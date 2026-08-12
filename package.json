@@ -1,0 +1,35 @@
+{
+  "name": "wolf-forge-platform",
+  "version": "1.0.0",
+  "description": "Internal operations platform for Wolf Forge.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UplineTonyuo/wolf-forge-platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/UplineTonyuo/wolf-forge-platform/issues"
+  },
+  "homepage": "https://github.com/UplineTonyuo/wolf-forge-platform#readme",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "supabase": "^2.113.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "zod": "^4.4.3"
+  }
+}
