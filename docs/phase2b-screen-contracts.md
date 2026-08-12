@@ -151,6 +151,34 @@ schema change, and each is supported by existing indexes and RLS.
 
 Drawer routes render their parent screen behind the overlay and are refresh-safe.
 
+### Navigation placement
+
+Every route above is reached through the **navigation rail** (shell §2) — a 64–72px icon rail
+whose categories open temporary floating panels. The four root destinations sit as follows,
+and **no screen in this document is reached from a global top bar or a mobile tab bar; both
+are retired** (shell §2, §3):
+
+| Root destination | Route | Rail category | Panel row |
+| --- | --- | --- | --- |
+| Projects list | `/orders` | Activity | Projects |
+| Clients list | `/clients` | Activity | Clients |
+| Home / attention queue | `/` | Activity | **To Do** |
+| Services list | `/services` | Setup | Services |
+
+Everything else in the route map is a child of one of these four and is reached by navigating
+inside the destination, never from the rail. **Tickets** (Activity) and **Invoices**,
+**Subscriptions** (Billing), **Forms**, **Settings** (Setup) have no route in this document
+because they have no screen — their rows are reserved and omitted from the rendered panel, and
+the Billing icon does not render at all in V1 (shell §4).
+
+Creation entry points additionally appear in **Quick Create**, opened from the Wolf Forge logo
+at the center of the rail: New Client and New Project always, New Task on
+`/orders/:orderId*`, and New Service on `/services*` (shell §6).
+
+> **Screen 2 remains contracted below under the HOME section heading for document
+> continuity; its locked rail label is "To Do".** These are the same implemented screen at
+> the same route with the same data, not separate destinations.
+
 **Paths are backend vocabulary in V1.** Every `/orders*` path above maps directly onto
 `OrderService` / `orders.id`, and is deliberately left unrenamed while the screen labels say
 **Projects**. This is the one place the split is visible to a user, in the address bar and in
@@ -222,6 +250,9 @@ password reset, magic links, SSO, MFA, "stay signed in", any client-portal entry
 ---
 
 ## 2. HOME
+
+**Route.** `/` · **Reached from.** Activity → **To Do** (shell §4). This is also the
+post-sign-in landing route.
 
 **Purpose.** Answer *"What needs attention?"* from real rows, and nothing else.
 
@@ -310,8 +341,8 @@ None of these are computable from the current schema, and none will be faked.
 
 ## 3. CLIENTS LIST
 
-**Route.** `/clients` · **Purpose.** The roster of client businesses and the entry point to
-every client record.
+**Route.** `/clients` · **Reached from.** Activity → **Clients** · **Purpose.** The roster of
+client businesses and the entry point to every client record.
 
 **User goal.** Find a client and open it; add a new one.
 
@@ -355,8 +386,8 @@ row flashes. Archive: row leaves the list, toast, **no Undo** (no un-archive met
 **Desktop.** Table, sticky header, 44px rows, 200-row cap notice per shell §19.
 
 **Mobile.** Stacked rows: name (16px/500) over `4 contacts · 2 open projects` in muted 13px.
-Filter input sits under the top bar and is sticky. **New client** is a full-width button
-pinned above the bottom bar.
+Filter input sits under the contextual top bar and is sticky. **New client** is a full-width
+button pinned above the navigation dock (shell §3).
 
 **Navigation destination.** `/clients/:companyId`.
 
@@ -720,8 +751,8 @@ contains **only changed fields** (`updateContactSchema` requires at least one).
 
 ## 10. SERVICES LIST
 
-**Route.** `/services` · **Purpose.** The catalog of service types a project can be placed
-against.
+**Route.** `/services` · **Reached from.** Setup → **Services** (the only row in the Setup
+panel in V1) · **Purpose.** The catalog of service types a project can be placed against.
 
 **User goal.** See what can be sold and delivered; keep the list current.
 
@@ -766,8 +797,10 @@ placed against — every project needs one."* + **New service**. Filtered-empty 
 
 **Desktop.** Table, max 1280px.
 
-**Mobile.** Reached from the avatar sheet, not the bottom bar (shell §3). Stacked rows: name
-over truncated description, trailing Inactive badge when applicable.
+**Mobile.** Reached from **Setup → Services** in the navigation dock — the same path as
+desktop (shell §3, §4). The old "Services lives in the avatar sheet on mobile" divergence is
+retired. Stacked rows: name over truncated description, trailing Inactive badge when
+applicable.
 
 **Navigation destination.** Stays on `/services`; drawers use their own routes.
 
@@ -857,8 +890,8 @@ here (done per-project via `updateOrderSchema.service_id`), deleting, unarchivin
 
 *UI: Project · Backend: order.*
 
-**Route.** `/orders` (see the route recommendation in §0.6) · **Purpose.** Every unit of work
-in the platform.
+**Route.** `/orders` (see the route recommendation in §0.6) · **Reached from.** Activity →
+**Projects** · **Purpose.** Every unit of work in the platform.
 
 **User goal.** Find work by state, ownership, or client, and open it.
 

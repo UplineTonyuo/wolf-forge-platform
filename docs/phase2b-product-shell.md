@@ -22,17 +22,19 @@ answer one question on arrival and then get out of the way:
 
 Five principles govern every shell decision.
 
-1. **The shell is thin.** Global chrome is one top bar on desktop and one top bar plus one
-   bottom bar on mobile. No permanent sidebar, no secondary persistent panels, no
-   collapsible rails. Screen content owns the viewport.
+1. **The shell is a thin rail, and everything else is temporary.** Permanent global chrome
+   is one 64–72px icon rail on desktop. Category menus are **floating panels that appear on
+   demand and retract**, never persistent columns. The rail never expands into a large
+   permanent sidebar, and no secondary panel stays open once a destination is chosen. The
+   workspace beside the rail owns the rest of the viewport.
 2. **Navigation exposes only what works.** A destination appears in navigation only when
    every action inside it is implemented end to end. No placeholders, no "coming soon",
    no disabled nav items.
 3. **Objects are the nouns.** Client, Contact, Service, Project, Task, Activity. The
    navigation is a map of real records, not a map of features.
-4. **Depth is expensive.** Maximum two levels of navigation: a global slot, and — only when
-   a slot genuinely holds more than one working screen — a contextual horizontal bar inside
-   it. V1 uses contextual bars only inside record detail screens.
+4. **Depth is expensive.** Maximum two levels of navigation: a rail category, and the panel
+   rows inside it. Below that, contextual horizontal tabs exist **only inside record detail
+   screens** — they are part of a record, not a third navigation tier.
 5. **Nothing is invented.** No metric is displayed that is not a count of rows the client
    actually fetched. No chart, no trend, no percentage, no forecast, no "health score".
 
@@ -96,120 +98,374 @@ Rules:
 - **Elevation:** borders do the work. Exactly two shadows exist in the system: dropdown/
   popover (`0 4px 12px rgba(0,13,81,0.08)`) and drawer/modal
   (`0 8px 32px rgba(0,13,81,0.12)`). Cards and tables use borders, never shadows.
-- **Icons:** single-weight line icons, 16px in dense UI, 20px in nav. Icons never appear
-  without a text label in navigation.
-- **Motion:** 120ms for hover/focus, 180ms for drawer and menu entry, 240ms for bottom
-  sheets. Easing `cubic-bezier(0.2, 0, 0, 1)`. Nothing animates on initial page paint.
-  Respect `prefers-reduced-motion: reduce` by dropping to opacity-only transitions.
-- **Gold is rationed.** Gold appears on: the attention-state badge, the "needs attention"
-  section marker on Home, and nowhere else in V1.
+- **Icons:** single-weight line icons, 16px in dense UI, 20px in nav. Navigation icons carry
+  visible text labels except in the desktop rail, where the icon-only format is intentional
+  and accessible names plus tooltips supply the label (§2.1).
+- **Motion:** the navigation rail, its category panels, Quick Create, and page replacement
+  follow the **locked motion language in §2.4** — that section is authoritative and no
+  navigation timing may be invented outside it. Everything else in the system uses 120ms for
+  hover/focus, 180ms for drawer and menu entry, and 240ms for bottom sheets, easing
+  `cubic-bezier(0.2, 0, 0, 1)`. Nothing animates on initial page paint. Respect
+  `prefers-reduced-motion: reduce` by dropping to opacity-only transitions everywhere,
+  including the rail.
+- **Gold is rationed.** Gold appears on exactly four things in V1: the attention-state badge,
+  the "needs attention" section marker on Home, the thin indicator on the selected row inside
+  a category panel (§2.2), and the Quick Create ring (§6). Nowhere else.
 
-Explicitly forbidden: gradient fills, glassmorphism, oversized rounded pills, multi-color
-status rainbows, decorative illustrations, sparklines, donut charts, KPI tiles with
-percentage deltas, "AI" visual language.
+Explicitly forbidden: gradient fills, glassmorphism as a *surface* treatment, oversized
+rounded pills, multi-color status rainbows, decorative illustrations, sparklines, donut
+charts, KPI tiles with percentage deltas, "AI" visual language, and any permanent expanded
+sidebar. The workspace blur behind an open panel (§2.2) is a **scrim**, not glassmorphism:
+panels themselves are opaque with a 1px border, never translucent frosted glass.
 
 ---
 
-## 2. Desktop global layout
+## 2. Desktop global layout — the navigation rail
+
+Wolf Forge Platform is an internal SPP / operating system, not a marketing website. Its
+navigation is therefore a **persistent thin rail plus temporary floating category panels** —
+permanent access to every category in a fixed 64–72px column, with the category's contents
+summoned only when asked for.
+
+> **Superseded decision.** Earlier drafts of this document locked "global top navigation" and
+> "no sidebar of any kind, at any breakpoint, ever." **Both statements are obsolete and are
+> replaced by this section.** The rail is not the sidebar that decision rejected: it is
+> icon-width, it never expands into a permanent labelled column, and its menus are transient.
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  WOLF FORGE   Home  Clients  Projects  Services          [ search ] [+] (AP) │  56px, sticky
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌─ page container: max-width 1280px, centered, 32px side padding ──────┐   │
-│   │  Page title                                    [ secondary ] [ Primary ] │
-│   │  supporting line / breadcrumb                                        │   │
-│   │  ────────────────────────────────────────────────────────────────    │   │
-│   │  contextual tabs (record detail screens only)                        │   │
-│   │                                                                      │   │
-│   │  content                                                             │   │
-│   └──────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌────┬─────────────────────────────────────────────────────────────────────────┐
+│    │                                                                         │
+│ ⊙  │  ┌─ workspace ────────────────────────────────────────────────────┐     │
+│ ACT│  │  Page title                              [ secondary ] [ Primary ]   │
+│    │  │  supporting line / breadcrumb                                  │     │
+│ ⊟  │  │  ──────────────────────────────────────────────────────────    │     │
+│ BIL│  │  contextual tabs (record detail screens only)                  │     │
+│    │  │                                                                │     │
+│ ▲  │  │  content                                                       │     │
+│ WF │  │                                                                │     │
+│    │  │                                                                │     │
+│ ⚙  │  │                                                                │     │
+│ SET│  └────────────────────────────────────────────────────────────────┘     │
+│    │                                                                         │
+└────┴─────────────────────────────────────────────────────────────────────────┘
+ 64-72px                        full working area
 ```
 
-- **Top bar:** 56px, `--wf-white`, 1px bottom border, sticky at `top: 0`, `z-index: 100`.
-  Never hides on scroll.
-- **Left:** wordmark, links to Home.
-- **Center-left:** global navigation links. Active item is 500 weight with a 2px
-  `--wf-navy` underline flush to the bar's bottom border. Inactive items are
-  `--wf-text-muted`.
-- **Right, in order:** search entry point (see §8), Create control (see §6), avatar menu
-  (see §9). 8px gap.
-- **Page container:** `max-width: 1280px` for list screens, `max-width: 1200px` for detail
-  screens, centered, 32px horizontal padding, 24px top padding.
-- **Page header block:** title (24px/600) on the left, actions on the right, aligned to the
-  same baseline. Maximum **one** primary button and **two** visible secondary buttons; any
-  further action goes into an overflow "…" menu. Breadcrumb, when present, sits above the
-  title at 13px muted and shows at most two ancestors.
+### 2.1 Rail anatomy
+
+- **Width:** 64–72px, fixed. It does not expand, collapse, pin, unpin, or remember a width.
+  There is no expand affordance, because there is no expanded state.
+- **Surface:** `--wf-white` with a 1px `--wf-border` right edge. Full viewport height,
+  `position: fixed`, `z-index: 200` — above the workspace scrim so **the rail always stays
+  sharp while the workspace blurs.**
+- **Contents, top to bottom:**
+
+  | Order | Item | Type | Behavior |
+  | --- | --- | --- | --- |
+  | 1 | **Activity** | category icon | opens the Activity panel (§4) |
+  | 2 | **Billing** | category icon | reserved — **absent in V1** (§4) |
+  | 3 | **Wolf Forge logo** | Quick Create | vertically centered, visually prominent (§6) |
+  | 4 | **Setup** | category icon | opens the Setup panel (§4) |
+
+- **The logo is centered in the rail's vertical axis**, not stacked immediately after the
+  category icons. It is the visual anchor of the rail and the largest target in it.
+- **Icons are single-weight line icons, 20px**, each with an accessible name and a tooltip on
+  hover after 400ms. This is the one place in the system where a navigation control carries
+  **no permanent visible text label** — the rail is icon-only by definition, so every rail
+  control must expose its name through `aria-label`, its tooltip, and the panel it opens.
+- **Rail state:** the icon whose category is currently open, and the icon owning the current
+  destination, both render in `--wf-navy` with a 2px `--wf-navy` left indicator flush to the
+  rail's left edge. Inactive icons are `--wf-text-muted`.
+- The rail **never scrolls** and never holds more than six controls. When a seventh category
+  is needed, categories merge — the rail does not grow a scrollbar.
+
+### 2.2 Floating category panels
+
+Clicking a category icon opens a **temporary bordered panel adjacent to the rail**. It is not
+a second column: it overlays the workspace, and it retracts.
+
+```
+┌────┬──────────────────────┬──────────────────────────────────────┐
+│ ⊙ ▏│  ACTIVITY            │                                      │
+│    │  ─────────────────   │        workspace, blurred            │
+│    │  Projects         ◂  │        while the panel is open       │
+│ ▲  │  Clients             │                                      │
+│ WF │  To Do               │                                      │
+│    │                      │        (Tickets omitted — unbuilt)   │
+│ ⚙  └──────────────────────┘                                      │
+│    │                                                             │
+└────┴─────────────────────────────────────────────────────────────┘
+      panel: 240px, opaque, 1px border, 6px radius
+```
+
+The rail above is drawn **as V1 renders it**: Activity · logo · Setup. The Billing icon is
+absent because neither of its rows is built, and Tickets is absent from the panel for the
+same reason (§4).
+
+- **Panel:** 240px wide, `--wf-white`, 1px `--wf-border`, 6px radius, popover shadow
+  (`0 4px 12px rgba(0,13,81,0.08)`). Anchored to its rail icon, offset 8px from the rail's
+  right edge, top-aligned to the icon and clamped to stay inside the viewport.
+- **Header:** the category name in 11px/600 uppercase `--wf-text-muted` with 0.06em tracking,
+  above a 1px divider.
+- **Rows:** 40px, 14px/400 text, 12px horizontal padding. Hover fills `--wf-navy-wash`.
+- **Selected destination row** (the category item matching the current route):
+  `--wf-navy-wash` background, a thin 2px `--wf-gold` left indicator, `translateX(3px)`, and
+  600-weight text. This is the only gold in navigation.
+- **Only one panel is open at a time.** Opening a second category closes the first with no
+  intermediate blur flash — the scrim persists across the swap.
+- **The panel is not a menu bar.** It closes the moment a destination is chosen, and it never
+  stays open alongside content.
+
+**Opening an exposed category** — Activity or Setup in V1; Billing after it has a working
+destination:
+
+1. the rail icon takes quick press feedback;
+2. the workspace behind blurs;
+3. the bordered panel expands outward from the rail;
+4. rows appear with a tiny stagger.
+
+The rail itself never blurs.
+
+**Choosing a destination** — e.g. Projects:
+
+1. the selected row briefly confirms;
+2. the panel retracts toward the rail;
+3. the blur clears;
+4. the destination loads in the workspace;
+5. the new page enters with a subtle fade and a small upward settle.
+
+**Dismissing without choosing** — by tapping the active icon again, clicking the blurred
+workspace, or pressing `Escape` — retracts the panel and clears the blur, and **the current
+page does not move.** Dismissal is never mistaken for navigation.
+
+### 2.3 The workspace
+
+Everything right of the rail is the full working area. After a destination is chosen it is
+the whole application:
+
+```
+[RAIL] | Projects
+       |
+       | project filters / controls
+       | project table
+       | project detail
+       | tasks
+       | activity
+```
+
+- **Container:** `max-width: 1280px` for list screens, `max-width: 1200px` for detail
+  screens, centered within the area right of the rail, 32px horizontal padding, 24px top
+  padding.
+- **Page header block:** title (24px/600) left, actions right, on one baseline. Maximum
+  **one** primary button and **two** visible secondary buttons; anything further goes to an
+  overflow "…" menu. A breadcrumb, when present, sits above the title at 13px muted and shows
+  at most two ancestors.
 - **Contextual horizontal navigation** appears only inside record detail screens (Client
-  Detail, Project Detail). It sits directly under the page header block, above the content,
-  as underlined tabs. It never appears at the module level in V1.
-- **No sidebar of any kind, at any breakpoint, ever.** This is a locked decision.
+  Detail, Project Detail), directly under the page header block, as underlined tabs. It never
+  appears at the category level in V1.
+- **The workspace scrolls; the rail does not.** Sticky table headers stick below the top of
+  the workspace, not below a global bar.
+- While a panel or Quick Create is open the workspace is `inert` and carries
+  `filter: blur(3px)` plus a `rgba(0,13,81,0.04)` tint. Blur is applied to a wrapper element,
+  never to `body`, so the rail and panel are unaffected.
+
+### 2.4 Locked motion language
+
+Motion is fast, deliberate, premium, and operational. **No floaty SaaS animation, no
+bouncing, no excessive travel.** These timings are locked; an implementation agent may not
+substitute its own.
+
+| Interaction | Duration |
+| --- | --- |
+| Tap / press feedback | 80–100ms |
+| Workspace blur (in and out) | 160–180ms |
+| Floating panel open | 200–240ms |
+| Floating panel close | 150–180ms |
+| Page replacement | 180–220ms |
+| Quick Create | 220–260ms |
+
+**Standard easing:** `cubic-bezier(0.22, 1, 0.36, 1)` for every entrance and every retraction
+in this section.
+
+**Panel entrance:**
+
+```
+opacity     0    → 1
+scale       .94  → 1
+translateX  -10px → 0
+```
+
+Transform origin is the rail edge, so the panel reads as expanding *out of* the rail.
+
+**Panel exit — closes toward the rail:**
+
+```
+scale       1 → .96
+translateX  0 → -8px
+opacity     1 → 0
+```
+
+**Row stagger:** 20–25ms per row on entrance, subtle only. A four-row panel is fully settled
+within ~100ms of the panel itself. Rows do not stagger on exit — the panel leaves as one
+object.
+
+**Page replacement:**
+
+```
+old page:  opacity 1 → 0,  translateY 0    → -4px   ~100ms
+new page:  opacity 0 → 1,  translateY 8px  → 0      ~180ms
+```
+
+The page title may enter ~40ms **before** the main content, so the destination names itself
+first. Total page replacement stays within the 180–220ms budget; the two phases overlap
+rather than running end to end.
+
+**Reduced motion.** Under `prefers-reduced-motion: reduce`, every transform above is dropped
+and only opacity remains, at the same durations. The workspace blur is replaced by a flat
+scrim with no blur filter. Nothing in the rail moves.
+
+**Not permitted anywhere in navigation:** spring or bounce easing, overshoot beyond the
+values above, travel greater than 10px, rotation, blur on the panel or rail themselves,
+sequential "cascading" reveals longer than the stagger budget, and any animation on initial
+page paint.
 
 ---
 
-## 3. Mobile global layout
+## 3. Mobile global layout — the rail becomes a dock
 
-Mobile is purpose-built. It is not the desktop shell at a smaller width.
+Mobile is purpose-built. **It is not the desktop rail shrunk down.** A 64px vertical column
+on a 390px screen would cost 17% of the width permanently and put every control in the
+hardest-to-reach corner.
+
+**The chosen adaptation: rotate the rail into a bottom dock and expand its panels upward.**
+This is the cleanest option because it preserves all four things that make the rail work —
+category grouping, Quick Create prominence, fast access to working modules, and the identical
+blur/panel interaction language — while moving every target into the thumb zone. The
+category model is unchanged; only the axis and the panel's direction of travel change.
 
 ```
-┌────────────────────────────┐
-│ ‹ Back   Screen title  (AP)│  52px top bar
-├────────────────────────────┤
-│                            │
-│  content, 16px padding     │
-│  full-bleed lists          │
-│                            │
-│                            │
-├────────────────────────────┤
-│  Home  Clients  Projects  ⊕│  56px + safe area
-└────────────────────────────┘
+┌────────────────────────────┐          ┌────────────────────────────┐
+│ ‹ Back   Screen title  (AP)│  52px    │ ‹ Back   Screen title  (AP)│
+├────────────────────────────┤          ├────────────────────────────┤
+│                            │          │░░░░░░ blurred workspace ░░░│
+│  content, 16px padding     │   tap    │░░┌──────────────────────┐░░│
+│  full-bleed lists          │  Activity│░░│ ACTIVITY             │░░│
+│                            │  ──────▶ │░░│ ─────────────────    │░░│
+│                            │          │░░│ Projects          ◂  │░░│
+│                            │          │░░│ Clients              │░░│
+│                            │          │░░│ To Do                │░░│
+│                            │          │░░│                      │░░│
+├────────────────────────────┤          ├──┴──────────────────────┴──┤
+│   ⊙        ▲WF        ⚙    │  64px    │   ⊙        ▲WF        ⚙    │
+└────────────────────────────┘  + safe  └────────────────────────────┘
+  Activity  Quick    Setup                 dock stays sharp above
+            Create                         the blur and the panel
 ```
 
-Differences from desktop, each deliberate:
+Rules, each deliberate:
 
-1. **Bottom bar carries destinations, not the brand.** Three destinations plus one Create
-   action. Icons with 11px labels. Active item is `--wf-navy` on both icon and label.
-2. **The top bar is contextual, not global.** On a root destination it shows the screen
-   title and the avatar. On a nested screen it shows a back affordance and the record name,
-   truncated to one line.
-3. **Services is not in the bottom bar.** Catalog editing is low-frequency configuration
-   work; spending a permanent thumb-zone slot on it would starve the daily flows. Services
-   lives in the account sheet (avatar → **Services**). This divergence from desktop is
-   intentional.
-4. **Page-level action buttons move to the bottom of the content**, full width, above the
-   bottom bar, rather than into the top bar. Destructive and low-frequency actions live in
-   an overflow sheet opened from the top bar "…".
-5. **Tables do not exist on mobile.** Every list is a stacked row list (see §19).
-6. **Drawers become bottom sheets**, dismissible by swipe-down and by an explicit Cancel.
-7. **No hover states.** Every affordance is visible at rest; row actions are reached by
-   tapping the row or its trailing "…" control.
+1. **The dock carries the same categories as the rail**, in the same order, with the Wolf
+   Forge logo centered between them: Activity · **logo** · Setup. Billing joins in its
+   reserved position when it ships (§4). 64px tall plus `env(safe-area-inset-bottom)`,
+   `--wf-white`, 1px top border, `z-index: 200`.
+2. **The logo keeps its prominence.** It is the center slot, rendered ~40px against ~24px
+   category icons, and it is the only dock control with a filled `--wf-navy` treatment.
+   Quick Create is the single most important action on mobile and is placed accordingly.
+3. **Dock icons carry 10px labels** (Activity, Setup) because a mobile tooltip cannot exist.
+   The logo carries no label — the mark is the label.
+4. **Panels rise from the dock instead of expanding from the rail.** Same 240px-equivalent
+   content at full width minus 16px insets, same opaque surface, same 1px border, same
+   header, same rows, same gold selected-row indicator, same stagger. Only the entrance
+   transform changes:
+
+   ```
+   opacity     0     → 1
+   scale       .94   → 1
+   translateY  +10px → 0      (panel exits back down toward the dock)
+   ```
+
+   Every duration and the easing curve are **identical to §2.4**. The dock stays sharp above
+   the blurred workspace exactly as the rail does.
+5. **Dismissal is identical:** tap the active category again, tap the blurred workspace, press
+   Escape on a keyboard, or swipe the panel down. The current page does not move.
+6. **The top bar is contextual, not global.** On a root destination it shows the screen title
+   and the avatar. On a nested screen it shows a back affordance and the record name,
+   truncated to one line. It carries **no navigation** — navigation lives only in the dock.
+7. **Page-level action buttons sit at the bottom of the content**, full width, above the
+   dock, rather than in the top bar. Destructive and low-frequency actions live in an
+   overflow sheet opened from the top bar "…".
+8. **Tables do not exist on mobile.** Every list is a stacked row list (see §19).
+9. **Drawers become bottom sheets**, dismissible by swipe-down and by an explicit Cancel. A
+   category panel and a drawer are never open at once.
+10. **No hover states.** Every affordance is visible at rest; row actions are reached by
+    tapping the row or its trailing "…" control.
+
+Because categories are identical on both shells, **Services no longer diverges between
+desktop and mobile** — it lives under Setup everywhere, and the account sheet no longer
+carries navigation.
 
 ---
 
 ## 4. First-version navigation
 
-### Desktop global navigation
+### The category structure
 
-| Slot | Route | Contains |
+Three categories, each a rail icon opening one floating panel. This is the **complete**
+structure — including items that do not exist yet, so the shape is settled once.
+
+| Rail icon | Panel contents | V1 status |
 | --- | --- | --- |
-| **Home** | `/` | Attention queues and recent activity. |
-| **Clients** | `/clients` | Client list → Client detail (contacts, projects, activity). |
-| **Projects** | `/orders` | Projects list → Project Detail (tasks, activity). *UI: Project · Backend: order.* |
-| **Services** | `/services` | Service catalog. |
+| **Activity** | Projects · Tickets · Clients · To Do | **partially exposed** |
+| **Billing** | Invoices · Subscriptions | **entire category absent in V1** |
+| **Setup** | Services · Forms · Settings | **partially exposed** |
 
-Four flat items, zero navigation depth. Rationale for the shape:
+### What V1 actually renders
 
-- **Projects is top-level, not nested under a "Work" slot.** A "Work" slot would today hold
-  exactly one working screen, which is depth for its own sake. Tasks have no independent
-  list — `TaskRepository` exposes only `listForOrder` — so a global Tasks destination is
-  not backed by the data layer and must not be shown.
-- **Services is top-level *provisionally*.** It is real, working, and needed. It is also
-  destined for the future **Sales** slot (SPP calls these products/packages). §5 defines
-  exactly how it moves there without a shell redesign.
-- **Nothing else appears.** Sales, Billing, Support, Forms, Automation, Integrations, and
-  the Client Portal are absent from navigation because no screen behind them works.
+The exposure rule from §1 is unchanged and governs every row above: **a destination appears
+only when every action inside it is implemented end to end.** Not-yet-built items are
+**omitted from the DOM** — never greyed, never disabled, never "coming soon".
+
+| Category | Row | Route | V1 | Why |
+| --- | --- | --- | --- | --- |
+| Activity | **Projects** | `/orders` | **ships** | Projects list → Project Detail. *UI: Project · Backend: order.* |
+| Activity | Tickets | — | absent | No ticket, message, or request table exists. |
+| Activity | **Clients** | `/clients` | **ships** | Client list → Client detail. |
+| Activity | **To Do** | `/` | **ships** | The implemented attention queue contracted under the HOME section heading. |
+| Billing | Invoices | — | absent | No invoice tables, no processor. |
+| Billing | Subscriptions | — | absent | No subscription tables. |
+| Setup | **Services** | `/services` | **ships** | The service catalog is real and working. |
+| Setup | Forms | — | absent | No form definition or submission tables. |
+| Setup | Settings | — | absent | No user-editable preference exists in the schema (§9). |
+
+Consequences an implementation agent must respect:
+
+- **The Billing icon does not render in V1 at all.** Both of its rows are unbuilt, and a
+  category icon that opens an empty panel is a fake working page by another name. Its
+  **position in the rail order is reserved** (§5.1) so it appears between Activity and the
+  logo the day Invoices ships, with no rail redesign and no re-learning of icon positions.
+- **The Setup icon renders**, because Services works. Its panel holds exactly one row in V1.
+  A one-row panel is correct and is not padded out.
+- **The V1 rail is therefore:** Activity · **logo** · Setup. Billing retains its reserved
+  position but does not render until at least one real Billing destination exists.
+
+**To Do is the locked navigation label** for the implemented attention queue at `/`, which
+the screen contracts retain under the HOME section heading for document continuity. It is
+one screen, not two: the route, data, queries, and blocks remain unchanged, and `/` remains
+the post-sign-in landing route.
+
+Rationale for the shape:
+
+- **Projects sits under Activity, not at the root.** The rail's whole purpose is that
+  categories absorb growth: Tickets and To Do join Projects and Clients without adding a rail
+  icon. Tasks still get **no destination of their own** — `TaskRepository` exposes only
+  `listForOrder`, so a cross-project task list is not backed by the data layer and must not
+  be shown, in any category.
+- **Services sits under Setup, not Activity.** Catalog editing is configuration, not daily
+  operational throughput. This also resolves the old desktop/mobile split cleanly (§3).
+- **Services is still destined for a future Sales area** (SPP calls these
+  products/packages). §5 defines how it moves without a shell redesign.
+- **Nothing else appears.** Sales, Support, Automation, Integrations, and the Client Portal
+  are absent from navigation because no screen behind them works.
 
 ### Route naming — recommendation
 
@@ -236,18 +492,21 @@ Contextual horizontal navigation in V1 exists in exactly two places:
 
 ### Mobile navigation
 
-| Bottom bar slot | Type | Target |
+Mobile uses **the same categories, the same rows, and the same exposure rule** — rotated into
+the dock described in §3. There is no separate mobile information architecture to maintain.
+
+| Dock slot | Type | Target |
 | --- | --- | --- |
-| Home | destination | `/` |
-| Clients | destination | `/clients` |
-| Projects | destination | `/orders` |
-| Create | action | opens the Create sheet (§6) |
+| Activity | category | opens the Activity panel: Projects · Clients · To Do |
+| **Wolf Forge logo** | action | opens Quick Create (§6) |
+| Setup | category | opens the Setup panel: Services |
+| Avatar (top bar) | menu | identity and **Sign out** only (§9) |
 
-Reachable from the avatar sheet: **Services**, signed-in identity, **Sign out**.
+Billing takes its reserved dock position, left of the logo, when Invoices ships.
 
-The fourth slot is deliberately an action rather than a destination, and a fifth slot is
-deliberately left unused — it is reserved for the **More** entry that appears when a fourth
-destination ships.
+The avatar sheet **no longer carries navigation** — Services moved into Setup, so the sheet
+holds identity and Sign out only. The old "Services lives in the account sheet on mobile"
+divergence is retired.
 
 ---
 
@@ -255,45 +514,64 @@ destination ships.
 
 The shell must absorb new modules without being redesigned. Three mechanisms do this.
 
-### 5.1 The slot registry
+### 5.1 The category registry
 
-Global navigation is data, not markup. One module registry drives desktop top nav, the
-mobile bottom bar, and the mobile account sheet:
+Navigation is data, not markup. **One registry drives the desktop rail, its panels, the
+mobile dock, and the mobile panels** — there is no second mobile structure to keep in sync:
 
 ```ts
-interface NavSlot {
-  id: string;                    // 'clients'
-  label: string;                 // 'Clients'
-  route: string;                 // '/clients'
-  icon: IconName;
+interface NavCategory {
+  id: string;                    // 'activity'
+  label: string;                 // 'Activity'      — panel header
+  icon: IconName;                // rail / dock glyph
+  order: number;                 // reserved position, held even while absent
+  items: NavItem[];
+}
+
+interface NavItem {
+  id: string;                    // 'projects'
+  label: string;                 // 'Projects'      — UI vocabulary, never 'Orders'
+  route: string;                 // '/orders'       — backend vocabulary, unchanged
   enabled: boolean;              // false = absent from the DOM, not disabled
-  surfaces: Array<'desktop' | 'mobile-bar' | 'mobile-sheet'>;
-  tabs?: ContextualTab[];        // populated only when > 1 working screen
   order: number;
 }
 ```
 
-Shipping Billing means appending one entry with `enabled: true`. No shell component
-changes. `enabled: false` slots must be **omitted from the rendered output**, never
-rendered disabled or greyed.
+Two rendering rules follow, and both are binding:
 
-### 5.2 The promotion rule
+1. **`enabled: false` items are omitted from the rendered panel**, never greyed or disabled.
+2. **A category whose every item is disabled does not render its rail icon at all.** This is
+   what keeps Billing reserved without producing a fake working page: the entry exists in the
+   registry with its `order` held, and the icon simply appears the day its first item flips to
+   `enabled: true`.
 
-> When a slot would hold more than one working screen, the slot becomes the parent and its
-> screens become contextual horizontal tabs inside it. The slot's route becomes a redirect
-> to its first tab.
+Shipping Invoices is therefore one boolean. No shell component changes, and the rail's icon
+positions never shuffle, because `order` is reserved from the start.
+
+### 5.2 The growth rule
+
+The rail absorbs growth **inside categories first, and only then by adding a category.**
+
+> A new destination joins an existing category as another panel row. A new rail icon is
+> created only when a capability fits none of Activity, Billing, or Setup — and never when
+> that would push the rail past six controls.
 
 Applied to the known roadmap:
 
-| Today | After expansion | Mechanism |
+| Capability | Where it lands | Rail impact |
 | --- | --- | --- |
-| `Projects` | `Work` → Projects · Tasks · Requests | Promotion; the current path keeps working as a permalink and the tab reads `/work/projects`, with a redirect from the old path. |
-| `Services` | `Sales` → Proposals · Packages · Checkout · Contracts | The Services slot is retired and re-registered as the "Packages" tab of the Sales slot; `/services` redirects. |
-| `Home` | `Dashboard` | Label change only. |
-| — | `Billing`, `Support` | New slots appended. |
+| Tickets / client requests | Activity panel row (already reserved) | none |
+| Invoices, Subscriptions | Billing panel rows; the reserved Billing icon appears | icon appears in its held position |
+| Forms, Settings | Setup panel rows (already reserved) | none |
+| Proposals, Packages, Checkout, Contracts | a new **Sales** category; Services migrates from Setup to Sales as **Packages**, `/services` redirects | one new icon |
+| Automation | inside Settings after Settings is implemented | none |
 
-Because every list and detail screen is written to a route and never to a nav position, a
-promotion is a routing table edit plus a redirect. No screen contract changes.
+Because every screen is written to a route and never to a nav position, moving a row between
+categories is a registry edit plus a redirect. **No screen contract changes.**
+
+The earlier "promotion rule" — where a top-nav slot holding two screens grew contextual tabs —
+is retired along with the top bar. Categories now do that job, and record-level contextual
+tabs (§5.3) stay what they always were: tabs *inside a record*, not a navigation tier.
 
 ### 5.3 The record-tab registry
 
@@ -313,12 +591,49 @@ dropdown.
 
 ---
 
-## 6. Quick-create behavior
+## 6. Quick Create — the Wolf Forge logo
 
 ### Control
 
-Desktop: a `+` button in the top bar right cluster opens a menu, keyboard shortcut `C`.
-Mobile: the bottom bar's Create slot opens a bottom sheet.
+**The Wolf Forge logo in the rail is the Quick Create control.** It is not a home link, not
+a wordmark, and not decoration. It sits at the rail's vertical center on desktop and at the
+dock's center slot on mobile, and it is the most prominent target in the shell — creation is
+the most consequential thing a user does, so it gets the anchor position.
+
+- Desktop: click the logo, or press `C`.
+- Mobile: tap the center dock slot.
+- The logo carries an accessible name of **"Quick Create"** — never "Wolf Forge" or "Home",
+  because the mark is a button and its name must say what it does.
+
+It behaves conceptually like the Quick Action control from William's Treasure: one control,
+one blur, one short list of things that can actually be created right now.
+
+### Interaction
+
+1. the logo takes its expressive press feedback (below);
+2. the workspace behind blurs, exactly as a category panel blurs it (§2.2);
+3. the Quick Create menu appears, anchored to the logo;
+4. only implemented creation actions are listed.
+
+Dismissal matches category panels precisely: click the logo again, click the blurred
+workspace, or press `Escape`. The current page does not move.
+
+### Motion
+
+The logo is the one control permitted slightly more expressive feedback than the 80–100ms
+rail press:
+
+```
+scale  1 → .88 → 1.05 → 1
+```
+
+A thin `--wf-gold` ring may expand briefly outward from the logo — one pulse, restrained, no
+repeat, no glow, and it never persists after the menu opens. The menu itself then enters on
+the §2.4 panel-entrance transform.
+
+**Total interaction stays under ~260ms**, ring included. Under
+`prefers-reduced-motion: reduce` the scale sequence and the ring are both dropped; the menu
+fades only.
 
 ### Contents — context-aware, never dead
 
@@ -330,8 +645,6 @@ The menu always contains the two creates that need no parent:
 The menu **gains** context-scoped entries when the current route supplies an unambiguous
 parent:
 
-- On any `/clients/:companyId*` route → **New Contact** (opens the contact drawer with the
-  client pre-bound)
 - On any `/orders/:orderId*` route → **New Task** (opens the task drawer with the project
   pre-bound)
 
@@ -339,18 +652,39 @@ Rationale: a global "New Task" with no project context would have to open a pick
 every project in the system, and its backing method `OrderRepository.list()` has no search
 or pagination. A create entry that is disabled, or that opens a modal asking "which
 project?", is worse than one that appears exactly where it can succeed. Users still create
-contacts and tasks from their parent screens, which remains the primary path.
+tasks from their parent project screen, which remains the primary path.
 
-**New Service is deliberately excluded from quick create.** It edits the global catalog,
-it is low-frequency configuration, and it is not part of daily operational throughput. It
-is created from `/services` only. **[REQUIRES APPROVAL — see §12 of the final report]**
+- On any `/services*` route → **New Service** (opens the service drawer)
+
+**New Service — superseding the earlier exclusion.** Earlier drafts excluded New Service from
+quick create outright, on the grounds that catalog editing is low-frequency configuration
+rather than daily throughput. That reasoning still holds for the *global* menu, so New Service
+is **not** offered everywhere — but it is genuinely implemented, and suppressing it while the
+user is standing in the Setup category is friction for no benefit. It therefore appears
+**where appropriate**: scoped to `/services*`, just as New Task is scoped to its parent
+project. The blanket exclusion is retired and its open approval item is closed.
+
+### V1 menu, resolved
+
+| Entry | Appears | Target |
+| --- | --- | --- |
+| **New Client** | always | `/clients/new` |
+| **New Project** | always | `/orders/new` |
+| **New Task** | on `/orders/:orderId*` | task drawer, project pre-bound |
+| **New Service** | on `/services*` | service drawer |
+
+Never more than four entries at once, well inside the six-item ceiling.
 
 ### Rules
 
 - The menu lists at most six items; beyond that it gains section headers.
 - Every entry navigates or opens immediately. No sub-menus.
+- **Nonfunctional actions are never exposed.** An entry appears only where it can succeed —
+  no disabled rows, no entry that opens a picker asking which parent the user meant.
 - A create started from quick create returns the user to the **created record**, not to the
   screen they launched from (see per-screen success behavior in the contracts document).
+- Choosing an entry retracts the menu toward the logo and clears the blur on the §2.4 exit
+  transform, then the destination or drawer opens.
 
 ---
 
@@ -366,6 +700,10 @@ is created from `/services` only. **[REQUIRES APPROVAL — see §12 of the final
   (`Contacts 4`). They must not carry a count that would require a separate query.
 - The default tab is the leftmost: Overview for Client Detail, Tasks for Project Detail.
 - Tab content owns its own loading and empty states; the header does not re-skeleton.
+- **A tab switch is not a page replacement.** It does not run the §2.4 page transition, does
+  not blur anything, and does not move the record header. The panel body cross-fades over
+  120ms with no translation. Contextual tabs are inside a record; the rail's motion language
+  belongs to navigation between destinations.
 
 ---
 
@@ -389,22 +727,27 @@ What V1 ships:
 
 What V1 reserves:
 
-- The top bar keeps a **search slot** in its right cluster. In V1 it renders **nothing** —
-  no greyed box, no non-functional icon.
-- When server-side search lands, that slot becomes a `⌘K` command palette spanning clients,
-  projects, and contacts. The slot's position, width, and keyboard shortcut are fixed now so
-  the top bar layout does not shift later.
+- **A search slot is reserved at the top-right of the workspace header**, on the page
+  header block's action baseline. In V1 it renders **nothing** — no greyed box, no
+  non-functional icon.
+- When the future global search / command system lands, it supports **Clients, Projects,
+  Services, and Tickets**, including relationship-aware results. Its reserved shell slot
+  prevents that capability from forcing a navigation redesign later.
+- **Search is not a rail control.** The rail holds categories and Quick Create only; adding a
+  search icon to it would make the rail a toolbar and break the "categories plus create"
+  model. When the palette ships it opens over the blurred workspace using the §2.4 language,
+  invoked by `⌘K` from anywhere.
 
-Prerequisite before global search is specified further: server-side search methods on the
-repositories (trigram or `ilike` indexes over `companies.name`, `orders.title`,
-`orders.order_number`, `client_contacts.name`/`email`). **[REQUIRES NEW READ METHOD]**
+The search system's ranking, indexing, result presentation, and commands are intentionally
+left for a future specification after the required read methods exist.
 
 ---
 
 ## 9. Profile / account placement
 
-- **Desktop:** a 28px circular avatar at the far right of the top bar showing the initials
-  derived from `profiles.display_name`. Click opens a 240px menu:
+- **Desktop:** a 28px circular avatar sits at the top-right of the workspace header, outside
+  the navigation rail, showing the initials derived from `profiles.display_name`. Click opens
+  a 240px account menu aligned to the avatar:
 
   ```
   Anthony Paghubasan
@@ -413,8 +756,9 @@ repositories (trigram or `ilike` indexes over `companies.name`, `orders.title`,
   Sign out
   ```
 
-- **Mobile:** the same avatar in the top bar opens a bottom sheet containing identity, a
-  **Services** link, and **Sign out**.
+- **Mobile:** the same avatar sits in the contextual top bar and opens a bottom sheet
+  containing identity and **Sign out**. It carries **no navigation** — Services moved into
+  the Setup category (§3, §4), so the sheet is identity-only on both shells.
 - There is **no settings screen in V1** — no user-editable preference exists in the schema.
   `profiles.display_name` is nullable and there is no profile update path in the service
   layer, so profile editing is not offered.
@@ -589,17 +933,22 @@ Global rules:
 
 | Range | Shell | Content |
 | --- | --- | --- |
-| `< 768px` | Mobile shell: contextual top bar + bottom bar. | Stacked row lists, full-width buttons, bottom sheets, single-column detail. |
-| `768px – 1023px` | Desktop shell, condensed: top bar padding 16px, nav labels only. | Tables allowed at a reduced column set (see §19). Drawers 400px. Record detail single-column. |
+| `< 768px` | Mobile shell: contextual top bar + bottom dock (§3). | Stacked row lists, full-width buttons, bottom sheets, single-column detail. |
+| `768px – 1023px` | Desktop shell: rail at 64px, workspace padding 16px. | Tables allowed at a reduced column set (see §19). Drawers 400px. Record detail single-column. |
 | `1024px – 1279px` | Desktop shell. | Full tables. Project Detail two-column (summary 320px + main). |
 | `≥ 1280px` | Desktop shell. | Container caps at 1280px and centers; no further layout change. |
 
 Rules:
 
 - The breakpoint at 768px is a **shell switch**, not a reflow. The two shells are separate
-  component trees.
-- Touch targets are ≥ 44×44px below 768px and ≥ 32px above it.
-- Bottom bar respects `env(safe-area-inset-bottom)`.
+  component trees — rail-with-side-panels and dock-with-rising-panels — driven by the same
+  category registry (§5.1).
+- Touch targets are ≥ 44×44px below 768px and ≥ 32px above it. Rail icons are 40×40px hit
+  areas centered in the 64–72px column; dock slots are ≥ 44×44px.
+- The dock respects `env(safe-area-inset-bottom)`; the rail respects
+  `env(safe-area-inset-left)`.
+- **The rail is outside the workspace's max-width.** Container caps in §2.3 apply to the area
+  right of the rail, so the rail never eats into the 1280px content measure.
 - No horizontal page scrolling at any width. Wide content scrolls inside its own container.
 - The layout is not tested below 360px.
 
@@ -615,6 +964,24 @@ Rules:
   `TaskService.reorder`.
 - **Overlays:** drawers and modals trap focus, close on `Esc`, and restore focus to their
   trigger. The background is `inert`.
+- **The rail is icon-only, so its names must be explicit.** Every rail and dock control
+  carries an `aria-label` (Activity, Billing, Setup, **Quick Create**).
+  Category icons are `aria-expanded` buttons owning their panel via `aria-controls`; the open
+  panel is a `menu` whose rows are `menuitem`s, arrow-navigable, with `Home`/`End` jumping to
+  the first and last row. The rail is wrapped in a `<nav aria-label="Primary">`.
+- **Panel focus:** opening a panel moves focus to its first row. `Esc` closes it and
+  **returns focus to the rail icon that opened it** — never to the workspace. Choosing a row
+  moves focus to the destination's `<h1>`. While a panel is open the blurred workspace is
+  `inert`, so tabbing can never reach a control the user cannot see.
+- **DOM order matches visual order on both shells.** On desktop the rail precedes the
+  workspace in the DOM, matching its position on the left, and a **Skip to content** link is
+  the first focusable element. On mobile the dock is visually at the bottom and therefore
+  comes **last** in the DOM — it is not hoisted to the top for "nav first", which would break
+  focus order (WCAG 2.4.3). A **Skip to navigation** link at the top of the mobile document
+  reaches it in one keystroke.
+- **Blur is decorative and must never be the only signal.** The open panel's own presence,
+  the `aria-expanded` state, and the active icon indicator all convey the state without
+  relying on the scrim.
 - **Tables** are real `<table>` elements with `<th scope="col">`, a visually hidden
   `<caption>`, and no ARIA grid roles.
 - **Status is never conveyed by color alone.** Every badge carries text. Overdue carries
@@ -679,7 +1046,8 @@ trailing "…" opens the action sheet.
   known limitation, not a feature. **[REQUIRES NEW READ METHOD before real data]**
 - **No row selection, no bulk actions, no inline cell editing** in V1.
 - **Column resize, reorder, and hide** are out of scope.
-- **Sticky table header** below the top bar on desktop lists.
+- **Sticky table header** at the top of the scrolling workspace on desktop lists. There is no
+  global bar to offset against — the rail is fixed beside the workspace, not above it.
 
 ---
 
@@ -715,42 +1083,48 @@ Each of the six named future areas has a pre-decided attachment point.
 
 ### Sales
 
-- **Nav:** new slot `Sales`, placed between Home and Clients. Services is retired as a slot
-  and re-registered as its **Packages** tab; `/services` redirects to `/sales/packages`
-  (§5.2).
+- **Nav:** a new **Sales** category joins the rail below Activity. Services migrates out of
+  Setup and is re-registered as Sales' **Packages** row; `/services` redirects to
+  `/sales/packages` (§5.2).
 - **Records:** proposals and packages get their own detail screens with the same header +
   contextual-tab anatomy. A **Proposals** tab appends to Client Detail.
 - **Shell impact:** two registry entries and one redirect.
 
 ### Billing
 
-- **Nav:** new slot `Billing` after Projects.
+- **Nav:** none required — **the Billing category is already reserved** in the registry with
+  its rail position held (§4, §5.1). Shipping Invoices flips one `enabled` flag and the icon
+  appears between Activity and the logo. Subscriptions appends as its second row.
 - **Records:** **Invoices** and **Subscriptions** tabs append to Client Detail; an
   **Invoice** tab appends to Project Detail. Project Detail's summary column gains a billing
   summary card in the space already reserved beneath the project metadata.
-- **Shell impact:** one slot, three tab registrations. No layout change — the two-column
-  Project Detail was chosen now so this card has somewhere to land.
+- **Shell impact:** two `enabled` flags and three tab registrations. No layout change and no
+  rail change — the Billing position was reserved from the start, and the two-column Project
+  Detail was chosen now so this card has somewhere to land.
 
 ### Support
 
-- **Nav:** new slot `Support`.
+- **Nav:** none required — **Tickets is already a reserved row in the Activity panel** (§4).
+  Shipping it flips one `enabled` flag; no new rail icon.
 - **Records:** a **Messages/Tickets** tab appends to Client Detail and to Project Detail.
-- **Shell impact:** the top bar right cluster gains an unread indicator on the avatar. Its
-  position is already reserved between the Create control and the avatar.
+- **Shell impact:** the Activity rail icon gains an unread dot — a 6px `--wf-gold` marker at
+  the icon's top-right, inside the 64–72px column. This is the only badge the rail may ever
+  carry and it never shows a number. It is a deliberate fifth entry on the gold ration (§1),
+  added only when Support ships.
 
 ### Forms
 
-- **Nav:** no slot of its own. Form *definitions* live under Settings; form *responses*
-  attach to records.
+- **Nav:** none required — **Forms is already a reserved row in the Setup panel** (§4). Form
+  *definitions* live there; form *responses* attach to records.
 - **Records:** a **Forms** tab appends to Client Detail (intake, onboarding) and to Project
   Detail (per-project questionnaires).
 - **Shell impact:** none beyond tab registration.
 
 ### Automation
 
-- **Nav:** no slot. Automation is configuration, not a daily destination — it belongs under
-  a future `Settings` area reached from the avatar menu, whose slot in the menu already
-  exists conceptually (§9).
+- **Nav:** none required. Automation is configuration, not a daily destination — it belongs
+  inside **Settings** after that destination is implemented. It does not add a fourth Setup
+  row and never earns a rail icon of its own.
 - **Surface:** automation results appear in the existing Activity timeline with
   `actor_profile_id` null. The activity schema already supports system-authored events via
   `ActivityService.recordSystemAction`, so no new display surface is needed — the timeline
@@ -765,7 +1139,7 @@ The portal is **a second application shell, not a permission mode of this one.**
 | --- | --- | --- |
 | Route namespace | `/` | `/portal/*` (or a separate host) |
 | Shell components | `shell/internal/*` | `shell/portal/*` — no shared navigation, header, or table components |
-| Nav registry | internal slots | its own slots: Overview, Projects, Files, Messages, Invoices, Services, Forms |
+| Nav registry | internal categories (§5.1) | its own registry and its own shell chrome: Overview, Projects, Files, Messages, Invoices, Services, Forms. The internal rail is **not** reused. |
 | Session gate | `roles.name ∈ {owner, admin, manager, staff}` | `roles.name = 'client'` |
 | Data scope | RLS internal policies | RLS client policies, already scoped by `private.current_user_company_id()` |
 | Vocabulary | Project, Task, Client | Project, Update, (their own company name) |
@@ -795,6 +1169,14 @@ Binding rules for the implementation agent:
 ### Wayfront / SPP reference boundary
 
 Wayfront/SPP informs **workflow, feature scope, and business logic only**. No Twig template,
-no layout, no permanent sidebar, no proprietary copy, and no visual pattern is reproduced.
-Where this document names an SPP concept (packages, checkout, tickets) it names a
-*capability*, not an implementation.
+no layout, no proprietary copy, and no visual pattern is reproduced. Where this document
+names an SPP concept (packages, checkout, tickets) it names a *capability*, not an
+implementation.
+
+**On the rail specifically:** the navigation rail is inspired by **the usefulness of SPP's
+navigation model** — categories reachable from one fixed place, without a heavy permanent
+column — and is **not copied from its visual design**. Wolf Forge's rail is icon-only at
+64–72px with transient bordered panels, its own motion language (§2.4), and its own tokens
+(§1). Nothing about SPP's chrome, spacing, iconography, or color is reproduced. The rail is
+explicitly **not** a large permanent Wayfront-style sidebar; that pattern remains rejected,
+which is the part of the old "no sidebar" decision that survives.
