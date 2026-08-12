@@ -2,12 +2,17 @@
   "name": "wolf-forge-platform",
   "version": "1.0.0",
   "description": "Internal operations platform for Wolf Forge.",
-  "main": "index.js",
+  "main": "dist/index.js",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "supabase test db --local",
+    "lint:db": "supabase db lint --local --level error --fail-on error",
+    "smoke:backend": "tsx scripts/backend-smoke.ts"
   },
   "repository": {
     "type": "git",
@@ -16,7 +21,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/UplineTonyuo/wolf-forge-platform/issues"
   },
