@@ -5,6 +5,11 @@ export type ApplicationErrorCode =
   | "CONFLICT"
   | "DATABASE_ERROR";
 
+export interface ClientSafeError {
+  code: ApplicationErrorCode;
+  message: string;
+}
+
 export class ApplicationError extends Error {
   readonly code: ApplicationErrorCode;
   readonly cause?: unknown;
@@ -13,8 +18,22 @@ export class ApplicationError extends Error {
     super(message);
     this.name = "ApplicationError";
     this.code = code;
-    this.cause = options?.cause;
+    Object.defineProperty(this, "cause", {
+      value: options?.cause,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
   }
+
+  toJSON(): ClientSafeError {
+    return { code: this.code, message: this.message };
+  }
+}
+
+export function toClientSafeError(error: unknown): ClientSafeError {
+  if (error instanceof ApplicationError) return error.toJSON();
+  return { code: "DATABASE_ERROR", message: "The operation failed." };
 }
 
 export class ValidationError extends ApplicationError {

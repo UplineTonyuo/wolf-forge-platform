@@ -1,10 +1,9 @@
 import { z } from "zod";
-import type { OrderRow } from "../../lib/supabase/database.types.js";
+import type { OrderRow } from "../../lib/supabase/database-rows.js";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
   nullableTimestampSchema,
-  timestampSchema,
   uuidSchema,
 } from "../shared.js";
 
@@ -26,6 +25,7 @@ export type OrderPriority = z.infer<typeof orderPrioritySchema>;
 export type Order = OrderRow;
 
 export const createOrderSchema = z.object({
+  request_id: uuidSchema.optional(),
   company_id: uuidSchema,
   service_id: uuidSchema,
   assigned_to_profile_id: uuidSchema.nullable().optional(),
@@ -49,19 +49,7 @@ export const updateOrderSchema = z
 
 export const changeOrderStatusSchema = z.object({
   status: orderStatusSchema,
-  completed_at: timestampSchema.optional(),
 });
-
-export function orderCompletionPatch(
-  status: OrderStatus,
-  requestedCompletion?: string,
-  now: () => Date = () => new Date(),
-): Pick<OrderRow, "status" | "completed_at"> {
-  return {
-    status,
-    completed_at: status === "complete" ? requestedCompletion ?? now().toISOString() : null,
-  };
-}
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ClientContactRow } from "../../lib/supabase/database.types.js";
+import type { ClientContactRow } from "../../lib/supabase/database-rows.js";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
@@ -11,6 +11,7 @@ export type ClientContact = ClientContactRow;
 const optionalContactText = nullableNonBlankTextSchema.optional();
 
 export const createContactSchema = z.object({
+  request_id: uuidSchema.optional(),
   company_id: uuidSchema,
   profile_id: uuidSchema.nullable().optional(),
   name: nonBlankTextSchema,

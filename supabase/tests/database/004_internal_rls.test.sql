@@ -37,6 +37,15 @@ where id = '10000000-0000-0000-0000-000000000001';
 insert into public.services (id, name, is_active)
 values ('40000000-0000-0000-0000-000000000010', 'Internal Inactive Service', false);
 
+create temporary table internal_rpc_ids (
+  contact_id uuid,
+  service_id uuid,
+  order_id uuid,
+  task_id uuid
+) on commit drop;
+insert into internal_rpc_ids default values;
+grant select, update on internal_rpc_ids to authenticated;
+
 -- Each internal application role is tested under the real authenticated
 -- PostgreSQL role and its own auth.uid(), rather than inferred from policy names.
 set local role authenticated;
@@ -50,7 +59,7 @@ select is(
   'owner can read inactive services'
 );
 select lives_ok(
-  $$insert into public.companies (name) values ('Owner-created Test Company')$$,
+  $$select public.app_create_company('84000000-0000-0000-0000-000000000001', 'Owner-created Test Client')$$,
   'owner can create an operational company'
 );
 
@@ -65,7 +74,7 @@ select is(
   'admin can read inactive services'
 );
 select lives_ok(
-  $$insert into public.companies (name) values ('Admin-created Test Company')$$,
+  $$select public.app_create_company('84000000-0000-0000-0000-000000000002', 'Admin-created Test Client')$$,
   'admin can create an operational company'
 );
 
@@ -80,7 +89,7 @@ select is(
   'manager can read inactive services'
 );
 select lives_ok(
-  $$insert into public.companies (name) values ('Manager-created Test Company')$$,
+  $$select public.app_create_company('84000000-0000-0000-0000-000000000003', 'Manager-created Test Client')$$,
   'manager can create an operational company'
 );
 
@@ -95,7 +104,7 @@ select is(
   'staff can read inactive services'
 );
 select lives_ok(
-  $$insert into public.companies (name) values ('Staff-created Test Company')$$,
+  $$select public.app_create_company('84000000-0000-0000-0000-000000000004', 'Staff-created Test Client')$$,
   'staff can create an operational company'
 );
 
@@ -104,91 +113,79 @@ select is((select count(*) from public.roles), 5::bigint, 'staff can read all sy
 
 select lives_ok(
   $$
-    insert into public.client_contacts (id, company_id, name)
-    values (
-      '35000000-0000-0000-0000-000000000010',
+    update internal_rpc_ids set contact_id = (public.app_create_contact(
+      '84000000-0000-0000-0000-000000000005',
       '30000000-0000-0000-0000-000000000010',
       'Staff-created Contact'
-    )
+    )).id
   $$,
   'staff can create a client contact'
 );
 
 select isnt_empty(
   $$
-    update public.client_contacts
-    set phone = '+1-555-0100'
-    where id = '35000000-0000-0000-0000-000000000010'
-    returning id
+    select public.app_update_contact(
+      (select contact_id from internal_rpc_ids),
+      '{"phone":"+1-555-0100"}'
+    )
   $$,
   'staff can update a client contact'
 );
 
 select lives_ok(
   $$
-    insert into public.services (id, name)
-    values ('40000000-0000-0000-0000-000000000020', 'Staff-created Service')
+    update internal_rpc_ids set service_id = (public.app_create_service(
+      '84000000-0000-0000-0000-000000000006', 'Staff-created Service'
+    )).id
   $$,
   'staff can create a service'
 );
 
 select isnt_empty(
   $$
-    update public.services
-    set description = 'Updated by staff test'
-    where id = '40000000-0000-0000-0000-000000000020'
-    returning id
+    select public.app_update_service(
+      (select service_id from internal_rpc_ids),
+      '{"description":"Updated by staff test"}'
+    )
   $$,
   'staff can update a service'
 );
 
 select lives_ok(
   $$
-    insert into public.orders (
-      id, company_id, service_id, assigned_to_profile_id, title
-    )
-    values (
-      '50000000-0000-0000-0000-000000000010',
+    update internal_rpc_ids set order_id = (public.app_create_order(
+      '84000000-0000-0000-0000-000000000007',
       '30000000-0000-0000-0000-000000000010',
-      '40000000-0000-0000-0000-000000000020',
-      '20000000-0000-0000-0000-000000000004',
-      'Staff-created Order'
-    )
+      (select service_id from internal_rpc_ids),
+      'Staff-created Project',
+      '20000000-0000-0000-0000-000000000004'
+    )).id
   $$,
   'staff can create and assign an order'
 );
 
 select isnt_empty(
   $$
-    update public.orders
-    set status = 'working', started_at = now()
-    where id = '50000000-0000-0000-0000-000000000010'
-    returning id
+    select public.app_change_order_status((select order_id from internal_rpc_ids), 'working')
   $$,
   'staff can update an order'
 );
 
 select lives_ok(
   $$
-    insert into public.order_tasks (
-      id, order_id, assigned_to_profile_id, title
-    )
-    values (
-      '60000000-0000-0000-0000-000000000010',
-      '50000000-0000-0000-0000-000000000010',
-      '20000000-0000-0000-0000-000000000004',
-      'Staff-created Task'
-    )
+    update internal_rpc_ids set task_id = (public.app_create_task(
+      '84000000-0000-0000-0000-000000000008',
+      (select order_id from internal_rpc_ids),
+      'Staff-created Task',
+      '20000000-0000-0000-0000-000000000004'
+    )).id
   $$,
   'staff can create and assign an order task'
 );
 
 select isnt_empty(
   $$
-    update public.order_tasks
-    set status = 'in_progress'
-    where id = '60000000-0000-0000-0000-000000000010'
-    returning id
+    select public.app_change_task_status((select task_id from internal_rpc_ids), 'in_progress')
   $$,
   'staff can update an order task'
 );
@@ -202,7 +199,7 @@ select lives_ok(
       '70000000-0000-0000-0000-000000000010',
       '20000000-0000-0000-0000-000000000001',
       'order',
-      '50000000-0000-0000-0000-000000000010',
+      (select order_id from internal_rpc_ids),
       'updated',
       'Staff updated the order',
       '2000-01-01 00:00:00+00'::timestamptz
@@ -256,28 +253,28 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$delete from public.client_contacts where id = '35000000-0000-0000-0000-000000000010'$$,
+  $$delete from public.client_contacts where id = (select contact_id from internal_rpc_ids)$$,
   '42501',
   'permission denied for table client_contacts',
   'internal users cannot hard-delete client contacts'
 );
 
 select throws_ok(
-  $$delete from public.services where id = '40000000-0000-0000-0000-000000000020'$$,
+  $$delete from public.services where id = (select service_id from internal_rpc_ids)$$,
   '42501',
   'permission denied for table services',
   'internal users cannot hard-delete services'
 );
 
 select throws_ok(
-  $$delete from public.orders where id = '50000000-0000-0000-0000-000000000010'$$,
+  $$delete from public.orders where id = (select order_id from internal_rpc_ids)$$,
   '42501',
   'permission denied for table orders',
   'internal users cannot hard-delete orders'
 );
 
 select throws_ok(
-  $$delete from public.order_tasks where id = '60000000-0000-0000-0000-000000000010'$$,
+  $$delete from public.order_tasks where id = (select task_id from internal_rpc_ids)$$,
   '42501',
   'permission denied for table order_tasks',
   'internal users cannot hard-delete order tasks'
@@ -303,12 +300,12 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, assigned_to_profile_id, title)
-    values (
+    select public.app_create_order(
+      '84000000-0000-0000-0000-000000000009',
       '30000000-0000-0000-0000-000000000010',
-      '40000000-0000-0000-0000-000000000020',
-      '10000000-0000-0000-0000-000000000001',
-      'Client-assigned Internal Order'
+      (select service_id from internal_rpc_ids),
+      'Client-assigned Internal Project',
+      '10000000-0000-0000-0000-000000000001'
     )
   $$,
   '23514',
@@ -318,12 +315,12 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, assigned_to_profile_id, title)
-    values (
+    select public.app_create_order(
+      '84000000-0000-0000-0000-000000000010',
       '30000000-0000-0000-0000-000000000010',
-      '40000000-0000-0000-0000-000000000020',
-      '20000000-0000-0000-0000-000000000005',
-      'Archived-assignee Internal Order'
+      (select service_id from internal_rpc_ids),
+      'Archived-assignee Internal Project',
+      '20000000-0000-0000-0000-000000000005'
     )
   $$,
   '23514',
@@ -333,11 +330,11 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.order_tasks (order_id, assigned_to_profile_id, title)
-    values (
-      '50000000-0000-0000-0000-000000000010',
-      '10000000-0000-0000-0000-000000000001',
-      'Client-assigned Internal Task'
+    select public.app_create_task(
+      '84000000-0000-0000-0000-000000000011',
+      (select order_id from internal_rpc_ids),
+      'Client-assigned Internal Task',
+      '10000000-0000-0000-0000-000000000001'
     )
   $$,
   '23514',
@@ -347,11 +344,11 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.order_tasks (order_id, assigned_to_profile_id, title)
-    values (
-      '50000000-0000-0000-0000-000000000010',
-      '20000000-0000-0000-0000-000000000005',
-      'Archived-assignee Internal Task'
+    select public.app_create_task(
+      '84000000-0000-0000-0000-000000000012',
+      (select order_id from internal_rpc_ids),
+      'Archived-assignee Internal Task',
+      '20000000-0000-0000-0000-000000000005'
     )
   $$,
   '23514',

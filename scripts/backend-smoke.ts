@@ -1,9 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { assertLocalSupabaseUrl, readServerEnvironment, type ServerEnvironment } from "../src/lib/env/index.js";
+import { assertLocalSupabaseUrl } from "../src/lib/env/public-env.js";
+import { readServerEnvironment, type ServerEnvironment } from "../src/lib/env/server-env.js";
 import type { Database } from "../src/lib/supabase/database.types.js";
 import { createTrustedServerSupabaseClient } from "../src/lib/supabase/trusted-server-client.js";
+import { createUserSupabaseClient, verifyActor } from "../src/lib/supabase/user-client.js";
 import { ActivityRepository } from "../src/repositories/activity-repository.js";
 import { CompanyRepository } from "../src/repositories/company-repository.js";
 import { ContactRepository } from "../src/repositories/contact-repository.js";
@@ -56,57 +58,114 @@ async function main(): Promise<void> {
   const suffix = randomUUID().slice(0, 8);
   const email = `phase2a-smoke-${suffix}@example.invalid`;
   const password = `LocalSmoke-${randomUUID()}`;
-  const { data: authData, error: authError } = await authAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-  if (authError || !authData.user) throw authError ?? new Error("Synthetic user was not created.");
+  const syntheticIds: {
+    company?: string;
+    contact?: string;
+    service?: string;
+    order?: string;
+    tasks: string[];
+  } = { tasks: [] };
+  let actorProfileId: string | undefined;
+  let output: Record<string, unknown> | undefined;
+  let workflowError: unknown;
+  const cleanupErrors: unknown[] = [];
 
-  const actorProfileId = authData.user.id;
-  const { data: ownerRole, error: roleError } = await trustedClient.from("roles").select("id").eq("name", "owner").single();
-  if (roleError || !ownerRole) throw roleError ?? new Error("Owner role was not found.");
-  const { error: profileError } = await trustedClient.from("profiles").update({ role_id: ownerRole.id }).eq("id", actorProfileId);
-  if (profileError) throw profileError;
+  try {
+    const { data: authData, error: authError } = await authAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (authError || !authData.user) throw authError ?? new Error("Synthetic user was not created.");
+    actorProfileId = authData.user.id;
 
-  const activity = new ActivityService(new ActivityRepository(trustedClient));
-  const context = { actorProfileId };
-  const companies = new CompanyService({ repository: new CompanyRepository(trustedClient), activity });
-  const contacts = new ContactService({ repository: new ContactRepository(trustedClient), activity });
-  const catalog = new CatalogService({ repository: new ServiceRepository(trustedClient), activity });
-  const orders = new OrderService({ repository: new OrderRepository(trustedClient), activity });
-  const tasks = new TaskService({ repository: new TaskRepository(trustedClient), activity });
+    const { data: ownerRole, error: roleError } = await trustedClient.from("roles").select("id").eq("name", "owner").single();
+    if (roleError || !ownerRole) throw roleError ?? new Error("Owner role was not found.");
+    const { error: profileError } = await trustedClient.from("profiles").update({ role_id: ownerRole.id }).eq("id", actorProfileId);
+    if (profileError) throw profileError;
 
-  const company = await companies.create({ name: `Synthetic Smoke Company ${suffix}` }, context);
-  const contact = await contacts.create({ company_id: company.id, name: "Synthetic Smoke Contact", email: `contact-${suffix}@example.invalid`, is_primary: true }, context);
-  const catalogService = await catalog.create({ name: `Synthetic Smoke Service ${suffix}`, description: "Local-only Phase 2A smoke record." }, context);
-  const order = await orders.create({ company_id: company.id, service_id: catalogService.id, title: "Synthetic smoke order", assigned_to_profile_id: actorProfileId }, context);
-  const firstTask = await tasks.create({ order_id: order.id, title: "Synthetic smoke task one", assigned_to_profile_id: actorProfileId, sort_position: 0 }, context);
-  const secondTask = await tasks.create({ order_id: order.id, title: "Synthetic smoke task two", assigned_to_profile_id: actorProfileId, sort_position: 1 }, context);
-  await orders.changeStatus(order.id, { status: "working" }, context);
-  await tasks.changeStatus(firstTask.id, { status: "complete" }, context);
-  const orderActivity = await activity.listTimeline("order", order.id);
-  const taskActivity = await activity.listTimeline("order_task", firstTask.id);
+    const authClient = createClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data: sessionData, error: signInError } = await authClient.auth.signInWithPassword({ email, password });
+    if (signInError || !sessionData.session) throw signInError ?? new Error("Synthetic user did not receive a local session.");
+    const userClient = createUserSupabaseClient(environment, sessionData.session.access_token);
+    const actor = await verifyActor(userClient);
+    if (actor.id !== actorProfileId) throw new Error("Verified actor did not match the local Auth user.");
 
-  // Application tables intentionally have no casual hard-delete path. Archive
-  // the top-level smoke records after exercising them; tasks become hidden with
-  // their archived parent order and all activity history remains intact.
-  await orders.archive(order.id, context);
-  await contacts.archive(contact.id, context);
-  await catalog.archive(catalogService.id, context);
-  await companies.archive(company.id, context);
-  const { error: authCleanupError } = await authAdmin.auth.admin.deleteUser(actorProfileId);
-  if (authCleanupError) throw authCleanupError;
+    const activity = new ActivityService(new ActivityRepository(userClient));
+    const companies = new CompanyService({ repository: new CompanyRepository(userClient) });
+    const contacts = new ContactService({ repository: new ContactRepository(userClient) });
+    const catalog = new CatalogService({ repository: new ServiceRepository(userClient) });
+    const orders = new OrderService({ repository: new OrderRepository(userClient) });
+    const tasks = new TaskService({ repository: new TaskRepository(userClient) });
 
-  console.log(JSON.stringify({
-    ok: true,
-    localOnly: true,
-    syntheticIds: { company: company.id, contact: contact.id, service: catalogService.id, order: order.id, tasks: [firstTask.id, secondTask.id] },
-    orderNumber: order.order_number,
-    activityEvents: orderActivity.length + taskActivity.length,
-    archivedAfterRun: true,
-    syntheticAuthUserRemoved: true,
-  }, null, 2));
+    const company = await companies.create({ request_id: randomUUID(), name: `Synthetic Smoke Company ${suffix}` }, actor);
+    syntheticIds.company = company.id;
+    const contact = await contacts.create({ request_id: randomUUID(), company_id: company.id, name: "Synthetic Smoke Contact", email: `contact-${suffix}@example.invalid`, is_primary: true }, actor);
+    syntheticIds.contact = contact.id;
+    const catalogService = await catalog.create({ request_id: randomUUID(), name: `Synthetic Smoke Service ${suffix}`, description: "Local-only Phase 2B smoke record." }, actor);
+    syntheticIds.service = catalogService.id;
+    const order = await orders.create({ request_id: randomUUID(), company_id: company.id, service_id: catalogService.id, title: "Synthetic smoke project", assigned_to_profile_id: actorProfileId }, actor);
+    syntheticIds.order = order.id;
+    const firstTask = await tasks.create({ request_id: randomUUID(), order_id: order.id, title: "Synthetic smoke task one", assigned_to_profile_id: actorProfileId, sort_position: 0 }, actor);
+    syntheticIds.tasks.push(firstTask.id);
+    const secondTask = await tasks.create({ request_id: randomUUID(), order_id: order.id, title: "Synthetic smoke task two", assigned_to_profile_id: actorProfileId, sort_position: 1 }, actor);
+    syntheticIds.tasks.push(secondTask.id);
+    await orders.update(order.id, { notes: "Atomic project update verified." }, actor);
+    await tasks.reorder(secondTask.id, { sort_position: 2 }, actor);
+    await orders.changeStatus(order.id, { status: "working" }, actor);
+    await tasks.changeStatus(firstTask.id, { status: "complete" }, actor);
+    const orderActivity = await activity.listTimeline("order", order.id);
+    const taskActivity = await activity.listTimeline("order_task", firstTask.id);
+
+    output = {
+      ok: true,
+      localOnly: true,
+      syntheticIds,
+      orderNumber: order.order_number,
+      activityEvents: orderActivity.length + taskActivity.length,
+      archivedAfterRun: true,
+      syntheticAuthUserRemoved: true,
+    };
+  } catch (error: unknown) {
+    workflowError = error;
+  } finally {
+    // Cleanup is exact-ID-only and uses the already local-asserted trusted
+    // client. Archival preserves append-only activity while removing every
+    // synthetic operational row from active application views.
+    const cleanupAttempts: Array<() => Promise<unknown>> = [
+      ...syntheticIds.tasks.map((id) => async () => trustedClient.from("order_tasks").update({ archived_at: new Date().toISOString() }).eq("id", id)),
+      async () => syntheticIds.order && trustedClient.from("orders").update({ archived_at: new Date().toISOString() }).eq("id", syntheticIds.order),
+      async () => syntheticIds.contact && trustedClient.from("client_contacts").update({ archived_at: new Date().toISOString(), is_primary: false }).eq("id", syntheticIds.contact),
+      async () => syntheticIds.service && trustedClient.from("services").update({ archived_at: new Date().toISOString(), is_active: false }).eq("id", syntheticIds.service),
+      async () => syntheticIds.company && trustedClient.from("companies").update({ archived_at: new Date().toISOString() }).eq("id", syntheticIds.company),
+    ];
+    for (const attempt of cleanupAttempts) {
+      try {
+        const result = await attempt() as { error?: unknown } | undefined;
+        if (result?.error) cleanupErrors.push(result.error);
+      } catch (error: unknown) {
+        cleanupErrors.push(error);
+      }
+    }
+    if (actorProfileId) {
+      try {
+        const { error } = await authAdmin.auth.admin.deleteUser(actorProfileId);
+        if (error) cleanupErrors.push(error);
+      } catch (error: unknown) {
+        cleanupErrors.push(error);
+      }
+    }
+  }
+
+  if (workflowError || cleanupErrors.length > 0) {
+    throw new AggregateError(
+      [...(workflowError ? [workflowError] : []), ...cleanupErrors],
+      "Smoke workflow or exact-ID cleanup failed.",
+    );
+  }
+  console.log(JSON.stringify(output, null, 2));
 }
 
 main().catch((error: unknown) => {

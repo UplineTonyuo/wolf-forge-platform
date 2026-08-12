@@ -1,13 +1,19 @@
+import { randomUUID } from "node:crypto";
 import type { CreateServiceInput, UpdateServiceInput } from "../domain/services/schema.js";
-import type { ServiceRow } from "../lib/supabase/database.types.js";
+import type { ServiceRow } from "../lib/supabase/database-rows.js";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { DatabaseClient } from "./types.js";
+import type { UserMutationClient } from "./types.js";
 
 export class ServiceRepository {
-  constructor(private readonly client: DatabaseClient) {}
+  constructor(private readonly client: UserMutationClient) {}
 
   async create(input: CreateServiceInput): Promise<ServiceRow> {
-    return unwrapOne(await this.client.from("services").insert(input).select().single(), "Service");
+    return unwrapOne(await this.client.rpc("app_create_service", {
+      p_request_id: input.request_id ?? randomUUID(),
+      p_name: input.name,
+      p_description: input.description ?? undefined,
+      p_is_active: input.is_active,
+    }), "Service");
   }
 
   async getById(id: string): Promise<ServiceRow> {
@@ -26,12 +32,12 @@ export class ServiceRepository {
   }
 
   async update(id: string, input: UpdateServiceInput): Promise<ServiceRow> {
-    return unwrapOne(await this.client.from("services").update(input).eq("id", id).select().single(), "Service");
+    return unwrapOne(await this.client.rpc("app_update_service", { p_service_id: id, p_patch: input }), "Service");
   }
 
-  async archive(id: string, archivedAt: string): Promise<ServiceRow> {
+  async archive(id: string): Promise<ServiceRow> {
     return unwrapOne(
-      await this.client.from("services").update({ archived_at: archivedAt, is_active: false }).eq("id", id).select().single(),
+      await this.client.rpc("app_archive_service", { p_service_id: id }),
       "Service",
     );
   }

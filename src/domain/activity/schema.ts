@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ActivityEventRow, Json } from "../../lib/supabase/database.types.js";
+import type { Json } from "../../lib/supabase/database.types.js";
+import type { ActivityEventRow } from "../../lib/supabase/database-rows.js";
 import { nonBlankTextSchema, timestampSchema, uuidSchema } from "../shared.js";
 
 export const activityEntityTypes = [

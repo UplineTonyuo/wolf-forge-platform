@@ -1,16 +1,11 @@
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import type { ActivityWriter } from "./activity-service.js";
+import { assertVerifiedActor, type VerifiedActor } from "../lib/supabase/user-client.js";
 
-export interface MutationContext {
-  actorProfileId: string;
-}
+export type UserMutationActor = VerifiedActor;
 
-export function parseMutationContext(context: MutationContext): MutationContext {
-  return { actorProfileId: parseInput(uuidSchema, context.actorProfileId) };
+export function requireVerifiedActor(actor: UserMutationActor): void {
+  assertVerifiedActor(actor);
 }
 
 export type ServiceDependencies<Repository> = {
   repository: Repository;
-  activity: ActivityWriter;
-  now?: () => Date;
 };

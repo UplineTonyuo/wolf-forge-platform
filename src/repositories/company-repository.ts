@@ -1,14 +1,20 @@
+import { randomUUID } from "node:crypto";
 import type { CreateCompanyInput, UpdateCompanyInput } from "../domain/companies/schema.js";
-import type { CompanyRow } from "../lib/supabase/database.types.js";
+import type { CompanyRow } from "../lib/supabase/database-rows.js";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { DatabaseClient } from "./types.js";
+import type { UserMutationClient } from "./types.js";
 
 export class CompanyRepository {
-  constructor(private readonly client: DatabaseClient) {}
+  constructor(private readonly client: UserMutationClient) {}
 
   async create(input: CreateCompanyInput): Promise<CompanyRow> {
     return unwrapOne(
-      await this.client.from("companies").insert(input).select().single(),
+      await this.client.rpc("app_create_company", {
+        // The HTTP/UI layer can retain request_id across retries. Direct callers
+        // get a fresh key for a one-shot request when they omit it.
+        p_request_id: input.request_id ?? randomUUID(),
+        p_name: input.name,
+      }),
       "Company",
     );
   }
@@ -28,14 +34,14 @@ export class CompanyRepository {
 
   async update(id: string, input: UpdateCompanyInput): Promise<CompanyRow> {
     return unwrapOne(
-      await this.client.from("companies").update(input).eq("id", id).select().single(),
-      "Company",
+      await this.client.rpc("app_update_company", { p_company_id: id, p_patch: input }),
+      "Client",
     );
   }
 
-  async archive(id: string, archivedAt: string): Promise<CompanyRow> {
+  async archive(id: string): Promise<CompanyRow> {
     return unwrapOne(
-      await this.client.from("companies").update({ archived_at: archivedAt }).eq("id", id).select().single(),
+      await this.client.rpc("app_archive_company", { p_company_id: id }),
       "Company",
     );
   }

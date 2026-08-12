@@ -1,10 +1,9 @@
 import { z } from "zod";
-import type { OrderTaskRow } from "../../lib/supabase/database.types.js";
+import type { OrderTaskRow } from "../../lib/supabase/database-rows.js";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
   nullableTimestampSchema,
-  timestampSchema,
   uuidSchema,
 } from "../shared.js";
 
@@ -14,6 +13,7 @@ export type TaskStatus = z.infer<typeof taskStatusSchema>;
 export type OrderTask = OrderTaskRow;
 
 export const createTaskSchema = z.object({
+  request_id: uuidSchema.optional(),
   order_id: uuidSchema,
   assigned_to_profile_id: uuidSchema.nullable().optional(),
   title: nonBlankTextSchema,
@@ -32,21 +32,9 @@ export const updateTaskSchema = z
 
 export const changeTaskStatusSchema = z.object({
   status: taskStatusSchema,
-  completed_at: timestampSchema.optional(),
 });
 
 export const reorderTaskSchema = z.object({ sort_position: z.number().int().nonnegative() });
-
-export function taskCompletionPatch(
-  status: TaskStatus,
-  requestedCompletion?: string,
-  now: () => Date = () => new Date(),
-): Pick<OrderTaskRow, "status" | "completed_at"> {
-  return {
-    status,
-    completed_at: status === "complete" ? requestedCompletion ?? now().toISOString() : null,
-  };
-}
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;

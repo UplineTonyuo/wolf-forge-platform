@@ -130,20 +130,21 @@ select ok(
 select ok(
   (
     select bool_and(
-      not has_table_privilege('authenticated', table_name, 'TRUNCATE')
+      has_table_privilege('authenticated', table_name, 'SELECT')
+      and not has_table_privilege('authenticated', table_name, 'INSERT')
+      and not has_table_privilege('authenticated', table_name, 'UPDATE')
+      and not has_table_privilege('authenticated', table_name, 'DELETE')
+      and not has_table_privilege('authenticated', table_name, 'TRUNCATE')
     )
     from unnest(array[
-      'public.roles',
-      'public.profiles',
       'public.companies',
       'public.client_contacts',
       'public.services',
       'public.orders',
-      'public.order_tasks',
-      'public.activity_events'
-    ]) as application_tables(table_name)
+      'public.order_tasks'
+    ]) as operational_tables(table_name)
   ),
-  'authenticated has no TRUNCATE privilege on application tables'
+  'authenticated operational tables are SELECT-only outside audited RPCs'
 );
 
 select ok(
@@ -505,8 +506,8 @@ select throws_ok(
   'service_role cannot delete activity events'
 );
 
--- The internal authenticated path still generates identity values with only
--- sequence USAGE, while actor and time inputs are normalized defensively.
+-- Authenticated internal writes must use audited RPCs. Direct operational DML
+-- is denied even when RLS would otherwise recognize the caller as internal.
 reset role;
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
@@ -514,7 +515,7 @@ set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000001';
 
 select ok(private.is_internal_user(), 'the administered owner is recognized as internal');
 
-select isnt_empty(
+select throws_ok(
   $$
     insert into public.orders (id, company_id, service_id, title)
     values (
@@ -523,18 +524,17 @@ select isnt_empty(
       '40000000-0000-0000-0000-000000000001',
       'Authenticated Identity Order'
     )
-    returning order_number
   $$,
-  'an authorized internal user can generate an order identity number'
+  '42501',
+  'permission denied for table orders',
+  'an authenticated internal user cannot directly insert an order'
 );
 
-select ok(
-  (
-    select order_number > 0
-    from public.orders
-    where id = '50000000-0000-0000-0000-000000000002'
-  ),
-  'the authenticated internal order received a positive identity number'
+select throws_ok(
+  $$update public.orders set title = 'Mass bypass'$$,
+  '42501',
+  'permission denied for table orders',
+  'an authenticated internal user cannot mass-update projects without activity'
 );
 
 select throws_ok(

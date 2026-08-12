@@ -83,9 +83,21 @@ reset role;
 set local role authenticated;
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000001';
 
-select is((select count(*) from public.companies), 1::bigint, 'internal staff can read an archived company');
-select is((select count(*) from public.orders), 1::bigint, 'internal staff can read orders for an archived company');
-select is((select count(*) from public.order_tasks), 1::bigint, 'internal staff can read tasks for an archived company');
+select is(
+  (select count(*) from public.companies where id = '30000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'internal staff can read the fixture archived company'
+);
+select is(
+  (select count(*) from public.orders where id = '50000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'internal staff can read the fixture order for an archived company'
+);
+select is(
+  (select count(*) from public.order_tasks where id = '60000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'internal staff can read the fixture task for an archived company'
+);
 
 reset role;
 update public.companies

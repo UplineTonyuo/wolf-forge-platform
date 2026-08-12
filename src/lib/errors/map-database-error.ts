@@ -20,6 +20,8 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
   const databaseError = error as DatabaseErrorLike;
   switch (databaseError?.code) {
     case "PGRST116":
+    case "02000":
+    case "P0002":
       return new NotFoundError(resource, error);
     case "42501":
     case "PGRST301":

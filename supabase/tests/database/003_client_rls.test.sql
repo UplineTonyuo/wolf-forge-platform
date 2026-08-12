@@ -215,27 +215,29 @@ select throws_ok(
     )
   $$,
   '42501',
-  'new row violates row-level security policy for table "orders"',
+  'permission denied for table orders',
   'Client A cannot create an order'
 );
 
-select is_empty(
+select throws_ok(
   $$
     update public.orders
     set title = 'Client-mutated Company A Order'
     where id = '50000000-0000-0000-0000-000000000001'
-    returning id
   $$,
+  '42501',
+  'permission denied for table orders',
   'Client A cannot update its own company order'
 );
 
-select is_empty(
+select throws_ok(
   $$
     update public.orders
     set title = 'Client-mutated Company B Order'
     where id = '50000000-0000-0000-0000-000000000002'
-    returning id
   $$,
+  '42501',
+  'permission denied for table orders',
   'Client A cannot update another company order'
 );
 
@@ -252,17 +254,18 @@ select throws_ok(
     values ('50000000-0000-0000-0000-000000000001', 'Client-created Task')
   $$,
   '42501',
-  'new row violates row-level security policy for table "order_tasks"',
+  'permission denied for table order_tasks',
   'Client A cannot create an order task'
 );
 
-select is_empty(
+select throws_ok(
   $$
     update public.order_tasks
     set title = 'Client-mutated Task'
     where id = '60000000-0000-0000-0000-000000000001'
-    returning id
   $$,
+  '42501',
+  'permission denied for table order_tasks',
   'Client A cannot update an order task'
 );
 
@@ -276,17 +279,18 @@ select throws_ok(
 select throws_ok(
   $$insert into public.services (name) values ('Client-created Service')$$,
   '42501',
-  'new row violates row-level security policy for table "services"',
+  'permission denied for table services',
   'Client A cannot create services'
 );
 
-select is_empty(
+select throws_ok(
   $$
     update public.services
     set name = 'Client-mutated Service'
     where id = '40000000-0000-0000-0000-000000000001'
-    returning id
   $$,
+  '42501',
+  'permission denied for table services',
   'Client A cannot update services'
 );
 

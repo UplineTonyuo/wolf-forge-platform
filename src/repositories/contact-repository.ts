@@ -1,14 +1,24 @@
+import { randomUUID } from "node:crypto";
 import type { CreateContactInput, UpdateContactInput } from "../domain/contacts/schema.js";
-import type { ClientContactRow } from "../lib/supabase/database.types.js";
+import type { ClientContactRow } from "../lib/supabase/database-rows.js";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { DatabaseClient } from "./types.js";
+import type { UserMutationClient } from "./types.js";
 
 export class ContactRepository {
-  constructor(private readonly client: DatabaseClient) {}
+  constructor(private readonly client: UserMutationClient) {}
 
   async create(input: CreateContactInput): Promise<ClientContactRow> {
     return unwrapOne(
-      await this.client.from("client_contacts").insert(input).select().single(),
+      await this.client.rpc("app_create_contact", {
+        p_request_id: input.request_id ?? randomUUID(),
+        p_company_id: input.company_id,
+        p_name: input.name,
+        p_profile_id: input.profile_id ?? undefined,
+        p_email: input.email ?? undefined,
+        p_phone: input.phone ?? undefined,
+        p_job_title: input.job_title ?? undefined,
+        p_is_primary: input.is_primary,
+      }),
       "Client contact",
     );
   }
@@ -34,14 +44,14 @@ export class ContactRepository {
 
   async update(id: string, input: UpdateContactInput): Promise<ClientContactRow> {
     return unwrapOne(
-      await this.client.from("client_contacts").update(input).eq("id", id).select().single(),
+      await this.client.rpc("app_update_contact", { p_contact_id: id, p_patch: input }),
       "Client contact",
     );
   }
 
-  async archive(id: string, archivedAt: string): Promise<ClientContactRow> {
+  async archive(id: string): Promise<ClientContactRow> {
     return unwrapOne(
-      await this.client.from("client_contacts").update({ archived_at: archivedAt, is_primary: false }).eq("id", id).select().single(),
+      await this.client.rpc("app_archive_contact", { p_contact_id: id }),
       "Client contact",
     );
   }

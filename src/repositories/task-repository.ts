@@ -1,17 +1,26 @@
+import { randomUUID } from "node:crypto";
 import type { CreateTaskInput, UpdateTaskInput } from "../domain/tasks/schema.js";
-import type { OrderTaskRow } from "../lib/supabase/database.types.js";
+import type { OrderTaskRow } from "../lib/supabase/database-rows.js";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { DatabaseClient } from "./types.js";
+import type { UserMutationClient } from "./types.js";
 
 export class TaskRepository {
-  constructor(private readonly client: DatabaseClient) {}
+  constructor(private readonly client: UserMutationClient) {}
 
   async create(input: CreateTaskInput): Promise<OrderTaskRow> {
-    return unwrapOne(await this.client.from("order_tasks").insert(input).select().single(), "Order task");
+    return unwrapOne(await this.client.rpc("app_create_task", {
+      p_request_id: input.request_id ?? randomUUID(),
+      p_order_id: input.order_id,
+      p_title: input.title,
+      p_assigned_to_profile_id: input.assigned_to_profile_id ?? undefined,
+      p_description: input.description ?? undefined,
+      p_due_at: input.due_at ?? undefined,
+      p_sort_position: input.sort_position,
+    }), "Project task") as OrderTaskRow;
   }
 
   async getById(id: string): Promise<OrderTaskRow> {
-    return unwrapOne(await this.client.from("order_tasks").select().eq("id", id).single(), "Order task");
+    return unwrapOne(await this.client.from("order_tasks").select().eq("id", id).single(), "Order task") as OrderTaskRow;
   }
 
   async listForOrder(orderId: string): Promise<OrderTaskRow[]> {
@@ -23,18 +32,34 @@ export class TaskRepository {
         .is("archived_at", null)
         .order("sort_position")
         .order("created_at"),
-    );
+    ) as OrderTaskRow[];
   }
 
-  async update(id: string, input: UpdateTaskInput | Partial<OrderTaskRow>): Promise<OrderTaskRow> {
-    return unwrapOne(await this.client.from("order_tasks").update(input).eq("id", id).select().single(), "Order task");
+  async update(id: string, input: UpdateTaskInput): Promise<OrderTaskRow> {
+    return unwrapOne(await this.client.rpc("app_update_task", {
+      p_task_id: id,
+      p_patch: input,
+    }), "Project task") as OrderTaskRow;
   }
 
   async assign(id: string, profileId: string | null): Promise<OrderTaskRow> {
-    return this.update(id, { assigned_to_profile_id: profileId });
+    return unwrapOne(await this.client.rpc("app_assign_task", {
+      p_task_id: id,
+      p_assigned_to_profile_id: profileId ?? undefined,
+    }), "Order task") as OrderTaskRow;
+  }
+
+  async changeStatus(id: string, status: OrderTaskRow["status"]): Promise<OrderTaskRow> {
+    return unwrapOne(await this.client.rpc("app_change_task_status", {
+      p_task_id: id,
+      p_status: status,
+    }), "Project task") as OrderTaskRow;
   }
 
   async reorder(id: string, sortPosition: number): Promise<OrderTaskRow> {
-    return this.update(id, { sort_position: sortPosition });
+    return unwrapOne(
+      await this.client.rpc("app_reorder_task", { p_task_id: id, p_sort_position: sortPosition }),
+      "Project task",
+    ) as OrderTaskRow;
   }
 }

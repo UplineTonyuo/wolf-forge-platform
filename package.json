@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "supabase test db --local",
+    "types:db": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts",
+    "test:integration": "tsx scripts/phase2b-integration.ts",
     "lint:db": "supabase db lint --local --level error --fail-on error",
     "smoke:backend": "tsx scripts/backend-smoke.ts"
   },
