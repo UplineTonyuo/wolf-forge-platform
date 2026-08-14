@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { changeOrderStatusSchema } from "../domain/orders/schema.js";
-import { changeTaskStatusSchema } from "../domain/tasks/schema.js";
+﻿import { describe, expect, it } from "vitest";
+import { changeOrderStatusSchema } from "../domain/orders/schema";
+import { changeTaskStatusSchema } from "../domain/tasks/schema";
 
 describe("completion transitions", () => {
   it.each([changeOrderStatusSchema, changeTaskStatusSchema])(

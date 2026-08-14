@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import type { CreateCompanyInput, UpdateCompanyInput } from "../domain/companies/schema.js";
-import type { CompanyRow } from "../lib/supabase/database-rows.js";
-import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { UserMutationClient } from "./types.js";
+﻿import { randomUUID } from "node:crypto";
+import type { CreateCompanyInput, UpdateCompanyInput } from "../domain/companies/schema";
+import type { CompanyRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
 
 export class CompanyRepository {
   constructor(private readonly client: UserMutationClient) {}

@@ -149,7 +149,8 @@ update final_ids set contact_id = (public.app_create_contact(
   'Correction Contact'
 )).id;
 update final_ids set service_id = (public.app_create_service(
-  '83000000-0000-0000-0000-000000000012', 'Correction Service'
+  '83000000-0000-0000-0000-000000000012',
+  '{"name":"Correction Service"}'::jsonb
 )).id;
 update final_ids set order_id = (public.app_create_order(
   '83000000-0000-0000-0000-000000000013',

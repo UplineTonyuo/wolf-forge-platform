@@ -27,6 +27,18 @@ set role_id = (select id from public.roles where name = 'staff'),
     archived_at = now()
 where id = '20000000-0000-0000-0000-000000000005';
 
+-- This fixture is an explicitly capable project operator. Internal membership
+-- alone remains insufficient, as proved by 013_backend_permission_boundary.
+insert into public.profile_permission_overrides (
+  profile_id,
+  permission_key,
+  allowed
+)
+values
+  ('20000000-0000-0000-0000-000000000004', 'projects.create', true),
+  ('20000000-0000-0000-0000-000000000004', 'projects.edit', true),
+  ('20000000-0000-0000-0000-000000000004', 'projects.assign', true);
+
 insert into public.companies (id, name)
 values ('30000000-0000-0000-0000-000000000010', 'Internal Test Company');
 
@@ -45,6 +57,20 @@ create temporary table internal_rpc_ids (
 ) on commit drop;
 insert into internal_rpc_ids default values;
 grant select, update on internal_rpc_ids to authenticated;
+
+insert into public.client_contacts (
+  id,
+  company_id,
+  name
+)
+values (
+  '45000000-0000-0000-0000-000000000010',
+  '30000000-0000-0000-0000-000000000010',
+  'Private Contact Fixture'
+);
+
+update internal_rpc_ids
+set contact_id = '45000000-0000-0000-0000-000000000010';
 
 -- Each internal application role is tested under the real authenticated
 -- PostgreSQL role and its own auth.uid(), rather than inferred from policy names.
@@ -108,34 +134,53 @@ select lives_ok(
   'staff can create an operational company'
 );
 
-select is((select count(*) from public.profiles), 6::bigint, 'staff can read all test profiles');
+select is(
+  (
+    select count(*) from public.profiles
+    where id in (
+      '20000000-0000-0000-0000-000000000001',
+      '20000000-0000-0000-0000-000000000002',
+      '20000000-0000-0000-0000-000000000003',
+      '20000000-0000-0000-0000-000000000004',
+      '20000000-0000-0000-0000-000000000005',
+      '10000000-0000-0000-0000-000000000001'
+    )
+  ),
+  6::bigint,
+  'staff can read all test profiles'
+);
 select is((select count(*) from public.roles), 5::bigint, 'staff can read all system roles');
 
-select lives_ok(
+select throws_ok(
   $$
-    update internal_rpc_ids set contact_id = (public.app_create_contact(
+    select public.app_create_contact(
       '84000000-0000-0000-0000-000000000005',
       '30000000-0000-0000-0000-000000000010',
       'Staff-created Contact'
-    )).id
+    )
   $$,
-  'staff can create a client contact'
+  '42501',
+  'permission denied: client_private.manage',
+  'staff cannot create a client-private contact without capability'
 );
 
-select isnt_empty(
+select throws_ok(
   $$
     select public.app_update_contact(
       (select contact_id from internal_rpc_ids),
       '{"phone":"+1-555-0100"}'
     )
   $$,
-  'staff can update a client contact'
+  '42501',
+  'permission denied: client_private.manage',
+  'staff cannot update a client-private contact without capability'
 );
 
 select lives_ok(
   $$
     update internal_rpc_ids set service_id = (public.app_create_service(
-      '84000000-0000-0000-0000-000000000006', 'Staff-created Service'
+      '84000000-0000-0000-0000-000000000006',
+      '{"name":"Staff-created Service"}'::jsonb
     )).id
   $$,
   'staff can create a service'

@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import type { CreateContactInput, UpdateContactInput } from "../domain/contacts/schema.js";
-import type { ClientContactRow } from "../lib/supabase/database-rows.js";
-import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { UserMutationClient } from "./types.js";
+﻿import { randomUUID } from "node:crypto";
+import type { CreateContactInput, UpdateContactInput } from "../domain/contacts/schema";
+import type { ClientContactRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
 
 export class ContactRepository {
   constructor(private readonly client: UserMutationClient) {}

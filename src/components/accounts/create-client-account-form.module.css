@@ -1,0 +1,365 @@
+.shell {
+  width: min(680px, 100%);
+  margin: 100px auto 48px;
+
+  border: 1px solid #e3e6ec;
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 16px 46px
+    rgba(0, 13, 81, 0.065);
+
+  overflow: hidden;
+}
+
+.header {
+  padding: 32px 32px 24px;
+}
+
+.header h1 {
+  margin: 0;
+
+  color: #000d51;
+
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.header p {
+  max-width: 500px;
+
+  margin: 9px 0 0;
+
+  color: #747c8c;
+
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.securityNote {
+  margin: 0 32px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 11px;
+
+  padding: 13px 14px;
+
+  border:
+    1px solid
+    rgba(215, 169, 40, 0.22);
+
+  border-radius: 11px;
+
+  background:
+    rgba(215, 169, 40, 0.055);
+
+  color: #000d51;
+}
+
+.securityNote > svg {
+  width: 17px;
+  height: 17px;
+
+  flex: 0 0 auto;
+
+  margin-top: 1px;
+
+  color: #a77910;
+}
+
+.securityNote div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.securityNote strong {
+  font-size: 10px;
+}
+
+.securityNote span {
+  color: #747c8c;
+
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  padding: 26px 32px 32px;
+}
+
+.grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.field {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.field label {
+  display: flex;
+  align-items: baseline;
+
+  gap: 5px;
+
+  color: #111a3f;
+
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.field label span {
+  color: #a1a7b3;
+
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.field input {
+  width: 100%;
+  min-height: 40px;
+
+  border:
+    1px solid #dfe3e9;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  padding: 0 11px;
+
+  color: #111a3f;
+
+  font: inherit;
+  font-size: 11px;
+
+  outline: none;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.field input:focus {
+  border-color:
+    rgba(0, 13, 81, 0.38);
+
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 13, 81, 0.055);
+}
+
+.field input[aria-invalid="true"] {
+  border-color: #b84343;
+}
+
+.fieldError {
+  margin: -1px 0 0;
+
+  color: #ad3030;
+
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.banner {
+  padding: 12px 13px;
+
+  border:
+    1px solid
+    rgba(173, 48, 48, 0.2);
+
+  border-radius: 9px;
+
+  background:
+    rgba(173, 48, 48, 0.055);
+
+  color: #8f2929;
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.passwordSection {
+  display: flex;
+  flex-direction: column;
+
+  gap: 16px;
+
+  margin-top: 2px;
+
+  padding: 17px;
+
+  border: 1px solid #e7e9ee;
+  border-radius: 12px;
+
+  background: #fafbfc;
+}
+
+.passwordHeading {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 10px;
+}
+
+.passwordHeading > svg {
+  width: 16px;
+  height: 16px;
+
+  flex: 0 0 auto;
+
+  margin-top: 1px;
+
+  color: #000d51;
+}
+
+.passwordHeading div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.passwordHeading strong {
+  color: #000d51;
+
+  font-size: 10px;
+}
+
+.passwordHeading span {
+  color: #7c8492;
+
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 9px;
+
+  margin-top: 4px;
+}
+
+.cancel,
+.submit {
+  min-height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  border-radius: 9px;
+
+  padding: 0 15px;
+
+  font-size: 10px;
+  font-weight: 650;
+
+  text-decoration: none;
+
+  cursor: pointer;
+}
+
+.cancel {
+  border: 1px solid #dfe3e9;
+
+  background: #ffffff;
+
+  color: #40495d;
+}
+
+.submit {
+  border: 1px solid #000d51;
+
+  background: #000d51;
+
+  color: #ffffff;
+}
+
+.submit:disabled {
+  opacity: 0.58;
+  cursor: wait;
+}
+
+.submit svg {
+  width: 14px;
+  height: 14px;
+}
+
+.spinner {
+  animation:
+    clientProvisionSpin
+    800ms linear infinite;
+}
+
+@keyframes clientProvisionSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 680px) {
+  .shell {
+    margin-top: 78px;
+  }
+
+  .header {
+    padding: 24px 22px 20px;
+  }
+
+  .securityNote {
+    margin: 0 22px;
+  }
+
+  .form {
+    padding: 22px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel,
+  .submit {
+    width: 100%;
+  }
+}
+
+@media (
+  prefers-reduced-motion:
+  reduce
+) {
+  .spinner {
+    animation: none;
+  }
+}

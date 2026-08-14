@@ -3,7 +3,8 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/tests/**/*.test.ts"],
+    // Component tests opt into jsdom per file with a @vitest-environment docblock.
+    include: ["src/tests/**/*.test.ts", "src/tests/**/*.test.tsx"],
     restoreMocks: true,
   },
 });

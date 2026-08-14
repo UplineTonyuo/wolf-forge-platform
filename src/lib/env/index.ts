@@ -1,1 +1,1 @@
-export * from "./public-env.js";
+﻿export * from "./public-env";

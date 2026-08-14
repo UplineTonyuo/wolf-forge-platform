@@ -1,7 +1,7 @@
-import { z } from "zod";
-import type { Json } from "../../lib/supabase/database.types.js";
-import type { ActivityEventRow } from "../../lib/supabase/database-rows.js";
-import { nonBlankTextSchema, timestampSchema, uuidSchema } from "../shared.js";
+﻿import { z } from "zod";
+import type { Json } from "../../lib/supabase/database.types";
+import type { ActivityEventRow } from "../../lib/supabase/database-rows";
+import { nonBlankTextSchema, timestampSchema, uuidSchema } from "../shared";
 
 export const activityEntityTypes = [
   "company",
@@ -10,6 +10,7 @@ export const activityEntityTypes = [
   "order",
   "order_task",
   "profile",
+  "ticket",
 ] as const;
 export const activityEntityTypeSchema = z.enum(activityEntityTypes);
 
@@ -32,6 +33,13 @@ export const activityActions = [
   "task.updated",
   "task.status_changed",
   "task.assigned",
+  "ticket.created",
+  "ticket.replied",
+  "ticket.internal_note_added",
+  "ticket.assigned",
+  "ticket.status_changed",
+  "ticket.priority_changed",
+  "ticket.archived",
 ] as const;
 export const activityActionSchema = z.enum(activityActions);
 

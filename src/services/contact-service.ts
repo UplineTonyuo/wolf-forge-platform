@@ -1,7 +1,7 @@
-import { createContactSchema, updateContactSchema } from "../domain/contacts/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import { ContactRepository } from "../repositories/contact-repository.js";
-import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context.js";
+﻿import { createContactSchema, updateContactSchema } from "../domain/contacts/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { ContactRepository } from "../repositories/contact-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
 
 export class ContactService {
   constructor(private readonly dependencies: ServiceDependencies<ContactRepository>) {}

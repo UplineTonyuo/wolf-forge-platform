@@ -27,7 +27,7 @@ select ok(
       'public.app_archive_company(uuid)',
       'public.app_create_contact(uuid,uuid,text,uuid,text,text,text,boolean)',
       'public.app_archive_contact(uuid)',
-      'public.app_create_service(uuid,text,text,boolean)',
+      'public.app_create_service(uuid,jsonb)',
       'public.app_archive_service(uuid)',
       'public.app_create_order(uuid,uuid,uuid,text,uuid,text,timestamptz,timestamptz,text)',
       'public.app_change_order_status(uuid,text)',
@@ -73,7 +73,18 @@ select ok(
     from pg_proc
     where pronamespace = 'public'::regnamespace
       and proname like 'app_%'
-      and coalesce(proargnames, array[]::text[]) && array['actor_id', 'actor_profile_id', 'p_actor_id', 'p_actor_profile_id']
+      and exists (
+        select 1
+        from generate_subscripts(proargnames, 1) as argument_index
+        where proargnames[argument_index] in (
+          'actor_id',
+          'actor_profile_id',
+          'p_actor_id',
+          'p_actor_profile_id'
+        )
+          and coalesce(proargmodes[argument_index], 'i'::"char")
+            in ('i'::"char", 'b'::"char", 'v'::"char")
+      )
   ),
   'no authenticated mutation RPC accepts a caller-supplied actor identity'
 );
@@ -101,7 +112,10 @@ select is((select actor_profile_id from public.activity_events where entity_id =
 update phase2b_ids set contact_id = (public.app_create_contact('82000000-0000-0000-0000-000000000002', (select company_id from phase2b_ids), 'Phase 2B Contact')).id;
 select is((select count(*) from public.activity_events where entity_id = (select contact_id from phase2b_ids) and action = 'contact.created'), 1::bigint, 'contact create and activity commit together');
 
-update phase2b_ids set service_id = (public.app_create_service('82000000-0000-0000-0000-000000000003', 'Phase 2B Service')).id;
+update phase2b_ids set service_id = (public.app_create_service(
+  '82000000-0000-0000-0000-000000000003',
+  '{"name":"Phase 2B Service"}'::jsonb
+)).id;
 select is((select count(*) from public.activity_events where entity_id = (select service_id from phase2b_ids) and action = 'service.created'), 1::bigint, 'service create and activity commit together');
 
 update phase2b_ids set order_id = (public.app_create_order(

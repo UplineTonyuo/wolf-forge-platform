@@ -1,0 +1,901 @@
+.picker,
+.servicePicker {
+  position: relative;
+  min-width: 0;
+}
+
+.servicePicker {
+  display: grid;
+  gap: 9px;
+}
+
+
+/* ==========================================================
+   TRIGGERS
+   ========================================================== */
+
+.pickerTrigger {
+  width: 100%;
+  min-height: 48px;
+
+  display: grid;
+  grid-template-columns:
+    34px
+    minmax(0, 1fr)
+    24px;
+
+  align-items: center;
+  gap: 10px;
+
+  padding: 6px 11px;
+
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbfcfe 100%
+    );
+
+  color: #1c2742;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 1px 0
+      rgba(255, 255, 255, 0.9);
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 180ms ease,
+    transform 140ms ease,
+    background-color 160ms ease;
+}
+
+.pickerTrigger:hover:not(:disabled) {
+  border-color: #c1c8d5;
+
+  box-shadow:
+    0 6px 16px
+      rgba(0, 13, 81, 0.055);
+
+  transform: translateY(-1px);
+}
+
+.pickerTrigger:active:not(:disabled) {
+  transform: scale(0.995);
+}
+
+.pickerTriggerOpen {
+  border-color:
+    rgba(0, 13, 81, 0.38);
+
+  box-shadow:
+    0 0 0 3px
+      rgba(0, 13, 81, 0.055),
+    0 8px 20px
+      rgba(0, 13, 81, 0.07);
+}
+
+.pickerTrigger:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.58;
+
+  background: #f6f7f9;
+}
+
+.pickerInvalid {
+  border-color:
+    #c95b5b !important;
+}
+
+
+/* ==========================================================
+   ICON
+   ========================================================== */
+
+.primaryIcon {
+  width: 32px;
+  height: 32px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 7px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #f4f6fb,
+      #edf0f7
+    );
+
+  color: #000d51;
+
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease;
+}
+
+.pickerTriggerOpen
+.primaryIcon {
+  background:
+    linear-gradient(
+      180deg,
+      #fffdf6,
+      #faf4e2
+    );
+
+  transform: scale(1.04);
+}
+
+
+/* ==========================================================
+   COPY
+   ========================================================== */
+
+.triggerCopy {
+  min-width: 0;
+
+  display: grid;
+  gap: 3px;
+}
+
+.triggerCopy small {
+  color: #9098a9;
+
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 800;
+
+  letter-spacing: 0.08em;
+}
+
+.triggerCopy strong {
+  overflow: hidden;
+
+  color: #1c2742;
+
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 660;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ==========================================================
+   CHEVRON
+   ========================================================== */
+
+.chevron,
+.chevronOpen {
+  justify-self: end;
+
+  color: #7f899c;
+
+  transition:
+    transform
+      220ms
+      cubic-bezier(
+        0.16,
+        1,
+        0.3,
+        1
+      ),
+    color 160ms ease;
+}
+
+.chevronOpen {
+  color: #000d51;
+
+  transform: rotate(180deg);
+}
+
+
+/* ==========================================================
+   PANEL
+   ========================================================== */
+
+.panel {
+  position: absolute;
+
+  z-index: 5000;
+
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+
+  width: 100%;
+
+  max-height: 360px;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(0, 13, 81, 0.12);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.995);
+
+  box-shadow:
+    0 22px 50px
+      rgba(0, 13, 81, 0.14),
+    0 6px 18px
+      rgba(0, 13, 81, 0.06);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform:
+    translateY(-7px)
+    scale(0.985);
+
+  transform-origin:
+    top center;
+
+  transition:
+    opacity 155ms ease,
+    transform
+      210ms
+      cubic-bezier(
+        0.16,
+        1,
+        0.3,
+        1
+      ),
+    visibility
+      0s
+      linear
+      220ms;
+}
+
+.panelOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+
+  transform:
+    translateY(0)
+    scale(1);
+
+  transition:
+    opacity 155ms ease,
+    transform
+      210ms
+      cubic-bezier(
+        0.16,
+        1,
+        0.3,
+        1
+      ),
+    visibility
+      0s
+      linear
+      0s;
+}
+
+.panelAccent {
+  position: absolute;
+
+  top: 0;
+  right: 22px;
+  left: 22px;
+
+  height: 2px;
+
+  border-radius:
+    0 0 999px 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #c99f3f,
+      transparent
+    );
+}
+
+
+/* ==========================================================
+   SEARCH
+   ========================================================== */
+
+.searchHeader {
+  display: grid;
+  gap: 7px;
+
+  padding:
+    14px
+    14px
+    10px;
+
+  border-bottom:
+    1px solid
+    #eef0f4;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fafbfe,
+      #ffffff
+    );
+}
+
+.searchBox {
+  min-height: 40px;
+
+  display: grid;
+  grid-template-columns:
+    18px
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+  gap: 8px;
+
+  padding:
+    0
+    10px;
+
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #7f899b;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.searchBox:focus-within {
+  border-color:
+    rgba(0, 13, 81, 0.34);
+
+  box-shadow:
+    0 0 0 3px
+      rgba(0, 13, 81, 0.05);
+}
+
+.searchBox input {
+  width: 100%;
+  min-width: 0;
+
+  padding: 0;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+
+  color: #1b2640;
+
+  font-size: 12px;
+}
+
+.searchBox input::placeholder {
+  color: #9ca4b3;
+}
+
+.searchBox button {
+  width: 26px;
+  height: 26px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #8790a1;
+
+  cursor: pointer;
+}
+
+.searchBox button:hover {
+  background: #f1f3f7;
+
+  color: #000d51;
+}
+
+.searchMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  padding-left: 2px;
+
+  color: #929bad;
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+
+/* ==========================================================
+   FLAT RESULTS
+   No boxes per option.
+   ========================================================== */
+
+.resultList {
+  max-height: 275px;
+
+  overflow-y: auto;
+
+  padding: 5px 0;
+
+  scrollbar-width: thin;
+
+  scrollbar-color:
+    rgba(0, 13, 81, 0.15)
+    transparent;
+}
+
+.resultRow {
+  --row-index: 0;
+
+  width: 100%;
+  min-height: 47px;
+
+  display: grid;
+
+  grid-template-columns:
+    32px
+    minmax(0, 1fr)
+    24px;
+
+  align-items: center;
+  gap: 10px;
+
+  padding:
+    5px
+    14px;
+
+  border: 0;
+  border-bottom:
+    1px solid
+    rgba(0, 13, 81, 0.045);
+
+  border-radius: 0;
+
+  background: transparent;
+
+  color: #26314a;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  opacity: 0;
+
+  transform:
+    translateY(5px);
+
+  animation:
+    pickerRowIn
+    230ms
+    cubic-bezier(
+      0.16,
+      1,
+      0.3,
+      1
+    )
+    forwards;
+
+  animation-delay:
+    calc(
+      var(--row-index) *
+      22ms
+    );
+
+  transition:
+    background-color 130ms ease,
+    color 130ms ease,
+    padding-left 150ms ease;
+}
+
+.resultRow:last-child {
+  border-bottom: 0;
+}
+
+.resultRow:hover {
+  padding-left: 17px;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 13, 81, 0.045),
+      rgba(0, 13, 81, 0.012)
+    );
+
+  color: #000d51;
+}
+
+.resultRowSelected {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(201, 159, 63, 0.10),
+      rgba(201, 159, 63, 0.025)
+    );
+}
+
+.rowIcon {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 7px;
+
+  background: #f1f3f8;
+
+  color: #000d51;
+}
+
+.resultRowSelected
+.rowIcon {
+  background: #fff7df;
+
+  color: #8c6812;
+}
+
+.rowCopy {
+  min-width: 0;
+
+  display: grid;
+  gap: 3px;
+}
+
+.rowCopy strong {
+  overflow: hidden;
+
+  font-size: 11px;
+  font-weight: 680;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowCopy small {
+  overflow: hidden;
+
+  color: #929aab;
+
+  font-size: 9px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowCheck {
+  width: 22px;
+  height: 22px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+
+  color: #000d51;
+}
+
+
+/* ==========================================================
+   FOLDER
+   ========================================================== */
+
+.folderPanel {
+  max-height: 370px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+
+  padding:
+    14px;
+
+  border-bottom:
+    1px solid
+    #eef0f4;
+
+  color: #000d51;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fafbfe,
+      #ffffff
+    );
+}
+
+.panelTitle > div {
+  display: grid;
+  gap: 3px;
+}
+
+.panelTitle strong {
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.panelTitle span {
+  color: #929bad;
+
+  font-size: 9px;
+}
+
+
+/* ==========================================================
+   FOLDER -> SERVICE FLOW
+   ========================================================== */
+
+.serviceFlow {
+  min-height: 24px;
+
+  display: flex;
+  align-items: center;
+
+  padding:
+    0
+    3px;
+
+  color: #8a93a5;
+
+  font-size: 9px;
+  font-weight: 720;
+
+  letter-spacing: 0.02em;
+}
+
+.flowStep {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  white-space: nowrap;
+}
+
+.stepNumber {
+  width: 19px;
+  height: 19px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #d9dee7;
+  border-radius: 999px;
+
+  background: #ffffff;
+
+  color: #7f899b;
+
+  font-size: 8px;
+
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.flowStepReady
+.stepNumber {
+  border-color:
+    rgba(201, 159, 63, 0.4);
+
+  background: #fff7df;
+
+  color: #80600f;
+
+  transform: scale(1.04);
+}
+
+.flowLine {
+  height: 1px;
+
+  flex: 1 1 auto;
+
+  margin:
+    0
+    8px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #e2e5ec,
+      #d1d6df,
+      #e2e5ec
+    );
+}
+
+.serviceStage {
+  opacity: 0.68;
+
+  transform:
+    translateY(-2px);
+
+  transition:
+    opacity 220ms ease,
+    transform
+      260ms
+      cubic-bezier(
+        0.16,
+        1,
+        0.3,
+        1
+      );
+}
+
+.serviceStageReady {
+  opacity: 1;
+
+  transform:
+    translateY(0);
+}
+
+
+/* ==========================================================
+   LOCKED CLIENT
+   ========================================================== */
+
+.lockedValue {
+  min-height: 48px;
+
+  display: grid;
+  grid-template-columns:
+    34px
+    minmax(0, 1fr);
+
+  align-items: center;
+  gap: 10px;
+
+  padding:
+    6px
+    11px;
+
+  border: 1px solid #e1e4ea;
+  border-radius: 8px;
+
+  background: #f7f8fa;
+}
+
+.lockedValue > span:last-child {
+  min-width: 0;
+
+  display: grid;
+  gap: 3px;
+}
+
+.lockedValue strong {
+  overflow: hidden;
+
+  color: #2b354d;
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lockedValue small {
+  color: #9098a9;
+
+  font-size: 9px;
+}
+
+
+/* ==========================================================
+   EMPTY
+   ========================================================== */
+
+.emptyResults {
+  min-height: 120px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  color: #8b94a6;
+
+  text-align: center;
+}
+
+.emptyResults strong {
+  margin-top: 8px;
+
+  color: #36405a;
+
+  font-size: 11px;
+}
+
+.emptyResults span {
+  margin-top: 4px;
+
+  font-size: 9px;
+}
+
+
+/* ==========================================================
+   ANIMATION
+   ========================================================== */
+
+@keyframes pickerRowIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media (max-width: 720px) {
+  .panel {
+    right: 0;
+    left: 0;
+
+    width: 100%;
+  }
+
+  .resultList {
+    max-height: 230px;
+  }
+}
+
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .pickerTrigger,
+  .primaryIcon,
+  .chevron,
+  .chevronOpen,
+  .panel,
+  .resultRow,
+  .serviceStage,
+  .stepNumber {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .resultRow {
+    opacity: 1;
+    transform: none;
+  }
+}

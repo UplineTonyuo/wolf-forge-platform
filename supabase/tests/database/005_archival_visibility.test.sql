@@ -58,7 +58,11 @@ select is((select count(*) from public.profiles), 1::bigint, 'active client can 
 select is((select count(*) from public.companies), 1::bigint, 'active client can read its company');
 select is((select count(*) from public.orders), 1::bigint, 'active client can read its order');
 select is((select count(*) from public.order_tasks), 1::bigint, 'active client can read its task');
-select is((select count(*) from public.services), 1::bigint, 'active client can read active services');
+select is(
+  (select count(*) from public.services where id = '40000000-0000-0000-0000-000000000001'),
+  1::bigint,
+  'active client can read the fixture active service'
+);
 
 reset role;
 update public.companies
@@ -90,16 +94,17 @@ select is(
 );
 select is(
   (select count(*) from public.orders where id = '50000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'internal staff can read the fixture order for an archived company'
+  0::bigint,
+  'unassigned client-private orders are not exposed by internal membership alone'
 );
 select is(
   (select count(*) from public.order_tasks where id = '60000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'internal staff can read the fixture task for an archived company'
+  0::bigint,
+  'unassigned client-private tasks are not exposed by internal membership alone'
 );
 
 reset role;
+set local "request.jwt.claim.sub" = '';
 update public.companies
 set archived_at = null
 where id = '30000000-0000-0000-0000-000000000001';
@@ -117,6 +122,7 @@ select is(
 );
 
 reset role;
+set local "request.jwt.claim.sub" = '';
 update public.orders
 set archived_at = null
 where id = '50000000-0000-0000-0000-000000000001';
@@ -130,6 +136,7 @@ select is((select count(*) from public.orders), 1::bigint, 'an active order rema
 select is((select count(*) from public.order_tasks), 0::bigint, 'an archived task is hidden from its client');
 
 reset role;
+set local "request.jwt.claim.sub" = '';
 update public.order_tasks
 set archived_at = null
 where id = '60000000-0000-0000-0000-000000000001';
@@ -144,9 +151,9 @@ select is((select count(*) from public.companies), 0::bigint, 'an archived clien
 select is((select count(*) from public.orders), 0::bigint, 'an archived client cannot read company orders');
 select is((select count(*) from public.order_tasks), 0::bigint, 'an archived client cannot read company tasks');
 select is(
-  (select count(*) from public.services),
+  (select count(*) from public.services where id = '40000000-0000-0000-0000-000000000001'),
   1::bigint,
-  'an archived profile can still read active services because the policy applies to authenticated users'
+  'an archived profile can still read the fixture active service because the policy applies to authenticated users'
 );
 
 select * from finish();

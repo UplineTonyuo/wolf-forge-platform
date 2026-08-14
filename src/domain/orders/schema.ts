@@ -1,11 +1,11 @@
-import { z } from "zod";
-import type { OrderRow } from "../../lib/supabase/database-rows.js";
+﻿import { z } from "zod";
+import type { OrderRow } from "../../lib/supabase/database-rows";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
   nullableTimestampSchema,
   uuidSchema,
-} from "../shared.js";
+} from "../shared";
 
 export const orderStatuses = [
   "pending",

@@ -1,4 +1,4 @@
-import { assertVerifiedActor, type VerifiedActor } from "../lib/supabase/user-client.js";
+﻿import { assertVerifiedActor, type VerifiedActor } from "../lib/supabase/user-client";
 
 export type UserMutationActor = VerifiedActor;
 

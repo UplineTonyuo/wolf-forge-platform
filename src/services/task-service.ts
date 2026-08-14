@@ -1,7 +1,7 @@
-import { changeTaskStatusSchema, createTaskSchema, reorderTaskSchema, updateTaskSchema } from "../domain/tasks/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import { TaskRepository } from "../repositories/task-repository.js";
-import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context.js";
+﻿import { changeTaskStatusSchema, createTaskSchema, reorderTaskSchema, updateTaskSchema } from "../domain/tasks/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { TaskRepository } from "../repositories/task-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
 
 export class TaskService {
   constructor(private readonly dependencies: ServiceDependencies<TaskRepository>) {}

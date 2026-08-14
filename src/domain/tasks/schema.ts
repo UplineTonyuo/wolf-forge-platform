@@ -1,11 +1,11 @@
-import { z } from "zod";
-import type { OrderTaskRow } from "../../lib/supabase/database-rows.js";
+﻿import { z } from "zod";
+import type { OrderTaskRow } from "../../lib/supabase/database-rows";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
   nullableTimestampSchema,
   uuidSchema,
-} from "../shared.js";
+} from "../shared";
 
 export const taskStatuses = ["todo", "in_progress", "blocked", "complete", "canceled"] as const;
 export const taskStatusSchema = z.enum(taskStatuses);

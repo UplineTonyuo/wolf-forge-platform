@@ -1,0 +1,854 @@
+.page {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 6px 0 42px;
+  color: #172039;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.pageHeader h1 {
+  margin: 7px 0 5px;
+  color: #091538;
+  font-family: var(--font-sora), sans-serif;
+  font-size: clamp(27px, 2.8vw, 34px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+.pageHeader p {
+  max-width: 620px;
+  margin: 0;
+  color: #737d94;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #9a7418;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.addButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #000d51;
+  border-radius: 8px;
+  background: #000d51;
+  color: #ffffff;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: #071a6d;
+}
+
+.summaryStrip {
+  display: flex;
+  align-items: stretch;
+  margin-top: 22px;
+  border: 1px solid #e4e7ef;
+  border-radius: 11px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.summaryStrip > div {
+  min-width: 108px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 17px;
+  border-right: 1px solid #eceef3;
+}
+
+.summaryStrip strong {
+  color: #000d51;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.summaryStrip span {
+  margin-top: 4px;
+  color: #9098aa;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.summaryStrip .summaryNote {
+  min-width: 0;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  border-right: 0;
+  color: #81899a;
+  font-size: 9px;
+}
+
+.summaryNote svg {
+  color: #b78a1d;
+}
+
+.viewBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 14px 0;
+  border-bottom: 1px solid #e6e9f0;
+}
+
+.viewButton,
+.viewActive {
+  position: relative;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: #788196;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.viewActive {
+  color: #000d51;
+}
+
+.viewActive::after {
+  content: "";
+  position: absolute;
+  right: 9px;
+  bottom: -1px;
+  left: 9px;
+  height: 2px;
+  border-radius: 999px;
+  background: #c69a2a;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #ead698;
+  border-radius: 8px;
+  background: #fffbf1;
+  color: #735810;
+  padding: 9px 11px;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.notice button {
+  border: 0;
+  background: transparent;
+  color: #8a6813;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.teamWorkspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 285px;
+  gap: 14px;
+  animation: reveal 210ms ease both;
+}
+
+.directoryPanel,
+.roleMap,
+.rolesRail,
+.permissionPanel {
+  border: 1px solid #e2e6ee;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 7px 24px rgb(18 33 77 / 4%);
+}
+
+.directoryPanel {
+  overflow: hidden;
+}
+
+.panelHeader,
+.roleMapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: 64px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #ebedf2;
+}
+
+.panelHeader h2,
+.roleMapHeader h2 {
+  margin: 0;
+  color: #17203b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.panelHeader p,
+.roleMapHeader p {
+  margin: 3px 0 0;
+  color: #969dae;
+  font-size: 9px;
+}
+
+.panelHeader > span {
+  color: #9ca3b1;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.searchRow {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid #eceef3;
+  padding: 0 16px;
+  color: #8992a6;
+  background: #fafbfc;
+}
+
+.searchRow input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #26304b;
+  font: inherit;
+  font-size: 10px;
+}
+
+.searchRow input::placeholder {
+  color: #a0a7b5;
+}
+
+.teamList {
+  display: grid;
+}
+
+.teamRow {
+  min-height: 59px;
+  display: grid;
+  grid-template-columns:
+    34px
+    minmax(0, 1fr)
+    90px
+    32px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 13px 7px 16px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.teamRow:last-child {
+  border-bottom: 0;
+}
+
+.teamRow:hover {
+  background: #fafbfc;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #07186d;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.memberCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.memberCopy strong {
+  overflow: hidden;
+  color: #202942;
+  font-size: 10.5px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberCopy span {
+  overflow: hidden;
+  color: #9098a9;
+  font-size: 8.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rolePill {
+  justify-self: start;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.roleOwner {
+  background: #eaf2ff;
+  color: #155aa7;
+}
+
+.roleAdmin {
+  background: #fff4d3;
+  color: #866414;
+}
+
+.roleManager {
+  background: #eef0f4;
+  color: #60697c;
+}
+
+.roleStaff {
+  background: #edf7f3;
+  color: #3d705e;
+}
+
+.roleClient {
+  background: #f2edff;
+  color: #6a56a0;
+}
+
+.moreButton {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dce1e9;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #778198;
+  cursor: pointer;
+}
+
+.moreButton:hover {
+  color: #000d51;
+  border-color: #bfc6d5;
+}
+
+.noResults {
+  padding: 42px 20px;
+  color: #8992a5;
+  font-size: 10px;
+  text-align: center;
+}
+
+.roleMap {
+  align-self: start;
+  overflow: hidden;
+}
+
+.roleMapHeader svg {
+  color: #b48920;
+}
+
+.roleMapList {
+  padding: 6px;
+}
+
+.roleMapRow {
+  width: 100%;
+  display: block;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.roleMapRow:hover {
+  background: #f7f8fb;
+}
+
+.roleMapTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roleMapTop > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roleMapTop strong {
+  color: #202a45;
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.roleMapTop span,
+.roleMapRow small {
+  color: #929aaa;
+  font-size: 8px;
+}
+
+.accessMeter {
+  height: 3px;
+  margin: 9px 0 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf0f4;
+}
+
+.accessMeter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #000d51;
+}
+
+.createRole {
+  width: calc(100% - 24px);
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 7px 12px 12px;
+  border: 1px dashed #ccd2de;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6e778c;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.createRole:hover {
+  border-color: #000d51;
+  color: #000d51;
+}
+
+.rolesWorkspace {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  animation: reveal 210ms ease both;
+}
+
+.rolesRail {
+  overflow: hidden;
+}
+
+.rolesRailTitle {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px 0 15px;
+  border-bottom: 1px solid #e9ecf2;
+}
+
+.rolesRailTitle span {
+  color: #6f788d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rolesRailTitle button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dde1e9;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #667087;
+  cursor: pointer;
+}
+
+.roleRailButton,
+.roleRailActive {
+  width: 100%;
+  min-height: 55px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-bottom: 1px solid #eff1f5;
+  background: #ffffff;
+  padding: 9px 13px 9px 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.roleRailActive {
+  background: #f3f5ff;
+  box-shadow: inset 3px 0 0 #000d51;
+}
+
+.roleRailButton > div,
+.roleRailActive > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.roleRailButton strong,
+.roleRailActive strong {
+  color: #26304b;
+  font-size: 10px;
+}
+
+.roleRailActive strong {
+  color: #000d51;
+}
+
+.roleRailButton span,
+.roleRailActive span {
+  color: #969dad;
+  font-size: 8px;
+}
+
+.permissionPanel {
+  overflow: hidden;
+}
+
+.permissionHeader {
+  min-height: 91px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e8ebf1;
+}
+
+.permissionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.permissionTitle h2 {
+  margin: 0;
+  color: #111d43;
+  font-family: var(--font-sora), sans-serif;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.permissionTitle span {
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #886713;
+  padding: 4px 7px;
+  font-size: 8px;
+  font-weight: 750;
+}
+
+.permissionHeader p {
+  max-width: 600px;
+  margin: 6px 0 0;
+  color: #858da0;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.permissionScore {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.permissionScore strong {
+  color: #000d51;
+  font-size: 19px;
+}
+
+.permissionScore span {
+  color: #9aa1af;
+  font-size: 8px;
+}
+
+.permissionBody {
+  padding: 0 20px;
+}
+
+.permissionGroup {
+  display: grid;
+  grid-template-columns: 155px minmax(0, 1fr);
+  gap: 20px;
+  padding: 17px 0;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.permissionGroup:last-child {
+  border-bottom: 0;
+}
+
+.groupCopy h3 {
+  margin: 0;
+  color: #29334e;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.groupCopy p {
+  margin: 4px 0 0;
+  color: #989faf;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.permissionOptions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.permissionOn,
+.permissionOff {
+  min-height: 33px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #697287;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.permissionOff:hover {
+  background: #f8f9fb;
+}
+
+.permissionOn {
+  background: #f6f7fb;
+  color: #28334f;
+}
+
+.permissionOn > span,
+.permissionOff > span {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cbd1dd;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.permissionOn > span {
+  border-color: #c69a2a;
+  background: #c69a2a;
+  color: #ffffff;
+}
+
+.permissionFooter {
+  min-height: 61px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid #e9ecf1;
+  background: #fafbfc;
+  padding: 11px 20px;
+}
+
+.permissionFooter > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #8a92a4;
+  font-size: 9px;
+}
+
+.permissionFooter svg {
+  color: #b48920;
+}
+
+.permissionFooter > button {
+  min-height: 34px;
+  border: 1px solid #000d51;
+  border-radius: 7px;
+  background: #000d51;
+  color: #ffffff;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .teamWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .roleMap {
+    order: -1;
+  }
+
+  .roleMapList {
+    display: grid;
+    grid-template-columns:
+      repeat(5, minmax(0, 1fr));
+  }
+
+  .rolesWorkspace {
+    grid-template-columns: 1fr;
+  }
+
+  .rolesRail {
+    display: grid;
+    grid-template-columns:
+      repeat(5, minmax(90px, 1fr));
+    overflow-x: auto;
+  }
+
+  .rolesRailTitle {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .pageHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addButton {
+    align-self: flex-start;
+  }
+
+  .summaryStrip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .summaryStrip > div {
+    min-width: 0;
+  }
+
+  .summaryStrip .summaryNote {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    border-top: 1px solid #eceef3;
+  }
+
+  .viewBar {
+    overflow-x: auto;
+  }
+
+  .teamRow {
+    grid-template-columns:
+      32px
+      minmax(0, 1fr)
+      auto;
+  }
+
+  .moreButton {
+    display: none;
+  }
+
+  .roleMapList {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .permissionGroup {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .permissionOptions {
+    grid-template-columns: 1fr;
+  }
+}
+.directoryAddButton {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #000d51;
+  border-radius: 7px;
+  background: #000d51;
+  color: #ffffff;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.directoryAddButton:hover {
+  background: #071a6d;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 12px rgb(0 13 81 / 14%);
+}
+
+.directoryAddButton:active {
+  transform: translateY(0);
+}

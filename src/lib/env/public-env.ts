@@ -6,9 +6,10 @@ const publicEnvironmentSchema = z.object({
 });
 
 export type PublicEnvironment = z.infer<typeof publicEnvironmentSchema>;
+export type EnvironmentSource = Record<string, string | undefined>;
 
 export function readPublicEnvironment(
-  source: NodeJS.ProcessEnv = process.env,
+  source: EnvironmentSource = process.env,
 ): PublicEnvironment {
   return publicEnvironmentSchema.parse(source);
 }

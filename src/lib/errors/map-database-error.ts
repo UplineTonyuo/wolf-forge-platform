@@ -1,11 +1,11 @@
-import {
+﻿import {
   ApplicationError,
   ConflictError,
   DatabaseError,
   NotFoundError,
   PermissionDeniedError,
   ValidationError,
-} from "./application-error.js";
+} from "./application-error";
 
 export interface DatabaseErrorLike {
   code?: string;
@@ -31,6 +31,7 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
     case "23503":
       return new ConflictError("The operation conflicts with a related record.", error);
     case "23514":
+    case "22023":
     case "22P02":
       return new ValidationError("The data violates a database constraint.", error);
     default:

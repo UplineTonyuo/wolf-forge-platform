@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import type { OrderRow, OrderTaskRow } from "../lib/supabase/database-rows.js";
-import { createUserSupabaseClient, verifyActor } from "../lib/supabase/user-client.js";
-import { OrderService } from "../services/order-service.js";
-import { TaskService } from "../services/task-service.js";
-import { CompanyService } from "../services/company-service.js";
-import { ContactService } from "../services/contact-service.js";
-import { CatalogService } from "../services/catalog-service.js";
+﻿import { describe, expect, it, vi } from "vitest";
+import type { OrderRow, OrderTaskRow } from "../lib/supabase/database-rows";
+import { createUserSupabaseClient, verifyActor } from "../lib/supabase/user-client";
+import { OrderService } from "../services/order-service";
+import { TaskService } from "../services/task-service";
+import { CompanyService } from "../services/company-service";
+import { ContactService } from "../services/contact-service";
+import { CatalogService } from "../services/catalog-service";
 
 const actorId = "20000000-0000-4000-8000-000000000001";
 const entityId = "50000000-0000-4000-8000-000000000001";
@@ -29,6 +29,67 @@ function task(status: OrderTaskRow["status"], completion: string | null): OrderT
 }
 
 describe("atomic service orchestration", () => {
+  it("delegates retry-safe service create with folder assignment", async () => {
+    const actor = await verifiedActor();
+    const repository = { create: vi.fn().mockResolvedValue({ id: entityId }) };
+    const service = new CatalogService({ repository: repository as never });
+
+    await service.create({
+      request_id: actorId,
+      name: "SEO Sprint",
+      folder_id: entityId,
+      price: 97,
+      currency: "USD",
+    }, actor);
+
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
+      request_id: actorId,
+      name: "SEO Sprint",
+      folder_id: entityId,
+      price: 97,
+    }));
+  });
+
+  it("delegates folder create and edit through audited repository operations", async () => {
+    const actor = await verifiedActor();
+    const repository = {
+      createFolder: vi.fn().mockResolvedValue({ id: entityId }),
+      updateFolder: vi.fn().mockResolvedValue({ id: entityId }),
+    };
+    const service = new CatalogService({ repository: repository as never });
+
+    await service.createFolder({ request_id: actorId, name: "SEO Sprints" }, actor);
+    await service.updateFolder(entityId, { description: "Edited" }, actor);
+
+    expect(repository.createFolder).toHaveBeenCalledWith(expect.objectContaining({ name: "SEO Sprints", sort_order: 0 }));
+    expect(repository.updateFolder).toHaveBeenCalledWith(entityId, { description: "Edited" });
+  });
+
+  it("delegates service duplication with its stable request id", async () => {
+    const actor = await verifiedActor();
+    const repository = { duplicate: vi.fn().mockResolvedValue({ id: actorId }) };
+    const service = new CatalogService({ repository: repository as never });
+
+    await service.duplicate(entityId, actorId, actor);
+
+    expect(repository.duplicate).toHaveBeenCalledWith(entityId, actorId);
+  });
+
+  it("delegates service and folder soft deletes", async () => {
+    const actor = await verifiedActor();
+    const repository = {
+      archive: vi.fn().mockResolvedValue({ id: entityId }),
+      archiveFolder: vi.fn().mockResolvedValue({ id: actorId }),
+    };
+    const service = new CatalogService({ repository: repository as never });
+
+    await service.archive(entityId, actor);
+    await service.archiveFolder(actorId, actor);
+
+    expect(repository.archive).toHaveBeenCalledWith(entityId);
+    expect(repository.archiveFolder).toHaveBeenCalledWith(actorId);
+  });
+
   it("delegates order completion to one transactional repository operation", async () => {
     const actor = await verifiedActor();
     const repository = { changeStatus: vi.fn().mockResolvedValue(order("complete", completedAt)) };

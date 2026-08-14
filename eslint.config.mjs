@@ -1,0 +1,23 @@
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypeScript from "eslint-config-next/typescript";
+
+export default defineConfig([
+  ...nextVitals,
+  ...nextTypeScript,
+  {
+    files: ["src/app/**/*.tsx"],
+    rules: {
+      "react-hooks/error-boundaries": "off",
+    },
+  },
+  globalIgnores([
+    ".next/**",
+    ".agents/**",
+    ".codex/**",
+    "dist/**",
+    "coverage/**",
+    "supabase/.temp/**",
+    "src/lib/supabase/database.types.ts",
+  ]),
+]);

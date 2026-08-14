@@ -1,14 +1,48 @@
-import { changeOrderStatusSchema, createOrderSchema, updateOrderSchema } from "../domain/orders/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import { OrderRepository } from "../repositories/order-repository.js";
-import type { ListOrdersFilter } from "../repositories/types.js";
-import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context.js";
+﻿import { composeProjectRows, type ProjectListRow, type ProjectRelationRow } from "../domain/orders/projections";
+import { changeOrderStatusSchema, createOrderSchema, updateOrderSchema } from "../domain/orders/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { OrderRepository, type ProjectLabelRow } from "../repositories/order-repository";
+import type { ListOrdersFilter } from "../repositories/types";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
+
+export type ProjectListResult = {
+  rows: ProjectListRow[];
+  /**
+   * False when the row limit clipped the authorized dataset. Callers must then
+   * surface an incomplete-data state instead of presenting partial totals.
+   */
+  complete: boolean;
+  totalCount: number | null;
+};
 
 export class OrderService {
   constructor(private readonly dependencies: ServiceDependencies<OrderRepository>) {}
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   list(filter?: ListOrdersFilter) { return this.dependencies.repository.list(filter); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }
+
+  async getWithRelations(id: unknown): Promise<ProjectRelationRow> {
+    return this.dependencies.repository.getWithRelations(parseInput(uuidSchema, id));
+  }
+
+  async listLabels(ids: string[]): Promise<ProjectLabelRow[]> {
+    return this.dependencies.repository.listLabels(ids.map((id) => parseInput(uuidSchema, id)));
+  }
+
+  /**
+   * The authoritative Projects read model: one embedded query for the projects
+   * plus one batched query for their tasks, regardless of row count.
+   */
+  async listProjects(filter?: ListOrdersFilter): Promise<ProjectListResult> {
+    const page = await this.dependencies.repository.listWithRelations(filter);
+    const taskFacts = await this.dependencies.repository.listTaskFacts(page.rows.map((row) => row.id));
+
+    return {
+      rows: composeProjectRows(page.rows, taskFacts),
+      complete: page.totalCount === null || page.totalCount <= page.rows.length,
+      totalCount: page.totalCount,
+    };
+  }
 
   async create(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);

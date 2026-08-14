@@ -1,23 +1,23 @@
-import { execFileSync } from "node:child_process";
+﻿import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { assertLocalSupabaseUrl } from "../src/lib/env/public-env.js";
-import { readServerEnvironment, type ServerEnvironment } from "../src/lib/env/server-env.js";
-import type { Database } from "../src/lib/supabase/database.types.js";
-import { createTrustedServerSupabaseClient } from "../src/lib/supabase/trusted-server-client.js";
-import { createUserSupabaseClient, verifyActor } from "../src/lib/supabase/user-client.js";
-import { ActivityRepository } from "../src/repositories/activity-repository.js";
-import { CompanyRepository } from "../src/repositories/company-repository.js";
-import { ContactRepository } from "../src/repositories/contact-repository.js";
-import { OrderRepository } from "../src/repositories/order-repository.js";
-import { ServiceRepository } from "../src/repositories/service-repository.js";
-import { TaskRepository } from "../src/repositories/task-repository.js";
-import { ActivityService } from "../src/services/activity-service.js";
-import { CatalogService } from "../src/services/catalog-service.js";
-import { CompanyService } from "../src/services/company-service.js";
-import { ContactService } from "../src/services/contact-service.js";
-import { OrderService } from "../src/services/order-service.js";
-import { TaskService } from "../src/services/task-service.js";
+import { assertLocalSupabaseUrl } from "../src/lib/env/public-env";
+import { readServerEnvironment, type ServerEnvironment } from "../src/lib/env/server-env";
+import type { Database } from "../src/lib/supabase/database.types";
+import { createTrustedServerSupabaseClient } from "../src/lib/supabase/trusted-server-client";
+import { createUserSupabaseClient, verifyActor } from "../src/lib/supabase/user-client";
+import { ActivityRepository } from "../src/repositories/activity-repository";
+import { CompanyRepository } from "../src/repositories/company-repository";
+import { ContactRepository } from "../src/repositories/contact-repository";
+import { OrderRepository } from "../src/repositories/order-repository";
+import { ServiceRepository } from "../src/repositories/service-repository";
+import { TaskRepository } from "../src/repositories/task-repository";
+import { ActivityService } from "../src/services/activity-service";
+import { CatalogService } from "../src/services/catalog-service";
+import { CompanyService } from "../src/services/company-service";
+import { ContactService } from "../src/services/contact-service";
+import { OrderService } from "../src/services/order-service";
+import { TaskService } from "../src/services/task-service";
 
 function localEnvironment(): ServerEnvironment {
   if (process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY && process.env.SUPABASE_SECRET_KEY) {

@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import type { CreateTaskInput, UpdateTaskInput } from "../domain/tasks/schema.js";
-import type { OrderTaskRow } from "../lib/supabase/database-rows.js";
-import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { UserMutationClient } from "./types.js";
+﻿import { randomUUID } from "node:crypto";
+import type { CreateTaskInput, UpdateTaskInput } from "../domain/tasks/schema";
+import type { OrderTaskRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
 
 export class TaskRepository {
   constructor(private readonly client: UserMutationClient) {}

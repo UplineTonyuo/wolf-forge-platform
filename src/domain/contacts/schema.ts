@@ -1,10 +1,10 @@
-import { z } from "zod";
-import type { ClientContactRow } from "../../lib/supabase/database-rows.js";
+﻿import { z } from "zod";
+import type { ClientContactRow } from "../../lib/supabase/database-rows";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
   uuidSchema,
-} from "../shared.js";
+} from "../shared";
 
 export type ClientContact = ClientContactRow;
 

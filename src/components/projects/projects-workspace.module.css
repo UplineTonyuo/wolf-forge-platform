@@ -1,0 +1,1511 @@
+.workspace {
+  width: 100%;
+}
+
+.attentionStrip {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+  border: 1px solid #e6e9f0;
+  border-left: 3px solid #c89a2b;
+  border-radius: 9px;
+  background: #fafbfc;
+  padding: 0 13px 0 15px;
+}
+
+.attentionStrip > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #657086;
+  font-size: 10px;
+}
+
+.attentionStrip svg {
+  color: #a57d18;
+}
+
+.attentionStrip strong {
+  color: #111b3f;
+  font-size: 11px;
+}
+
+.attentionStrip button {
+  min-height: 30px;
+  border: 1px solid #d8dde6;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #29344e;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+  border: 1px solid #ead698;
+  border-radius: 8px;
+  background: #fffbf1;
+  color: #745a13;
+  padding: 9px 11px;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.notice button {
+  border: 0;
+  background: transparent;
+  color: #896814;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.controlRow {
+  min-height: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #e5e8ef;
+}
+
+.statusTabs {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  overflow: visible;
+  scrollbar-width: none;
+}
+
+.statusTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.statusTab,
+.statusTabActive {
+  position: relative;
+  min-height: 45px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #7d8699;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.statusTab:hover {
+  color: #26304c;
+}
+
+.statusTabActive {
+  color: #000d51;
+}
+
+.statusTabActive::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  bottom: -1px;
+  left: 7px;
+  height: 2px;
+  border-radius: 999px;
+  background: #c89a2b;
+}
+
+.statusTab span,
+.statusTabActive span {
+  min-width: 19px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef0f4;
+  color: #778095;
+  padding: 0 5px;
+  font-size: 8px;
+}
+
+.statusTabActive span {
+  background: #eef1ff;
+  color: #000d51;
+}
+
+.toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 6px;
+}
+
+.toolbarMenu {
+  position: relative;
+}
+
+.toolbarButton,
+.toolbarButtonActive {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #34405b;
+  padding: 0 11px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.toolbarButtonActive {
+  border-color: #000d51;
+  color: #000d51;
+}
+
+.toolbarButton > span,
+.toolbarButtonActive > span {
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: #c89a2b;
+  color: #ffffff;
+  font-size: 8px;
+}
+
+.actionsMenu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 165px;
+  overflow: hidden;
+  border: 1px solid #e0e4ec;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(16 29 68 / 12%);
+}
+
+.actionsMenu button {
+  width: 100%;
+  min-height: 37px;
+  display: block;
+  border: 0;
+  border-bottom: 1px solid #eef0f4;
+  background: #ffffff;
+  color: #4a556e;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.actionsMenu button:last-child {
+  border-bottom: 0;
+}
+
+.actionsMenu button:hover {
+  background: #f7f8fb;
+  color: #000d51;
+}
+
+.filterPanel {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.25fr)
+    minmax(140px, 1fr)
+    minmax(140px, 1fr)
+    minmax(140px, 1fr)
+    auto
+    auto;
+  align-items: end;
+  gap: 10px;
+  margin: 10px 0;
+  border: 1px solid #e2e6ed;
+  border-radius: 9px;
+  background: #fafbfc;
+  padding: 11px;
+}
+
+.filterPanel > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filterPanel label {
+  color: #7f889a;
+  font-size: 8px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filterPanel select,
+.filterPanel input {
+  min-height: 33px;
+  width: 100%;
+  border: 1px solid #dce0e8;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #36405a;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.attentionFilter,
+.attentionFilterActive,
+.clearFilters {
+  min-height: 33px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 7px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attentionFilter {
+  border: 1px solid #dce0e8;
+  background: #ffffff;
+  color: #657086;
+}
+
+.attentionFilterActive {
+  border: 1px solid #c89a2b;
+  background: #fff9e9;
+  color: #7b5d10;
+}
+
+.clearFilters {
+  border: 0;
+  background: transparent;
+  color: #7d8698;
+}
+
+.tableCard {
+  overflow: hidden;
+  margin-top: 10px;
+  border: 1px solid #d5dbe7;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 5px 18px rgb(10 24 70 / 4%);
+}
+
+.tableHeader,
+.projectRow,
+.projectRowCanceled {
+  display: grid;
+  grid-template-columns:
+    26px
+    minmax(300px, 1fr)
+    150px
+    150px
+    90px
+    150px;
+  align-items: center;
+  gap: 12px;
+}
+
+.tableHeader {
+  min-height: 46px;
+  border-bottom: 1px solid #000d51;
+  background: #000d51;
+  padding: 0 14px;
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.tableHeader > span {
+  color: #ffffff;
+}
+
+.tableHeader .checkbox,
+.tableHeader .checkboxActive {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  color: #ffffff;
+}
+
+.tableHeader .checkbox:hover,
+.tableHeader .checkboxActive:hover {
+  border-color: #ffffff;
+}
+
+.projectRow,
+.projectRowCanceled {
+  min-height: 70px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.projectRow:last-child,
+.projectRowCanceled:last-child {
+  border-bottom: 0;
+}
+
+.projectRow:hover {
+  background: #f7f9fc;
+}
+
+.projectRowCanceled {
+  opacity: 0.57;
+}
+
+.checkbox,
+.checkboxActive {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cfd5df;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #ffffff;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkboxActive {
+  border-color: #000d51;
+  background: #000d51;
+}
+
+.projectIdentity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.projectIdentity strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: #1e2844;
+  font-size: 10.5px;
+  font-weight: 780;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectIdentity > span {
+  overflow: hidden;
+  max-width: 100%;
+  color: #5e6880;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectIdentity small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  color: #989faf;
+  font-size: 8px;
+}
+
+.projectIdentity small b {
+  color: #c89a2b;
+  font-weight: 900;
+}
+
+.personCell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #4f5970;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.avatar,
+.avatarEmpty {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: #07186d;
+  color: #ffffff;
+  font-size: 7.5px;
+  font-weight: 800;
+}
+
+.avatarEmpty {
+  border: 1px dashed #cbd2de;
+  background: #f5f6fa;
+  color: #99a1b2;
+}
+
+.unassigned {
+  color: #97a0b1;
+}
+
+.statusBadge {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.status_pending {
+  background: #f1f2f5;
+  color: #596277;
+}
+
+.status_submitted {
+  background: #fff8e4;
+  color: #84600a;
+}
+
+.status_working {
+  background: #edf0ff;
+  color: #000d51;
+}
+
+.status_waiting_reply {
+  border: 1px solid #e5cb73;
+  background: #fffdf5;
+  color: #80600d;
+}
+
+.status_pending_update {
+  background: #fff4d4;
+  color: #805f0a;
+}
+
+.status_complete {
+  background: #edf8f3;
+  color: #287054;
+}
+
+.status_canceled {
+  background: #f1f2f4;
+  color: #777f90;
+}
+
+.created {
+  color: #697286;
+  font-size: 9px;
+}
+
+.infoCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.infoCell > span,
+.infoCell > button {
+  min-width: 38px;
+  height: 27px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #dfe3eb;
+  border-right: 0;
+  background: #ffffff;
+  color: #8891a4;
+  font: inherit;
+  font-size: 8px;
+}
+
+.infoCell > span:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.infoCell > button {
+  border-right: 1px solid #dfe3eb;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+
+.infoCell > button:hover {
+  color: #000d51;
+}
+
+.emptyState {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #8991a2;
+}
+
+.emptyState strong {
+  color: #34405a;
+  font-size: 11px;
+}
+
+.emptyState span {
+  font-size: 9px;
+}
+
+.tableFooter {
+  min-height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e9ecf1;
+  background: #fafbfc;
+  padding: 0 14px;
+  color: #9098a9;
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.rowMenuWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.rowMenu {
+  position: absolute;
+  z-index: 45;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 168px;
+  overflow: hidden;
+  border: 1px solid #e0e4ec;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgb(16 29 68 / 12%);
+}
+
+.rowMenu a,
+.rowMenu button {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid #eef0f4;
+  background: #ffffff;
+  color: #4a556e;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 9px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rowMenu a:last-child,
+.rowMenu button:last-child {
+  border-bottom: 0;
+}
+
+.rowMenu a:hover,
+.rowMenu button:hover:not(:disabled) {
+  background: #f7f8fb;
+  color: #000d51;
+}
+
+.rowMenu button:disabled {
+  color: #b3b9c6;
+  cursor: not-allowed;
+}
+
+.actionsMenu button:disabled {
+  color: #b3b9c6;
+  cursor: not-allowed;
+}
+
+.truncationNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #e3c9c9;
+  border-radius: 8px;
+  background: #fdf6f6;
+  color: #7d3232;
+  padding: 9px 11px;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.resultPanel {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  border: 1px solid #dfe4ee;
+  border-radius: 9px;
+  background: #fbfcfe;
+  padding: 11px 12px;
+}
+
+.resultHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #26304c;
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.resultHeading button {
+  border: 0;
+  background: transparent;
+  color: #6c7689;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.resultNote {
+  color: #7d8698;
+  font-size: 8.5px;
+}
+
+.resultList {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resultList li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 9px;
+}
+
+.resultOk {
+  color: #2b6b52;
+}
+
+.resultFail {
+  color: #8c2f2f;
+}
+
+.resultFail em {
+  color: #97544e;
+  font-style: normal;
+}
+
+.dialogBackdrop {
+  position: fixed;
+  z-index: 400;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(10 18 45 / 38%);
+  padding: 20px;
+}
+
+.dialog {
+  width: min(100%, 380px);
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe4ee;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 18px;
+  box-shadow: 0 24px 60px rgb(10 24 70 / 22%);
+}
+
+.dialog h2 {
+  margin: 0;
+  color: #14204a;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.dialog p {
+  margin: 0;
+  color: #6b7488;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dialog label {
+  display: grid;
+  gap: 5px;
+  color: #7f889a;
+  font-size: 8px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dialog select {
+  min-height: 36px;
+  border: 1px solid #dce0e8;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #36405a;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 10px;
+}
+
+.dialogActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialogActions button {
+  min-height: 33px;
+  border-radius: 7px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.dialogCancel {
+  border: 1px solid #d9dee8;
+  background: #ffffff;
+  color: #4a556e;
+}
+
+.dialogConfirm {
+  border: 1px solid #000d51;
+  background: #000d51;
+  color: #ffffff;
+}
+
+.dialogConfirm:disabled,
+.dialogCancel:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 1050px) {
+  .tableHeader,
+  .projectRow,
+  .projectRowCanceled {
+    grid-template-columns:
+      26px
+      minmax(260px, 1fr)
+      130px
+      135px
+      80px
+      52px;
+  }
+
+  /* The task counter folds away; the row action menu must remain reachable. */
+  .infoCell > span {
+    display: none;
+  }
+
+  .infoCell > button {
+    border-left: 1px solid #dfe3eb;
+    border-radius: 6px;
+  }
+}
+
+@media (max-width: 760px) {
+  .controlRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .toolbar {
+    justify-content: flex-end;
+  }
+
+  .filterPanel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tableCard {
+    overflow-x: auto;
+  }
+
+  .tableHeader,
+  .projectRow,
+  .projectRowCanceled {
+    min-width: 720px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialogBackdrop,
+  .dialog {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* WF PROJECTS 4 VIEW RAIL START */
+
+
+/* ==========================================================
+   REMOVE REDUNDANT ATTENTION BANNER
+   ========================================================== */
+
+.attentionStrip {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   MAIN CONTROL ROW
+   ========================================================== */
+
+.controlRow {
+  min-height: 58px;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  gap: 24px;
+
+  border-bottom: 1px solid #e5e8ef;
+
+  margin-bottom: 10px;
+}
+
+
+/* ==========================================================
+   STATUS RAIL
+   ========================================================== */
+
+.statusTabs {
+  min-width: 0;
+
+  display: flex !important;
+  align-items: center !important;
+
+  flex: 1 1 auto;
+
+  gap: 10px !important;
+
+  flex-wrap: nowrap !important;
+
+  overflow: visible !important;
+}
+
+
+/* ==========================================================
+   LARGE STATUS BUTTONS
+   ========================================================== */
+
+.statusTab,
+.statusTabActive {
+  position: relative;
+
+  flex: 0 0 auto;
+
+  min-height: 48px !important;
+  height: 48px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 8px !important;
+
+  padding:
+    0
+    17px !important;
+
+  border: 0 !important;
+  border-radius: 8px 8px 0 0;
+
+  background: transparent !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 720 !important;
+
+  letter-spacing: -0.012em;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    transform 140ms ease;
+}
+
+.statusTab {
+  color: #7a8498 !important;
+}
+
+.statusTab:hover {
+  color: #1e2947 !important;
+
+  background:
+    rgba(0, 13, 81, 0.025) !important;
+}
+
+.statusTabActive {
+  color: #000d51 !important;
+}
+
+.statusTab:active,
+.statusTabActive:active {
+  transform: scale(0.975);
+}
+
+
+/* ==========================================================
+   ACTIVE GOLD INDICATOR
+   ========================================================== */
+
+.statusTabActive::after {
+  content: "";
+
+  position: absolute;
+
+  right: 12px !important;
+  bottom: -1px !important;
+  left: 12px !important;
+
+  height: 3px !important;
+
+  border-radius:
+    999px
+    999px
+    0
+    0 !important;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ad7f1b 0%,
+      #d2ad4e 50%,
+      #ad7f1b 100%
+    ) !important;
+
+  box-shadow:
+    0 -1px 5px
+      rgba(201, 164, 73, 0.14);
+}
+
+
+/* ==========================================================
+   STATUS COUNT BADGES
+   ========================================================== */
+
+.statusTab span,
+.statusTabActive span {
+  min-width: 22px !important;
+  height: 20px !important;
+
+  display: inline-grid !important;
+  place-items: center !important;
+
+  padding:
+    0
+    6px !important;
+
+  border-radius: 999px !important;
+
+  font-size: 9px !important;
+  font-weight: 780 !important;
+}
+
+.statusTab span {
+  background: #eef0f4 !important;
+  color: #778095 !important;
+}
+
+.statusTabActive span {
+  background: #edf0ff !important;
+  color: #000d51 !important;
+}
+
+
+/* ==========================================================
+   FILTER + NEW PROJECT TOOLBAR
+   ========================================================== */
+
+.toolbar {
+  flex: 0 0 auto !important;
+
+  min-height: 48px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  gap: 10px !important;
+
+  padding: 0 !important;
+
+  align-self: center !important;
+}
+
+.toolbarMenu {
+  min-height: 48px;
+
+  display: flex !important;
+  align-items: center !important;
+}
+
+
+/* ==========================================================
+   FILTER BUTTON
+   ========================================================== */
+
+.toolbarButton,
+.toolbarButtonActive {
+  min-height: 46px !important;
+  height: 46px !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  gap: 8px !important;
+
+  padding:
+    0
+    16px !important;
+
+  border-radius: 9px !important;
+
+  font-size: 12px !important;
+  font-weight: 720 !important;
+
+  white-space: nowrap;
+
+  transition:
+    transform 140ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.toolbarButton:hover,
+.toolbarButtonActive:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 7px 18px
+      rgba(0, 13, 81, 0.07);
+}
+
+.toolbarButton:active,
+.toolbarButtonActive:active {
+  transform: scale(0.975);
+}
+
+
+/* ==========================================================
+   NEW PROJECT SPLIT BUTTON
+   Normalize whatever ProjectsHeaderActions renders.
+   ========================================================== */
+
+.toolbar > :last-child {
+  min-height: 46px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  align-self: center !important;
+}
+
+.toolbar > :last-child a,
+.toolbar > :last-child button {
+  min-height: 46px !important;
+  height: 46px !important;
+
+  font-size: 12px !important;
+  font-weight: 720 !important;
+}
+
+
+/*
+ * Keep the main New Project + chevron split vertically equal.
+ */
+
+.toolbar > :last-child > div {
+  min-height: 46px !important;
+
+  display: flex;
+  align-items: stretch;
+}
+
+.toolbar > :last-child > div > a,
+.toolbar > :last-child > div > button {
+  min-height: 46px !important;
+  height: 46px !important;
+}
+
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+.tableCard {
+  margin-top: 0 !important;
+}
+
+
+/* ==========================================================
+   MEDIUM WIDTH
+   ========================================================== */
+
+@media (max-width: 1150px) {
+  .controlRow {
+    gap: 12px;
+  }
+
+  .statusTabs {
+    gap: 3px !important;
+
+    overflow-x: auto !important;
+
+    scrollbar-width: none;
+  }
+
+  .statusTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .statusTab,
+  .statusTabActive {
+    padding:
+      0
+      11px !important;
+
+    font-size: 11px !important;
+  }
+}
+
+
+/* ==========================================================
+   SMALL WORKSPACE
+   ========================================================== */
+
+@media (max-width: 850px) {
+  .controlRow {
+    flex-wrap: wrap;
+
+    padding-bottom: 8px;
+  }
+
+  .statusTabs {
+    width: 100%;
+  }
+
+  .toolbar {
+    width: 100%;
+
+    justify-content: flex-end;
+  }
+}
+
+
+/* ==========================================================
+   REDUCED MOTION
+   ========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .statusTab,
+  .statusTabActive,
+  .toolbarButton,
+  .toolbarButtonActive {
+    transition: none !important;
+  }
+}
+
+/* WF PROJECTS 4 VIEW RAIL END */
+
+/* WF PROJECTS FIVE COLUMN GRID START */
+
+/*
+ * The redundant Info column has been removed from JSX.
+ *
+ * Remaining columns:
+ * checkbox | client/project | people | status | created
+ */
+
+.tableHeader,
+.projectRow,
+.projectRowCanceled {
+  grid-template-columns:
+    26px
+    minmax(360px, 1.65fr)
+    minmax(220px, 0.90fr)
+    minmax(170px, 0.65fr)
+    minmax(170px, 0.65fr)
+    !important;
+
+  column-gap: 18px;
+}
+
+
+/*
+ * Slightly stronger table labels.
+ */
+
+.tableHeader {
+  font-size: 9px;
+  letter-spacing: 0.075em;
+}
+
+
+/*
+ * PEOPLE
+ */
+
+.personCell {
+  gap: 9px;
+
+  font-size: 10.5px !important;
+  font-weight: 680;
+}
+
+.personCell .avatar,
+.personCell .avatarEmpty {
+  width: 30px;
+  height: 30px;
+
+  flex-basis: 30px;
+
+  font-size: 8px;
+}
+
+
+/*
+ * STATUS
+ *
+ * Fourth child after:
+ * checkbox, identity, people.
+ */
+
+.projectRow > :nth-child(4),
+.projectRowCanceled > :nth-child(4) {
+  min-width: 0;
+
+  font-size: 10px;
+  font-weight: 680;
+}
+
+.projectRow > :nth-child(4) *,
+.projectRowCanceled > :nth-child(4) * {
+  font-size: inherit !important;
+}
+
+
+/*
+ * CREATED
+ */
+
+.projectRow > :nth-child(5),
+.projectRowCanceled > :nth-child(5) {
+  min-width: 0;
+
+  font-size: 10.5px !important;
+  font-weight: 650;
+}
+
+
+/*
+ * Give the rows a little more breathing room now that the
+ * important operational columns are larger.
+ */
+
+.projectRow,
+.projectRowCanceled {
+  min-height: 74px;
+}
+
+
+/*
+ * Mid-size desktop.
+ */
+
+@media (max-width: 1050px) {
+
+  .tableHeader,
+  .projectRow,
+  .projectRowCanceled {
+    grid-template-columns:
+      26px
+      minmax(300px, 1.35fr)
+      minmax(190px, 0.85fr)
+      minmax(150px, 0.70fr)
+      minmax(135px, 0.65fr)
+      !important;
+
+    column-gap: 14px;
+  }
+}
+
+
+/*
+ * Smaller screens can scroll the operational table rather
+ * than crushing People / Status / Created into tiny columns.
+ */
+
+@media (max-width: 760px) {
+
+  .tableHeader,
+  .projectRow,
+  .projectRowCanceled {
+    min-width: 900px;
+  }
+}
+
+/* WF PROJECTS FIVE COLUMN GRID END */
+
+/* WF PROJECTS SIZE TUNE START */
+
+/* Header labels */
+.tableHeader {
+  min-height: 52px !important;
+
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+}
+
+.tableHeader > span {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+
+/* Project rows */
+.projectRow,
+.projectRowCanceled {
+  min-height: 88px !important;
+}
+
+
+/* CLIENT / PROJECT */
+
+.projectIdentity {
+  gap: 5px !important;
+}
+
+.projectIdentity strong {
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+  font-weight: 750 !important;
+}
+
+.projectIdentity > span {
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+  font-weight: 580 !important;
+}
+
+.projectIdentity small {
+  font-size: 10px !important;
+  line-height: 1.25 !important;
+}
+
+
+/* PEOPLE */
+
+.personCell {
+  gap: 10px !important;
+
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.personCell > span:last-child {
+  font-size: 13px !important;
+}
+
+.personCell .avatar,
+.personCell .avatarEmpty {
+  width: 34px !important;
+  height: 34px !important;
+
+  flex:
+    0
+    0
+    34px !important;
+
+  font-size: 9px !important;
+}
+
+
+/* STATUS */
+
+.projectRow > :nth-child(4),
+.projectRowCanceled > :nth-child(4) {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.projectRow > :nth-child(4) *,
+.projectRowCanceled > :nth-child(4) * {
+  font-size: 12px !important;
+}
+
+
+/* CREATED */
+
+.projectRow > :nth-child(5),
+.projectRowCanceled > :nth-child(5) {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+
+/* Footer count */
+.tableCard > :last-child {
+  font-size: 10px;
+}
+
+/* WF PROJECTS SIZE TUNE END */

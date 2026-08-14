@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { systemActivitySchema, userActivitySchema } from "../domain/activity/schema.js";
-import { mapDatabaseError } from "../lib/errors/map-database-error.js";
-import { toClientSafeError } from "../lib/errors/application-error.js";
+﻿import { describe, expect, it } from "vitest";
+import { systemActivitySchema, userActivitySchema } from "../domain/activity/schema";
+import { mapDatabaseError } from "../lib/errors/map-database-error";
+import { toClientSafeError } from "../lib/errors/application-error";
 
 const id = "10000000-0000-4000-8000-000000000001";
 

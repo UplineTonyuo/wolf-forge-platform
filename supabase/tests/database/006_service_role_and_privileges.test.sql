@@ -770,7 +770,7 @@ select throws_ok(
   $$
     insert into public.activity_events (entity_type, entity_id, action, summary)
     values (
-      'invoice',
+      'external_accounting_export',
       '79999999-0000-0000-0000-000000000099',
       'invalid_type',
       'Later-phase entity test'
@@ -778,7 +778,7 @@ select throws_ok(
   $$,
   '23514',
   'new row for relation "activity_events" violates check constraint "activity_events_entity_type_valid"',
-  'later-phase activity entity types are rejected in Phase 1'
+  'unsupported activity entity types remain rejected'
 );
 
 select throws_ok(

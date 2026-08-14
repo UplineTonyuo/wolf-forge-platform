@@ -1,9 +1,9 @@
-import type { SystemActivityInput, UserActivityInput } from "../domain/activity/schema.js";
-import type { ActivityEventRow } from "../lib/supabase/database-rows.js";
-import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers.js";
-import type { TrustedServerClient } from "../lib/supabase/trusted-server-client.js";
-import type { UserScopedClient } from "../lib/supabase/user-client.js";
-import type { DatabaseClient } from "./types.js";
+﻿import type { SystemActivityInput, UserActivityInput } from "../domain/activity/schema";
+import type { ActivityEventRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { TrustedServerClient } from "../lib/supabase/trusted-server-client";
+import type { UserScopedClient } from "../lib/supabase/user-client";
+import type { DatabaseClient } from "./types";
 
 export class ActivityRepository {
   constructor(private readonly client: DatabaseClient) {}

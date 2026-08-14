@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { ValidationError } from "../lib/errors/application-error.js";
+﻿import { z } from "zod";
+import { ValidationError } from "../lib/errors/application-error";
 
 export const uuidSchema = z.uuid();
 export const timestampSchema = z.iso.datetime({ offset: true });

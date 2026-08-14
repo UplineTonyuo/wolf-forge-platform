@@ -1,7 +1,7 @@
-import { createCompanySchema, updateCompanySchema } from "../domain/companies/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import { CompanyRepository } from "../repositories/company-repository.js";
-import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context.js";
+﻿import { createCompanySchema, updateCompanySchema } from "../domain/companies/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { CompanyRepository } from "../repositories/company-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
 
 export class CompanyService {
   constructor(private readonly dependencies: ServiceDependencies<CompanyRepository>) {}

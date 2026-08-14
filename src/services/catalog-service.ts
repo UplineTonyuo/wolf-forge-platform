@@ -1,12 +1,39 @@
-import { createServiceSchema, updateServiceSchema } from "../domain/services/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
-import { ServiceRepository } from "../repositories/service-repository.js";
-import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context.js";
+import {
+  createServiceFolderSchema,
+  createServiceSchema,
+  updateServiceFolderSchema,
+  updateServiceSchema,
+} from "../domain/services/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { ServiceRepository } from "../repositories/service-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
 
 export class CatalogService {
   constructor(private readonly dependencies: ServiceDependencies<ServiceRepository>) {}
-  get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
-  listActive() { return this.dependencies.repository.listActive(); }
+
+  get(id: unknown) {
+    return this.dependencies.repository.getById(parseInput(uuidSchema, id));
+  }
+
+  listActive() {
+    return this.dependencies.repository.listActive();
+  }
+
+  listCatalog() {
+    return this.dependencies.repository.listCatalog();
+  }
+
+  listFolders() {
+    return this.dependencies.repository.listFolders();
+  }
+
+  getFolder(id: unknown) {
+    return this.dependencies.repository.getFolderById(parseInput(uuidSchema, id));
+  }
+
+  listAssignees() {
+    return this.dependencies.repository.listAssignees();
+  }
 
   async create(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
@@ -21,8 +48,34 @@ export class CatalogService {
     );
   }
 
+  async duplicate(id: unknown, requestId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.duplicate(
+      parseInput(uuidSchema, id),
+      parseInput(uuidSchema, requestId),
+    );
+  }
+
   async archive(id: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.archive(parseInput(uuidSchema, id));
+  }
+
+  async createFolder(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.createFolder(parseInput(createServiceFolderSchema, input));
+  }
+
+  async updateFolder(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.updateFolder(
+      parseInput(uuidSchema, id),
+      parseInput(updateServiceFolderSchema, input),
+    );
+  }
+
+  async archiveFolder(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.archiveFolder(parseInput(uuidSchema, id));
   }
 }

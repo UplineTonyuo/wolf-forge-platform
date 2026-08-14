@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { ServerEnvironment } from "../env/server-env.js";
-import type { Database } from "./database.types.js";
+﻿import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { ServerEnvironment } from "../env/server-env";
+import type { Database } from "./database.types";
 
 /** Server-only trust boundary. Never import this factory into browser code. */
 declare const trustedServerClientBrand: unique symbol;

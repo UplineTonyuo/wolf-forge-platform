@@ -1,5 +1,5 @@
-import type { PostgrestError } from "@supabase/supabase-js";
-import { mapDatabaseError } from "../errors/map-database-error.js";
+﻿import type { PostgrestError } from "@supabase/supabase-js";
+import { mapDatabaseError } from "../errors/map-database-error";
 
 export function unwrapOne<T>(
   result: { data: T | null; error: PostgrestError | null },

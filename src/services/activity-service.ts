@@ -1,16 +1,16 @@
-import {
+﻿import {
   activityEntityTypeSchema,
   systemActivitySchema,
   userActivitySchema,
   type SystemActivityInput,
   type UserActivityInput,
-} from "../domain/activity/schema.js";
-import { parseInput, uuidSchema } from "../domain/shared.js";
+} from "../domain/activity/schema";
+import { parseInput, uuidSchema } from "../domain/shared";
 import {
   ActivityRepository,
   SystemActivityRepository,
   UserActivityRepository,
-} from "../repositories/activity-repository.js";
+} from "../repositories/activity-repository";
 
 export class ActivityService {
   constructor(private readonly repository: ActivityRepository) {}

@@ -1,6 +1,6 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { PublicEnvironment } from "../env/index.js";
-import type { Database } from "./database.types.js";
+﻿import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { PublicEnvironment } from "../env/index";
+import type { Database } from "./database.types";
 
 declare const userScopedClientBrand: unique symbol;
 declare const verifiedActorBrand: unique symbol;

@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-import { assertLocalSupabaseUrl, readPublicEnvironment } from "../lib/env/public-env.js";
-import { createTrustedServerSupabaseClient, type TrustedServerClient } from "../lib/supabase/trusted-server-client.js";
-import { assertVerifiedActor, createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "../lib/supabase/user-client.js";
-import { CompanyRepository } from "../repositories/company-repository.js";
-import { SystemActivityRepository, UserActivityRepository } from "../repositories/activity-repository.js";
+﻿import { describe, expect, it, vi } from "vitest";
+import { assertLocalSupabaseUrl, readPublicEnvironment } from "../lib/env/public-env";
+import { createTrustedServerSupabaseClient, type TrustedServerClient } from "../lib/supabase/trusted-server-client";
+import { assertVerifiedActor, createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "../lib/supabase/user-client";
+import { CompanyRepository } from "../repositories/company-repository";
+import { SystemActivityRepository, UserActivityRepository } from "../repositories/activity-repository";
 
 const environment = { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHABLE_KEY: "local-key" };
 
