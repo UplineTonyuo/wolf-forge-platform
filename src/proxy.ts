@@ -1,11 +1,10 @@
 ﻿import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
-import { assertLocalSupabaseUrl, readPublicEnvironment } from "./lib/env/public-env";
+import { readPublicEnvironment } from "./lib/env/public-env";
 
 export async function proxy(request: NextRequest) {
   const environment = readPublicEnvironment();
-  assertLocalSupabaseUrl(environment.SUPABASE_URL);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient<Database>(
@@ -30,3 +29,4 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };
+

@@ -1,10 +1,10 @@
-import "server-only";
+﻿import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { readPublicEnvironment, assertLocalSupabaseUrl } from "../env/public-env";
+import { readPublicEnvironment } from "../env/public-env";
 import type { ProjectCapabilities } from "../../domain/orders/projections";
 import type { InvoiceCapabilities } from "../../domain/invoices/schema";
 import type { SubscriptionCapabilities } from "../../domain/subscriptions/schema";
@@ -65,9 +65,7 @@ export type ClientUser = {
 };
 
 export function readLocalFrontendEnvironment() {
-  const environment = readPublicEnvironment();
-  assertLocalSupabaseUrl(environment.SUPABASE_URL);
-  return environment;
+  return readPublicEnvironment();
 }
 
 export async function createNextServerSupabaseClient() {
@@ -250,3 +248,4 @@ export const getClientContext = cache(async () => {
     },
   };
 });
+
