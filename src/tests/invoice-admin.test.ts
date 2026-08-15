@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navigationForCapabilities } from "../components/shell/nav-registry";
+import { navigationCategories, navigationForModules } from "../components/shell/nav-registry";
 import { parseInvoiceFormData, parseMoneyToCents } from "../lib/invoices/form-data";
 import { serviceDescriptionToPlainText } from "../lib/service-description-html";
 
@@ -59,14 +59,25 @@ describe("Invoice admin form serialization", () => {
   });
 });
 
+/** Mirrors what app_current_user_modules returns for a fully granted member. */
+function modules(overrides: Record<string, boolean> = {}): Record<string, boolean> {
+  const granted = Object.fromEntries(
+    navigationCategories.flatMap((category) => category.items.map((item) => [item.id, true])),
+  );
+
+  return { ...granted, ...overrides };
+}
+
 describe("Invoice capability navigation", () => {
-  it("hides Invoices from a member without invoice access", () => {
-    const labels = navigationForCapabilities(true, false).flatMap((category) => category.items.map((item) => item.label));
+  it("hides Invoices from a member without the invoices module", () => {
+    const labels = navigationForModules(modules({ invoices: false }))
+      .flatMap((category) => category.items.map((item) => item.label));
     expect(labels).not.toContain("Invoices");
   });
 
-  it("shows Invoices when access is granted", () => {
-    const labels = navigationForCapabilities(true, true).flatMap((category) => category.items.map((item) => item.label));
+  it("shows Invoices when the module is granted", () => {
+    const labels = navigationForModules(modules())
+      .flatMap((category) => category.items.map((item) => item.label));
     expect(labels).toContain("Invoices");
   });
 });

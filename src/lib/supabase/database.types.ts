@@ -3852,6 +3852,43 @@ export type Database = {
           work_type: string
         }[]
       }
+      app_list_internal_members: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          email: string
+          is_self: boolean
+          override_count: number
+          preset_key: string
+          preset_name: string
+          profile_id: string
+          sort_order: number
+        }[]
+      }
+      app_list_permission_preset_grants: {
+        Args: never
+        Returns: {
+          allowed: boolean
+          category: string
+          description: string
+          label: string
+          permission_key: string
+          preset_key: string
+        }[]
+      }
+      app_list_permission_preset_overview: {
+        Args: never
+        Returns: {
+          account_class: string
+          granted_permission_count: number
+          member_count: number
+          preset_key: string
+          preset_name: string
+          sort_order: number
+          total_permission_count: number
+        }[]
+      }
       app_list_permission_presets: {
         Args: never
         Returns: {
@@ -4875,3 +4912,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

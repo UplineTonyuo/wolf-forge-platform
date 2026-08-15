@@ -24,7 +24,7 @@ import type {
 } from "react";
 import type { InternalUser } from "../../lib/supabase/next-server";
 import { AccountMenu } from "./account-menu";
-import { navigationForCapabilities, routeIsCurrent } from "./nav-registry";
+import { navigationForModules, routeIsCurrent } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 
@@ -106,11 +106,7 @@ export function InternalShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const navigationCategories = navigationForCapabilities(
-    user.canManageCoupons,
-    user.invoices.view || user.invoices.manage,
-    user.subscriptions.view || user.subscriptions.manage || user.subscriptions.billing,
-  );
+  const navigationCategories = navigationForModules(user.modules);
 
   const mainRef =
     useRef<HTMLElement>(null);

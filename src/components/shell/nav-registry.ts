@@ -59,19 +59,21 @@ export const navigationCategories: NavigationCategory[] = [
   },
 ];
 
-export function navigationForCapabilities(
-  canManageCoupons: boolean,
-  canAccessInvoices = true,
-  canAccessSubscriptions = true,
+/**
+ * Visibility comes from public.permission_modules through
+ * app_current_user_modules(), so the rail can never drift from the capability
+ * that actually gates a screen. Every navigation id is also a module key.
+ *
+ * This is presentation only. app_require_module_access() and the RPC boundary
+ * stay authoritative, so a typed URL is still rejected for a hidden module.
+ */
+export function navigationForModules(
+  modules: Record<string, boolean>,
 ): NavigationCategory[] {
   return navigationCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => (
-        (item.id !== "coupons" || canManageCoupons)
-        && (item.id !== "invoices" || canAccessInvoices)
-        && (item.id !== "subscriptions" || canAccessSubscriptions)
-      )),
+      items: category.items.filter((item) => modules[item.id] === true),
     }))
     .filter((category) => category.items.length > 0);
 }

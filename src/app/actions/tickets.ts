@@ -29,6 +29,52 @@ export async function createClientTicketAction(input: { requestId: string; subje
   redirect(`/account/tickets/${ticketId}?created=1`);
 }
 
+export type CreateInternalTicketResult =
+  | { ok: true; ticketId: string }
+  | { ok: false; error: string };
+
+export async function createInternalTicketAction(input: {
+  requestId: string;
+  companyId: string;
+  subject: string;
+  message: string;
+  priority: string;
+}): Promise<CreateInternalTicketResult> {
+  const context = await getInternalContext();
+
+  if (!context.user.tickets.create) {
+    return {
+      ok: false,
+      error: "You do not have permission to create Tickets.",
+    };
+  }
+
+  try {
+    const ticket = await context.services.tickets.create(
+      {
+        request_id: input.requestId,
+        company_id: input.companyId,
+        subject: input.subject,
+        message: input.message,
+        priority: input.priority,
+      },
+      context.actor,
+    );
+
+    refreshTicket(ticket.id);
+
+    return {
+      ok: true,
+      ticketId: ticket.id,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: toClientSafeError(error).message,
+    };
+  }
+}
+
 export async function adminReplyTicketAction(ticketId: string, requestId: string, body: string): Promise<TicketMutationResult> {
   const context = await getInternalContext();
   if (!context.user.tickets.reply) return { ok: false, error: "You do not have permission to reply to Tickets." };

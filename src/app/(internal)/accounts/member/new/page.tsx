@@ -1,21 +1,22 @@
 import { redirect } from "next/navigation";
-import { ProvisioningPlaceholder } from "../../../../../components/accounts/provisioning-placeholder";
+import { CreateMemberAccountForm } from "../../../../../components/accounts/create-member-account-form";
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
-export default async function AddMemberAccountPage() {
-  const { user } =
-    await getInternalContext();
+export const metadata = {
+  title: "Add team member",
+};
 
-  if (
-    user.role !== "owner" &&
-    user.role !== "admin"
-  ) {
+export default async function AddMemberAccountPage() {
+  const { user } = await getInternalContext();
+
+  /*
+   * Gated on the real capabilities the provisioning RPC itself requires rather
+   * than on a role name. The database re-authorizes against auth.uid() either
+   * way; this only avoids showing a form that cannot succeed.
+   */
+  if (!user.team.create || !user.team.managePermissions) {
     redirect("/");
   }
 
-  return (
-    <ProvisioningPlaceholder
-      kind="member"
-    />
-  );
+  return <CreateMemberAccountForm />;
 }

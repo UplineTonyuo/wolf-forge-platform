@@ -10,6 +10,7 @@ import type { InvoiceCapabilities } from "../../domain/invoices/schema";
 import type { SubscriptionCapabilities } from "../../domain/subscriptions/schema";
 import type { FormCapabilities } from "../../domain/forms/schema";
 import type { TicketCapabilities } from "../../domain/tickets/schema";
+import { toModuleAccessMap, type ModuleAccess } from "../../domain/permissions/schema";
 import type { Database } from "./database.types";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
 import { ActivityRepository } from "../../repositories/activity-repository";
@@ -45,10 +46,23 @@ import { TaskService } from "../../services/task-service";
 
 const internalRoleNames = new Set(["owner", "admin", "manager", "staff"]);
 
+export type TeamCapabilities = {
+  view: boolean;
+  create: boolean;
+  managePermissions: boolean;
+};
+
 export type InternalUser = {
   id: string;
   displayName: string | null;
   role: "owner" | "admin" | "manager" | "staff";
+  /**
+   * Navigation visibility derived from public.permission_modules, so the rail
+   * and the server-side rejection share one boundary. Never a substitute for it:
+   * app_require_module_access and every RPC still re-authorize on their own.
+   */
+  modules: Record<string, boolean>;
+  team: TeamCapabilities;
   canManageCoupons: boolean;
   invoices: InvoiceCapabilities;
   subscriptions: SubscriptionCapabilities;
@@ -90,10 +104,11 @@ export async function resolveInternalUser(
   client: UserScopedClient,
   actor: VerifiedActor,
 ): Promise<InternalUser | null> {
-  const [profileResult, rolesResult, permissionsResult] = await Promise.all([
+  const [profileResult, rolesResult, permissionsResult, modulesResult] = await Promise.all([
     client.from("profiles").select("id, role_id, display_name, archived_at").eq("id", actor.id).single(),
     client.from("roles").select("id, name"),
     client.rpc("app_current_user_permissions"),
+    client.rpc("app_current_user_modules"),
   ]);
 
   if (profileResult.error || !profileResult.data || profileResult.data.archived_at) return null;
@@ -108,6 +123,14 @@ export async function resolveInternalUser(
     id: profileResult.data.id,
     displayName: profileResult.data.display_name,
     role: role as InternalUser["role"],
+    modules: toModuleAccessMap(
+      modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
+    ),
+    team: {
+      view: granted.has("users.view"),
+      create: granted.has("users.create"),
+      managePermissions: granted.has("users.manage_permissions"),
+    },
     canManageCoupons: granted.has("coupons.manage"),
     invoices: {
       view: granted.has("invoices.view"),

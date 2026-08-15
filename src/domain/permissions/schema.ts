@@ -156,6 +156,42 @@ export type ModuleAccess = {
   granted: boolean;
 };
 
+/**
+ * The internal employee directory. Client portal accounts are a separate
+ * security domain and are excluded by the read boundary itself, not by a filter
+ * the caller could forget.
+ */
+export type InternalMember = {
+  profile_id: string;
+  display_name: string | null;
+  email: string | null;
+  preset_key: string;
+  preset_name: string;
+  sort_order: number;
+  override_count: number;
+  is_self: boolean;
+  created_at: string;
+};
+
+export type PermissionPresetOverview = {
+  preset_key: string;
+  preset_name: string;
+  account_class: AccountClass;
+  sort_order: number;
+  member_count: number;
+  granted_permission_count: number;
+  total_permission_count: number;
+};
+
+export type PermissionPresetGrant = {
+  preset_key: string;
+  permission_key: string;
+  category: string;
+  label: string;
+  description: string;
+  allowed: boolean;
+};
+
 export type ProvisionedAccount = {
   profile: ProfileRow;
   companyId: string | null;

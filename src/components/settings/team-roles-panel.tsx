@@ -3,1185 +3,663 @@
 import {
   Check,
   ChevronRight,
+  LoaderCircle,
   LockKeyhole,
   MoreHorizontal,
-  Plus,
   Search,
   ShieldCheck,
   SlidersHorizontal,
   UserPlus,
   UsersRound,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { setMemberPresetAction } from "../../app/actions/member-account-provisioning";
+import type {
+  InternalMember,
+  PermissionPresetGrant,
+  PermissionPresetOverview,
+} from "../../domain/permissions/schema";
 import styles from "./team-roles-panel.module.css";
 
 type View = "team" | "roles";
 
-type RoleName =
-  | "Owner"
-  | "Admin"
-  | "Manager"
-  | "Staff"
-  | "Client";
-
-type TeamMember = {
-  id: string;
-  name: string;
-  email: string;
-  role: RoleName;
+export type TeamRolesPanelProps = {
+  members: InternalMember[];
+  presets: PermissionPresetOverview[];
+  grants: PermissionPresetGrant[];
+  /** users.create + users.manage_permissions, re-checked by the database. */
+  canAddMembers: boolean;
+  /** users.manage_permissions, re-checked by the database. */
+  canManagePermissions: boolean;
+  createdMember?: boolean;
 };
 
-type PermissionItem = {
-  key: string;
-  label: string;
+/**
+ * The presets a member can be moved between from this screen. Owner is absent
+ * on purpose: it is not an ordinary reassignment, and the resolver gives it a
+ * blanket bypass.
+ */
+const assignablePresetKeys = ["admin", "manager", "staff"] as const;
+
+/**
+ * Presentation only. Capability categories come from public.permissions; this
+ * just gives the well-known ones a nicer heading than a raw key would read as.
+ */
+const categoryHeadings: Record<string, string> = {
+  dashboard: "Dashboard",
+  projects: "Projects",
+  tickets: "Tickets",
+  clients: "Clients",
+  todo: "To Do",
+  billing: "Billing",
+  marketing: "Marketing",
+  services: "Services",
+  forms: "Forms",
+  users: "Team",
+  settings: "Settings",
 };
 
-type PermissionGroup = {
-  title: string;
-  description: string;
-  items: PermissionItem[];
-};
-
-const ROLE_ORDER: RoleName[] = [
-  "Owner",
-  "Admin",
-  "Manager",
-  "Staff",
-  "Client",
-];
-
-const TEAM_MEMBERS: TeamMember[] = [
-  {
-    id: "william",
-    name: "William Jones",
-    email: "hcjaxx123@gmail.com",
-    role: "Owner",
-  },
-  {
-    id: "operations",
-    name: "Operations Manager",
-    email: "buce.oexepower@gmail.com",
-    role: "Manager",
-  },
-  {
-    id: "isaiah",
-    name: "Isaiah",
-    email: "isaiah@wolfforgemarketing.com",
-    role: "Manager",
-  },
-  {
-    id: "john",
-    name: "John",
-    email: "john@wolfforgemarketing.com",
-    role: "Manager",
-  },
-  {
-    id: "lorenzo",
-    name: "Lorenzo",
-    email: "lorenzo@wolfforgemarketing.com",
-    role: "Manager",
-  },
-  {
-    id: "nardo",
-    name: "Nardo",
-    email: "nardo@wolfforgemarketing.com",
-    role: "Manager",
-  },
-  {
-    id: "vincent",
-    name: "Vincent Jay Gonzaga",
-    email: "vincent@wolfforgemarketing.com",
-    role: "Manager",
-  },
-  {
-    id: "anthony",
-    name: "Anthony Paghubasan",
-    email: "paghubasanantonio7@gmail.com",
-    role: "Manager",
-  },
-];
-
-const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
-  Owner:
-    "Full authority across Wolf Forge, including security and permission management.",
-  Admin:
-    "Broad administrative access across workspace operations.",
-  Manager:
-    "Operational control across projects, tickets, clients, and team work.",
-  Staff:
-    "Focused access for assigned operational responsibilities.",
-  Client:
-    "Client-facing access limited to permitted features and company-scoped data.",
-};
-
-const PERMISSION_GROUPS: PermissionGroup[] = [
-  {
-    title: "Dashboard",
-    description: "Workspace overview.",
-    items: [
-      {
-        key: "dashboard.view",
-        label: "View dashboard",
-      },
-    ],
-  },
-  {
-    title: "Projects",
-    description: "Delivery and project operations.",
-    items: [
-      {
-        key: "projects.view",
-        label: "View projects",
-      },
-      {
-        key: "projects.create",
-        label: "Create projects",
-      },
-      {
-        key: "projects.edit",
-        label: "Edit projects",
-      },
-      {
-        key: "projects.assign",
-        label: "Assign projects",
-      },
-      {
-        key: "projects.archive",
-        label: "Archive projects",
-      },
-    ],
-  },
-  {
-    title: "Tickets",
-    description: "Support and ticket operations.",
-    items: [
-      {
-        key: "tickets.view",
-        label: "View tickets",
-      },
-      {
-        key: "tickets.create",
-        label: "Create tickets",
-      },
-      {
-        key: "tickets.edit",
-        label: "Edit tickets",
-      },
-      {
-        key: "tickets.assign",
-        label: "Assign tickets",
-      },
-      {
-        key: "tickets.archive",
-        label: "Archive tickets",
-      },
-    ],
-  },
-  {
-    title: "Clients",
-    description: "Client directory controls.",
-    items: [
-      {
-        key: "clients.view",
-        label: "View clients",
-      },
-      {
-        key: "clients.create",
-        label: "Create clients",
-      },
-      {
-        key: "clients.edit",
-        label: "Edit clients",
-      },
-      {
-        key: "clients.archive",
-        label: "Archive clients",
-      },
-    ],
-  },
-  {
-    title: "To Do",
-    description: "Operational tasks.",
-    items: [
-      {
-        key: "todo.view",
-        label: "View tasks",
-      },
-      {
-        key: "todo.manage",
-        label: "Manage tasks",
-      },
-    ],
-  },
-  {
-    title: "Billing",
-    description: "Invoices and subscriptions.",
-    items: [
-      {
-        key: "invoices.view",
-        label: "View invoices",
-      },
-      {
-        key: "invoices.manage",
-        label: "Manage invoices",
-      },
-      {
-        key: "subscriptions.view",
-        label: "View subscriptions",
-      },
-      {
-        key: "subscriptions.manage",
-        label: "Manage subscriptions",
-      },
-    ],
-  },
-  {
-    title: "Marketing",
-    description: "Promotional controls.",
-    items: [
-      {
-        key: "coupons.view",
-        label: "View coupons",
-      },
-      {
-        key: "coupons.manage",
-        label: "Manage coupons",
-      },
-    ],
-  },
-  {
-    title: "Services",
-    description: "Service catalog.",
-    items: [
-      {
-        key: "services.view",
-        label: "View services",
-      },
-      {
-        key: "services.create",
-        label: "Create services",
-      },
-      {
-        key: "services.edit",
-        label: "Edit services",
-      },
-      {
-        key: "services.archive",
-        label: "Archive services",
-      },
-    ],
-  },
-  {
-    title: "Forms",
-    description: "Workspace forms.",
-    items: [
-      {
-        key: "forms.view",
-        label: "View forms",
-      },
-      {
-        key: "forms.manage",
-        label: "Manage forms",
-      },
-    ],
-  },
-  {
-    title: "Team & Settings",
-    description: "Sensitive administration.",
-    items: [
-      {
-        key: "settings.view",
-        label: "View settings",
-      },
-      {
-        key: "users.view",
-        label: "View team",
-      },
-      {
-        key: "users.create",
-        label: "Create users",
-      },
-      {
-        key: "users.edit",
-        label: "Edit users",
-      },
-      {
-        key: "users.manage_permissions",
-        label: "Manage permissions",
-      },
-    ],
-  },
-];
-
-const ALL_PERMISSION_KEYS =
-  PERMISSION_GROUPS.flatMap(
-    (group) =>
-      group.items.map(
-        (item) => item.key,
-      ),
+function categoryHeading(category: string) {
+  return (
+    categoryHeadings[category]
+    ?? category.replace(/_/gu, " ").replace(/^./u, (first) => first.toUpperCase())
   );
-
-const INITIAL_PERMISSIONS:
-  Record<RoleName, string[]> = {
-  Owner: [...ALL_PERMISSION_KEYS],
-
-  Admin: [...ALL_PERMISSION_KEYS],
-
-  Manager: [
-    "dashboard.view",
-
-    "projects.view",
-    "projects.create",
-    "projects.edit",
-    "projects.assign",
-
-    "tickets.view",
-    "tickets.create",
-    "tickets.edit",
-    "tickets.assign",
-
-    "clients.view",
-
-    "todo.view",
-    "todo.manage",
-
-    "invoices.view",
-    "subscriptions.view",
-
-    "services.view",
-    "forms.view",
-  ],
-
-  Staff: [
-    "dashboard.view",
-
-    "projects.view",
-
-    "tickets.view",
-    "tickets.create",
-    "tickets.edit",
-
-    "todo.view",
-
-    "services.view",
-    "forms.view",
-  ],
-
-  Client: [
-    "dashboard.view",
-    "projects.view",
-    "tickets.view",
-    "tickets.create",
-    "invoices.view",
-    "subscriptions.view",
-  ],
-};
+}
 
 function initials(name: string) {
   return name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map(
-      (part) =>
-        part[0]?.toUpperCase() ?? "",
-    )
+    .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 }
 
-function roleClass(role: RoleName) {
-  if (role === "Owner") {
+function roleClass(presetKey: string) {
+  if (presetKey === "owner") {
     return styles.roleOwner;
   }
 
-  if (role === "Admin") {
+  if (presetKey === "admin") {
     return styles.roleAdmin;
   }
 
-  if (role === "Manager") {
+  if (presetKey === "manager") {
     return styles.roleManager;
   }
 
-  if (role === "Staff") {
+  if (presetKey === "staff") {
     return styles.roleStaff;
   }
 
   return styles.roleClient;
 }
 
-export function TeamRolesPanel() {
-  const [view, setView] =
-    useState<View>("team");
+function memberName(member: InternalMember) {
+  return member.display_name ?? member.email ?? "Unnamed member";
+}
 
-  const [
-    selectedRole,
-    setSelectedRole,
-  ] =
-    useState<RoleName>("Manager");
+/** Why this member's preset cannot be changed here, or null when it can be. */
+function blockedReason(
+  member: InternalMember,
+  canManagePermissions: boolean,
+): string | null {
+  if (!canManagePermissions) {
+    return "You do not have permission to change roles.";
+  }
 
-  const [
-    search,
-    setSearch,
-  ] = useState("");
+  if (member.is_self) {
+    return "You cannot change your own role.";
+  }
 
-  const [
-    permissions,
-    setPermissions,
-  ] = useState<
-    Record<RoleName, string[]>
-  >(INITIAL_PERMISSIONS);
+  if (member.preset_key === "owner") {
+    return "The Owner role is protected.";
+  }
 
-  const [
-    notice,
-    setNotice,
-  ] =
-    useState<string | null>(null);
+  return null;
+}
 
-  const selectedPermissions =
-    useMemo(
-      () =>
-        new Set(
-          permissions[selectedRole],
-        ),
-      [permissions, selectedRole],
-    );
+export function TeamRolesPanel({
+  members,
+  presets,
+  grants,
+  canAddMembers,
+  canManagePermissions,
+  createdMember = false,
+}: TeamRolesPanelProps) {
+  const router = useRouter();
 
-  const filteredTeam =
-    useMemo(() => {
-      const query =
-        search.trim().toLowerCase();
+  const [view, setView] = useState<View>("team");
 
-      if (!query) {
-        return TEAM_MEMBERS;
+  const [selectedPreset, setSelectedPreset] = useState<string>(
+    () => presets.find((preset) => preset.preset_key === "manager")?.preset_key
+      ?? presets[0]?.preset_key
+      ?? "",
+  );
+
+  const [search, setSearch] = useState("");
+
+  const [notice, setNotice] = useState<string | null>(
+    createdMember ? "The team member was created and can sign in now." : null,
+  );
+
+  const [pendingMember, setPendingMember] = useState<InternalMember | null>(null);
+  const [pendingPreset, setPendingPreset] = useState<string | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+  const [saving, startSaving] = useTransition();
+
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (pendingMember && !dialog.open) {
+      dialog.showModal();
+    }
+
+    if (!pendingMember && dialog.open) {
+      dialog.close();
+    }
+  }, [pendingMember]);
+
+  const presetsByKey = useMemo(
+    () => new Map(presets.map((preset) => [preset.preset_key, preset])),
+    [presets],
+  );
+
+  const selected = presetsByKey.get(selectedPreset) ?? presets[0] ?? null;
+
+  /** Real preset grants grouped by the real capability category. */
+  const selectedGroups = useMemo(() => {
+    const groups = new Map<string, PermissionPresetGrant[]>();
+
+    for (const grant of grants) {
+      if (grant.preset_key !== selected?.preset_key) continue;
+      const existing = groups.get(grant.category);
+      if (existing) {
+        existing.push(grant);
+      } else {
+        groups.set(grant.category, [grant]);
       }
+    }
 
-      return TEAM_MEMBERS.filter(
-        (member) =>
-          member.name
-            .toLowerCase()
-            .includes(query) ||
-          member.email
-            .toLowerCase()
-            .includes(query) ||
-          member.role
-            .toLowerCase()
-            .includes(query),
-      );
-    }, [search]);
+    return Array.from(groups.entries());
+  }, [grants, selected]);
 
-  const roleCounts =
-    useMemo(() => {
-      const counts =
-        Object.fromEntries(
-          ROLE_ORDER.map(
-            (role) => [role, 0],
-          ),
-        ) as Record<
-          RoleName,
-          number
-        >;
+  const filteredTeam = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-      TEAM_MEMBERS.forEach(
-        (member) => {
-          counts[member.role] += 1;
-        },
-      );
+    if (!query) {
+      return members;
+    }
 
-      return counts;
-    }, []);
+    return members.filter(
+      (member) =>
+        memberName(member).toLowerCase().includes(query)
+        || (member.email ?? "").toLowerCase().includes(query)
+        || member.preset_name.toLowerCase().includes(query),
+    );
+  }, [members, search]);
 
-  function openRole(
-    role: RoleName,
-  ) {
-    setSelectedRole(role);
+  const ownerCount = presetsByKey.get("owner")?.member_count ?? 0;
+
+  function openRole(presetKey: string) {
+    setSelectedPreset(presetKey);
     setView("roles");
     setNotice(null);
   }
 
-  function togglePermission(
-    permissionKey: string,
-  ) {
-    if (selectedRole === "Owner") {
-      setNotice(
-        "Owner keeps full access.",
-      );
+  function openRoleChange(member: InternalMember) {
+    setPendingMember(member);
+    setPendingPreset(
+      assignablePresetKeys.includes(member.preset_key as (typeof assignablePresetKeys)[number])
+        ? member.preset_key
+        : null,
+    );
+    setDialogError(null);
+    setNotice(null);
+  }
+
+  function closeRoleChange() {
+    if (saving) return;
+    setPendingMember(null);
+    setPendingPreset(null);
+    setDialogError(null);
+  }
+
+  function confirmRoleChange() {
+    const member = pendingMember;
+    const presetKey = pendingPreset;
+    if (!member || !presetKey) return;
+
+    if (presetKey === member.preset_key) {
+      setDialogError("That is already this member's role.");
       return;
     }
 
-    setPermissions(
-      (current) => {
-        const active = new Set(
-          current[selectedRole],
-        );
+    setDialogError(null);
 
-        if (
-          active.has(permissionKey)
-        ) {
-          active.delete(
-            permissionKey,
-          );
-        } else {
-          active.add(
-            permissionKey,
-          );
-        }
+    startSaving(async () => {
+      const result = await setMemberPresetAction({
+        profileId: member.profile_id,
+        presetKey,
+      });
 
-        return {
-          ...current,
-          [selectedRole]:
-            Array.from(active),
-        };
-      },
-    );
+      if (!result.ok) {
+        setDialogError(result.error);
+        return;
+      }
 
-    setNotice(null);
+      const presetName = presetsByKey.get(presetKey)?.preset_name ?? presetKey;
+      setPendingMember(null);
+      setPendingPreset(null);
+      setNotice(`${memberName(member)} is now ${presetName}.`);
+      router.refresh();
+    });
   }
 
   return (
     <section className={styles.page}>
-      <header
-        className={styles.pageHeader}
-      >
+      <header className={styles.pageHeader}>
         <div>
-          <div
-            className={
-              styles.eyebrow
-            }
-          >
-            <LockKeyhole
-              size={13}
-              aria-hidden="true"
-            />
+          <div className={styles.eyebrow}>
+            <LockKeyhole size={13} aria-hidden="true" />
             Access control
           </div>
 
-          <h1>Team & Roles</h1>
+          <h1>Team &amp; Roles</h1>
 
           <p>
-            Manage people, roles, and
-            workspace access from one
-            control center.
+            Manage people, roles, and workspace access from one control center.
           </p>
         </div>
-
-
       </header>
 
-      <div
-        className={
-          styles.summaryStrip
-        }
-      >
+      <div className={styles.summaryStrip}>
         <div>
-          <strong>
-            {TEAM_MEMBERS.length}
-          </strong>
+          <strong>{members.length}</strong>
           <span>Members</span>
         </div>
 
         <div>
-          <strong>
-            {ROLE_ORDER.length}
-          </strong>
+          <strong>{presets.length}</strong>
           <span>Roles</span>
         </div>
 
         <div>
-          <strong>
-            {roleCounts.Owner}
-          </strong>
+          <strong>{ownerCount}</strong>
           <span>Owner</span>
         </div>
 
-        <div
-          className={
-            styles.summaryNote
-          }
-        >
-          <ShieldCheck
-            size={15}
-            aria-hidden="true"
-          />
-          Role changes are preview-only
-          until backend connection.
+        <div className={styles.summaryNote}>
+          <ShieldCheck size={15} aria-hidden="true" />
+          Role changes apply immediately and are audited.
         </div>
       </div>
 
-      <div
-        className={styles.viewBar}
-      >
+      <div className={styles.viewBar}>
         <button
           type="button"
-          className={
-            view === "team"
-              ? styles.viewActive
-              : styles.viewButton
-          }
+          className={view === "team" ? styles.viewActive : styles.viewButton}
           onClick={() => {
             setView("team");
             setNotice(null);
           }}
         >
-          <UsersRound
-            size={15}
-            aria-hidden="true"
-          />
+          <UsersRound size={15} aria-hidden="true" />
           Team directory
         </button>
 
         <button
           type="button"
-          className={
-            view === "roles"
-              ? styles.viewActive
-              : styles.viewButton
-          }
+          className={view === "roles" ? styles.viewActive : styles.viewButton}
           onClick={() => {
             setView("roles");
             setNotice(null);
           }}
         >
-          <SlidersHorizontal
-            size={15}
-            aria-hidden="true"
-          />
-          Roles & permissions
+          <SlidersHorizontal size={15} aria-hidden="true" />
+          Roles &amp; permissions
         </button>
       </div>
 
       {notice ? (
-        <div className={styles.notice}>
+        <div className={styles.notice} role="status">
           {notice}
 
-          <button
-            type="button"
-            onClick={() =>
-              setNotice(null)
-            }
-          >
+          <button type="button" onClick={() => setNotice(null)}>
             Dismiss
           </button>
         </div>
       ) : null}
 
       {view === "team" ? (
-        <div
-          className={
-            styles.teamWorkspace
-          }
-        >
-          <section
-            className={
-              styles.directoryPanel
-            }
-          >
-            <div
-              className={
-                styles.panelHeader
-              }
-            >
+        <div className={styles.teamWorkspace}>
+          <section className={styles.directoryPanel}>
+            <div className={styles.panelHeader}>
               <div>
-                <h2>
-                  Team directory
-                </h2>
-                <p>
-                  Wolf Forge workspace
-                  members.
-                </p>
+                <h2>Team directory</h2>
+                <p>Wolf Forge workspace members.</p>
               </div>
 
-              <button
-                type="button"
-                className={styles.directoryAddButton}
-                onClick={() =>
-                  setNotice(
-                    "Add user is frontend-only for now.",
-                  )
-                }
-              >
-                <UserPlus
-                  size={14}
-                  aria-hidden="true"
-                />
-                Add user
-              </button>
+              {canAddMembers ? (
+                <Link
+                  href="/accounts/member/new"
+                  className={styles.directoryAddButton}
+                >
+                  <UserPlus size={14} aria-hidden="true" />
+                  Add user
+                </Link>
+              ) : null}
             </div>
 
-            <div
-              className={
-                styles.searchRow
-              }
-            >
-              <Search
-                size={15}
-                aria-hidden="true"
-              />
+            <div className={styles.searchRow}>
+              <Search size={15} aria-hidden="true" />
 
               <input
                 type="search"
                 placeholder="Search people, email, or role"
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => setSearch(event.target.value)}
               />
             </div>
 
-            <div
-              className={
-                styles.teamList
-              }
-            >
-              {filteredTeam.map(
-                (member) => (
-                  <div
-                    className={
-                      styles.teamRow
-                    }
-                    key={member.id}
-                  >
-                    <div
-                      className={
-                        styles.avatar
-                      }
-                    >
-                      {initials(
-                        member.name,
-                      )}
-                    </div>
+            <div className={styles.teamList}>
+              {filteredTeam.map((member) => {
+                const blocked = blockedReason(member, canManagePermissions);
+                const name = memberName(member);
 
-                    <div
-                      className={
-                        styles.memberCopy
-                      }
-                    >
-                      <strong>
-                        {member.name}
-                      </strong>
-                      <span>
-                        {member.email}
-                      </span>
+                return (
+                  <div className={styles.teamRow} key={member.profile_id}>
+                    <div className={styles.avatar}>{initials(name)}</div>
+
+                    <div className={styles.memberCopy}>
+                      <strong>{name}</strong>
+                      <span>{member.email ?? "No email on file"}</span>
                     </div>
 
                     <button
                       type="button"
-                      className={`${styles.rolePill} ${roleClass(
-                        member.role,
-                      )}`}
-                      onClick={() =>
-                        openRole(
-                          member.role,
-                        )
-                      }
+                      className={`${styles.rolePill} ${roleClass(member.preset_key)}`}
+                      onClick={() => openRole(member.preset_key)}
                     >
-                      {member.role}
+                      {member.preset_name}
                     </button>
 
                     <button
                       type="button"
-                      className={
-                        styles.moreButton
-                      }
-                      aria-label={`Actions for ${member.name}`}
-                      onClick={() =>
-                        setNotice(
-                          `${member.name}'s account controls will connect later.`,
-                        )
-                      }
+                      className={styles.moreButton}
+                      aria-label={`Change role for ${name}`}
+                      title={blocked ?? `Change role for ${name}`}
+                      disabled={blocked !== null}
+                      onClick={() => openRoleChange(member)}
                     >
-                      <MoreHorizontal
-                        size={17}
-                      />
+                      <MoreHorizontal size={17} />
                     </button>
                   </div>
-                ),
-              )}
+                );
+              })}
 
-              {filteredTeam.length ===
-              0 ? (
-                <div
-                  className={
-                    styles.noResults
-                  }
-                >
-                  No team members match
-                  â€œ{search}â€.
+              {filteredTeam.length === 0 ? (
+                <div className={styles.noResults}>
+                  {members.length === 0
+                    ? "No Wolf Forge members yet."
+                    : `No team members match “${search}”.`}
                 </div>
               ) : null}
             </div>
           </section>
 
-          <aside
-            className={
-              styles.roleMap
-            }
-          >
-            <div
-              className={
-                styles.roleMapHeader
-              }
-            >
+          <aside className={styles.roleMap}>
+            <div className={styles.roleMapHeader}>
               <div>
                 <h2>Role map</h2>
-                <p>
-                  Access presets and
-                  current assignment.
-                </p>
+                <p>Access presets and current assignment.</p>
               </div>
 
-              <ShieldCheck
-                size={18}
-                aria-hidden="true"
-              />
+              <ShieldCheck size={18} aria-hidden="true" />
             </div>
 
-            <div
-              className={
-                styles.roleMapList
-              }
-            >
-              {ROLE_ORDER.map(
-                (role) => {
-                  const count =
-                    roleCounts[role];
-
-                  const access =
-                    permissions[role]
-                      .length;
-
-                  const percent =
-                    Math.round(
-                      (access /
-                        ALL_PERMISSION_KEYS.length) *
-                        100,
-                    );
-
-                  return (
-                    <button
-                      type="button"
-                      key={role}
-                      className={
-                        styles.roleMapRow
-                      }
-                      onClick={() =>
-                        openRole(role)
-                      }
-                    >
-                      <div
-                        className={
-                          styles.roleMapTop
-                        }
-                      >
-                        <div>
-                          <strong>
-                            {role}
-                          </strong>
-
-                          <span>
-                            {count}{" "}
-                            {count === 1
-                              ? "member"
-                              : "members"}
-                          </span>
-                        </div>
-
-                        <ChevronRight
-                          size={15}
-                        />
-                      </div>
-
-                      <div
-                        className={
-                          styles.accessMeter
-                        }
-                      >
-                        <span
-                          style={{
-                            width: `${percent}%`,
-                          }}
-                        />
-                      </div>
-
-                      <small>
-                        {access} of{" "}
-                        {
-                          ALL_PERMISSION_KEYS.length
-                        }{" "}
-                        permissions
-                      </small>
-                    </button>
-                  );
-                },
-              )}
-            </div>
-
-            <button
-              type="button"
-              className={
-                styles.createRole
-              }
-              onClick={() =>
-                setNotice(
-                  "Custom role creation will connect later.",
-                )
-              }
-            >
-              <Plus size={14} />
-              Create custom role
-            </button>
-          </aside>
-        </div>
-      ) : (
-        <div
-          className={
-            styles.rolesWorkspace
-          }
-        >
-          <aside
-            className={
-              styles.rolesRail
-            }
-          >
-            <div
-              className={
-                styles.rolesRailTitle
-              }
-            >
-              <span>Role presets</span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setNotice(
-                    "Custom role creation will connect later.",
+            <div className={styles.roleMapList}>
+              {presets.map((preset) => {
+                const percent = preset.total_permission_count > 0
+                  ? Math.round(
+                    (preset.granted_permission_count / preset.total_permission_count) * 100,
                   )
-                }
-                aria-label="Create role"
-              >
-                <Plus size={15} />
-              </button>
-            </div>
-
-            {ROLE_ORDER.map(
-              (role) => {
-                const active =
-                  role ===
-                  selectedRole;
+                  : 0;
 
                 return (
                   <button
                     type="button"
-                    key={role}
-                    className={
-                      active
-                        ? styles.roleRailActive
-                        : styles.roleRailButton
-                    }
-                    onClick={() => {
-                      setSelectedRole(
-                        role,
-                      );
-                      setNotice(null);
-                    }}
+                    key={preset.preset_key}
+                    className={styles.roleMapRow}
+                    onClick={() => openRole(preset.preset_key)}
                   >
-                    <div>
-                      <strong>
-                        {role}
-                      </strong>
+                    <div className={styles.roleMapTop}>
+                      <div>
+                        <strong>{preset.preset_name}</strong>
 
-                      <span>
-                        {roleCounts[role]}{" "}
-                        members
-                      </span>
+                        <span>
+                          {preset.member_count}{" "}
+                          {preset.member_count === 1 ? "member" : "members"}
+                        </span>
+                      </div>
+
+                      <ChevronRight size={15} />
                     </div>
 
-                    <ChevronRight
-                      size={15}
-                    />
+                    <div className={styles.accessMeter}>
+                      <span style={{ width: `${percent}%` }} />
+                    </div>
+
+                    <small>
+                      {preset.granted_permission_count} of{" "}
+                      {preset.total_permission_count} permissions
+                    </small>
                   </button>
                 );
-              },
-            )}
+              })}
+            </div>
+          </aside>
+        </div>
+      ) : (
+        <div className={styles.rolesWorkspace}>
+          <aside className={styles.rolesRail}>
+            <div className={styles.rolesRailTitle}>
+              <span>Role presets</span>
+            </div>
+
+            {presets.map((preset) => {
+              const active = preset.preset_key === selected?.preset_key;
+
+              return (
+                <button
+                  type="button"
+                  key={preset.preset_key}
+                  className={active ? styles.roleRailActive : styles.roleRailButton}
+                  onClick={() => {
+                    setSelectedPreset(preset.preset_key);
+                    setNotice(null);
+                  }}
+                >
+                  <div>
+                    <strong>{preset.preset_name}</strong>
+
+                    <span>
+                      {preset.member_count}{" "}
+                      {preset.member_count === 1 ? "member" : "members"}
+                    </span>
+                  </div>
+
+                  <ChevronRight size={15} />
+                </button>
+              );
+            })}
           </aside>
 
-          <section
-            className={
-              styles.permissionPanel
-            }
-          >
-            <div
-              className={
-                styles.permissionHeader
-              }
-            >
+          <section className={styles.permissionPanel}>
+            <div className={styles.permissionHeader}>
               <div>
-                <div
-                  className={
-                    styles.permissionTitle
-                  }
-                >
-                  <h2>
-                    {selectedRole}
-                  </h2>
+                <div className={styles.permissionTitle}>
+                  <h2>{selected?.preset_name ?? "Role"}</h2>
 
-                  {selectedRole ===
-                  "Owner" ? (
-                    <span>
-                      Locked full access
-                    </span>
+                  {selected?.preset_key === "owner" ? (
+                    <span>Locked full access</span>
                   ) : null}
                 </div>
 
                 <p>
-                  {
-                    ROLE_DESCRIPTIONS[
-                      selectedRole
-                    ]
-                  }
+                  {selected?.account_class === "client"
+                    ? "Client portal preset. Client accounts are a separate security domain and never receive internal access."
+                    : "Wolf Forge internal preset. Capabilities below are resolved by the database for every request."}
                 </p>
               </div>
 
-              <div
-                className={
-                  styles.permissionScore
-                }
-              >
-                <strong>
-                  {
-                    permissions[
-                      selectedRole
-                    ].length
-                  }
-                </strong>
-                <span>
-                  /{" "}
-                  {
-                    ALL_PERMISSION_KEYS.length
-                  }{" "}
-                  active
-                </span>
+              <div className={styles.permissionScore}>
+                <strong>{selected?.granted_permission_count ?? 0}</strong>
+                <span>/ {selected?.total_permission_count ?? 0} active</span>
               </div>
             </div>
 
-            <div
-              className={
-                styles.permissionBody
-              }
-            >
-              {PERMISSION_GROUPS.map(
-                (group) => (
-                  <div
-                    className={
-                      styles.permissionGroup
-                    }
-                    key={group.title}
-                  >
-                    <div
-                      className={
-                        styles.groupCopy
-                      }
-                    >
-                      <h3>
-                        {group.title}
-                      </h3>
+            <div className={styles.permissionBody}>
+              {selectedGroups.map(([category, items]) => (
+                <div className={styles.permissionGroup} key={category}>
+                  <div className={styles.groupCopy}>
+                    <h3>{categoryHeading(category)}</h3>
 
-                      <p>
-                        {
-                          group.description
-                        }
-                      </p>
-                    </div>
-
-                    <div
-                      className={
-                        styles.permissionOptions
-                      }
-                    >
-                      {group.items.map(
-                        (item) => {
-                          const checked =
-                            selectedPermissions.has(
-                              item.key,
-                            );
-
-                          return (
-                            <button
-                              type="button"
-                              key={
-                                item.key
-                              }
-                              aria-pressed={
-                                checked
-                              }
-                              className={
-                                checked
-                                  ? styles.permissionOn
-                                  : styles.permissionOff
-                              }
-                              onClick={() =>
-                                togglePermission(
-                                  item.key,
-                                )
-                              }
-                            >
-                              <span>
-                                {checked ? (
-                                  <Check
-                                    size={
-                                      12
-                                    }
-                                    strokeWidth={
-                                      3
-                                    }
-                                  />
-                                ) : null}
-                              </span>
-
-                              {
-                                item.label
-                              }
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
+                    <p>
+                      {items.filter((item) => item.allowed).length} of {items.length}{" "}
+                      granted
+                    </p>
                   </div>
-                ),
-              )}
+
+                  <div className={styles.permissionOptions}>
+                    {items.map((item) => (
+                      <div
+                        key={item.permission_key}
+                        title={item.description || item.label}
+                        className={`${styles.permissionReadOnly} ${
+                          item.allowed ? styles.permissionGranted : styles.permissionDenied
+                        }`}
+                      >
+                        <span>
+                          {item.allowed ? <Check size={12} strokeWidth={3} /> : null}
+                        </span>
+
+                        {item.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            <footer
-              className={
-                styles.permissionFooter
-              }
-            >
+            <footer className={styles.permissionFooter}>
               <div>
-                <ShieldCheck
-                  size={15}
-                />
+                <ShieldCheck size={15} />
 
                 <span>
-                  Changes are local
-                  preview only.
+                  Preset grants are system-managed. Assign a preset from the team
+                  directory to change what a member can reach.
                 </span>
               </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setNotice(
-                    `${selectedRole} permission changes are not connected to the database yet.`,
-                  )
-                }
-              >
-                Save role
-              </button>
             </footer>
           </section>
         </div>
       )}
+
+      <dialog
+        ref={dialogRef}
+        className={styles.roleDialog}
+        aria-label="Change role"
+        onCancel={(event) => {
+          if (saving) {
+            event.preventDefault();
+            return;
+          }
+          closeRoleChange();
+        }}
+        onClose={closeRoleChange}
+      >
+        {pendingMember ? (
+          <>
+            <div className={styles.roleDialogHeader}>
+              <h2>Change role</h2>
+
+              <p>
+                {memberName(pendingMember)} is currently {pendingMember.preset_name}.
+                Choose the preset that should decide their access.
+              </p>
+            </div>
+
+            <div className={styles.roleDialogOptions}>
+              {assignablePresetKeys.map((presetKey) => {
+                const preset = presetsByKey.get(presetKey);
+                const active = pendingPreset === presetKey;
+
+                return (
+                  <button
+                    type="button"
+                    key={presetKey}
+                    disabled={saving}
+                    className={active ? styles.roleDialogOptionActive : styles.roleDialogOption}
+                    aria-pressed={active}
+                    onClick={() => {
+                      setPendingPreset(presetKey);
+                      setDialogError(null);
+                    }}
+                  >
+                    {preset?.preset_name ?? presetKey}
+
+                    <small>
+                      {presetKey === pendingMember.preset_key
+                        ? "Current"
+                        : `${preset?.granted_permission_count ?? 0} permissions`}
+                    </small>
+                  </button>
+                );
+              })}
+            </div>
+
+            {dialogError ? (
+              <p className={styles.roleDialogError} role="alert">
+                {dialogError}
+              </p>
+            ) : null}
+
+            <div className={styles.roleDialogActions}>
+              <button
+                type="button"
+                className={styles.roleDialogCancel}
+                disabled={saving}
+                onClick={closeRoleChange}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className={styles.roleDialogConfirm}
+                disabled={saving || !pendingPreset}
+                onClick={confirmRoleChange}
+              >
+                {saving ? (
+                  <LoaderCircle
+                    size={13}
+                    className={styles.roleDialogSpinner}
+                    aria-hidden="true"
+                  />
+                ) : null}
+
+                {saving ? "Changing..." : "Change role"}
+              </button>
+            </div>
+          </>
+        ) : null}
+      </dialog>
     </section>
   );
 }

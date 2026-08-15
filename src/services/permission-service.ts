@@ -5,8 +5,11 @@ import {
   setProfilePresetSchema,
   toModuleAccessMap,
   type EffectivePermission,
+  type InternalMember,
   type ModuleAccess,
   type PermissionPreset,
+  type PermissionPresetGrant,
+  type PermissionPresetOverview,
   type ProfilePermissionSummary,
 } from "../domain/permissions/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
@@ -40,6 +43,18 @@ export class PermissionService {
 
   listPresets(): Promise<PermissionPreset[]> {
     return this.dependencies.repository.listPresets();
+  }
+
+  listInternalMembers(): Promise<InternalMember[]> {
+    return this.dependencies.repository.listInternalMembers();
+  }
+
+  listPresetOverview(): Promise<PermissionPresetOverview[]> {
+    return this.dependencies.repository.listPresetOverview();
+  }
+
+  listPresetGrants(): Promise<PermissionPresetGrant[]> {
+    return this.dependencies.repository.listPresetGrants();
   }
 
   effectivePermissions(profileId?: unknown): Promise<EffectivePermission[]> {

@@ -8,8 +8,10 @@ import {
   toModuleAccessMap,
   type ModuleAccess,
 } from "../domain/permissions/schema";
+import type { PublicEnvironment } from "../lib/env/index";
+import { PermissionDeniedError } from "../lib/errors/application-error";
 import { AuthAdminError } from "../lib/supabase/auth-admin";
-import type { VerifiedActor } from "../lib/supabase/user-client";
+import { createUserSupabaseClient, verifyActor, type VerifiedActor } from "../lib/supabase/user-client";
 import { AccountProvisioningService } from "../services/account-provisioning-service";
 import { PermissionService } from "../services/permission-service";
 
@@ -98,6 +100,27 @@ function verifiedActor(): VerifiedActor {
   return { id: profileId } as VerifiedActor;
 }
 
+/**
+ * A real branded actor. The brand is a runtime WeakSet, so the only way to get
+ * one is through verifyActor -- which is the point: a cast cannot forge it.
+ */
+async function serverVerifiedActor(): Promise<VerifiedActor> {
+  const client = createUserSupabaseClient(
+    {
+      SUPABASE_URL: "http://127.0.0.1:54321",
+      SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
+    } as PublicEnvironment,
+    "test-access-token",
+  );
+
+  vi.spyOn(client.auth, "getUser").mockResolvedValue({
+    data: { user: { id: profileId } },
+    error: null,
+  } as never);
+
+  return verifyActor(client);
+}
+
 describe("permission and provisioning service boundaries", () => {
   it("refuses permission mutations without a server-verified actor", async () => {
     const repository = { setPreset: vi.fn(), setOverride: vi.fn(), clearOverride: vi.fn() };
@@ -145,6 +168,83 @@ describe("permission and provisioning service boundaries", () => {
 
     // No auth user is created when the actor cannot be trusted.
     expect(authAdmin.createUser).not.toHaveBeenCalled();
+  });
+
+  it("creates the auth user first, then completes provisioning on the chosen preset", async () => {
+    const authAdmin = {
+      createUser: vi.fn().mockResolvedValue({ id: profileId, email: "member@example.invalid" }),
+      deleteUser: vi.fn(),
+    };
+    const permissions = {
+      provisionInternalMemberProfile: vi.fn().mockResolvedValue({ id: profileId }),
+    };
+    const service = new AccountProvisioningService({
+      permissions: permissions as never,
+      companies: {} as never,
+      contacts: {} as never,
+      authAdmin: authAdmin as never,
+    });
+
+    const account = await service.provisionInternalMember(
+      {
+        email: "Member@Example.Invalid",
+        first_name: "Casey",
+        last_name: "Field",
+        temporary_password: "temporary-secret",
+        preset_key: "manager",
+      },
+      await serverVerifiedActor(),
+    );
+
+    expect(authAdmin.createUser).toHaveBeenCalledWith({
+      email: "member@example.invalid",
+      password: "temporary-secret",
+      displayName: "Casey Field",
+    });
+
+    // The database decides access; the adapter only creates the login.
+    expect(permissions.provisionInternalMemberProfile).toHaveBeenCalledWith(
+      profileId,
+      "manager",
+      "Casey Field",
+      [],
+    );
+
+    // A Wolf Forge member is never scoped to a company.
+    expect(account.companyId).toBeNull();
+    expect(authAdmin.deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("rolls the auth user back when the provisioning RPC rejects the request", async () => {
+    const authAdmin = {
+      createUser: vi.fn().mockResolvedValue({ id: profileId, email: "member@example.invalid" }),
+      deleteUser: vi.fn().mockResolvedValue(undefined),
+    };
+    const permissions = {
+      provisionInternalMemberProfile: vi
+        .fn()
+        .mockRejectedValue(new PermissionDeniedError()),
+    };
+    const service = new AccountProvisioningService({
+      permissions: permissions as never,
+      companies: {} as never,
+      contacts: {} as never,
+      authAdmin: authAdmin as never,
+    });
+
+    await expect(
+      service.provisionInternalMember(
+        {
+          email: "member@example.invalid",
+          temporary_password: "temporary-secret",
+          preset_key: "staff",
+        },
+        await serverVerifiedActor(),
+      ),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+
+    // auth.users lives outside the Postgres transaction, so it is compensated.
+    expect(authAdmin.deleteUser).toHaveBeenCalledWith(profileId);
   });
 
   it("classifies a duplicate account without leaking the auth admin failure", () => {

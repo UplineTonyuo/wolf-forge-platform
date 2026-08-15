@@ -1,9 +1,12 @@
 import type {
   ClearProfileOverrideInput,
   EffectivePermission,
+  InternalMember,
   ModuleAccess,
   PermissionOverrideInput,
   PermissionPreset,
+  PermissionPresetGrant,
+  PermissionPresetOverview,
   ProfilePermissionSummary,
   SetProfileOverrideInput,
   SetProfilePresetInput,
@@ -44,6 +47,26 @@ export class PermissionRepository {
     return unwrapMany(
       await this.client.rpc("app_list_permission_presets"),
     ) as PermissionPreset[];
+  }
+
+  /** Internal members only; the RPC never returns a client portal account. */
+  async listInternalMembers(): Promise<InternalMember[]> {
+    return unwrapMany(
+      await this.client.rpc("app_list_internal_members"),
+    ) as InternalMember[];
+  }
+
+  /** Real member counts and access breadth behind the role map. */
+  async listPresetOverview(): Promise<PermissionPresetOverview[]> {
+    return unwrapMany(
+      await this.client.rpc("app_list_permission_preset_overview"),
+    ) as PermissionPresetOverview[];
+  }
+
+  async listPresetGrants(): Promise<PermissionPresetGrant[]> {
+    return unwrapMany(
+      await this.client.rpc("app_list_permission_preset_grants"),
+    ) as PermissionPresetGrant[];
   }
 
   /** Omit the profile id to read your own effective permissions. */

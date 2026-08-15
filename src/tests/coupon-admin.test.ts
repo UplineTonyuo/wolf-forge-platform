@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { navigationForCapabilities } from "../components/shell/nav-registry";
+import { navigationCategories, navigationForModules } from "../components/shell/nav-registry";
 import { parseCouponFormData } from "../lib/coupons/form-data";
 
 const SERVICE_ONE = "11111111-1111-4111-8111-111111111111";
@@ -98,15 +98,25 @@ describe("Coupons admin form serialization", () => {
   });
 });
 
+/** Mirrors what app_current_user_modules returns for a fully granted member. */
+function modules(overrides: Record<string, boolean> = {}): Record<string, boolean> {
+  const granted = Object.fromEntries(
+    navigationCategories.flatMap((category) => category.items.map((item) => [item.id, true])),
+  );
+
+  return { ...granted, ...overrides };
+}
+
 describe("Coupons capability navigation", () => {
-  it("removes Coupons and its empty Marketing group without coupons.manage", () => {
-    const labels = navigationForCapabilities(false).flatMap((category) => category.items.map((item) => item.label));
+  it("removes Coupons and its empty Marketing group without the coupons module", () => {
+    const withoutCoupons = navigationForModules(modules({ coupons: false }));
+    const labels = withoutCoupons.flatMap((category) => category.items.map((item) => item.label));
     expect(labels).not.toContain("Coupons");
-    expect(navigationForCapabilities(false).map((category) => category.label)).not.toContain("Marketing");
+    expect(withoutCoupons.map((category) => category.label)).not.toContain("Marketing");
   });
 
-  it("shows Coupons with coupons.manage", () => {
-    const labels = navigationForCapabilities(true).flatMap((category) => category.items.map((item) => item.label));
+  it("shows Coupons when the coupons module is granted", () => {
+    const labels = navigationForModules(modules()).flatMap((category) => category.items.map((item) => item.label));
     expect(labels).toContain("Coupons");
   });
 });

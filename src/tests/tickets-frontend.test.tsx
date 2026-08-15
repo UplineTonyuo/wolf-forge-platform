@@ -15,7 +15,7 @@ const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("../app/actions/tickets", () => ({
   adminReplyTicketAction: vi.fn(), clientReplyTicketAction: vi.fn(), addTicketInternalNoteAction: vi.fn(),
-  createClientTicketAction: vi.fn(), updateTicketStatusAction: vi.fn(), updateTicketPriorityAction: vi.fn(), assignTicketAction: vi.fn(),
+  createClientTicketAction: vi.fn(), createInternalTicketAction: vi.fn(), updateTicketStatusAction: vi.fn(), updateTicketPriorityAction: vi.fn(), assignTicketAction: vi.fn(),
 }));
 
 beforeAll(() => {
@@ -25,7 +25,12 @@ beforeAll(() => {
 });
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.values(actions).forEach((action) => vi.mocked(action).mockResolvedValue({ ok: true }));
+  Object.values(actions).forEach((action) =>
+    vi.mocked(action).mockResolvedValue({
+      ok: true,
+      ticketId: "20000000-0000-4000-8000-000000000099",
+    } as never),
+  );
 });
 afterEach(cleanup);
 
@@ -70,7 +75,7 @@ describe("Ticket detail and actions", () => {
   });
   it("wires staff replies and immutable internal notes with stable request IDs", async () => {
     const { rerender } = render(<TicketComposer ticketId={ticket.ticket_id} mode="admin" />);
-    fireEvent.change(screen.getByPlaceholderText("Write a reply…"), { target: { value: "We are reviewing this now." } });
+    fireEvent.change(screen.getByPlaceholderText("Write a replyÃ¢â‚¬Â¦"), { target: { value: "We are reviewing this now." } });
     fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
     await waitFor(() => expect(actions.adminReplyTicketAction).toHaveBeenCalledWith(ticket.ticket_id, expect.any(String), "We are reviewing this now."));
     rerender(<TicketComposer ticketId={ticket.ticket_id} mode="note" />);

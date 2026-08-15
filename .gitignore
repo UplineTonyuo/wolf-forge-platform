@@ -8,3 +8,6 @@ coverage/
 .netlify/
 *.log
 *.tsbuildinfo
+
+.vercel
+.env*
