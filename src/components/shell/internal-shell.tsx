@@ -25,7 +25,6 @@ import type {
   ReactNode,
 } from "react";
 import type { InternalUser } from "../../lib/supabase/next-server";
-import { AccountMenu } from "./account-menu";
 import { navigationForModules, routeIsCurrent } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
@@ -438,13 +437,6 @@ export function InternalShell({
             ),
           )}
         </nav>
-
-        <div className="sidebar-account">
-          <AccountMenu
-            user={user}
-            sidebar
-          />
-        </div>
       </aside>
 
       <div

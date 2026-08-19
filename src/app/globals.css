@@ -47,7 +47,6 @@ a { color: inherit; }
 .sidebar-link.is-active { color: var(--wf-white); background: rgba(255, 255, 255, .13); font-weight: 600; }
 .sidebar-link.is-active::before { background: #c9a449; }
 .sidebar-link:focus-visible, .account-sidebar .avatar-button:focus-visible { outline-color: var(--wf-white); outline-offset: -2px; }
-.sidebar-account { flex: 0 0 auto; padding: 14px; border-top: 1px solid rgba(255, 255, 255, .12); }
 .account-sidebar { position: relative; }
 .account-sidebar .avatar-button { width: 100%; height: 52px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 16px; gap: 10px; padding: 0 10px; border: 0; border-radius: 5px; color: var(--wf-white); background: transparent; text-align: left; }
 .account-sidebar .avatar-button:hover, .account-sidebar .avatar-button[aria-expanded=true] { background: rgba(255, 255, 255, .08); }
@@ -193,7 +192,6 @@ tbody tr:hover { background: #fbfbfc; }
   .sidebar-navigation { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; overflow: visible; padding: 18px 14px 20px; }
   .sidebar-section + .sidebar-section { margin-top: 0; }
   .sidebar-link { min-height: 40px; }
-  .sidebar-account { display: none; }
   .workspace { margin-left: 0; }
   .skip-link { left: 8px; }
   .desktop-table-wrap { display: none; }
