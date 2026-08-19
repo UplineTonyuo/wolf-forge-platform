@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { InvoiceStatusBadge } from "../../../components/invoices/invoice-status-badge";
 import styles from "../../../components/invoices/invoice-admin.module.css";
+import adminList from "../../../components/ui/admin-list.module.css";
+import { FilterInput } from "../../../components/ui/filter-input";
 import { EmptyState } from "../../../components/ui/list-states";
+import { ListToolbar } from "../../../components/ui/list-toolbar";
 import { PageFrame } from "../../../components/ui/page-frame";
 import { formatCurrencyCents, formatDate, formatShortDate } from "../../../lib/format";
 import { getInternalContext } from "../../../lib/supabase/next-server";
@@ -24,34 +27,79 @@ function numberLabel(value: number | null) {
   return value == null ? "Pending" : `WF-${String(value).padStart(4, "0")}`;
 }
 
+/** Preserves the active search while switching the status filter. */
+function invoiceHref(state: string, search: string) {
+  const params = new URLSearchParams();
+  if (state !== "all") params.set("state", state);
+  if (search) params.set("q", search);
+  const query = params.toString();
+  return query ? `/invoices?${query}` : "/invoices";
+}
+
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string }>;
+  searchParams: Promise<{ state?: string; q?: string }>;
 }) {
-  const [{ state }, context] = await Promise.all([searchParams, getInternalContext()]);
+  const [{ state, q }, context] = await Promise.all([searchParams, getInternalContext()]);
   const activeFilter = filters.some(([value]) => value === state) ? state ?? "all" : "all";
+  const search = q?.trim() ?? "";
   const invoices = await context.services.invoices.list();
-  const visible = activeFilter === "all"
+
+  const byState = activeFilter === "all"
     ? invoices
     : invoices.filter((summary) => summary.financials.presentation_state === activeFilter);
 
+  /*
+   * Text search narrows what the status filter already selected, so the status
+   * semantics above are untouched.
+   */
+  const needle = search.toLocaleLowerCase();
+  const visible = needle
+    ? byState.filter((summary) =>
+        summary.clientName.toLocaleLowerCase().includes(needle) ||
+        numberLabel(summary.invoice.invoice_number).toLocaleLowerCase().includes(needle))
+    : byState;
+
+  const activeLabel = filters.find(([value]) => value === activeFilter)?.[1] ?? "matching";
+
+  const addInvoice = context.user.invoices.manage ? (
+    <Link className={`button-primary ${adminList.actionButton}`} href="/invoices/new">
+      <Plus aria-hidden="true" />Add Invoice
+    </Link>
+  ) : undefined;
+
   return (
-    <PageFrame
-      title="Invoices"
-      action={context.user.invoices.manage ? <Link className="button-primary" href="/invoices/new"><Plus aria-hidden="true" />Add Invoice</Link> : undefined}
-    >
+    <PageFrame title="Invoices">
       <div className={styles.pageEnter}>
-        <nav className={styles.filterTabs} aria-label="Invoice status">
-          {filters.map(([value, label]) => <Link key={value} className={activeFilter === value ? styles.activeTab : undefined} href={value === "all" ? "/invoices" : `/invoices?state=${value}`}>{label}</Link>)}
-        </nav>
+        <ListToolbar
+          label="Invoice status filters"
+          filters={filters.map(([value, label]) => ({
+            value,
+            label,
+            href: invoiceHref(value, search),
+            active: activeFilter === value,
+          }))}
+          action={addInvoice}
+          search={<FilterInput label="Search invoices" placeholder="Search invoices" initialValue={search} />}
+        />
 
         {visible.length === 0 ? (
-          <EmptyState title="Invoices" body={activeFilter === "all" ? "Create invoices for client Services and custom work." : `No ${filters.find(([value]) => value === activeFilter)?.[1] ?? "matching"} invoices.`} action={activeFilter === "all" && context.user.invoices.manage ? <Link className="button-primary" href="/invoices/new"><Plus aria-hidden="true" />Add Invoice</Link> : undefined} />
+          <EmptyState
+            title={search ? "No matching invoices" : activeFilter === "all" ? "No invoices yet" : `No ${activeLabel.toLocaleLowerCase()} invoices`}
+            body={
+              search
+                ? `Nothing matches “${search}” by client name or invoice number.`
+                : activeFilter === "all"
+                  ? "Create invoices for client Services and custom work."
+                  : "Invoices appear here as they reach this state."
+            }
+            action={activeFilter === "all" && !search ? addInvoice : undefined}
+          />
         ) : (
           <>
             <div className={`desktop-table-wrap ${styles.tableWrap}`}>
-              <table className={styles.invoiceTable}>
+              <table className={`${styles.invoiceTable} ${adminList.table}`}>
                 <thead><tr><th>Client</th><th>Total</th><th>Status</th><th>Created</th><th>Paid</th><th>Number</th><th>Actions</th></tr></thead>
                 <tbody>{visible.map((summary) => {
                   const canEdit = context.user.invoices.manage && ["draft", "unpaid", "payment_pending"].includes(summary.invoice.status);

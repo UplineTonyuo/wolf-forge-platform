@@ -1,0 +1,1082 @@
+=== PROFILE DOMAIN ===
+import { z } from "zod";
+
+/**
+ * Self-service profile domain.
+ *
+ * Only fields an account may change about itself live here. Role, preset,
+ * account class, company and email are read-only projections: they have
+ * authoritative sources elsewhere (Team & Roles and Supabase Auth) and are
+ * never accepted as input.
+ */
+
+export const DISPLAY_NAME_MAX = 120;
+
+export const updateMyProfileSchema = z.object({
+  display_name: z
+    .string()
+    .trim()
+    .min(1, "Enter a display name.")
+    .max(DISPLAY_NAME_MAX, "Display name is too long."),
+  notification_sound_enabled: z.boolean(),
+});
+
+export type UpdateMyProfileInput = z.infer<typeof updateMyProfileSchema>;
+
+/**
+ * Result shape of the profile update action.
+ *
+ * This and its initial value live here rather than beside the action because a
+ * "use server" module may only export async functions — Next.js rejects the
+ * whole module otherwise, taking down every route that imports it.
+ */
+export type ProfileActionState = {
+  error: string | null;
+  fieldErrors: Record<string, string>;
+  /** ISO timestamp of the last successful save, used to confirm in the UI. */
+  savedAt: string | null;
+};
+
+export const initialProfileActionState: ProfileActionState = {
+  error: null,
+  fieldErrors: {},
+  savedAt: null,
+};
+
+/** Read-only identity projection for the Settings surface. */
+export type MyProfile = {
+  profileId: string;
+  displayName: string | null;
+  email: string | null;
+  /** Underlying role name, e.g. "owner". Never editable from Settings. */
+  roleName: string;
+  /** Presentation preset, e.g. "Administrator". */
+  presetKey: string | null;
+  presetName: string | null;
+  avatarPath: string | null;
+  avatarUrl: string | null;
+  notificationSoundEnabled: boolean;
+  createdAt: string;
+};
+
+export type MyProfileRow = {
+  profile_id: string;
+  display_name: string | null;
+  email: string | null;
+  role_name: string;
+  preset_key: string | null;
+  preset_name: string | null;
+  avatar_path: string | null;
+  avatar_url: string | null;
+  notification_sound_enabled: boolean;
+  created_at: string;
+};
+
+export function toMyProfile(row: MyProfileRow): MyProfile {
+  return {
+    profileId: row.profile_id,
+    displayName: row.display_name,
+    email: row.email,
+    roleName: row.role_name,
+    presetKey: row.preset_key,
+    presetName: row.preset_name,
+    avatarPath: row.avatar_path,
+    avatarUrl: row.avatar_url,
+    notificationSoundEnabled: row.notification_sound_enabled,
+    createdAt: row.created_at,
+  };
+}
+
+/** Initials fallback shown whenever an account has no avatar object. */
+export function profileInitials(name: string | null | undefined): string {
+  const clean = name?.trim();
+  if (!clean) return "•";
+
+  return clean
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+import { z } from "zod";
+
+/**
+ * Account security domain.
+ *
+ * Password values only ever pass through this module as opaque strings. Nothing
+ * here reads, stores, hashes or logs a password, and no password value is ever
+ * written to an application table — Supabase Auth owns the credential.
+ */
+
+/**
+ * Mirrors `minimum_password_length` in supabase/config.toml.
+ *
+ * It is a server setting with no runtime accessor, so this constant exists to
+ * give the user an accurate message before a round trip. Supabase Auth re-checks
+ * it regardless, so this is UX rather than enforcement — if the project setting
+ * is raised, Auth still rejects and the mapped error is surfaced.
+ */
+export const MIN_PASSWORD_LENGTH = 6;
+
+export const changePasswordSchema = z
+  .object({
+    current_password: z.string().min(1, "Enter your current password."),
+    new_password: z
+      .string()
+      .min(
+        MIN_PASSWORD_LENGTH,
+        `New password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      ),
+    confirm_password: z.string().min(1, "Confirm your new password."),
+  })
+  .refine((value) => value.new_password === value.confirm_password, {
+    path: ["confirm_password"],
+    message: "The new passwords do not match.",
+  })
+  .refine((value) => value.new_password !== value.current_password, {
+    path: ["new_password"],
+    message: "Choose a password different from your current one.",
+  });
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+export type PasswordActionState = {
+  error: string | null;
+  fieldErrors: Record<string, string>;
+  /** ISO timestamp of the last successful change, used to confirm in the UI. */
+  changedAt: string | null;
+};
+
+export const initialPasswordActionState: PasswordActionState = {
+  error: null,
+  fieldErrors: {},
+  changedAt: null,
+};
+
+/**
+ * A sign-in identity as reported by Supabase Auth.
+ *
+ * Only identities Auth actually returns are ever rendered — nothing about this
+ * shape is speculative or locally invented.
+ */
+export type SignInIdentity = {
+  id: string;
+  provider: string;
+  email: string | null;
+  /** True for the password identity, which cannot be removed. */
+  isPrimary: boolean;
+};
+
+/** Human label for a provider key returned by Auth. */
+export function providerLabel(provider: string): string {
+  const labels: Record<string, string> = {
+    email: "Email and password",
+    google: "Google",
+    azure: "Microsoft",
+    apple: "Apple",
+    github: "GitHub",
+  };
+
+  return labels[provider] ?? provider.replace(/^./u, (first) => first.toUpperCase());
+}
+
+=== PROFILE REPOSITORY ===
+import {
+  toMyProfile,
+  type MyProfile,
+  type MyProfileRow,
+  type UpdateMyProfileInput,
+} from "../domain/profile/schema";
+import { unwrapMany } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
+
+export const AVATAR_BUCKET = "profile-avatars";
+
+/**
+ * Self-service profile access.
+ *
+ * Every call is an audited SECURITY DEFINER RPC that derives the account from
+ * auth.uid(); none of them take a profile id, so there is no parameter an
+ * attacker could point at somebody else's row. public.profiles has no write
+ * grant for `authenticated`, so there is no direct table path either.
+ */
+export class ProfileRepository {
+  constructor(private readonly client: UserMutationClient) {}
+
+  async getMine(): Promise<MyProfile | null> {
+    const rows = unwrapMany(
+      await this.client.rpc("app_get_my_profile"),
+    ) as MyProfileRow[];
+
+    const row = rows[0];
+    return row ? toMyProfile(row) : null;
+  }
+
+  async updateMine(input: UpdateMyProfileInput): Promise<void> {
+    const { error } = await this.client.rpc("app_update_my_profile", {
+      p_display_name: input.display_name,
+      p_notification_sound_enabled: input.notification_sound_enabled,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Uploads the avatar object under the caller's own folder. The storage
+   * policies on storage.objects re-check that ownership, so a forged path is
+   * rejected by the database rather than by this method.
+   */
+  async uploadAvatarObject(
+    objectPath: string,
+    body: Uint8Array,
+    contentType: string,
+  ): Promise<void> {
+    const { error } = await this.client.storage
+      .from(AVATAR_BUCKET)
+      .upload(objectPath, body, { contentType, upsert: false });
+
+    if (error) throw error;
+  }
+
+  publicAvatarUrl(objectPath: string): string {
+    return this.client.storage.from(AVATAR_BUCKET).getPublicUrl(objectPath).data
+      .publicUrl;
+  }
+
+  /** Returns the replaced object path, if any, for post-commit cleanup. */
+  async setMineAvatar(objectPath: string, publicUrl: string): Promise<string | null> {
+    const rows = unwrapMany(
+      await this.client.rpc("app_set_my_avatar", {
+        p_avatar_path: objectPath,
+        p_avatar_url: publicUrl,
+      }),
+    ) as Array<{ previous_avatar_path: string | null }>;
+
+    return rows[0]?.previous_avatar_path ?? null;
+  }
+
+  /** Returns the removed object path, if any, for post-commit cleanup. */
+  async clearMineAvatar(): Promise<string | null> {
+    const rows = unwrapMany(
+      await this.client.rpc("app_clear_my_avatar"),
+    ) as Array<{ previous_avatar_path: string | null }>;
+
+    return rows[0]?.previous_avatar_path ?? null;
+  }
+
+  /**
+   * Best-effort removal of a superseded object. Never throws: a failed cleanup
+   * must not undo a profile update that already committed. The delete is still
+   * authorized by the owner-scoped storage policy, so this cannot touch another
+   * account's object even if it were called with one.
+   */
+  async removeAvatarObject(objectPath: string): Promise<void> {
+    await this.client.storage.from(AVATAR_BUCKET).remove([objectPath]);
+  }
+}
+
+=== PROFILE SERVICE ===
+import {
+  updateMyProfileSchema,
+  type MyProfile,
+} from "../domain/profile/schema";
+import { parseInput } from "../domain/shared";
+import {
+  buildAvatarObjectPath,
+  validateAvatarBytes,
+  type AvatarValidationResult,
+} from "../lib/images/avatar-file";
+import type { ProfileRepository } from "../repositories/profile-repository";
+import {
+  requireVerifiedActor,
+  type ServiceDependencies,
+  type UserMutationActor,
+} from "./mutation-context";
+
+export type AvatarSaveResult =
+  | { ok: true; avatarUrl: string }
+  | { ok: false; error: string };
+
+/**
+ * Self-service profile operations.
+ *
+ * The database decides authorization; this service validates shapes, derives
+ * the storage object path from the *verified* actor rather than from anything
+ * the browser sent, and sequences avatar replacement so a failed cleanup can
+ * never undo a committed profile change.
+ */
+export class ProfileService {
+  constructor(private readonly dependencies: ServiceDependencies<ProfileRepository>) {}
+
+  getMine(): Promise<MyProfile | null> {
+    return this.dependencies.repository.getMine();
+  }
+
+  async updateMine(input: unknown, actor: UserMutationActor): Promise<void> {
+    requireVerifiedActor(actor);
+    await this.dependencies.repository.updateMine(parseInput(updateMyProfileSchema, input));
+  }
+
+  /**
+   * Validates the bytes, stores the object and persists the profile pointer.
+   *
+   * Sequence is deliberate: upload the new object, persist it, and only then
+   * remove the object it replaced. At no point is the old avatar deleted before
+   * the replacement is durable, so an interrupted save leaves the account with
+   * its previous photo rather than none.
+   */
+  async saveMineAvatar(
+    input: { bytes: Uint8Array; declaredSize?: number },
+    actor: UserMutationActor,
+  ): Promise<AvatarSaveResult> {
+    requireVerifiedActor(actor);
+
+    const validation: AvatarValidationResult = validateAvatarBytes(
+      input.bytes,
+      input.declaredSize,
+    );
+
+    if (!validation.ok) return { ok: false, error: validation.error };
+
+    /*
+     * The folder segment is the verified actor id, so the caller cannot aim the
+     * upload at another account even by tampering with the request. The
+     * filename is random, so an upload can never clobber an existing object.
+     */
+    const objectPath = buildAvatarObjectPath(
+      actor.id,
+      validation.format,
+      crypto.randomUUID(),
+    );
+
+    await this.dependencies.repository.uploadAvatarObject(
+      objectPath,
+      input.bytes,
+      validation.format.mimeType,
+    );
+
+    const publicUrl = this.dependencies.repository.publicAvatarUrl(objectPath);
+
+    let replacedPath: string | null = null;
+    try {
+      replacedPath = await this.dependencies.repository.setMineAvatar(objectPath, publicUrl);
+    } catch (error) {
+      /*
+       * Persisting failed, so the object just uploaded is an orphan. Remove it
+       * before surfacing the failure, then let the caller report the error.
+       */
+      await this.dependencies.repository
+        .removeAvatarObject(objectPath)
+        .catch(() => undefined);
+      throw error;
+    }
+
+    if (replacedPath) {
+      await this.dependencies.repository
+        .removeAvatarObject(replacedPath)
+        .catch(() => undefined);
+    }
+
+    return { ok: true, avatarUrl: publicUrl };
+  }
+
+  /** Clears the pointer first, then removes the object it referenced. */
+  async removeMineAvatar(actor: UserMutationActor): Promise<void> {
+    requireVerifiedActor(actor);
+
+    const removedPath = await this.dependencies.repository.clearMineAvatar();
+
+    if (removedPath) {
+      await this.dependencies.repository
+        .removeAvatarObject(removedPath)
+        .catch(() => undefined);
+    }
+  }
+}
+
+=== PROFILE ACTION ===
+"use server";
+
+import { revalidatePath } from "next/cache";
+import type { ProfileActionState } from "../../domain/profile/schema";
+import { toClientSafeError } from "../../lib/errors/application-error";
+import { AVATAR_MAX_BYTES } from "../../lib/images/avatar-file";
+import { getSelfServiceContext } from "../../lib/supabase/next-server";
+
+/*
+ * Only async functions may be exported from a "use server" module. The action
+ * state type and its initial value live in domain/profile/schema.ts for that
+ * reason; type-only exports are erased and are safe here.
+ */
+export type AvatarActionResult =
+  | { ok: true; avatarUrl: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Every surface the new avatar appears on is server-rendered from the same
+ * profile row, so one revalidation set keeps the shell, the account menu and
+ * the team directory in step after a save.
+ */
+function refreshProfileSurfaces() {
+  revalidatePath("/settings");
+  revalidatePath("/team");
+  // The client portal renders the same profile row in its rail and on its own
+  // Profile page, so a save has to reach both workspaces.
+  revalidatePath("/account/profile");
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Updates the signed-in account's own profile.
+ *
+ * There is no profile id in the signature: the RPC derives the account from
+ * auth.uid(). Role, preset and email are not accepted here at all, so Settings
+ * cannot be used to move an account between roles — that stays behind the Team
+ * & Roles boundary.
+ */
+export async function updateMyProfileAction(
+  _state: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  void _state;
+
+  const displayName = String(formData.get("display_name") ?? "").trim();
+  const notificationSound = formData.get("notification_sound_enabled") === "on";
+
+  if (!displayName) {
+    return {
+      error: "Check the highlighted fields.",
+      fieldErrors: { display_name: "Enter a display name." },
+      savedAt: null,
+    };
+  }
+
+  const context = await getSelfServiceContext();
+
+  try {
+    await context.services.profile.updateMine(
+      {
+        display_name: displayName,
+        notification_sound_enabled: notificationSound,
+      },
+      context.actor,
+    );
+  } catch (error) {
+    const safe = toClientSafeError(error);
+    return {
+      error: safe.code === "VALIDATION_ERROR" ? safe.message : "Unable to update profile.",
+      fieldErrors: {},
+      savedAt: null,
+    };
+  }
+
+  refreshProfileSurfaces();
+  return { error: null, fieldErrors: {}, savedAt: new Date().toISOString() };
+}
+
+/**
+ * Stores a new profile photo.
+ *
+ * The upload arrives as bytes and is identified by its real file signature in
+ * the service layer — the browser's MIME type, the filename and the extension
+ * are all discarded. The storage object path is generated from the verified
+ * actor id, so it can only ever land in the caller's own folder.
+ */
+export async function uploadMyAvatarAction(formData: FormData): Promise<AvatarActionResult> {
+  const file = formData.get("avatar");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose an image to upload." };
+  }
+
+  /* Cheap rejection before buffering the whole upload into memory. */
+  if (file.size > AVATAR_MAX_BYTES) {
+    return { ok: false, error: "Image must be smaller than 5 MB." };
+  }
+
+  const context = await getSelfServiceContext();
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+
+    const result = await context.services.profile.saveMineAvatar(
+      { bytes, declaredSize: file.size },
+      context.actor,
+    );
+
+    if (!result.ok) return result;
+
+    refreshProfileSurfaces();
+    return { ok: true, avatarUrl: result.avatarUrl };
+  } catch {
+    /* Storage and database detail never reaches the browser. */
+    return { ok: false, error: "Unable to update your photo. Try again." };
+  }
+}
+
+export async function removeMyAvatarAction(): Promise<AvatarActionResult> {
+  const context = await getSelfServiceContext();
+
+  try {
+    await context.services.profile.removeMineAvatar(context.actor);
+  } catch {
+    return { ok: false, error: "Unable to remove your photo. Try again." };
+  }
+
+  refreshProfileSurfaces();
+  return { ok: true, avatarUrl: null };
+}
+
+=== CLIENT PROFILE PAGE ===
+import type { Metadata } from "next";
+import { ClientProfile } from "../../../components/account/profile/client-profile";
+import type { SignInIdentity } from "../../../domain/profile/security";
+import {
+  createNextServerSupabaseClient,
+  getClientContext,
+} from "../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "Profile" };
+
+/**
+ * The account's real sign-in identities, from Supabase Auth.
+ *
+ * getUserIdentities() resolves against the caller's own session, so there is no
+ * user id to pass and none is accepted. Only what Auth actually returns is
+ * rendered — no speculative provider list.
+ */
+async function loadSignInIdentities(): Promise<SignInIdentity[]> {
+  const supabase = await createNextServerSupabaseClient();
+  const { data, error } = await supabase.auth.getUserIdentities();
+
+  if (error || !data?.identities) return [];
+
+  return data.identities.map((identity) => ({
+    id: identity.identity_id ?? identity.id,
+    provider: identity.provider,
+    email:
+      typeof identity.identity_data?.email === "string" ? identity.identity_data.email : null,
+    /* The password credential is the account's primary and cannot be removed. */
+    isPrimary: identity.provider === "email",
+  }));
+}
+
+export default async function ClientProfilePage() {
+  const context = await getClientContext();
+
+  /*
+   * No module gate. Profile is self-service: app_get_my_profile is granted to
+   * `authenticated` and derives the account from auth.uid(), so every signed-in
+   * account can reach its own profile and no account can reach another's. There
+   * is no identifier on this page to get wrong.
+   */
+  const [profile, identities] = await Promise.all([
+    context.services.profile.getMine().catch(() => null),
+    loadSignInIdentities().catch(() => []),
+  ]);
+
+  if (!profile) {
+    return (
+      <div className="portal-page">
+        <header className="portal-page-head">
+          <span className="portal-eyebrow">Account</span>
+          <h1>Profile</h1>
+        </header>
+        <p className="portal-empty">Your profile could not be loaded.</p>
+      </div>
+    );
+  }
+
+  return (
+    <ClientProfile
+      profile={profile}
+      companyName={context.user.companyName}
+      identities={identities}
+    />
+  );
+}
+
+=== CLIENT PROFILE UI ===
+"use client";
+
+import { Check, Loader2, Trash2, Upload } from "lucide-react";
+import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
+import {
+  removeMyAvatarAction,
+  updateMyProfileAction,
+  uploadMyAvatarAction,
+} from "../../../app/actions/profile";
+import {
+  DISPLAY_NAME_MAX,
+  initialProfileActionState,
+  type MyProfile,
+} from "../../../domain/profile/schema";
+import type { SignInIdentity } from "../../../domain/profile/security";
+import { AVATAR_MAX_BYTES } from "../../../lib/images/avatar-file";
+import { SecuritySection } from "../../settings/security-section";
+import { AccountAvatar } from "../../ui/account-avatar";
+import { SuccessToast } from "../../ui/success-toast";
+
+/** Mirrors the server-side allowlist so the picker rejects early, for UX only. */
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/**
+ * The client account's own profile.
+ *
+ * Deliberately NOT the internal SettingsWorkspace. That surface renders the
+ * account's role, its permission preset and a pointer to Team & Roles — all
+ * internal mechanics a client should never be shown, let alone offered. This
+ * component exposes only the three things a client account may change about
+ * itself, and each goes through the same self-service RPC the internal surface
+ * uses: one that takes no profile id and resolves the account from auth.uid().
+ *
+ * Company name and email are read-only. Both have authoritative sources
+ * elsewhere (the Wolf Forge team, and Supabase Auth) and are not accepted as
+ * input by app_update_my_profile at all.
+ */
+export function ClientProfile({
+  profile,
+  companyName,
+  identities,
+}: {
+  profile: MyProfile;
+  companyName: string;
+  identities: SignInIdentity[];
+}) {
+  const [state, submit, pending] = useActionState(
+    updateMyProfileAction,
+    initialProfileActionState,
+  );
+
+  const displayNameId = useId();
+  const displayNameErrorId = useId();
+  const soundId = useId();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewUrlRef = useRef<string | null>(null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
+  const [avatarBusy, startAvatarTransition] = useTransition();
+
+  function notify(message: string) {
+    setToast((current) => ({ id: (current?.id ?? 0) + 1, message }));
+  }
+
+  /* Object URLs are released on unmount so a long session cannot leak them. */
+  useEffect(
+    () => () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    },
+    [],
+  );
+
+  function clearPreview() {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = null;
+    setPreviewUrl(null);
+  }
+
+  function chooseFile(file: File | null) {
+    if (!file) return;
+    setAvatarError(null);
+
+    /*
+     * Cheap client-side rejection only. The server re-derives the real file
+     * type from the bytes and re-checks the size, so nothing here is trusted.
+     */
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setAvatarError("Choose a JPEG, PNG or WebP image.");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setAvatarError("Image must be smaller than 5 MB.");
+      return;
+    }
+
+    clearPreview();
+    const url = URL.createObjectURL(file);
+    previewUrlRef.current = url;
+    setPreviewUrl(url);
+
+    const formData = new FormData();
+    formData.set("avatar", file);
+
+    startAvatarTransition(async () => {
+      const result = await uploadMyAvatarAction(formData);
+      clearPreview();
+      if (result.ok) notify("Photo updated.");
+      else setAvatarError(result.error);
+    });
+  }
+
+  function removePhoto() {
+    setAvatarError(null);
+    startAvatarTransition(async () => {
+      const result = await removeMyAvatarAction();
+      if (result.ok) notify("Photo removed.");
+      else setAvatarError(result.error);
+    });
+  }
+
+  const shownAvatar = previewUrl ?? profile.avatarUrl;
+
+  return (
+    <div className="portal-page">
+      <header className="portal-page-head">
+        <span className="portal-eyebrow">Account</span>
+        <h1>Profile</h1>
+        <p>Your name, photo and sign-in details for the Wolf Forge workspace.</p>
+      </header>
+
+      <section className="portal-section" aria-labelledby="portal-profile-identity">
+        <header className="portal-section-head">
+          <h2 id="portal-profile-identity">Your details</h2>
+        </header>
+
+        <div className="portal-card portal-profile-card">
+          <div className="portal-profile-avatar">
+            <AccountAvatar
+              name={profile.displayName ?? companyName}
+              avatarUrl={shownAvatar}
+              size={72}
+            />
+
+            <div className="portal-profile-avatar-actions">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPTED_TYPES.join(",")}
+                className="sr-only"
+                onChange={(event) => {
+                  chooseFile(event.target.files?.[0] ?? null);
+                  event.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                className="portal-ghost-action"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarBusy}
+              >
+                {avatarBusy ? (
+                  <Loader2 className="spinner" aria-hidden="true" />
+                ) : (
+                  <Upload aria-hidden="true" />
+                )}
+                {profile.avatarUrl ? "Change photo" : "Add a photo"}
+              </button>
+
+              {profile.avatarUrl ? (
+                <button
+                  type="button"
+                  className="portal-ghost-action"
+                  onClick={removePhoto}
+                  disabled={avatarBusy}
+                >
+                  <Trash2 aria-hidden="true" />
+                  Remove
+                </button>
+              ) : null}
+
+              {avatarError ? (
+                <p className="portal-field-error" role="alert">
+                  {avatarError}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <form action={submit} className="portal-form">
+            <label className="portal-field" htmlFor={displayNameId}>
+              <span>Display name</span>
+              <input
+                id={displayNameId}
+                name="display_name"
+                defaultValue={profile.displayName ?? ""}
+                maxLength={DISPLAY_NAME_MAX}
+                required
+                aria-invalid={state.fieldErrors.display_name ? true : undefined}
+                aria-describedby={
+                  state.fieldErrors.display_name ? displayNameErrorId : undefined
+                }
+              />
+              {state.fieldErrors.display_name ? (
+                <span className="portal-field-error" id={displayNameErrorId} role="alert">
+                  {state.fieldErrors.display_name}
+                </span>
+              ) : null}
+            </label>
+
+            {/* Read-only projections. Neither is accepted by the update RPC. */}
+            <div className="portal-field">
+              <span>Email</span>
+              <output>{profile.email ?? "—"}</output>
+            </div>
+
+            <div className="portal-field">
+              <span>Company</span>
+              <output>{companyName}</output>
+            </div>
+
+            <label className="portal-toggle" htmlFor={soundId}>
+              <input
+                id={soundId}
+                type="checkbox"
+                name="notification_sound_enabled"
+                defaultChecked={profile.notificationSoundEnabled}
+              />
+              <span>
+                <strong>Notification sound</strong>
+                <span>Play a short chime when a new notification arrives.</span>
+              </span>
+            </label>
+
+            {state.error ? (
+              <p className="portal-field-error" role="alert">
+                {state.error}
+              </p>
+            ) : null}
+
+            <div className="portal-form-actions">
+              <button type="submit" className="portal-primary-action" disabled={pending}>
+                {pending ? <Loader2 className="spinner" aria-hidden="true" /> : null}
+                Save changes
+              </button>
+              {state.savedAt ? (
+                <span className="portal-form-saved" role="status">
+                  <Check aria-hidden="true" />
+                  Saved
+                </span>
+              ) : null}
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/*
+       * Password and sign-in methods only. SecuritySection renders exactly what
+       * Supabase Auth reports for this account and nothing speculative, so it is
+       * safe to share with the internal Settings surface verbatim.
+       */}
+      <div className="portal-security">
+        <SecuritySection
+          identities={identities}
+          onPasswordChanged={() => notify("Password updated.")}
+        />
+      </div>
+
+      {toast ? <SuccessToast key={toast.id} title={toast.message} /> : null}
+    </div>
+  );
+}
+
+=== ACCOUNT MENU ===
+"use client";
+
+import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { signOutAction } from "../../app/actions/auth";
+import type { InternalUser } from "../../lib/supabase/next-server";
+import { AccountAvatar } from "../ui/account-avatar";
+
+/**
+ * How long the menu's closing transition runs, in milliseconds. Must stay in
+ * step with the closed-state `transition-duration` in globals.css: it is the
+ * window the menu is held in the DOM so the exit is visible.
+ */
+const MENU_EXIT_MS = 110;
+
+/** `closing` is the menu animating out — mounted, but no longer interactive. */
+type MenuPhase = "closed" | "open" | "closing";
+
+export function AccountMenu({ user, mobile = false, sidebar = false }: { user: InternalUser; mobile?: boolean; sidebar?: boolean }) {
+  const [phase, setPhase] = useState<MenuPhase>("closed");
+  const exitTimerRef = useRef<number | null>(null);
+  const open = phase === "open";
+
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  /* The sidebar and the command bar each render one of these, so ids collide. */
+  const identityId = useId();
+
+  /*
+   * Closing hands the menu to CSS and keeps it mounted for the length of the
+   * exit. Reopening before that lands cancels the timer, so the menu retargets
+   * from wherever it currently sits instead of restarting.
+   */
+  const close = useCallback(() => {
+    setPhase((current) => (current === "open" ? "closing" : current));
+
+    if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+
+    exitTimerRef.current = window.setTimeout(() => {
+      exitTimerRef.current = null;
+      setPhase((current) => (current === "closing" ? "closed" : current));
+    }, MENU_EXIT_MS);
+  }, []);
+
+  const openMenu = useCallback(() => {
+    if (exitTimerRef.current !== null) {
+      window.clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+
+    setPhase("open");
+  }, []);
+
+  useEffect(() => () => {
+    if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        close();
+        buttonRef.current?.focus();
+      }
+    };
+
+    /*
+     * Dismiss on any press outside the trigger and the menu. Without this the
+     * menu stayed open until Escape, which is unreachable with a pointer.
+     */
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    };
+
+    /* Tabbing past the last item closes the menu rather than stranding it open. */
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("focusin", onFocusIn);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("focusin", onFocusIn);
+    };
+  }, [close, open]);
+
+  useEffect(() => {
+    if (open) menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [open]);
+
+  const roleLabel = `${user.role[0]?.toUpperCase() ?? ""}${user.role.slice(1)}`;
+
+  return (
+    <div className={sidebar ? "account account-sidebar" : mobile ? "account account-mobile" : "account account-desktop"}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="avatar-button"
+        aria-label="Account"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => (open ? close() : openMenu())}
+      >
+        {/*
+          One canonical avatar renderer: the stored photo when the account has
+          one, initials otherwise. The rail sits on navy, the command bar on
+          white, so only the treatment differs.
+        */}
+        <AccountAvatar
+          name={user.displayName}
+          avatarUrl={user.avatarUrl}
+          size={sidebar ? 32 : 30}
+          onNavy={sidebar}
+        />
+        {sidebar ? <><span className="account-button-copy"><strong>{user.displayName ?? "Unnamed user"}</strong><small>{user.role}</small></span><ChevronDown aria-hidden="true" /></> : null}
+      </button>
+      {phase !== "closed" ? (
+        <div
+          ref={menuRef}
+          className={sidebar ? "account-popover account-popover-sidebar" : mobile ? "account-sheet" : "account-popover"}
+          data-state={open ? "open" : "closed"}
+        >
+          {/*
+            The identity block is a heading for the menu, not an item in it, so
+            the menu role wraps only what is actually actionable.
+          */}
+          <div className="account-identity" id={identityId}>
+            <strong>{user.displayName ?? "Unnamed user"}</strong>
+            <span>{roleLabel}</span>
+          </div>
+          <div role="menu" aria-labelledby={identityId}>
+            <form action={signOutAction} role="none">
+              <button type="submit" role="menuitem">Sign out</button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+=== INTERNAL ACTOR FUNCTION ===
+
+> supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:8:create or replace function 
+private.require_internal_actor()
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:9:returns uuid
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:10:language plpgsql
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:11:security definer
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:12:set search_path = ''
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:13:as $$
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:14:declare
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:15:  actor_id uuid := (select 
+auth.uid());
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:16:begin
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:17:  if actor_id is null or not 
+(select private.is_internal_user()) then
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:18:    raise exception 'verified 
+internal authentication is required'
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:19:      using errcode = '42501';
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:20:  end if;
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:21:  return actor_id;
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:22:end;
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:23:$$;
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:24:
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:25:create or replace function 
+private.record_authenticated_activity(
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:26:  p_entity_type text,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:27:  p_entity_id uuid,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:28:  p_action text,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:29:  p_summary text,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:30:  p_metadata jsonb default 
+'{}'::jsonb
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:31:)
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:32:returns public.activity_events
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:33:language plpgsql
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:34:security definer
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:35:set search_path = ''
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:36:as $$
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:37:declare
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:38:  event_row 
+public.activity_events;
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:39:  actor_id uuid := 
+private.require_internal_actor();
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:40:begin
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:41:  insert into 
+public.activity_events (
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:42:    actor_profile_id,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:43:    entity_type,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:44:    entity_id,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:45:    action,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:46:    summary,
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:47:    metadata
+  supabase\migrations\20260813010000_phase2b_atomic_mutations.sql:48:  )
+
+
+

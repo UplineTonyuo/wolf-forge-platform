@@ -6,9 +6,11 @@ import {
   FolderKanban,
   FormInput,
   HandCoins,
+  LayoutDashboard,
   ReceiptText,
   Settings,
   ShieldCheck,
+  Sparkles,
   Tags,
   TicketCheck,
   UsersRound,
@@ -29,6 +31,7 @@ import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 
 const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
+  dashboard: LayoutDashboard,
   projects: FolderKanban,
   tickets: TicketCheck,
   clients: UsersRound,
@@ -36,6 +39,7 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   invoices: ReceiptText,
   subscriptions: HandCoins,
   coupons: Tags,
+  investment_intent: Sparkles,
   services: Wrench,
   forms: FormInput,
   team: ShieldCheck,
@@ -46,8 +50,6 @@ type RouteTransitionPhase =
   | "idle"
   | "vacuum"
   | "enter";
-
-const ROUTE_VACUUM_MS = 190;
 
 function SidebarLink({
   id,
@@ -345,10 +347,16 @@ export function InternalShell({
       "vacuum",
     );
 
-    exitTimerRef.current =
-      setTimeout(() => {
-        router.push(route);
-      }, ROUTE_VACUUM_MS);
+    const navigationFrame =
+      window.requestAnimationFrame(
+        () => {
+          router.push(route);
+        },
+      );
+
+    frameRefs.current.push(
+      navigationFrame,
+    );
   }
 
 
@@ -378,13 +386,8 @@ export function InternalShell({
 
       <aside className="app-sidebar">
         <div
-          className="sidebar-brand"
+          className="sidebar-brand is-mark-only"
           aria-label="Wolf Forge"
-          style={{
-            justifyContent: "center",
-            paddingLeft: 16,
-            paddingRight: 16,
-          }}
         >
           <WolfForgeMark />
         </div>
@@ -418,7 +421,7 @@ export function InternalShell({
                         route={item.route}
                         active={routeIsCurrent(
                           item.route,
-                          pathname,
+                          transitionTarget ?? pathname,
                         )}
                         transitioning={
                           transitionTarget ===

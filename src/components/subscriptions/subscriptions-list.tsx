@@ -6,6 +6,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import type { SubscriptionSummary } from "../../domain/subscriptions/schema";
 import { formatCurrencyCents, formatDate } from "../../lib/format";
 import { formatSubscriptionInterval, subscriptionStatusLabels } from "../../lib/subscriptions/presentation";
+import { AnimatedSelect } from "../ui/animated-select";
 import { SubscriptionHealthBadge, SubscriptionStatusBadge } from "./subscription-status-badge";
 import styles from "./subscriptions.module.css";
 
@@ -92,28 +93,36 @@ export function SubscriptionsList({
             <div>
               <label>
                 <span>Health</span>
-                <select
+                <AnimatedSelect
+                  name="health"
+                  label="Health"
                   value={health}
-                  onChange={(event) => setHealth(event.currentTarget.value)}
-                >
-                  <option value="all">All health states</option>
-                  <option value="requires_attention">Requires attention</option>
-                  <option value="stalled">Stalled</option>
-                </select>
+                  onChange={setHealth}
+                  menuLabel="Health"
+                  options={[
+                    { value: "all", label: "All health states" },
+                    { value: "requires_attention", label: "Requires attention" },
+                    { value: "stalled", label: "Stalled" },
+                  ]}
+                />
               </label>
 
               <label>
                 <span>Interval</span>
-                <select
+                <AnimatedSelect
+                  name="interval"
+                  label="Interval"
                   value={interval}
-                  onChange={(event) => setInterval(event.currentTarget.value)}
-                >
-                  <option value="all">All intervals</option>
-                  <option value="day">Daily</option>
-                  <option value="week">Weekly</option>
-                  <option value="month">Monthly</option>
-                  <option value="year">Yearly</option>
-                </select>
+                  onChange={setInterval}
+                  menuLabel="Interval"
+                  options={[
+                    { value: "all", label: "All intervals" },
+                    { value: "day", label: "Daily" },
+                    { value: "week", label: "Weekly" },
+                    { value: "month", label: "Monthly" },
+                    { value: "year", label: "Yearly" },
+                  ]}
+                />
               </label>
 
               <button

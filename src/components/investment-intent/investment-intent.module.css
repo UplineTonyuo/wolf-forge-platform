@@ -1,0 +1,417 @@
+/*
+ * Investment Intent workspace.
+ *
+ * Deliberately thin. The toolbar, filter pills and table chrome come from the
+ * shared admin list system, so this file only adds what the surface genuinely
+ * needs: a counts strip, the cart/renewed chips, and the column rhythm. Navy
+ * carries state, gold stays a hairline accent.
+ */
+
+/* ------------------------------------------------------------------ summary */
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+
+  margin: 14px 0 0;
+  overflow: hidden;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: var(--wf-border);
+}
+
+.summary > div {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--wf-white);
+}
+
+.summary dt {
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.summary dd {
+  margin: 6px 0 0;
+  color: var(--wf-navy);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ------------------------------------------------------------------ filters */
+
+/*
+ * The count rides inside the pill rather than beside it, so a filter row of
+ * eight items still reads as eight controls and not sixteen.
+ */
+.filterCount {
+  margin-left: 7px;
+  padding-left: 7px;
+  border-left: 1px solid currentColor;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+/* Local, not URL-driven: this workspace filters in the browser. */
+.search {
+  position: relative;
+  width: min(100%, 300px);
+  display: flex;
+  align-items: center;
+}
+
+.search > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.search > svg {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  color: var(--wf-text-muted);
+  pointer-events: none;
+}
+
+.search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 34px 0 34px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+
+  color: var(--wf-text);
+  background: var(--wf-white);
+
+  font-size: 13px;
+}
+
+.search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.search > button {
+  position: absolute;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+
+  color: var(--wf-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.search > button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* -------------------------------------------------------------------- table */
+
+.tableWrap {
+  margin-top: 0;
+}
+
+.table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.clientColumn { width: 190px; }
+.investmentColumn { width: 220px; }
+.statusColumn { width: 170px; }
+.actionsColumn { width: 168px; }
+
+.company {
+  display: block;
+  overflow: hidden;
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactedBy,
+.category,
+.cadence {
+  display: block;
+  margin-top: 3px;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+}
+
+.investment {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The row a notification pointed at.
+ *
+ * The wash alone would be indistinguishable from the shared hover state, so the
+ * row also takes the gold hairline the admin table already uses under its
+ * header. Full width and one pixel: gold stays a rule, never a state (D-014),
+ * and the highlight cannot be mistaken for a status or a selection.
+ */
+.table tbody tr[data-focused] {
+  background: var(--wf-navy-wash);
+}
+
+.table tbody tr[data-focused] td {
+  border-bottom-color: rgba(168, 131, 46, .55);
+}
+
+/* -------------------------------------------------------------------- chips */
+
+/*
+ * Cart state is the latest recorded client activity, not a live mirror of the
+ * browser. It is stated plainly in a tooltip on the chip and the filter rather
+ * than in a banner, because a warning strip over a whole workspace would
+ * overstate a footnote.
+ */
+.cartChip {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 3px 9px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.cartChip[data-in-cart="true"] {
+  color: var(--wf-white);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+/*
+ * Renewed interest is an activity signal, never a workflow status -- there is
+ * no "renewed" state to move an intent into. It reads as a quiet mark beside
+ * the cart chip, and gold is doing what gold does here: drawing the eye without
+ * claiming to be a state.
+ */
+.renewed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  margin-left: 6px;
+
+  color: var(--wf-gold-ink, #7d6120);
+
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.renewed svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ------------------------------------------------------------------- status */
+
+.statusControl {
+  min-width: 0;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 10px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.statusBadge[data-status="new"] {
+  color: var(--wf-white);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.statusBadge[data-status="qualified"] {
+  color: var(--wf-navy);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+}
+
+.statusError {
+  display: block;
+  margin-top: 5px;
+  color: #a3242a;
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------- row actions */
+
+.rowActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.rowActions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rowActions svg {
+  width: 12px;
+  height: 12px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rowActions a:hover {
+    text-decoration: underline;
+  }
+
+  .search > button:hover {
+    color: var(--wf-navy);
+    background: var(--wf-navy-wash);
+  }
+}
+
+/* ------------------------------------------------------------------- mobile */
+
+.mobileList {
+  margin-top: 0;
+}
+
+.mobileCard {
+  min-width: 0;
+  padding: 17px 16px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+/* Same treatment as the focused table row, on the card's existing rule. */
+.mobileCard[data-focused] {
+  background: var(--wf-navy-wash);
+  border-bottom-color: rgba(168, 131, 46, .55);
+}
+
+.mobileCardHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobileCardHeading > div { min-width: 0; }
+
+.mobileCardHeading strong {
+  color: var(--wf-navy);
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: 0.025em;
+}
+
+.mobileCardHeading span {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCard dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+}
+
+.mobileCard dl > div { min-width: 0; }
+
+.mobileCard dt {
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mobileCard dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--wf-text);
+  font-size: 12px;
+}
+
+.mobileActions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1023px) {
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .search {
+    width: 100%;
+  }
+}

@@ -1,0 +1,879 @@
+/*
+ * The client Store.
+ *
+ * Scoped to this module on purpose: the portal shell, the rail and every other
+ * portal page keep the furniture in globals.css untouched. Only tokens are
+ * borrowed (--wf-navy, --wf-gold, --wf-ease), so the Store cannot drift away
+ * from the brand and cannot drag anything else with it.
+ *
+ * Every seeded service carries a null image_url, so the card is typographic
+ * first and treats artwork as the exception rather than the layout.
+ */
+
+.store {
+  --store-gold: var(--wf-gold);
+  /*
+   * --wf-gold is ~3.5:1 on white — fine for a 1-2px rule or a dot, not for the
+   * 9.5px labels that carry billing information. This is the same hue darkened
+   * to ~5.9:1 and is used wherever gold has to be read rather than seen.
+   */
+  --store-gold-ink: #7d6120;
+  --store-lift: 0 20px 38px -26px rgba(0, 13, 81, .42);
+  --store-radius: 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* --- Masthead ------------------------------------------------------------- */
+
+.masthead {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 34px 34px 32px;
+  border-radius: 16px;
+  overflow: hidden;
+  color: #fff;
+  /* The same radial the dashboard welcome panel uses, so the two read as one brand. */
+  background:
+    radial-gradient(120% 160% at 88% 8%, rgba(168, 131, 46, .28), transparent 58%),
+    var(--wf-navy);
+}
+
+/* Restrained decoration: a faint forge-hatch, never a gradient soup. */
+.masthead::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    118deg,
+    rgba(255, 255, 255, .05) 0 1px,
+    transparent 1px 74px
+  );
+  mask-image: linear-gradient(255deg, #000, transparent 62%);
+  -webkit-mask-image: linear-gradient(255deg, #000, transparent 62%);
+}
+
+/* Switching category rewrites the heading; it re-enters rather than snapping. */
+.headSwap { animation: headSwap 320ms var(--wf-ease) both; }
+
+@keyframes headSwap {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+
+.mastheadCopy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(233, 205, 141, .92);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+
+.eyebrow::after {
+  content: "";
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(233, 205, 141, .8), transparent);
+}
+
+.mastheadCopy h1 {
+  margin: 0;
+  font-family: var(--wf-font-display);
+  font-size: 38px;
+  line-height: 1.05;
+  font-weight: 620;
+  letter-spacing: -.028em;
+  text-wrap: balance;
+}
+
+.mastheadCopy p {
+  margin: 0;
+  max-width: 48ch;
+  color: rgba(255, 255, 255, .74);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+/* Real counts derived from the catalogue. Not a dashboard, just an index. */
+.index {
+  position: relative;
+  display: flex;
+  gap: 26px;
+  margin: 0;
+  flex: 0 0 auto;
+  padding-left: 26px;
+  border-left: 1px solid rgba(255, 255, 255, .16);
+}
+
+.index > div { display: flex; flex-direction: column; gap: 4px; }
+
+.index dt {
+  color: rgba(255, 255, 255, .72);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.index dd {
+  margin: 0;
+  font-family: var(--wf-font-display);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Control bar ---------------------------------------------------------- */
+
+.controls {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  /* Bleeds to the inner container edges so nothing scrolls through the gutter. */
+  margin: 0 -40px;
+  padding: 12px 40px;
+  border-bottom: 1px solid var(--wf-border);
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/*
+ * Eight categories never fit beside the filter field, so the rail scrolls. The
+ * fade is the only cue that it does — without it the last pill just stops at a
+ * hard edge and reads as the end of the list.
+ */
+.pills {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  padding: 4px 14px 4px 0;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+}
+
+/* At the end of the rail there is nothing left to hint at, and a permanently
+   half-faded last pill (or focus ring) reads as a rendering fault. */
+.pills[data-at-end="true"] { mask-image: none; -webkit-mask-image: none; }
+
+.pills::-webkit-scrollbar { display: none; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 15px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 160ms var(--wf-ease),
+    border-color 160ms var(--wf-ease),
+    background-color 160ms var(--wf-ease),
+    box-shadow 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.pill:hover {
+  color: var(--wf-navy);
+  border-color: rgba(0, 13, 81, .3);
+  background: var(--wf-navy-wash);
+  transform: translateY(-1px);
+}
+
+.pill:active { transform: translateY(0) scale(.98); }
+
+.pill[aria-pressed="true"] {
+  color: #fff;
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+  box-shadow: 0 10px 20px -14px rgba(0, 13, 81, .9);
+}
+
+.pillCount {
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: color 160ms var(--wf-ease);
+}
+
+.pill[aria-pressed="true"] .pillCount { color: rgba(255, 255, 255, .58); }
+
+/* The one gold beat in the control bar: the active category's mark. */
+.pillDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--store-gold);
+  transform: scale(0);
+  transition: transform 200ms var(--wf-ease);
+}
+
+.pill[aria-pressed="true"] .pillDot { transform: scale(1); }
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: 232px;
+  height: 34px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  background: var(--wf-white);
+  transition: border-color 160ms var(--wf-ease), box-shadow 160ms var(--wf-ease);
+}
+
+.search:focus-within {
+  border-color: rgba(0, 13, 81, .38);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, .07);
+}
+
+.search > svg {
+  position: absolute;
+  left: 11px;
+  width: 14px;
+  height: 14px;
+  color: var(--wf-text-muted);
+  pointer-events: none;
+}
+
+.search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--wf-text);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.search input::placeholder { color: var(--wf-text-muted); opacity: 1; }
+.search input::-webkit-search-cancel-button { display: none; }
+
+.searchClear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--wf-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 140ms var(--wf-ease), background-color 140ms var(--wf-ease);
+}
+
+.searchClear:hover { color: var(--wf-navy); background: var(--wf-navy-wash); }
+.searchClear svg { width: 13px; height: 13px; }
+
+/* --- Flagship spotlight --------------------------------------------------- */
+
+.spotlight {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 34px;
+  padding: 26px 28px;
+  border: 1px solid var(--wf-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(140% 200% at 100% 0%, rgba(0, 13, 81, .05), transparent 56%),
+    linear-gradient(180deg, var(--wf-white), var(--wf-warm-50));
+  transition: border-color 200ms var(--wf-ease), box-shadow 200ms var(--wf-ease);
+}
+
+.spotlight:hover {
+  border-color: rgba(0, 13, 81, .2);
+  box-shadow: var(--store-lift);
+}
+
+/* Gold bar riding the top-left edge, the flagship's only ornament. */
+.spotlight::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 28px;
+  width: 96px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--store-gold), rgba(168, 131, 46, 0));
+}
+
+.spotlightCopy { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+
+.spotlightTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  color: var(--store-gold-ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.spotlightCopy h2 a { color: inherit; text-decoration: none; }
+.spotlightCopy h2 a::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+.spotlightCopy h2 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 620;
+  letter-spacing: -.018em;
+  text-wrap: balance;
+}
+
+.spotlightCopy p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.spotlightMeta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.spotlightMeta span:nth-child(2) {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--wf-border);
+}
+
+.spotlightAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.spotlightPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 27px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -.024em;
+  font-variant-numeric: tabular-nums;
+}
+
+.spotlightPrice em {
+  color: var(--wf-text-muted);
+  font-family: var(--wf-font-ui);
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+/* Add sits beside Explore rather than under it: both are one decision. */
+/* The add control and the primary CTA are one right-aligned action group. */
+.spotlightActions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/*
+ * A fixed slot, not an auto-sized one. The add control expands into a pill on
+ * hover; letting that widen the row would resize the spotlight's auto grid
+ * column and reflow the copy beside it. The slot reserves the expanded width
+ * once, the control grows leftward inside it, and nothing on the card moves.
+ */
+.spotlightAddSlot {
+  flex: 0 0 auto;
+  width: 136px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.spotlightCta {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease),
+    box-shadow 160ms var(--wf-ease);
+}
+
+.spotlightCta:hover {
+  background: var(--wf-navy-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px -16px rgba(0, 13, 81, .9);
+}
+
+.spotlightCta:active { transform: translateY(0) scale(.98); }
+.spotlightCta svg { width: 15px; height: 15px; transition: transform 200ms var(--wf-ease); }
+.spotlightCta:hover svg { transform: translateX(3px); }
+
+/* --- Sections ------------------------------------------------------------- */
+
+.sections { display: flex; flex-direction: column; gap: 34px; }
+
+.section { display: flex; flex-direction: column; gap: 16px; }
+
+.sectionHead {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+/* A short gold segment sitting on the hairline — the section's signature. */
+.sectionHead::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 34px;
+  height: 1px;
+  background: var(--store-gold);
+}
+
+.sectionHead h2 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 17px;
+  font-weight: 620;
+  letter-spacing: -.012em;
+}
+
+.sectionCount {
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionNote {
+  margin: -4px 0 0;
+  max-width: 62ch;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* --- Cards ---------------------------------------------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  /* Staggered arrival, capped in the component so a long list never crawls. */
+  animation: cardIn 460ms var(--wf-ease) both;
+  animation-delay: calc(var(--i, 0) * 38ms);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.cardLink {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 20px 20px 18px;
+  border: 1px solid var(--wf-border);
+  border-radius: var(--store-radius);
+  background: var(--wf-white);
+  text-decoration: none;
+  transition:
+    border-color 220ms var(--wf-ease),
+    box-shadow 220ms var(--wf-ease),
+    transform 220ms var(--wf-ease);
+}
+
+.cardLink:hover {
+  border-color: rgba(0, 13, 81, .22);
+  box-shadow: var(--store-lift);
+  transform: translateY(-3px);
+}
+
+.cardLink:active { transform: translateY(-1px) scale(.995); transition-duration: 90ms; }
+
+/* Gold rule that draws itself across the top edge on hover. */
+.cardRule {
+  position: absolute;
+  top: -1px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--store-gold), rgba(168, 131, 46, 0));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 380ms var(--wf-ease);
+}
+
+.cardLink:hover .cardRule,
+.cardLink:focus-within .cardRule { transform: scaleX(1); }
+
+.cardArt {
+  display: block;
+  margin: -4px -4px 2px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--wf-warm-100);
+}
+
+.cardArt img {
+  display: block;
+  width: 100%;
+  height: 122px;
+  object-fit: cover;
+  transition: transform 460ms var(--wf-ease);
+}
+
+.cardLink:hover .cardArt img { transform: scale(1.035); }
+
+/* The card pins the add control to its corner; the button itself is unpositioned. */
+.cardAdd {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
+.cardTag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  /* Clears the add-to-cart control pinned in the corner. */
+  max-width: calc(100% - 34px);
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: color 200ms var(--wf-ease), border-color 200ms var(--wf-ease);
+}
+
+.cardTag[data-recurring="true"] {
+  color: var(--store-gold-ink);
+  border-color: rgba(168, 131, 46, .34);
+  background: rgba(168, 131, 46, .07);
+}
+
+/*
+ * Only the name is the link; it stretches over the card through ::after. The
+ * whole card was the anchor before, which made every entry in a 43-item links
+ * list announce as tag + title + 190-character summary + price.
+ */
+.cardTitle {
+  margin: 0;
+  color: var(--wf-text);
+  font-family: var(--wf-font-display);
+  font-size: 15px;
+  line-height: 1.34;
+  font-weight: 620;
+  letter-spacing: -.008em;
+  /* Long captured names stay on two lines so every card in a row aligns. */
+  display: -webkit-box;
+  /* Three lines: these names are captured verbatim and separate late
+     ("…Guaranteed 150 Links" vs "…350 Links"), so two lines can render two
+     different services as the same string. */
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 200ms var(--wf-ease);
+}
+
+.cardTitle a { color: inherit; text-decoration: none; }
+.cardTitle a::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+
+.cardLink:hover .cardTitle { color: var(--wf-navy); }
+
+.cardSummary {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.58;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cardFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--wf-border);
+}
+
+.cardPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -.018em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardPrice em {
+  color: var(--wf-text-muted);
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+/* The label unfurls from zero width, so nothing reflows around it. */
+.ctaLabel {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition: grid-template-columns 280ms var(--wf-ease), opacity 200ms var(--wf-ease);
+}
+
+.ctaLabel > span { overflow: hidden; white-space: nowrap; }
+
+.cardLink:hover .ctaLabel,
+.cardLink:focus-within .ctaLabel { grid-template-columns: 1fr; opacity: 1; }
+
+.ctaDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--wf-border);
+  border-radius: 50%;
+  color: var(--wf-navy);
+  transition: color 200ms var(--wf-ease), border-color 200ms var(--wf-ease),
+    background-color 200ms var(--wf-ease);
+}
+
+.ctaDot svg { width: 14px; height: 14px; transition: transform 240ms var(--wf-ease); }
+
+.cardLink:hover .ctaDot,
+.cardLink:focus-within .ctaDot {
+  color: #fff;
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.cardLink:hover .ctaDot svg { transform: translateX(2px); }
+
+/* --- States --------------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 32px 28px;
+  border: 1px dashed var(--wf-border);
+  border-radius: var(--store-radius);
+  background: var(--wf-warm-50);
+}
+
+.empty p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.empty strong { color: var(--wf-text); font-weight: 620; }
+
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 15px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  font-size: 12.5px;
+  font-weight: 620;
+  cursor: pointer;
+  transition: border-color 160ms var(--wf-ease), background-color 160ms var(--wf-ease);
+}
+
+.emptyAction:hover { border-color: rgba(0, 13, 81, .3); background: var(--wf-navy-wash); }
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .masthead { flex-direction: column; align-items: flex-start; gap: 24px; padding: 30px 28px; }
+  .index { padding-left: 0; border-left: 0; gap: 30px; }
+  .spotlight { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .spotlightAside { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+}
+
+/* Below this the portal rail becomes a drawer behind a 56px sticky top bar. */
+@media (max-width: 900px) {
+  .controls { top: 56px; margin: 0 -18px; padding: 10px 18px; }
+}
+
+@media (max-width: 720px) {
+  .store { gap: 20px; }
+  .masthead { padding: 26px 22px; border-radius: 14px; }
+  .mastheadCopy h1 { font-size: 28px; }
+  .mastheadCopy p { font-size: 13px; }
+  .index dd { font-size: 22px; }
+  .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+  .search { width: 100%; }
+  /* Under 16px, focusing the filter zooms the viewport on iOS. */
+  .search input { font-size: 16px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .spotlight { padding: 22px 20px; }
+  .spotlight::before { left: 20px; }
+  .spotlightCopy h2 { font-size: 19px; }
+  .spotlightAside { flex-wrap: wrap; gap: 12px; }
+  .spotlightActions { flex-wrap: wrap; gap: 10px; }
+  .spotlightAddSlot { width: auto; }
+  .spotlightActions { flex: 1 1 auto; }
+  .spotlightCta { flex: 1 1 auto; justify-content: center; }
+}
+
+/* Touch surfaces never get a hover, so the card CTA is simply always legible. */
+@media (hover: none) {
+  .ctaLabel { grid-template-columns: 1fr; opacity: 1; }
+  .cardRule { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .pills { scroll-behavior: auto; }
+
+  .cardLink,
+  .cardRule,
+  .cardArt img,
+  .ctaLabel,
+  .ctaDot,
+  .ctaDot svg,
+  .pill,
+  .pillDot,
+  .spotlight,
+  .spotlightCta,
+  .spotlightCta svg,
+  .headSwap { transition: none; animation: none; }
+
+  .cardLink:hover,
+  .cardLink:active,
+  .pill:hover,
+  .pill:active,
+  .spotlightCta:hover,
+  .spotlightCta:active { transform: none; }
+
+  .cardLink:hover .cardArt img,
+  .cardLink:hover .ctaDot svg,
+  .spotlightCta:hover svg { transform: none; }
+
+  .cardRule { transform: scaleX(1); }
+}

@@ -1,0 +1,789 @@
+
+
+============================================================
+FILE: .\src\app\account\store\page.tsx
+============================================================
+
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { StoreCatalogView } from "../../../components/account/store/store-catalog";
+import { selectStoreFolder, type StoreCatalog } from "../../../domain/services/store-projections";
+import { toClientSafeError } from "../../../lib/errors/application-error";
+import { getClientContext } from "../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "Store" };
+
+const emptyCatalog: StoreCatalog = { folders: [], ungrouped: [], serviceCount: 0 };
+
+export default async function ClientStorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ folder?: string }>;
+}) {
+  const [{ folder }, { services }] = await Promise.all([searchParams, getClientContext()]);
+
+  let catalog = emptyCatalog;
+  let denied = false;
+  let loadError: string | null = null;
+
+  try {
+    /*
+     * portal_store resolves to store.view, a client-only capability. The
+     * internal services.view is untouched, so nothing here grants a client
+     * access to the internal Services module.
+     */
+    await services.permissions.requireModuleAccess("portal_store");
+    catalog = await services.catalog.listStoreCatalog();
+  } catch (error) {
+    const safe = toClientSafeError(error);
+    if (safe.code === "PERMISSION_DENIED") denied = true;
+    else loadError = safe.message || "The Store could not be loaded.";
+  }
+
+  // redirect() throws its own control-flow error, so it stays outside the catch.
+  if (denied) redirect("/account");
+
+  if (loadError) {
+    return (
+      <div className="portal-page">
+        <header className="portal-page-head">
+          <span className="portal-eyebrow">Store</span>
+          <h1>Store</h1>
+        </header>
+        <p className="portal-empty">{loadError}</p>
+      </div>
+    );
+  }
+
+  // An unknown or non-visible folder id falls back to the whole Store rather
+  // than erroring, so a stale link never reveals whether a folder exists.
+  return <StoreCatalogView catalog={catalog} activeFolder={selectStoreFolder(catalog, folder)} />;
+}
+
+============================================================
+FILE: .\src\components\account\store\store-catalog.tsx
+============================================================
+
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import type { StoreCatalog, StoreFolderView, StoreServiceView } from "../../../domain/services/store-projections";
+
+/**
+ * Browse-only. There is no cart, no checkout and no order action: the client
+ * portal has no project-creation surface in this slice, and the database
+ * refuses client-initiated projects. The single call to action routes into the
+ * existing support ticket flow.
+ */
+function ServiceCard({ service }: { service: StoreServiceView }) {
+  return (
+    <li className="portal-service-card">
+      <Link href={`/account/store/${service.id}`}>
+        {service.imageUrl ? (
+          // Captured catalog artwork; decorative next to the service name.
+          <span className="portal-service-art">
+            <img src={service.imageUrl} alt="" loading="lazy" />
+          </span>
+        ) : null}
+        <span className="portal-service-body">
+          <strong>{service.name}</strong>
+          {service.summary ? <span className="portal-service-summary">{service.summary}</span> : null}
+        </span>
+        <span className="portal-service-foot">
+          <span className="portal-service-price">
+            {service.recurringLabel ?? service.priceLabel}
+          </span>
+          <ArrowRight aria-hidden={true} />
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+function FolderSection({ folder }: { folder: StoreFolderView }) {
+  return (
+    <section className="portal-store-section" aria-labelledby={`store-folder-${folder.id}`}>
+      <header>
+        <h2 id={`store-folder-${folder.id}`}>{folder.name}</h2>
+        {folder.description ? <p>{folder.description}</p> : null}
+      </header>
+      <ul className="portal-service-grid">
+        {folder.services.map((service) => (
+          <ServiceCard key={service.id} service={service} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+export function StoreCatalogView({
+  catalog,
+  activeFolder,
+}: {
+  catalog: StoreCatalog;
+  activeFolder: StoreFolderView | null;
+}) {
+  const sections = activeFolder ? [activeFolder] : catalog.folders;
+  const showUngrouped = !activeFolder && catalog.ungrouped.length > 0;
+
+  return (
+    <div className="portal-page">
+      <header className="portal-page-head">
+        <span className="portal-eyebrow">Store</span>
+        <h1>{activeFolder ? activeFolder.name : "Store"}</h1>
+        <p>
+          {activeFolder
+            ? activeFolder.description ??
+              `${activeFolder.services.length} ${activeFolder.services.length === 1 ? "service" : "services"} in this category.`
+            : "Everything Wolf Forge builds, organised the way we deliver it. Browse now and talk to us when something fits."}
+        </p>
+      </header>
+
+      {catalog.serviceCount === 0 ? (
+        <p className="portal-empty">
+          The Store is being prepared. Your Wolf Forge team can walk you through what is available
+          in the meantime.
+        </p>
+      ) : (
+        <>
+          {sections.map((folder) => (
+            <FolderSection key={folder.id} folder={folder} />
+          ))}
+
+          {showUngrouped ? (
+            <section className="portal-store-section" aria-labelledby="store-folder-other">
+              <header>
+                <h2 id="store-folder-other">Other services</h2>
+              </header>
+              <ul className="portal-service-grid">
+                {catalog.ungrouped.map((service) => (
+                  <ServiceCard key={service.id} service={service} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
+============================================================
+FILE: .\src\domain\services\store-projections.ts
+============================================================
+
+import { sanitizeServiceDescription, serviceDescriptionToPlainText } from "../../lib/service-description-html";
+import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
+
+/**
+ * Store is the client-facing presentation of the internal Services catalog. It
+ * reads the same tables through the same repository; this module decides what a
+ * client account is shown, and nothing here is a security boundary.
+ *
+ * The authority is RLS: services_authenticated_select_active restricts a client
+ * session to is_active and is_public and not archived, and
+ * service_folders_authenticated_select_active to non-archived folders. The
+ * predicate below re-states that rule so a row handed in from an internal
+ * session (a test, a future internal preview) cannot leak into a client view
+ * model by accident.
+ */
+export function isClientVisibleService(service: ServiceRow): boolean {
+  return service.is_active && service.is_public && service.archived_at === null;
+}
+
+/** Fields deliberately dropped: assigned_to_profile_id, deadline_*, require_client_profile. */
+export type StoreServiceView = {
+  id: string;
+  name: string;
+  folderId: string | null;
+  priceLabel: string;
+  recurring: boolean;
+  recurringLabel: string | null;
+  imageUrl: string | null;
+  /** Sanitized through the existing shared service-description boundary. */
+  descriptionHtml: string;
+  /** Plain-text lead used by cards, so a card never renders raw captured HTML. */
+  summary: string;
+};
+
+export type StoreFolderView = {
+  id: string;
+  name: string;
+  description: string | null;
+  services: StoreServiceView[];
+};
+
+export type StoreCatalog = {
+  folders: StoreFolderView[];
+  /** Visible services whose folder is missing or archived. Never a nav entry. */
+  ungrouped: StoreServiceView[];
+  serviceCount: number;
+};
+
+const summaryLength = 190;
+
+export function formatStoreAmount(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+const intervalUnitLabels: Record<string, string> = {
+  day: "day",
+  week: "week",
+  month: "month",
+  year: "year",
+};
+
+function recurringLabel(service: ServiceRow): string | null {
+  if (!service.recurring) return null;
+
+  const amount = service.recurring_price ?? service.price;
+  const price = formatStoreAmount(amount, service.currency);
+  const length = service.recurring_interval_length ?? 1;
+  const unit = intervalUnitLabels[(service.recurring_interval_unit ?? "month").toLowerCase()];
+
+  if (!unit) return `${price} recurring`;
+  return length === 1 ? `${price} / ${unit}` : `${price} every ${length} ${unit}s`;
+}
+
+function truncate(value: string): string {
+  if (value.length <= summaryLength) return value;
+  const clipped = value.slice(0, summaryLength);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return `${(lastSpace > 60 ? clipped.slice(0, lastSpace) : clipped).trimEnd()}…`;
+}
+
+export function toStoreServiceView(service: ServiceRow): StoreServiceView {
+  return {
+    id: service.id,
+    name: service.name,
+    folderId: service.folder_id,
+    priceLabel: formatStoreAmount(service.price, service.currency),
+    recurring: service.recurring,
+    recurringLabel: recurringLabel(service),
+    imageUrl: service.image_url,
+    descriptionHtml: sanitizeServiceDescription(service.description),
+    summary: truncate(serviceDescriptionToPlainText(service.description)),
+  };
+}
+
+/**
+ * Groups the client-visible catalog. A folder that resolves to zero visible
+ * services is dropped entirely, so an unlaunched category name never appears in
+ * the portal even though service_folders has no is_public column of its own.
+ */
+export function composeStoreCatalog(
+  folders: ServiceFolderRow[],
+  services: ServiceRow[],
+): StoreCatalog {
+  const visible = services.filter(isClientVisibleService);
+  const byFolder = new Map<string, StoreServiceView[]>();
+  const ungrouped: StoreServiceView[] = [];
+  const folderIds = new Set(folders.filter((folder) => folder.archived_at === null).map((folder) => folder.id));
+
+  for (const service of visible) {
+    const view = toStoreServiceView(service);
+    if (!view.folderId || !folderIds.has(view.folderId)) {
+      ungrouped.push(view);
+      continue;
+    }
+
+    const existing = byFolder.get(view.folderId);
+    if (existing) existing.push(view);
+    else byFolder.set(view.folderId, [view]);
+  }
+
+  const grouped = folders
+    .filter((folder) => folder.archived_at === null && (byFolder.get(folder.id)?.length ?? 0) > 0)
+    .map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      description: folder.description,
+      services: byFolder.get(folder.id) ?? [],
+    }));
+
+  return { folders: grouped, ungrouped, serviceCount: visible.length };
+}
+
+/** Sidebar entries. Derived from the same catalog the page renders, never a literal list. */
+export type StoreFolderLink = {
+  id: string;
+  name: string;
+  serviceCount: number;
+};
+
+export function toStoreFolderLinks(catalog: StoreCatalog): StoreFolderLink[] {
+  return catalog.folders.map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    serviceCount: folder.services.length,
+  }));
+}
+
+/**
+ * Resolves the requested folder id against the catalog the caller may actually
+ * see. An unknown or non-visible id falls back to the whole Store rather than
+ * erroring, so a stale link never becomes an existence oracle.
+ */
+export function selectStoreFolder(
+  catalog: StoreCatalog,
+  folderId: string | null | undefined,
+): StoreFolderView | null {
+  if (!folderId) return null;
+  return catalog.folders.find((folder) => folder.id === folderId) ?? null;
+}
+
+============================================================
+FILE: .\src\services\catalog-service.ts
+============================================================
+
+import {
+  createServiceFolderSchema,
+  createServiceSchema,
+  updateServiceFolderSchema,
+  updateServiceSchema,
+} from "../domain/services/schema";
+import {
+  composeStoreCatalog,
+  toStoreServiceView,
+  type StoreCatalog,
+  type StoreServiceView,
+} from "../domain/services/store-projections";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { ServiceRepository } from "../repositories/service-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
+
+export class CatalogService {
+  constructor(private readonly dependencies: ServiceDependencies<ServiceRepository>) {}
+
+  get(id: unknown) {
+    return this.dependencies.repository.getById(parseInput(uuidSchema, id));
+  }
+
+  listActive() {
+    return this.dependencies.repository.listActive();
+  }
+
+  listCatalog() {
+    return this.dependencies.repository.listCatalog();
+  }
+
+  listFolders() {
+    return this.dependencies.repository.listFolders();
+  }
+
+  /**
+   * The client Store catalog, composed from the same tables the internal
+   * Services module reads. There is no second catalog and no client-only
+   * service table; only the projection differs.
+   */
+  async listStoreCatalog(): Promise<StoreCatalog> {
+    const [folders, services] = await Promise.all([
+      this.dependencies.repository.listFolders(),
+      this.dependencies.repository.listStoreServices(),
+    ]);
+
+    return composeStoreCatalog(folders, services);
+  }
+
+  async getStoreService(id: unknown): Promise<StoreServiceView> {
+    return toStoreServiceView(
+      await this.dependencies.repository.getStoreService(parseInput(uuidSchema, id)),
+    );
+  }
+
+  getFolder(id: unknown) {
+    return this.dependencies.repository.getFolderById(parseInput(uuidSchema, id));
+  }
+
+  listAssignees() {
+    return this.dependencies.repository.listAssignees();
+  }
+
+  async create(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.create(parseInput(createServiceSchema, input));
+  }
+
+  async update(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.update(
+      parseInput(uuidSchema, id),
+      parseInput(updateServiceSchema, input),
+    );
+  }
+
+  async duplicate(id: unknown, requestId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.duplicate(
+      parseInput(uuidSchema, id),
+      parseInput(uuidSchema, requestId),
+    );
+  }
+
+  async archive(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.archive(parseInput(uuidSchema, id));
+  }
+
+  async createFolder(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.createFolder(parseInput(createServiceFolderSchema, input));
+  }
+
+  async updateFolder(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.updateFolder(
+      parseInput(uuidSchema, id),
+      parseInput(updateServiceFolderSchema, input),
+    );
+  }
+
+  async archiveFolder(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.archiveFolder(parseInput(uuidSchema, id));
+  }
+}
+
+============================================================
+FILE: .\src\repositories\service-repository.ts
+============================================================
+
+import { randomUUID } from "node:crypto";
+import type {
+  CreateServiceFolderInput,
+  CreateServiceInput,
+  UpdateServiceFolderInput,
+  UpdateServiceInput,
+} from "../domain/services/schema";
+import type { ServiceFolderRow, ServiceRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
+
+export type ServiceAssigneeOption = {
+  id: string;
+  displayName: string;
+};
+
+export class ServiceRepository {
+  constructor(private readonly client: UserMutationClient) {}
+
+  async create(input: CreateServiceInput): Promise<ServiceRow> {
+    const { request_id: requestId, ...payload } = input;
+    return unwrapOne(
+      await this.client.rpc("app_create_service", {
+        p_request_id: requestId ?? randomUUID(),
+        p_payload: payload,
+      }),
+      "Service",
+    );
+  }
+
+  async duplicate(id: string, requestId: string = randomUUID()): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_duplicate_service", {
+        p_request_id: requestId,
+        p_service_id: id,
+      }),
+      "Service",
+    );
+  }
+
+  async getById(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.from("services").select().eq("id", id).is("archived_at", null).single(),
+      "Service",
+    );
+  }
+
+  async listActive(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .order("name"),
+    );
+  }
+
+  async listCatalog(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  /**
+   * The client Store slice of the catalog. RLS already narrows a client session
+   * to public, active, non-archived services; the predicates are restated here
+   * so the query means the same thing whoever runs it.
+   */
+  async listStoreServices(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  async getStoreService(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client
+        .from("services")
+        .select()
+        .eq("id", id)
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .single(),
+      "Service",
+    );
+  }
+
+  async update(id: string, input: UpdateServiceInput): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_update_service", { p_service_id: id, p_patch: input }),
+      "Service",
+    );
+  }
+
+  async archive(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_archive_service", { p_service_id: id }),
+      "Service",
+    );
+  }
+
+  async createFolder(input: CreateServiceFolderInput): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_create_service_folder", {
+        p_request_id: input.request_id ?? randomUUID(),
+        p_name: input.name,
+        p_description: input.description ?? undefined,
+        p_parent_id: input.parent_id ?? undefined,
+        p_sort_order: input.sort_order,
+      }),
+      "Service folder",
+    );
+  }
+
+  async getFolderById(id: string): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client
+        .from("service_folders")
+        .select()
+        .eq("id", id)
+        .is("archived_at", null)
+        .single(),
+      "Service folder",
+    );
+  }
+
+  async listFolders(): Promise<ServiceFolderRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("service_folders")
+        .select()
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  async updateFolder(id: string, input: UpdateServiceFolderInput): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_update_service_folder", {
+        p_folder_id: id,
+        p_patch: input,
+      }),
+      "Service folder",
+    );
+  }
+
+  async archiveFolder(id: string): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_archive_service_folder", { p_folder_id: id }),
+      "Service folder",
+    );
+  }
+
+  async listAssignees(): Promise<ServiceAssigneeOption[]> {
+    const [profiles, roles] = await Promise.all([
+      this.client
+        .from("profiles")
+        .select("id, display_name, role_id")
+        .is("archived_at", null),
+      this.client.from("roles").select("id, name"),
+    ]);
+    const internalRoleIds = new Set(
+      unwrapMany(roles)
+        .filter((role) => ["owner", "admin", "manager", "staff"].includes(role.name))
+        .map((role) => role.id),
+    );
+
+    return unwrapMany(profiles)
+      .filter((profile) => internalRoleIds.has(profile.role_id))
+      .map((profile) => ({
+        id: profile.id,
+        displayName: profile.display_name ?? "Unnamed teammate",
+      }))
+      .sort((left, right) => left.displayName.localeCompare(right.displayName));
+  }
+}
+
+============================================================
+FILE: .\src\components\account\portal-nav-registry.ts
+============================================================
+
+import type { StoreFolderLink } from "../../domain/services/store-projections";
+
+/**
+ * The client portal navigation registry.
+ *
+ * Deliberately a separate file from the internal src/components/shell/
+ * nav-registry.ts. No internal navigation id is representable in this module's
+ * types, so an internal route cannot reach the portal through a mistake in a
+ * filter — the entries simply do not exist.
+ *
+ * Every id is a client-class public.permission_modules key (portal_*), and
+ * visibility is resolved from app_current_user_modules(). That is presentation
+ * only: each page still calls app_require_module_access() server-side, and RLS
+ * remains the authority on rows.
+ */
+export type PortalNavigationItemId =
+  | "portal_dashboard"
+  | "portal_projects"
+  | "portal_tickets"
+  | "portal_store"
+  | "portal_forms"
+  | "portal_invoices"
+  | "portal_subscriptions";
+
+export type PortalNavigationItem = {
+  id: PortalNavigationItemId;
+  label: string;
+  route: string;
+  /**
+   * True when the route should only match exactly. /account is the dashboard
+   * and a prefix of every other portal route, so it cannot use prefix matching.
+   */
+  exact?: boolean;
+  /** Catalog-derived children, resolved at render time. Never a literal list. */
+  children?: PortalNavigationChild[];
+};
+
+export type PortalNavigationChild = {
+  id: string;
+  label: string;
+  route: string;
+  meta?: string;
+};
+
+export type PortalNavigationCategory = {
+  id: "activity" | "store" | "workspace" | "billing";
+  label: string;
+  items: PortalNavigationItem[];
+};
+
+export const portalNavigationCategories: PortalNavigationCategory[] = [
+  {
+    id: "activity",
+    label: "Activity",
+    items: [
+      { id: "portal_dashboard", label: "Dashboard", route: "/account", exact: true },
+      { id: "portal_projects", label: "Projects", route: "/account/projects" },
+      { id: "portal_tickets", label: "Tickets", route: "/account/tickets" },
+    ],
+  },
+  {
+    id: "store",
+    label: "Store",
+    items: [{ id: "portal_store", label: "Browse Store", route: "/account/store" }],
+  },
+  {
+    id: "workspace",
+    label: "Workspace",
+    items: [{ id: "portal_forms", label: "Forms", route: "/account/forms" }],
+  },
+  {
+    id: "billing",
+    label: "Billing",
+    items: [
+      { id: "portal_invoices", label: "Invoices", route: "/account/invoices" },
+      { id: "portal_subscriptions", label: "Subscriptions", route: "/account/subscriptions" },
+    ],
+  },
+];
+
+export function storeFolderRoute(folderId: string): string {
+  return `/account/store?folder=${encodeURIComponent(folderId)}`;
+}
+
+/**
+ * Store categories are the real client-visible service folders, resolved from
+ * the catalog on every request. A folder only reaches this list when
+ * composeStoreCatalog kept it, which requires at least one public, active,
+ * non-archived service inside it.
+ */
+export function storeFolderChildren(folders: StoreFolderLink[]): PortalNavigationChild[] {
+  return folders.map((folder) => ({
+    id: folder.id,
+    label: folder.name,
+    route: storeFolderRoute(folder.id),
+    meta: String(folder.serviceCount),
+  }));
+}
+
+export function portalNavigationFor(
+  modules: Record<string, boolean>,
+  storeFolders: StoreFolderLink[] = [],
+): PortalNavigationCategory[] {
+  return portalNavigationCategories
+    .map((category) => ({
+      ...category,
+      items: category.items
+        .filter((item) => modules[item.id] === true)
+        .map((item) =>
+          item.id === "portal_store" && storeFolders.length > 0
+            ? { ...item, children: storeFolderChildren(storeFolders) }
+            : item,
+        ),
+    }))
+    .filter((category) => category.items.length > 0);
+}
+
+export function portalRouteIsCurrent(
+  item: Pick<PortalNavigationItem, "route" | "exact">,
+  pathname: string,
+): boolean {
+  if (item.exact) return pathname === item.route;
+  return pathname === item.route || pathname.startsWith(`${item.route}/`);
+}
+
+export function portalTitleForPath(pathname: string): string {
+  if (pathname === "/account") return "Dashboard";
+
+  const item = portalNavigationCategories
+    .flatMap((category) => category.items)
+    .find((entry) => portalRouteIsCurrent(entry, pathname));
+
+  return item?.label ?? "Wolf Forge";
+}
+
+============================================================
+PLATINUM / CAROUSEL SEARCH
+============================================================
+

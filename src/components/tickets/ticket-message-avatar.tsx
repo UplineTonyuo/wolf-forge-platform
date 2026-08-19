@@ -1,0 +1,86 @@
+"use client";
+
+/* eslint-disable @next/next/no-img-element */
+
+import { useMemo, useState } from "react";
+import { WolfForgeMark } from "../shell/wolf-forge-mark";
+import styles from "./tickets.module.css";
+
+function safeAvatarSource(
+  value: string | null | undefined,
+): string | null {
+  const candidate = value?.trim();
+
+  if (!candidate) {
+    return null;
+  }
+
+  if (
+    candidate.startsWith("/") &&
+    !candidate.startsWith("//")
+  ) {
+    return candidate;
+  }
+
+  try {
+    const parsed = new URL(candidate);
+
+    if (
+      parsed.protocol === "http:" ||
+      parsed.protocol === "https:"
+    ) {
+      return candidate;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+export function TicketMessageAvatar({
+  src,
+}: {
+  src?: string | null;
+}) {
+  const safeSource =
+    useMemo(
+      () => safeAvatarSource(src),
+      [src],
+    );
+
+  const [failed, setFailed] =
+    useState(false);
+
+  if (
+    safeSource &&
+    !failed
+  ) {
+    return (
+      <span
+        className={styles.messageAvatar}
+        aria-hidden="true"
+      >
+        <img
+          src={safeSource}
+          alt=""
+          referrerPolicy="no-referrer"
+          onError={() =>
+            setFailed(true)
+          }
+          data-testid="ticket-avatar-image"
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={`${styles.messageAvatar} ${styles.messageAvatarFallback}`}
+      aria-hidden="true"
+      data-testid="ticket-avatar-fallback"
+    >
+      <WolfForgeMark />
+    </span>
+  );
+}

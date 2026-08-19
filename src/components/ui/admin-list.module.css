@@ -1,0 +1,258 @@
+/*
+ * Wolf Forge admin list system.
+ *
+ * Shared by the Coupons and Invoices list pages so the two read as siblings
+ * rather than as two separately-built CRUD screens. Navy carries state, gold
+ * is a hairline accent only, and the filter group is the control itself rather
+ * than a row of small tabs floating inside a large empty bordered strip.
+ */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin: 14px 0 16px;
+}
+
+/*
+ * The filters ARE the container. No outer box, no fill — the group reads as
+ * one control because the pills share a baseline and a gap, not because a
+ * border has been drawn around mostly empty space.
+ */
+.filters {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+
+  padding: 0 14px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+
+  transition:
+    color 150ms var(--wf-ease),
+    border-color 150ms var(--wf-ease),
+    background-color 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.filterActive {
+  color: var(--wf-white);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.filter:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.filter:active {
+  transform: scale(.97);
+  transition-duration: 100ms;
+}
+
+/*
+ * Action and search travel together on the trailing edge. They share a
+ * centre line and a single gap so the pair reads as one cluster, and when the
+ * filters take the full row this whole group wraps rather than splitting.
+ */
+.trailing {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.action {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.search {
+  flex: 0 1 auto;
+  width: min(100%, 280px);
+}
+
+/*
+ * FilterInput ships with its own page-level margins and a stacked visible
+ * label. Inside the toolbar the label would make the control taller than the
+ * pills it sits beside, so it stays available to assistive tech only.
+ */
+.search :global(.filter-control) {
+  width: 100%;
+  margin: 0;
+}
+
+.search :global(.filter-control) > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * 40px matches the shared `.button-primary` height, so the search box and the
+ * Add action line up exactly instead of being a few pixels apart.
+ */
+.search :global(.filter-control) > div {
+  height: 40px;
+}
+
+.search :global(.filter-control) input {
+  height: 40px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------ table */
+
+/*
+ * Navy header, white body. `th` is styled globally with a warm grey fill, so
+ * this scoped override replaces it without touching any other table.
+ */
+.table th {
+  color: var(--wf-white);
+  background: var(--wf-navy);
+
+  /* The single restrained gold moment on the page. */
+  border-bottom: 1px solid rgba(168, 131, 46, .55);
+
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .07em;
+}
+
+.table tbody tr {
+  background: var(--wf-white);
+  transition: background-color 150ms var(--wf-ease);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* --------------------------------------------------------- action button */
+
+/*
+ * Add Coupon and Add Invoice already share `.button-primary`, which owns the
+ * height, radius and padding for every primary action in the product. This
+ * adds only the interaction polish, so the two pages gain press and hover
+ * feedback without forking the shared button geometry.
+ */
+.actionButton {
+  transition:
+    background-color 150ms var(--wf-ease),
+    box-shadow 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.actionButton:active {
+  transform: scale(.97);
+  transition-duration: 100ms;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter:hover {
+    color: var(--wf-navy);
+    border-color: #c6c2ba;
+    background: var(--wf-navy-wash);
+  }
+
+  .filterActive:hover {
+    color: var(--wf-white);
+    border-color: var(--wf-navy);
+    background: var(--wf-navy-hover);
+  }
+
+  .table tbody tr:hover {
+    background: var(--wf-navy-wash);
+  }
+
+  .actionButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 13, 81, .18);
+  }
+}
+
+@media (max-width: 767px) {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  /*
+   * The action keeps its natural width and search absorbs the rest, so the
+   * button stays reachable without becoming a full-width slab.
+   */
+  .trailing {
+    gap: 8px;
+    margin-left: 0;
+  }
+
+  .search {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+  }
+
+  /* Wrapping keeps all seven invoice states reachable without a scroll track. */
+  .filter {
+    min-height: 40px;
+  }
+}
+
+/* Only at the narrowest widths is there genuinely no room for both on one row. */
+@media (max-width: 430px) {
+  .trailing {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filter,
+  .table tbody tr,
+  .actionButton {
+    transition: none;
+  }
+
+  .filter:active,
+  .actionButton:active,
+  .actionButton:hover {
+    transform: none;
+  }
+}

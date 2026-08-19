@@ -11,3 +11,8 @@ coverage/
 
 .vercel
 .env*
+
+# Shared Obsidian project memory, symlinked outside the repo.
+# Tailwind follows unignored paths when scanning sources, and this one leaves
+# the filesystem root, which breaks the production build.
+.ai-memory

@@ -1,62 +1,103 @@
 "use server";
 
 import {
+  getClientContext,
   getInternalContext,
 } from "../../lib/supabase/next-server";
 
+export type NotificationCategory =
+  | "project"
+  | "client"
+  | "form"
+  | "coupon"
+  | "ticket"
+  | "payment"
+  | "wallet"
+  | "store";
+
 export type WalletNotificationItem = {
   id: string;
-  companyId: string;
+  companyId: string | null;
   title: string;
   body: string;
   reason: string | null;
   createdAt: string;
   href: string;
   kind: "credit" | "debit";
+  category: NotificationCategory;
+  audience: "internal" | "client";
+  readAt: string | null;
 };
 
 export type WalletNotificationResult =
   | {
       ok: true;
-      notifications:
-        WalletNotificationItem[];
+      notifications: WalletNotificationItem[];
     }
   | {
       ok: false;
       error: string;
+      notifications: [];
     };
 
-function firstName(
-  value: string,
-) {
-  const normalized =
-    value.trim();
+type NotificationRpcRow = {
+  id: string;
+  company_id: string | null;
+  audience: "internal" | "client";
+  category: NotificationCategory;
+  variant: "info" | "credit" | "debit";
+  title: string;
+  body: string;
+  href: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  actor_profile_id: string | null;
+  event_key: string;
+  read_at: string | null;
+  created_at: string;
+};
 
-  if (!normalized) {
-    return "Client";
-  }
+function normalizeRows(
+  data: unknown,
+): WalletNotificationItem[] {
+  const rows =
+    (data ?? []) as NotificationRpcRow[];
 
-  return (
-    normalized.split(/\s+/)[0] ??
-    normalized
+  return rows.map(
+    (row) => ({
+      id: row.id,
+      companyId: row.company_id,
+      title: row.title,
+      body: row.body,
+      reason: null,
+      createdAt: row.created_at,
+      href: row.href,
+      kind:
+        row.variant === "debit"
+          ? "debit"
+          : "credit",
+      category: row.category,
+      audience: row.audience,
+      readAt: row.read_at,
+    }),
   );
 }
 
-function formatMoney(
-  cents: number,
-  currency: string,
-) {
-  return new Intl.NumberFormat(
-    "en-US",
-    {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    },
-  ).format(cents / 100);
+function failure(): WalletNotificationResult {
+  return {
+    ok: false,
+    error:
+      "Notifications could not be loaded.",
+    notifications: [],
+  };
 }
 
+/**
+ * Compatibility name retained so the existing internal command bar
+ * does not need a risky wholesale rewrite.
+ *
+ * It now returns the unified notification feed, not wallet-only rows.
+ */
 export async function getWalletNotificationsAction(): Promise<
   WalletNotificationResult
 > {
@@ -64,96 +105,122 @@ export async function getWalletNotificationsAction(): Promise<
     const context =
       await getInternalContext();
 
-    const rows =
-      await context.services.wallets.listRecent(
-        10,
+    const result =
+      await context.client.rpc(
+        "app_list_my_notifications",
+        {
+          p_limit: 50,
+        },
       );
 
-    const notifications =
-      rows.map((row) => {
-        const amountCents =
-          Number(
-            row.amount_cents,
-          );
-
-        const balanceCents =
-          Number(
-            row.balance_after_cents,
-          );
-
-        const credit =
-          amountCents > 0;
-
-        const client =
-          firstName(
-            row.client_name,
-          );
-
-        const actor =
-          row.is_current_actor
-            ? "You"
-            : row.actor_display_name
-              ? firstName(
-                  row.actor_display_name,
-                )
-              : "A Wolf Forge operator";
-
-        const amount =
-          formatMoney(
-            Math.abs(
-              amountCents,
-            ),
-            row.currency,
-          );
-
-        const balance =
-          formatMoney(
-            balanceCents,
-            row.currency,
-          );
-
-        const title =
-          credit
-            ? `${actor} added ${amount} to ${client}'s balance.`
-            : `${actor} deducted ${amount} from ${client}'s balance.`;
-
-        return {
-          id:
-            row.transaction_id,
-
-          companyId:
-            row.company_id,
-
-          title,
-
-          body:
-            `${client} now has ${balance} available.`,
-
-          reason:
-            row.reason,
-
-          createdAt:
-            row.created_at,
-
-          href:
-            `/clients/${row.company_id}`,
-
-          kind:
-            credit
-              ? "credit"
-              : "debit",
-        } satisfies WalletNotificationItem;
-      });
+    if (result.error) {
+      return failure();
+    }
 
     return {
       ok: true,
-      notifications,
+      notifications:
+        normalizeRows(
+          result.data,
+        ),
     };
   } catch {
+    return failure();
+  }
+}
+
+export async function getClientNotificationsAction(): Promise<
+  WalletNotificationResult
+> {
+  try {
+    const context =
+      await getClientContext();
+
+    const result =
+      await context.client.rpc(
+        "app_list_my_notifications",
+        {
+          p_limit: 50,
+        },
+      );
+
+    if (result.error) {
+      return failure();
+    }
+
     return {
-      ok: false,
-      error:
-        "Wallet notifications could not be loaded.",
+      ok: true,
+      notifications:
+        normalizeRows(
+          result.data,
+        ),
     };
+  } catch {
+    return failure();
+  }
+}
+
+export async function markNotificationReadAction(
+  notificationId: string,
+): Promise<void> {
+  try {
+    const context =
+      await getInternalContext();
+
+    await context.client.rpc(
+      "app_mark_notification_read",
+      {
+        p_notification_id:
+          notificationId,
+      },
+    );
+  } catch {
+    // Read state is best-effort UI state.
+    // Authorization remains database enforced.
+  }
+}
+
+export async function markClientNotificationReadAction(
+  notificationId: string,
+): Promise<void> {
+  try {
+    const context =
+      await getClientContext();
+
+    await context.client.rpc(
+      "app_mark_notification_read",
+      {
+        p_notification_id:
+          notificationId,
+      },
+    );
+  } catch {
+    // Same rule as the internal bell.
+  }
+}
+
+export async function markAllNotificationsReadAction(): Promise<void> {
+  try {
+    const context =
+      await getInternalContext();
+
+    await context.client.rpc(
+      "app_mark_all_notifications_read",
+    );
+  } catch {
+    // Best effort.
+  }
+}
+
+export async function markAllClientNotificationsReadAction(): Promise<void> {
+  try {
+    const context =
+      await getClientContext();
+
+    await context.client.rpc(
+      "app_mark_all_notifications_read",
+    );
+  } catch {
+    // Best effort.
   }
 }

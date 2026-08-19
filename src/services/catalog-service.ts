@@ -4,6 +4,12 @@ import {
   updateServiceFolderSchema,
   updateServiceSchema,
 } from "../domain/services/schema";
+import {
+  composeStoreCatalog,
+  toStoreServiceView,
+  type StoreCatalog,
+  type StoreServiceView,
+} from "../domain/services/store-projections";
 import { parseInput, uuidSchema } from "../domain/shared";
 import { ServiceRepository } from "../repositories/service-repository";
 import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
@@ -25,6 +31,26 @@ export class CatalogService {
 
   listFolders() {
     return this.dependencies.repository.listFolders();
+  }
+
+  /**
+   * The client Store catalog, composed from the same tables the internal
+   * Services module reads. There is no second catalog and no client-only
+   * service table; only the projection differs.
+   */
+  async listStoreCatalog(): Promise<StoreCatalog> {
+    const [folders, services] = await Promise.all([
+      this.dependencies.repository.listFolders(),
+      this.dependencies.repository.listStoreServices(),
+    ]);
+
+    return composeStoreCatalog(folders, services);
+  }
+
+  async getStoreService(id: unknown): Promise<StoreServiceView> {
+    return toStoreServiceView(
+      await this.dependencies.repository.getStoreService(parseInput(uuidSchema, id)),
+    );
   }
 
   getFolder(id: unknown) {

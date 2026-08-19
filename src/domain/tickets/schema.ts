@@ -95,6 +95,7 @@ export type TicketDetailMessage = {
   ticket_id: string;
   author_profile_id: string | null;
   author_name: string | null;
+  author_avatar_url: string | null;
   author_type: (typeof ticketAuthorTypes)[number];
   message_kind: (typeof ticketMessageKinds)[number];
   visibility: (typeof ticketVisibilities)[number];

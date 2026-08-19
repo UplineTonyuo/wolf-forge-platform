@@ -2,47 +2,90 @@ import { Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArchiveCouponButton } from "../../../components/coupons/archive-coupon-button";
+import adminList from "../../../components/ui/admin-list.module.css";
+import { FilterInput } from "../../../components/ui/filter-input";
 import { EmptyState } from "../../../components/ui/list-states";
+import { ListToolbar } from "../../../components/ui/list-toolbar";
 import { PageFrame } from "../../../components/ui/page-frame";
+import { SuccessToast } from "../../../components/ui/success-toast";
 import { formatDate, formatDateTime } from "../../../lib/format";
 import { getInternalContext } from "../../../lib/supabase/next-server";
 import styles from "../../../components/coupons/coupon-admin.module.css";
 
 export const metadata: Metadata = { title: "Coupons" };
 
+/** Preserves the caller's other query values while switching the status view. */
+function couponHref(view: "active" | "archived", search: string) {
+  const params = new URLSearchParams();
+  if (view === "archived") params.set("view", "archived");
+  if (search) params.set("q", search);
+  const query = params.toString();
+  return query ? `/coupons?${query}` : "/coupons";
+}
+
 export default async function CouponsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; created?: string; archived?: string }>;
+  searchParams: Promise<{ view?: string; created?: string; archived?: string; q?: string }>;
 }) {
   const query = await searchParams;
   const showingArchived = query.view === "archived";
+  const search = query.q?.trim() ?? "";
   const context = await getInternalContext();
   const coupons = await context.services.coupons.list(showingArchived);
 
+  /*
+   * Text search narrows what is already on screen. The Active/Archived split
+   * above still decides which set is loaded, so status filtering is unchanged.
+   */
+  const needle = search.toLocaleLowerCase();
+  const visible = needle
+    ? coupons.filter((coupon) =>
+        coupon.code.toLocaleLowerCase().includes(needle) ||
+        (coupon.description ?? "").toLocaleLowerCase().includes(needle))
+    : coupons;
+
+  const addCoupon = (
+    <Link className={`button-primary ${adminList.actionButton}`} href="/coupons/new">
+      <Plus aria-hidden="true" />Add Coupon
+    </Link>
+  );
+
   return (
-    <PageFrame
-      title="Coupons"
-      action={<Link className="button-primary" href="/coupons/new"><Plus aria-hidden="true" />Add Coupon</Link>}
-    >
-      {query.created ? <div className="success-banner">Coupon created.</div> : null}
-      {query.archived ? <div className="success-banner">Coupon archived. Redemption history was preserved.</div> : null}
+    <PageFrame title="Coupons">
+      {query.created ? (
+        <SuccessToast title="Coupon created" detail="It is now listed under Active." />
+      ) : null}
+      {query.archived ? (
+        <SuccessToast title="Coupon archived" detail="Redemption history was preserved." />
+      ) : null}
 
-      <nav className={styles.viewTabs} aria-label="Coupon status">
-        <Link className={!showingArchived ? styles.activeTab : undefined} href="/coupons">Active</Link>
-        <Link className={showingArchived ? styles.activeTab : undefined} href="/coupons?view=archived">Archived</Link>
-      </nav>
+      <ListToolbar
+        label="Coupon status filters"
+        filters={[
+          { value: "active", label: "Active", href: couponHref("active", search), active: !showingArchived },
+          { value: "archived", label: "Archived", href: couponHref("archived", search), active: showingArchived },
+        ]}
+        action={addCoupon}
+        search={<FilterInput label="Search coupons" placeholder="Search coupons" initialValue={search} />}
+      />
 
-      {coupons.length === 0 ? (
+      {visible.length === 0 ? (
         <EmptyState
-          title="Coupons"
-          body={showingArchived ? "No archived coupons." : "Create discount codes for your Services."}
-          action={showingArchived ? undefined : <Link className="button-primary" href="/coupons/new"><Plus aria-hidden="true" />Add Coupon</Link>}
+          title={search ? "No matching coupons" : showingArchived ? "No archived coupons" : "No coupons yet"}
+          body={
+            search
+              ? `Nothing matches “${search}” in ${showingArchived ? "archived" : "active"} coupons.`
+              : showingArchived
+                ? "Coupons you archive are kept here with their redemption history."
+                : "Create discount codes for your Services."
+          }
+          action={showingArchived || search ? undefined : addCoupon}
         />
       ) : (
         <>
           <div className={`desktop-table-wrap ${styles.tableWrap}`}>
-            <table className={styles.table}>
+            <table className={`${styles.table} ${adminList.table}`}>
               <colgroup>
                 <col className={styles.codeColumn} /><col className={styles.descriptionColumn} />
                 <col /><col className={styles.expiryColumn} /><col /><col /><col /><col /><col className={styles.actionsColumn} />
@@ -52,7 +95,7 @@ export default async function CouponsPage({
                 <th>Times used</th><th>Created</th><th>Updated</th><th>Actions</th>
               </tr></thead>
               <tbody>
-                {coupons.map((coupon) => (
+                {visible.map((coupon) => (
                   <tr key={coupon.id}>
                     <td><strong className={styles.code}>{coupon.code}</strong>{!coupon.is_active && !showingArchived ? <span className={styles.inactive}>Inactive</span> : null}</td>
                     <td><span className={styles.description} title={coupon.description ?? undefined}>{coupon.description ?? "—"}</span></td>
@@ -77,7 +120,7 @@ export default async function CouponsPage({
           </div>
 
           <div className={`mobile-record-list ${styles.mobileList}`}>
-            {coupons.map((coupon) => (
+            {visible.map((coupon) => (
               <article className={styles.mobileCard} key={coupon.id}>
                 <div className={styles.mobileCardHeading}>
                   <div><strong>{coupon.code}</strong><span>{coupon.description ?? "No description"}</span></div>

@@ -15,6 +15,7 @@ import type { Database } from "./database.types";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
 import { ActivityRepository } from "../../repositories/activity-repository";
 import { CompanyRepository } from "../../repositories/company-repository";
+import { DashboardRepository } from "../../repositories/dashboard-repository";
 import { CompanyWalletRepository } from "../../repositories/company-wallet-repository";
 import { ContactRepository } from "../../repositories/contact-repository";
 import { CouponRepository } from "../../repositories/coupon-repository";
@@ -22,26 +23,32 @@ import { OrderRepository } from "../../repositories/order-repository";
 import { InvoiceRepository } from "../../repositories/invoice-repository";
 import { WfCardRepository } from "../../repositories/wf-card-repository";
 import { ServiceRepository } from "../../repositories/service-repository";
+import { StoreInterestRepository } from "../../repositories/store-interest-repository";
 import { SubscriptionRepository } from "../../repositories/subscription-repository";
 import { FormRepository } from "../../repositories/form-repository";
 import { TicketRepository } from "../../repositories/ticket-repository";
 import { PermissionRepository } from "../../repositories/permission-repository";
+import { ProfileRepository } from "../../repositories/profile-repository";
 import { TaskRepository } from "../../repositories/task-repository";
 import { AccountProvisioningService } from "../../services/account-provisioning-service";
 import { PermissionService } from "../../services/permission-service";
+import { ProfileService } from "../../services/profile-service";
 import { AuthAdminAdapter } from "./auth-admin";
 import { ActivityService } from "../../services/activity-service";
 import { CatalogService } from "../../services/catalog-service";
 import { CompanyService } from "../../services/company-service";
+import { DashboardService } from "../../services/dashboard-service";
 import { CompanyWalletService } from "../../services/company-wallet-service";
 import { ContactService } from "../../services/contact-service";
 import { CouponService } from "../../services/coupon-service";
 import { OrderService } from "../../services/order-service";
 import { InvoiceService } from "../../services/invoice-service";
 import { SubscriptionService } from "../../services/subscription-service";
+import { SubscriptionCalendarService } from "../../services/subscription-calendar-service";
 import { FormService } from "../../services/form-service";
 import { TicketService } from "../../services/ticket-service";
 import { WfCardService } from "../../services/wf-card-service";
+import { StoreInterestService } from "../../services/store-interest-service";
 import { TaskService } from "../../services/task-service";
 
 const internalRoleNames = new Set(["owner", "admin", "manager", "staff"]);
@@ -52,9 +59,25 @@ export type TeamCapabilities = {
   managePermissions: boolean;
 };
 
+/**
+ * Presentation only, like every other capability block here. The workspace hides
+ * its status control without `manage`, and app_set_investment_intent_status
+ * refuses the call regardless of what the browser was shown.
+ */
+export type InvestmentIntentCapabilities = {
+  view: boolean;
+  manage: boolean;
+};
+
 export type InternalUser = {
   id: string;
   displayName: string | null;
+  /**
+   * Public avatar URL, or null when the account still falls back to initials.
+   * Read from public.profiles on the same query that resolves identity, so the
+   * shell never needs a second round trip to render the account avatar.
+   */
+  avatarUrl: string | null;
   role: "owner" | "admin" | "manager" | "staff";
   /**
    * Navigation visibility derived from public.permission_modules, so the rail
@@ -69,6 +92,7 @@ export type InternalUser = {
   forms: FormCapabilities;
   tickets: TicketCapabilities;
   projects: ProjectCapabilities;
+  investmentIntent: InvestmentIntentCapabilities;
 };
 
 export type ClientUser = {
@@ -76,6 +100,14 @@ export type ClientUser = {
   companyId: string;
   displayName: string | null;
   companyName: string;
+  /**
+   * Portal navigation visibility, from the same public.permission_modules
+   * boundary the internal rail uses. app_current_user_modules() returns only
+   * the caller's own account class, so a client can never receive an internal
+   * module key here. Presentation only: app_require_module_access() and RLS
+   * remain authoritative for every screen and every row.
+   */
+  modules: Record<string, boolean>;
 };
 
 export function readLocalFrontendEnvironment() {
@@ -105,7 +137,7 @@ export async function resolveInternalUser(
   actor: VerifiedActor,
 ): Promise<InternalUser | null> {
   const [profileResult, rolesResult, permissionsResult, modulesResult] = await Promise.all([
-    client.from("profiles").select("id, role_id, display_name, archived_at").eq("id", actor.id).single(),
+    client.from("profiles").select("id, role_id, display_name, avatar_url, archived_at").eq("id", actor.id).single(),
     client.from("roles").select("id, name"),
     client.rpc("app_current_user_permissions"),
     client.rpc("app_current_user_modules"),
@@ -122,6 +154,7 @@ export async function resolveInternalUser(
   return {
     id: profileResult.data.id,
     displayName: profileResult.data.display_name,
+    avatarUrl: profileResult.data.avatar_url,
     role: role as InternalUser["role"],
     modules: toModuleAccessMap(
       modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
@@ -169,6 +202,10 @@ export async function resolveInternalUser(
       assign: granted.has("projects.assign"),
       archive: granted.has("projects.archive"),
     },
+    investmentIntent: {
+      view: granted.has("investment_intent.view"),
+      manage: granted.has("investment_intent.manage"),
+    },
   };
 }
 
@@ -176,7 +213,10 @@ export async function resolveClientUser(
   client: UserScopedClient,
   actor: VerifiedActor,
 ): Promise<ClientUser | null> {
-  const result = await client.rpc("app_get_client_account_context");
+  const [result, modulesResult] = await Promise.all([
+    client.rpc("app_get_client_account_context"),
+    client.rpc("app_current_user_modules"),
+  ]);
   if (result.error) return null;
   const account = result.data?.[0];
   if (!account || account.profile_id !== actor.id) return null;
@@ -186,6 +226,9 @@ export async function resolveClientUser(
     companyId: account.company_id,
     displayName: account.display_name,
     companyName: account.company_name,
+    modules: toModuleAccessMap(
+      modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
+    ),
   };
 }
 
@@ -210,16 +253,29 @@ export const getInternalContext = cache(async () => {
       activity: new ActivityService(new ActivityRepository(client)),
       catalog: new CatalogService({ repository: new ServiceRepository(client) }),
       companies: new CompanyService({ repository: new CompanyRepository(client) }),
+      dashboard: new DashboardService({ repository: new DashboardRepository(client) }),
       wallets: new CompanyWalletService({ repository: new CompanyWalletRepository(client) }),
       contacts: new ContactService({ repository: new ContactRepository(client) }),
       coupons: new CouponService({ repository: new CouponRepository(client) }),
       invoices: new InvoiceService({ repository: new InvoiceRepository(client) }),
       subscriptions: new SubscriptionService({ repository: new SubscriptionRepository(client) }),
+      subscriptionCalendar: new SubscriptionCalendarService({
+        repository: new SubscriptionRepository(client),
+      }),
       forms: new FormService({ repository: new FormRepository(client) }),
       tickets: new TicketService({ repository: new TicketRepository(client) }),
       orders: new OrderService({ repository: new OrderRepository(client) }),
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
+      profile: new ProfileService({ repository: new ProfileRepository(client) }),
+      /**
+       * The Investment Intent workspace. Reads and status changes both
+       * re-authorize through the internal investment_intent module inside the
+       * database, so this service grants nothing by being constructed here.
+       */
+      investmentIntent: new StoreInterestService({
+        repository: new StoreInterestRepository(client),
+      }),
     },
   };
 });
@@ -243,15 +299,50 @@ export async function getAccountProvisioningService() {
   };
 }
 
-export const getClientContext = cache(async () => {
+/**
+ * A verified account acting on itself, whatever class it belongs to.
+ *
+ * Self-service profile operations — display name, avatar, password — are the
+ * one surface an internal member and a client account share. The underlying
+ * RPCs (app_get_my_profile, app_update_my_profile, app_set_my_avatar,
+ * app_clear_my_avatar) are granted to `authenticated`, take no profile id and
+ * derive the account from auth.uid(), so there is no parameter that could be
+ * pointed at somebody else's row and nothing here to scope by company.
+ *
+ * This exists so a client can reach those RPCs without getInternalContext()
+ * turning them away for not being staff. It grants nothing: it resolves the
+ * session, verifies the actor, and hands back a ProfileService bound to that
+ * session's client. No role check is skipped, because no role check applies —
+ * the only authority for these calls is auth.uid(), and it always has been.
+ */
+export const getSelfServiceContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) redirect("/login?next=/account/invoices");
+  if (error || !data.session) redirect("/login");
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token);
   const actor = await verifyActor(client).catch(() => null);
-  if (!actor) redirect("/login?next=/account/invoices");
+  if (!actor) redirect("/login");
+
+  return {
+    actor,
+    client,
+    services: {
+      profile: new ProfileService({ repository: new ProfileRepository(client) }),
+    },
+  };
+});
+
+export const getClientContext = cache(async () => {
+  const supabase = await createNextServerSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) redirect("/login?next=/account");
+
+  const environment = readLocalFrontendEnvironment();
+  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const actor = await verifyActor(client).catch(() => null);
+  if (!actor) redirect("/login?next=/account");
 
   const user = await resolveClientUser(client, actor);
   if (!user) redirect("/login?reason=client-only");
@@ -263,11 +354,39 @@ export const getClientContext = cache(async () => {
     services: {
       invoices: new InvoiceService({ repository: new InvoiceRepository(client) }),
       subscriptions: new SubscriptionService({ repository: new SubscriptionRepository(client) }),
+      subscriptionCalendar: new SubscriptionCalendarService({
+        repository: new SubscriptionRepository(client),
+      }),
       forms: new FormService({ repository: new FormRepository(client) }),
       tickets: new TicketService({ repository: new TicketRepository(client) }),
       wallets: new CompanyWalletService({ repository: new CompanyWalletRepository(client) }),
       wfCard: new WfCardService({ repository: new WfCardRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
+      /**
+       * Self-service only. Every ProfileRepository call is an RPC that takes no
+       * profile id and derives the account from auth.uid(), so this cannot read
+       * or write anyone but the caller — including anyone else at the same
+       * company.
+       */
+      profile: new ProfileService({ repository: new ProfileRepository(client) }),
+      /**
+       * Store and Projects run on the same session-scoped client as everything
+       * else here. Both are read-only in the portal: catalog visibility comes
+       * from the services RLS policies, project visibility from
+       * orders_client_select_own_company. No service-role client is ever
+       * constructed on this path.
+       */
+      catalog: new CatalogService({ repository: new ServiceRepository(client) }),
+      projects: new OrderService({ repository: new OrderRepository(client) }),
+      /**
+       * Write-only from the portal's point of view: the only method a client
+       * path reaches is record(), and no client-facing read of interest exists.
+       * The company is derived from auth.uid() inside the RPC, so this cannot
+       * record interest for anyone but the caller's own company.
+       */
+      storeInterest: new StoreInterestService({
+        repository: new StoreInterestRepository(client),
+      }),
     },
   };
 });

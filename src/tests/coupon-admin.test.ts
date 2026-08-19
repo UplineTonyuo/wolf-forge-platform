@@ -108,11 +108,28 @@ function modules(overrides: Record<string, boolean> = {}): Record<string, boolea
 }
 
 describe("Coupons capability navigation", () => {
-  it("removes Coupons and its empty Marketing group without the coupons module", () => {
+  it("removes Coupons without the coupons module", () => {
     const withoutCoupons = navigationForModules(modules({ coupons: false }));
     const labels = withoutCoupons.flatMap((category) => category.items.map((item) => item.label));
     expect(labels).not.toContain("Coupons");
-    expect(withoutCoupons.map((category) => category.label)).not.toContain("Marketing");
+  });
+
+  /*
+   * Marketing now carries Investment Intent as well, so losing Coupons alone no
+   * longer empties the group. The group still disappears once nothing in it is
+   * granted, which is the behaviour this ever meant to protect.
+   */
+  it("drops the Marketing group only once every module in it is denied", () => {
+    const withoutCoupons = navigationForModules(modules({ coupons: false }));
+    expect(withoutCoupons.map((category) => category.label)).toContain("Marketing");
+    expect(
+      withoutCoupons.flatMap((category) => category.items.map((item) => item.label)),
+    ).toContain("Investment Intent");
+
+    const withoutMarketing = navigationForModules(
+      modules({ coupons: false, investment_intent: false }),
+    );
+    expect(withoutMarketing.map((category) => category.label)).not.toContain("Marketing");
   });
 
   it("shows Coupons when the coupons module is granted", () => {

@@ -1,0 +1,97 @@
+/*
+ * Dashboard command-bar calendar trigger.
+ *
+ * Only the trigger lives here now: the panel it opens is the Subscription
+ * calendar, which owns its own module. The hover/reveal behaviour is unchanged
+ * so the command bar's shortcut row still animates as one group.
+ */
+
+.trigger {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  /*
+   * Matches the shared header utility-icon treatment in globals.css: no
+   * container, the icon carries the weight. The gold wash below survives as the
+   * hover fill, which is what made this control feel like the calendar.
+   */
+  border: 0;
+  border-radius: 9px;
+  color: #667085;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.trigger > svg { width: 21px; height: 21px; stroke-width: 1.85; }
+
+.trigger::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background: linear-gradient(
+    130deg,
+    rgba(199,154,34,.18),
+    rgba(0,13,81,.04)
+  );
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.trigger:hover {
+  color: #8b6812;
+  background: rgba(0, 13, 81, .06);
+}
+
+.trigger:hover::before {
+  opacity: 1;
+}
+
+.trigger:active {
+  transform: translateY(0) scale(.95);
+}
+
+/*
+ * The gold marker stays; its pulse does not. This control sits in the command
+ * bar on every internal page, so a 2.2s loop ran for as long as the app was
+ * open and signalled nothing.
+ */
+.triggerGlow {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #c79a22;
+  box-shadow: 0 0 0 2px rgba(199,154,34,.16);
+}
+
+/* Movement on hover is fine-pointer only; a tap must not leave it tilted. */
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger:hover,
+  .trigger:active {
+    transform: none;
+  }
+
+  /* Press keeps a visible response without scaling. */
+  .trigger:active {
+    border-color: rgba(199,154,34,.5);
+  }
+}

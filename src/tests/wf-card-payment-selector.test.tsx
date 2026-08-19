@@ -46,7 +46,13 @@ describe("WF Card invoice payment selector", () => {
     );
 
     expect(container.querySelector(".wolf-wallet-final")).toBeInTheDocument();
-    expect(screen.getByText(/client wallet/i)).toBeInTheDocument();
+    /*
+     * Client POV wording. The card is shared with the admin surface, which
+     * keeps "Client Wallet" — a client is never addressed as "Client" inside
+     * their own workspace.
+     */
+    expect(screen.getByText(/your wallet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/client wallet/i)).not.toBeInTheDocument();
     expect(screen.getAllByText("Available Balance").length).toBeGreaterThan(0);
     expect(screen.getAllByText("$684.17").length).toBeGreaterThan(0);
     expect(screen.getByText("Selected")).toBeInTheDocument();

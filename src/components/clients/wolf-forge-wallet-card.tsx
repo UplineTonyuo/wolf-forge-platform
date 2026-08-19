@@ -11,6 +11,16 @@ type WolfForgeWalletCardProps = {
   currency: string;
   compact?: boolean;
   fromBalanceCents?: number;
+  /**
+   * The micro-label above the holder name.
+   *
+   * Defaults to the admin wording, because that is where the card was born and
+   * where "Client Wallet" is the correct description of what a staff member is
+   * looking at. The client portal passes "Your Wallet" instead: a client should
+   * never be addressed as "Client" in their own workspace. Deliberately a prop
+   * rather than a global rename, so the two perspectives stay independent.
+   */
+  eyebrow?: string;
 };
 
 function getFirstName(value: string) {
@@ -50,6 +60,7 @@ export function WolfForgeWalletCard({
   currency,
   compact = false,
   fromBalanceCents,
+  eyebrow = "Client Wallet",
 }: WolfForgeWalletCardProps) {
   const displayName =
     getFirstName(clientName);
@@ -186,7 +197,7 @@ export function WolfForgeWalletCard({
 
       <div className="wolf-wallet-final__content">
         <span className="wolf-wallet-final__eyebrow">
-          Client Wallet
+          {eyebrow}
         </span>
 
         <strong className="wolf-wallet-final__name">

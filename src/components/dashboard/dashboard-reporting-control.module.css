@@ -1,0 +1,604 @@
+/*
+ * Dashboard reporting-period control.
+ *
+ * One compact button, one popover. Wolf Forge white / navy / restrained gold,
+ * sized to sit inside the Dashboard header without becoming a filter card.
+ */
+
+.root {
+  position: relative;
+  flex: 0 0 auto;
+
+  --wf-report-navy: #0b1d5c;
+  --wf-report-navy-deep: #000d51;
+  --wf-report-gold: #c79a22;
+  --wf-report-muted: #7c849c;
+  --wf-report-line: rgba(13, 29, 84, .11);
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 11px 0 14px;
+  border: 1px solid var(--wf-report-line);
+  border-radius: 999px;
+  color: var(--wf-report-navy-deep);
+  background: rgba(255, 255, 255, .95);
+  box-shadow:
+    0 5px 16px rgba(0, 13, 81, .045),
+    inset 0 1px 0 #fff;
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 170ms cubic-bezier(.2, .8, .2, 1),
+    border-color 170ms ease,
+    box-shadow 170ms ease,
+    color 170ms ease;
+}
+
+.trigger:hover {
+  color: #8b6812;
+  border-color: rgba(199, 154, 34, .34);
+  box-shadow:
+    0 9px 22px rgba(0, 13, 81, .08),
+    0 0 0 3px rgba(199, 154, 34, .06);
+}
+
+.trigger:active {
+  transform: scale(.97);
+}
+
+.trigger[aria-expanded="true"] {
+  color: #fff;
+  border-color: rgba(199, 154, 34, .45);
+  background: linear-gradient(140deg, var(--wf-report-navy), var(--wf-report-navy-deep));
+  box-shadow: 0 10px 24px rgba(0, 13, 81, .2);
+}
+
+.triggerLabel {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  color: var(--wf-report-muted);
+  transition: transform 200ms cubic-bezier(.2, .8, .2, 1), color 170ms ease;
+}
+
+.trigger:hover .chevron {
+  color: #8b6812;
+}
+
+.trigger[aria-expanded="true"] .chevron {
+  color: rgba(255, 255, 255, .75);
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------- popover */
+
+.popover {
+  position: fixed;
+  z-index: 11000;
+  width: 268px;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 15px;
+  color: #111c4e;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(199, 154, 34, .1), transparent 42%),
+    rgba(255, 255, 255, .98);
+  box-shadow:
+    0 22px 54px rgba(0, 13, 81, .2),
+    inset 0 1px 0 #fff;
+  backdrop-filter: blur(9px) saturate(.96);
+
+  /*
+   * Open and closed are two ends of one transition, so either direction can be
+   * interrupted and retargeted from wherever the popover currently sits — a
+   * keyframe would restart from zero. `--wf-report-origin` is written by the
+   * component from the measured trigger position, so the popover scales out of
+   * the button rather than out of a hardcoded corner.
+   */
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: var(--wf-report-origin, top right);
+  transition:
+    opacity 190ms cubic-bezier(.2, .8, .2, 1),
+    transform 190ms cubic-bezier(.2, .8, .2, 1);
+}
+
+/* The frame the popover grows from on the render that mounts it. */
+@starting-style {
+  .popover {
+    opacity: 0;
+    transform: translateY(-6px) scale(.97);
+  }
+}
+
+/*
+ * Dismissal is the system responding rather than the user deciding, so it runs
+ * shorter than the entrance.
+ */
+.popover[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(-6px) scale(.97);
+  pointer-events: none;
+  transition-duration: 130ms;
+}
+
+.popover[data-view="range"] {
+  width: 306px;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 10px;
+  color: #111c4e;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.menuItem:hover {
+  background: rgba(0, 13, 81, .045);
+}
+
+.menuItem:active {
+  transform: scale(.98);
+}
+
+.menuItem[data-active="true"] {
+  color: var(--wf-report-navy-deep);
+  background: rgba(199, 154, 34, .1);
+  font-weight: 620;
+}
+
+.menuItem[data-active="true"] svg {
+  color: #8b6812;
+}
+
+.menuItem svg {
+  flex: 0 0 auto;
+  color: var(--wf-report-muted);
+}
+
+/* --------------------------------------------------------------- range */
+
+.range {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 4px;
+  animation: rangeIn 200ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.rangeHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.rangeHead span {
+  display: block;
+  color: var(--wf-report-muted);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+.rangeHead strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--wf-report-navy-deep);
+  font-size: 12.5px;
+  font-weight: 620;
+  letter-spacing: -.02em;
+}
+
+.back {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--wf-report-line);
+  border-radius: 8px;
+  color: var(--wf-report-navy-deep);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(.2, .8, .2, 1), border-color 160ms ease, color 160ms ease;
+}
+
+.back:hover {
+  color: #8b6812;
+  border-color: rgba(199, 154, 34, .38);
+}
+
+.months {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  /* Touch drag must reach the month cells instead of panning the popover. */
+  touch-action: none;
+}
+
+.month {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 2px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #111c4e;
+  background: rgba(0, 13, 81, .028);
+  font-size: 11.5px;
+  font-weight: 560;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.month small {
+  color: var(--wf-report-muted);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.month:hover {
+  border-color: rgba(0, 13, 81, .14);
+}
+
+.month[data-in-range="true"] {
+  color: #fff;
+  background: rgba(11, 29, 92, .82);
+}
+
+.month[data-in-range="true"] small {
+  color: rgba(255, 255, 255, .6);
+}
+
+.month[data-start="true"],
+.month[data-end="true"] {
+  background: linear-gradient(150deg, var(--wf-report-navy), var(--wf-report-navy-deep));
+  box-shadow: 0 8px 18px rgba(0, 13, 81, .22);
+}
+
+/* The endpoints carry the gold handle so the span reads start-to-end. */
+.month[data-start="true"]::after,
+.month[data-end="true"]::after {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  content: "";
+  border-radius: 2px;
+  background: var(--wf-report-gold);
+  transform: translateX(-50%);
+}
+
+.rangeFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--wf-report-line);
+}
+
+.secondary {
+  padding: 7px 12px;
+  border: 1px solid var(--wf-report-line);
+  border-radius: 999px;
+  color: var(--wf-report-navy-deep);
+  background: #fff;
+  font-size: 11.5px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.secondary:hover {
+  color: #8b6812;
+  border-color: rgba(199, 154, 34, .38);
+}
+
+.apply {
+  padding: 7px 14px;
+  border: 1px solid rgba(199, 154, 34, .45);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(140deg, var(--wf-report-navy), var(--wf-report-navy-deep));
+  box-shadow: 0 8px 20px rgba(0, 13, 81, .2);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms cubic-bezier(.2, .8, .2, 1), box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.apply:hover:not(:disabled) {
+  box-shadow: 0 12px 26px rgba(0, 13, 81, .26);
+}
+
+.apply:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+.apply:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------------------- mobile sheet */
+
+.popover[data-sheet="true"] {
+  inset: auto 10px 10px;
+  width: auto;
+  padding: 10px;
+  border-radius: 18px;
+
+  /* The sheet rises from, and drops back to, the edge it is docked to. */
+  transform: translateY(0);
+  transform-origin: bottom center;
+}
+
+@starting-style {
+  .popover[data-sheet="true"] {
+    transform: translateY(14px);
+  }
+}
+
+.popover[data-sheet="true"][data-state="closed"] {
+  transform: translateY(14px);
+}
+
+.popover[data-sheet="true"] .month {
+  padding: 11px 2px;
+}
+
+/* ------------------------------------------------------------ motion */
+
+/*
+ * The popover itself no longer uses keyframes — see `.popover` above. This is
+ * the menu/range view swap, which is a genuine mount and cannot be interrupted
+ * mid-flight anyway.
+ */
+@keyframes rangeIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* WF REPORTING RANGE VISIBILITY FIX START */
+
+/* Months between the start and end */
+.month[data-in-range="true"] {
+  color: #ffffff !important;
+  background: rgba(0, 13, 81, 0.78) !important;
+  border-color: rgba(0, 13, 81, 0.18) !important;
+}
+
+.month[data-in-range="true"] small {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Start + end months */
+.month[data-start="true"],
+.month[data-end="true"] {
+  color: #ffffff !important;
+  background: linear-gradient(
+    145deg,
+    #0b1d5c 0%,
+    #000d51 100%
+  ) !important;
+  border-color: rgba(199, 154, 34, 0.72) !important;
+  box-shadow:
+    0 8px 18px rgba(0, 13, 81, 0.24),
+    inset 0 0 0 1px rgba(199, 154, 34, 0.20) !important;
+}
+
+.month[data-start="true"] small,
+.month[data-end="true"] small {
+  color: rgba(255, 255, 255, 0.76) !important;
+}
+
+/* Gold endpoint marker */
+.month[data-start="true"]::after,
+.month[data-end="true"]::after {
+  background: #c79a22 !important;
+}
+
+/* Apply Range button */
+.apply {
+  min-width: 112px;
+  color: #ffffff !important;
+  background: linear-gradient(
+    145deg,
+    #0b1d5c 0%,
+    #000d51 100%
+  ) !important;
+  border-color: rgba(199, 154, 34, 0.62) !important;
+  box-shadow: 0 8px 20px rgba(0, 13, 81, 0.20) !important;
+}
+
+.apply:hover:not(:disabled) {
+  color: #ffffff !important;
+  background: linear-gradient(
+    145deg,
+    #10266f 0%,
+    #000d51 100%
+  ) !important;
+}
+
+.apply:disabled {
+  color: rgba(255, 255, 255, 0.78) !important;
+  background: #7d86a5 !important;
+  border-color: rgba(0, 13, 81, 0.10) !important;
+  opacity: 0.58 !important;
+}
+
+/* WF REPORTING RANGE VISIBILITY FIX END */
+/* WF REPORTING YEAR NAVIGATION START */
+
+.yearNavigator {
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  padding: 5px;
+  border: 1px solid rgba(0, 13, 81, 0.07);
+  border-radius: 12px;
+  background: rgba(248, 249, 252, 0.86);
+}
+
+.yearNavigator strong {
+  color: #000d51;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.yearNavigator button {
+  width: 34px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0, 13, 81, 0.09);
+  border-radius: 9px;
+  color: #000d51;
+  background: #ffffff;
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(.2,.8,.2,1),
+    border-color 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.yearNavigator button:hover:not(:disabled) {
+  border-color: rgba(199, 154, 34, 0.42);
+  background: #fffaf0;
+}
+
+.yearNavigator button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.yearNavigator button:disabled {
+  color: #b9becd;
+  background: #f5f6f9;
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* WF REPORTING YEAR NAVIGATION END */
+
+/*
+ * Movement on hover, gated to fine pointers. The month grid is drag-driven on
+ * touch, where a lingering hover would leave cells raised mid-selection.
+ * Kept last in the file so it lands after the year-navigator rules above.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover {
+    transform: translateY(-1px);
+  }
+
+  .menuItem:hover {
+    transform: translateX(2px);
+  }
+
+  .back:hover {
+    transform: translateX(-2px);
+  }
+
+  .month:hover {
+    transform: translateY(-1px);
+  }
+
+  .secondary:hover {
+    transform: translateY(-1px);
+  }
+
+  .apply:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .yearNavigator button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+/*
+ * Reduced motion keeps the popover's fade — it still reads as opening and
+ * closing — and keeps every colour, border and shadow response. Only travel,
+ * scale and rotation are dropped.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .popover,
+  .popover[data-state="closed"],
+  .popover[data-sheet="true"],
+  .popover[data-sheet="true"][data-state="closed"] {
+    transform: none;
+    transition: opacity 120ms ease;
+  }
+
+  .range {
+    animation: none;
+  }
+
+  .chevron {
+    transition: color 170ms ease;
+  }
+
+  .trigger:hover,
+  .trigger:active,
+  .menuItem:hover,
+  .menuItem:active,
+  .month:hover,
+  .back:hover,
+  .secondary:hover,
+  .apply:hover:not(:disabled),
+  .apply:active:not(:disabled),
+  .yearNavigator button:hover:not(:disabled),
+  .yearNavigator button:active:not(:disabled) {
+    transform: none;
+  }
+
+  /* Presses still answer, in tone rather than in scale. */
+  .menuItem:active {
+    background: rgba(0, 13, 81, .085);
+  }
+
+  .yearNavigator button:active:not(:disabled) {
+    background: #fff4de;
+  }
+}

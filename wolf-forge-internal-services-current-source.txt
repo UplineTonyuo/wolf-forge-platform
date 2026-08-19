@@ -1,0 +1,1919 @@
+
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\[serviceId]\not-found.tsx
+============================================================
+
+import Link from "next/link";
+import { PageFrame } from "../../../../components/ui/page-frame";
+
+export default function ServiceNotFound() {
+  return <PageFrame title="Service unavailable"><div className="error-state"><strong>This service does not exist or was soft deleted.</strong><Link href="/services">Back to Services</Link></div></PageFrame>;
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\[serviceId]\page.tsx
+============================================================
+
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ServiceForm } from "../../../../components/services/service-form";
+import { ServiceRecordActions } from "../../../../components/services/record-actions";
+import { PageFrame } from "../../../../components/ui/page-frame";
+import { toClientSafeError } from "../../../../lib/errors/application-error";
+import { sanitizeServiceDescription } from "../../../../lib/service-description-html";
+import { getInternalContext } from "../../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "Edit Service" };
+
+export default async function EditServicePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ serviceId: string }>;
+  searchParams: Promise<{ created?: string; saved?: string; duplicated?: string }>;
+}) {
+  const [{ serviceId }, query] = await Promise.all([params, searchParams]);
+  const context = await getInternalContext();
+  try {
+    const [service, folders, assignees] = await Promise.all([
+      context.services.catalog.get(serviceId),
+      context.services.catalog.listFolders(),
+      context.services.catalog.listAssignees(),
+    ]);
+    return (
+      <PageFrame title={service.name} description="Edit service configuration and Project defaults." action={<ServiceRecordActions serviceId={service.id} />}>
+        {query.created ? <div className="success-banner">Service created.</div> : null}
+        {query.saved ? <div className="success-banner">Service changes saved.</div> : null}
+        {query.duplicated ? <div className="success-banner">Service duplicated. You are editing the new copy.</div> : null}
+        <ServiceForm
+          mode="edit"
+          service={service}
+          descriptionHtml={sanitizeServiceDescription(service.description)}
+          folders={folders}
+          assignees={assignees}
+        />
+      </PageFrame>
+    );
+  } catch (error) {
+    if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    throw error;
+  }
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\folders\[folderId]\not-found.tsx
+============================================================
+
+import Link from "next/link";
+import { PageFrame } from "../../../../../components/ui/page-frame";
+
+export default function ServiceFolderNotFound() {
+  return <PageFrame title="Folder unavailable"><div className="error-state"><strong>This folder does not exist or was soft deleted.</strong><Link href="/services">Back to Services</Link></div></PageFrame>;
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\folders\[folderId]\page.tsx
+============================================================
+
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { FolderForm } from "../../../../../components/services/folder-form";
+import { FolderRecordActions } from "../../../../../components/services/record-actions";
+import { PageFrame } from "../../../../../components/ui/page-frame";
+import { toClientSafeError } from "../../../../../lib/errors/application-error";
+import { getInternalContext } from "../../../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "Edit Service Folder" };
+
+export default async function EditServiceFolderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ folderId: string }>;
+  searchParams: Promise<{ saved?: string }>;
+}) {
+  const [{ folderId }, query] = await Promise.all([params, searchParams]);
+  const context = await getInternalContext();
+  try {
+    const [folder, folders] = await Promise.all([
+      context.services.catalog.getFolder(folderId),
+      context.services.catalog.listFolders(),
+    ]);
+    return (
+      <PageFrame title={folder.name} description="Edit this service folder and its nesting." action={<FolderRecordActions folderId={folder.id} />} narrow>
+        {query.saved ? <div className="success-banner">Folder changes saved.</div> : null}
+        <FolderForm folder={folder} folders={folders} />
+      </PageFrame>
+    );
+  } catch (error) {
+    if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    throw error;
+  }
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\folders\new\page.tsx
+============================================================
+
+import type { Metadata } from "next";
+import { FolderForm } from "../../../../../components/services/folder-form";
+import { PageFrame } from "../../../../../components/ui/page-frame";
+import { getInternalContext } from "../../../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "New Service Folder" };
+
+export default async function NewServiceFolderPage() {
+  const context = await getInternalContext();
+  const folders = await context.services.catalog.listFolders();
+  return <PageFrame title="New Folder" description="Create a catalog folder for related services." narrow><FolderForm folders={folders} /></PageFrame>;
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\new\page.tsx
+============================================================
+
+import type { Metadata } from "next";
+import { ServiceForm } from "../../../../components/services/service-form";
+import { PageFrame } from "../../../../components/ui/page-frame";
+import { getInternalContext } from "../../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "New Service" };
+
+export default async function NewServicePage() {
+  const context = await getInternalContext();
+  const [folders, assignees] = await Promise.all([
+    context.services.catalog.listFolders(),
+    context.services.catalog.listAssignees(),
+  ]);
+  return (
+    <PageFrame title="New Service" description="Add a real service to the Wolf Forge catalog.">
+      <ServiceForm mode="create" folders={folders} assignees={assignees} />
+    </PageFrame>
+  );
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\app\(internal)\services\page.tsx
+============================================================
+
+import { ArrowDown, ArrowUp, Folder, MoreHorizontal, Pencil, Plus } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { FilterInput } from "../../../components/ui/filter-input";
+import { DataError, EmptyState } from "../../../components/ui/list-states";
+import { PageFrame } from "../../../components/ui/page-frame";
+import { toClientSafeError } from "../../../lib/errors/application-error";
+import {
+  compareServiceNameMatches,
+  serviceNameSearchScore,
+} from "../../../lib/service-name-search";
+import type { ServiceFolderRow, ServiceRow } from "../../../lib/supabase/database-rows";
+import { getInternalContext } from "../../../lib/supabase/next-server";
+
+export const metadata: Metadata = { title: "Services" };
+
+type ServiceSort = "name" | "price" | "created";
+type SortDirection = "asc" | "desc";
+
+function flattenFolders(folders: ServiceFolderRow[]) {
+  const result: Array<{ folder: ServiceFolderRow; depth: number }> = [];
+  const visited = new Set<string>();
+
+  function visit(parentId: string | null, depth: number) {
+    for (const folder of folders.filter((candidate) => candidate.parent_id === parentId)) {
+      if (visited.has(folder.id)) continue;
+      visited.add(folder.id);
+      result.push({ folder, depth });
+      visit(folder.id, depth + 1);
+    }
+  }
+
+  visit(null, 0);
+  for (const folder of folders) {
+    if (!visited.has(folder.id)) result.push({ folder, depth: 0 });
+  }
+  return result;
+}
+
+function formatMoney(service: ServiceRow) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: service.currency,
+    minimumFractionDigits: service.price % 1 === 0 ? 0 : 2,
+  }).format(service.price);
+}
+
+function formatCatalogDate(value: string) {
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+}
+
+function sortServices(services: ServiceRow[], sort: ServiceSort, direction: SortDirection) {
+  const multiplier = direction === "asc" ? 1 : -1;
+  return [...services].sort((left, right) => {
+    if (sort === "price") return (left.price - right.price) * multiplier;
+    if (sort === "created") return left.created_at.localeCompare(right.created_at) * multiplier;
+    return left.name.localeCompare(right.name) * multiplier;
+  });
+}
+
+function ServicesHeaderActions() {
+  return (
+    <div className="services-header-actions">
+      <Link className="button-primary" href="/services/new"><Plus aria-hidden="true" />New Service</Link>
+      <details className="services-actions-menu">
+        <summary className="button-secondary"><MoreHorizontal aria-hidden="true" />Actions</summary>
+        <div><Link href="/services/folders/new"><Folder aria-hidden="true" />New Folder</Link></div>
+      </details>
+    </div>
+  );
+}
+
+function SortLink({
+  label,
+  column,
+  currentSort,
+  direction,
+  folder,
+  query,
+}: {
+  label: string;
+  column: ServiceSort;
+  currentSort: ServiceSort;
+  direction: SortDirection;
+  folder: string;
+  query: string;
+}) {
+  const nextDirection = currentSort === column && direction === "asc" ? "desc" : "asc";
+  const params = new URLSearchParams({ folder, sort: column, direction: nextDirection });
+  if (query) params.set("q", query);
+  return (
+    <Link
+      className="services-sort-link"
+      href={`/services?${params}`}
+    >
+      <span>
+        {label}
+      </span>
+
+      {currentSort === column ? (
+        direction === "asc" ? (
+          <ArrowUp
+            aria-hidden="true"
+          />
+        ) : (
+          <ArrowDown
+            aria-hidden="true"
+          />
+        )
+      ) : null}
+    </Link>
+  );
+}
+
+export default async function ServicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    folder?: string;
+    sort?: string;
+    direction?: string;
+    archived?: string;
+    folderCreated?: string;
+    folderArchived?: string;
+  }>;
+}) {
+  const parameters = await searchParams;
+  const q = parameters.q ?? "";
+  const folderParameter = parameters.folder ?? "unfiled";
+  const sort: ServiceSort = ["name", "price", "created"].includes(parameters.sort ?? "")
+    ? parameters.sort as ServiceSort
+    : "name";
+  const direction: SortDirection = parameters.direction === "desc" ? "desc" : "asc";
+  const context = await getInternalContext();
+
+  try {
+    const [services, folders] = await Promise.all([
+      context.services.catalog.listCatalog(),
+      context.services.catalog.listFolders(),
+    ]);
+    const selectedFolder = folders.find((folder) => folder.id === folderParameter) ?? null;
+    const selectedFolderId = selectedFolder?.id ?? null;
+    const needle = q.trim();
+
+    const visibleServices =
+      services.filter((service) => {
+        /*
+         * When there is an active search, search the ENTIRE
+         * service catalog regardless of folder.
+         *
+         * Without a search, preserve normal folder behavior.
+         */
+        if (needle) {
+          return (
+            serviceNameSearchScore(
+              service.name,
+              needle,
+            ) !== null
+          );
+        }
+
+        return selectedFolderId
+          ? service.folder_id === selectedFolderId
+          : service.folder_id === null;
+      });
+
+    const sortedServices =
+      needle
+        ? [...visibleServices]
+            .sort((left, right) =>
+              compareServiceNameMatches(
+                left.name,
+                right.name,
+                needle,
+              ),
+            )
+            .slice(0, 200)
+        : sortServices(
+            visibleServices,
+            sort,
+            direction,
+          ).slice(0, 200);
+    const serviceCounts = new Map<string, number>();
+    for (const service of services) {
+      if (service.folder_id) serviceCounts.set(service.folder_id, (serviceCounts.get(service.folder_id) ?? 0) + 1);
+    }
+    const unfiledCount = services.filter((service) => service.folder_id === null).length;
+    const folderQueryValue = selectedFolder?.id ?? "unfiled";
+
+    return (
+      <PageFrame
+        title="Services"
+        description="Configure the catalog that becomes Wolf Forge Project work."
+        action={<ServicesHeaderActions />}
+      >
+        {parameters.archived ? <div className="success-banner">Service soft deleted.</div> : null}
+        {parameters.folderCreated ? <div className="success-banner">Folder created.</div> : null}
+        {parameters.folderArchived ? <div className="success-banner">Folder soft deleted. Its services are now Unfiled.</div> : null}
+
+        <section className="services-folder-section" aria-labelledby="services-folders-heading">
+          <div className="services-section-heading">
+            <div><span>Catalog structure</span><h2 id="services-folders-heading">Folders</h2></div>
+            <Link href="/services/folders/new"><Plus aria-hidden="true" />New Folder</Link>
+          </div>
+          <div className="services-folder-list">
+            {flattenFolders(folders).map(({ folder, depth }) => (
+              <div className={selectedFolder?.id === folder.id ? "services-folder-row is-active" : "services-folder-row"} key={folder.id} style={{ "--folder-depth": depth } as React.CSSProperties}>
+                <Link className="services-folder-link" href={`/services?folder=${folder.id}`}>
+                  <Folder aria-hidden="true" />
+                  <span><strong>{folder.name}</strong>{folder.description ? <small>{folder.description}</small> : null}</span>
+                  <b>{serviceCounts.get(folder.id) ?? 0}</b>
+                </Link>
+                <Link className="services-folder-edit" href={`/services/folders/${folder.id}`} aria-label={`Edit ${folder.name}`}><Pencil aria-hidden="true" /></Link>
+              </div>
+            ))}
+            <div className={!selectedFolder ? "services-folder-row is-active" : "services-folder-row"}>
+              <Link className="services-folder-link" href="/services?folder=unfiled">
+                <Folder aria-hidden="true" /><span><strong>Unfiled</strong><small>Services without a folder</small></span><b>{unfiledCount}</b>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="services-catalog-section" aria-labelledby="services-catalog-heading">
+          <div className="services-section-heading services-catalog-heading">
+            <div>
+              <span>Service catalog</span>
+              <h2 id="services-catalog-heading">
+                {needle
+                  ? "Search results"
+                  : selectedFolder?.name ?? "Unfiled services"}
+              </h2>
+            </div>
+            {!needle && selectedFolder ? (
+              <Link href={`/services/folders/${selectedFolder.id}`}>
+                <Pencil aria-hidden="true" />
+                Edit Folder
+              </Link>
+            ) : null}
+          </div>
+          <FilterInput
+            label="Filter services"
+            initialValue={q}
+            suggestions={services.map(
+              (service) => service.name,
+            )}
+          />
+
+          {sortedServices.length === 0 ? (
+            <EmptyState
+              title={q ? `No services match "${q}".` : "No services in this folder."}
+              body={q ? "Try a different search." : "Create a service or assign an existing service to this folder."}
+            />
+          ) : (
+            <>
+              <div className="services-table-shell">
+                <table className="services-table">
+                  <caption className="sr-only">
+                    {needle
+                      ? "Service search results"
+                      : `Services in ${selectedFolder?.name ?? "Unfiled"}`}
+                  </caption>
+                  <thead><tr>
+                    <th><SortLink label="Service" column="name" currentSort={sort} direction={direction} folder={folderQueryValue} query={q} /></th>
+                    <th><SortLink label="Price" column="price" currentSort={sort} direction={direction} folder={folderQueryValue} query={q} /></th>
+                    <th><SortLink label="Created" column="created" currentSort={sort} direction={direction} folder={folderQueryValue} query={q} /></th>
+                  </tr></thead>
+                  <tbody>{sortedServices.map((service) => (
+                    <tr key={service.id}>
+                      <td><Link className="services-table-name" href={`/services/${service.id}`}>{service.name}</Link></td>
+                      <td className="services-price-cell">{formatMoney(service)}</td>
+                      <td><time dateTime={service.created_at}>{formatCatalogDate(service.created_at)}</time></td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <div className="mobile-record-list services-mobile-list">{sortedServices.map((service) => (
+                <Link className="mobile-record-row" href={`/services/${service.id}`} key={service.id}>
+                  <div><strong>{service.name}</strong><span>{formatMoney(service)}</span></div>
+                  <time dateTime={service.created_at}>{formatCatalogDate(service.created_at)}</time>
+                </Link>
+              ))}</div>
+            </>
+          )}
+        </section>
+      </PageFrame>
+    );
+  } catch (error) {
+    return <PageFrame title="Services" action={<ServicesHeaderActions />}><DataError message={toClientSafeError(error).message} /></PageFrame>;
+  }
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\components\services\folder-form.tsx
+============================================================
+
+"use client";
+
+import { LoaderCircle } from "lucide-react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
+import {
+  createServiceFolderAction,
+  updateServiceFolderAction,
+  type CatalogFormState,
+} from "../../app/actions/services";
+import type { ServiceFolderRow } from "../../lib/supabase/database-rows";
+
+function SubmitButton({ editing }: { editing: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className="button-primary" disabled={pending} type="submit">
+      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
+      {editing ? "Save folder" : "Create folder"}
+    </button>
+  );
+}
+
+export function FolderForm({ folder, folders }: { folder?: ServiceFolderRow; folders: ServiceFolderRow[] }) {
+  const [requestId] = useState(() => crypto.randomUUID());
+  const updateAction = folder ? updateServiceFolderAction.bind(null, folder.id) : null;
+  const initialState: CatalogFormState = { error: null };
+  const [state, action] = useActionState(updateAction ?? createServiceFolderAction, initialState);
+
+  return (
+    <form action={action} className="service-editor-form service-folder-form">
+      <input type="hidden" name="request_id" value={requestId} />
+      {state.error ? <div className="form-banner" role="alert">{state.error}</div> : null}
+      <section className="service-form-section">
+        <div className="service-form-section-heading">
+          <span>01</span>
+          <div><h2>Folder details</h2><p>Organize related services without changing their Project relationship.</p></div>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-field service-field-wide" htmlFor="folder-name">
+            <span>Folder name</span>
+            <input id="folder-name" name="name" defaultValue={folder?.name ?? ""} maxLength={200} required />
+          </label>
+          <label className="service-field service-field-wide" htmlFor="folder-description">
+            <span>Description <small>optional</small></span>
+            <textarea id="folder-description" name="description" defaultValue={folder?.description ?? ""} rows={4} maxLength={2000} />
+          </label>
+          <label className="service-field" htmlFor="folder-parent">
+            <span>Parent folder <small>optional</small></span>
+            <select id="folder-parent" name="parent_id" defaultValue={folder?.parent_id ?? ""}>
+              <option value="">Root</option>
+              {folders.filter((candidate) => candidate.id !== folder?.id).map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="service-field" htmlFor="folder-sort-order">
+            <span>Sort order</span>
+            <input id="folder-sort-order" name="sort_order" type="number" min="0" step="1" defaultValue={folder?.sort_order ?? 0} required />
+          </label>
+          <div className="service-field service-field-wide">
+            <span>Image <small>unavailable</small></span>
+            <button className="service-disabled-control" type="button" disabled>Image upload is not configured</button>
+            <small className="service-field-help">Folder images can be connected after the media domain exists.</small>
+          </div>
+        </div>
+      </section>
+      <div className="service-form-actions">
+        <Link className="button-secondary" href="/services">Cancel</Link>
+        <SubmitButton editing={Boolean(folder)} />
+      </div>
+    </form>
+  );
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\components\services\record-actions.tsx
+============================================================
+
+"use client";
+
+import { Copy, LoaderCircle, Trash2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
+import {
+  archiveServiceAction,
+  archiveServiceFolderAction,
+  duplicateServiceAction,
+  type CatalogFormState,
+} from "../../app/actions/services";
+
+function ActionButton({ kind }: { kind: "duplicate" | "archive-service" | "archive-folder" }) {
+  const { pending } = useFormStatus();
+  const archive = kind !== "duplicate";
+  return (
+    <button className={archive ? "button-danger" : "button-secondary"} disabled={pending} type="submit">
+      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : archive ? <Trash2 aria-hidden="true" /> : <Copy aria-hidden="true" />}
+      {kind === "duplicate" ? "Duplicate service" : kind === "archive-folder" ? "Soft delete folder" : "Soft delete service"}
+    </button>
+  );
+}
+
+export function ServiceRecordActions({ serviceId }: { serviceId: string }) {
+  const [requestId] = useState(() => crypto.randomUUID());
+  const initialState: CatalogFormState = { error: null };
+  const [duplicateState, duplicateAction] = useActionState(duplicateServiceAction.bind(null, serviceId), initialState);
+  const [archiveState, archiveAction] = useActionState(archiveServiceAction.bind(null, serviceId), initialState);
+
+  return (
+    <div className="service-record-actions">
+      <form action={duplicateAction}><input type="hidden" name="request_id" value={requestId} /><ActionButton kind="duplicate" /></form>
+      <form action={archiveAction}><ActionButton kind="archive-service" /></form>
+      {duplicateState.error || archiveState.error ? <p className="field-error" role="alert">{duplicateState.error ?? archiveState.error}</p> : null}
+    </div>
+  );
+}
+
+export function FolderRecordActions({ folderId }: { folderId: string }) {
+  const initialState: CatalogFormState = { error: null };
+  const [state, action] = useActionState(archiveServiceFolderAction.bind(null, folderId), initialState);
+  return (
+    <div className="service-record-actions">
+      <form action={action}><ActionButton kind="archive-folder" /></form>
+      {state.error ? <p className="field-error" role="alert">{state.error}</p> : null}
+    </div>
+  );
+}
+
+============================================================
+FILE: C:\Users\User\Documents\Wolf-Forge-Platform\src\components\services\service-form.tsx
+============================================================
+
+"use client";
+
+import {
+  Bold,
+  Heading2,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  LoaderCircle,
+  Redo2,
+  Undo2,
+  type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { useActionState, useRef, useState, type ClipboardEvent } from "react";
+import { useFormStatus } from "react-dom";
+import {
+  createServiceAction,
+  updateServiceAction,
+  type CatalogFormState,
+} from "../../app/actions/services";
+import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
+import type { ServiceAssigneeOption } from "../../repositories/service-repository";
+
+function SubmitButton({ mode }: { mode: "create" | "edit" }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className="button-primary" disabled={pending} type="submit">
+      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
+      {mode === "create" ? "Create service" : "Save changes"}
+    </button>
+  );
+}
+
+function EditorButton({
+  label,
+  icon: Icon,
+  onClick,
+}: {
+  label: string;
+  icon: LucideIcon;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+    >
+      <Icon aria-hidden="true" />
+    </button>
+  );
+}
+
+export function RichTextDescription({
+  initialValue,
+  initialHtml,
+}: {
+  initialValue: string;
+  initialHtml: string;
+}) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function syncDescription() {
+    const editor = editorRef.current;
+    const input = inputRef.current;
+    if (editor && input) input.value = editor.innerHTML;
+  }
+
+  function runCommand(command: string, value?: string) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    document.execCommand(command, false, value);
+    syncDescription();
+  }
+
+  function createLink() {
+    const href = window.prompt("Link URL", "https://");
+    if (!href) return;
+
+    try {
+      const url = new URL(href, window.location.origin);
+      if (!["http:", "https:", "mailto:", "tel:"].includes(url.protocol)) return;
+      runCommand("createLink", href);
+    } catch {
+      // Ignore invalid URLs and leave the selected text unchanged.
+    }
+  }
+
+  function pastePlainText(event: ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
+    syncDescription();
+  }
+
+  return (
+    <div className="service-rich-field">
+      <div className="service-rich-toolbar" aria-label="Description formatting">
+        <EditorButton label="Bold" icon={Bold} onClick={() => runCommand("bold")} />
+        <EditorButton label="Italic" icon={Italic} onClick={() => runCommand("italic")} />
+        <EditorButton label="Heading" icon={Heading2} onClick={() => runCommand("formatBlock", "h2")} />
+        <span className="service-rich-toolbar-divider" aria-hidden="true" />
+        <EditorButton label="Bulleted list" icon={List} onClick={() => runCommand("insertUnorderedList")} />
+        <EditorButton label="Numbered list" icon={ListOrdered} onClick={() => runCommand("insertOrderedList")} />
+        <EditorButton label="Link" icon={Link2} onClick={createLink} />
+        <span className="service-rich-toolbar-divider" aria-hidden="true" />
+        <EditorButton label="Undo" icon={Undo2} onClick={() => runCommand("undo")} />
+        <EditorButton label="Redo" icon={Redo2} onClick={() => runCommand("redo")} />
+      </div>
+      <input ref={inputRef} type="hidden" name="description" defaultValue={initialValue} />
+      <div
+        ref={editorRef}
+        id="service-description"
+        className="service-rich-editor"
+        role="textbox"
+        aria-label="Description"
+        aria-multiline="true"
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder="Add a service description"
+        dangerouslySetInnerHTML={{ __html: initialHtml }}
+        onInput={syncDescription}
+        onBlur={syncDescription}
+        onPaste={pastePlainText}
+      />
+    </div>
+  );
+}
+
+export function ServiceForm({
+  mode,
+  service,
+  descriptionHtml = "",
+  folders,
+  assignees,
+}: {
+  mode: "create" | "edit";
+  service?: ServiceRow;
+  descriptionHtml?: string;
+  folders: ServiceFolderRow[];
+  assignees: ServiceAssigneeOption[];
+}) {
+  const [requestId] = useState(() => crypto.randomUUID());
+  const [recurring, setRecurring] = useState(service?.recurring ?? false);
+  const initialState: CatalogFormState = { error: null };
+  const updateAction = service ? updateServiceAction.bind(null, service.id) : null;
+  const [state, action] = useActionState(
+    mode === "edit" && updateAction ? updateAction : createServiceAction,
+    initialState,
+  );
+
+  return (
+    <form action={action} className="service-editor-form">
+      <input type="hidden" name="request_id" value={requestId} />
+      <input type="hidden" name="is_active" value={String(service?.is_active ?? true)} />
+
+      {state.error ? <div className="form-banner" role="alert">{state.error}</div> : null}
+
+      <section className="service-form-section" aria-labelledby="service-basic-heading">
+        <div className="service-form-section-heading">
+          <h2 id="service-basic-heading">Basic</h2>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-field service-field-wide" htmlFor="service-name">
+            <span>Service name</span>
+            <input id="service-name" name="name" defaultValue={service?.name ?? ""} maxLength={200} required />
+          </label>
+          <label className="service-field service-field-folder" htmlFor="service-folder">
+            <span>Folder</span>
+            <select id="service-folder" name="folder_id" defaultValue={service?.folder_id ?? ""}>
+              <option value="">Unfiled</option>
+              {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+            </select>
+          </label>
+          <div className="service-field service-field-wide">
+            <label htmlFor="service-description">Description <small>optional</small></label>
+            <RichTextDescription
+              initialValue={service?.description ?? ""}
+              initialHtml={descriptionHtml}
+            />
+          </div>
+          <div className="service-field service-field-wide">
+            <span>Image <small>unavailable</small></span>
+            <button className="service-disabled-control" type="button" disabled>Image upload is not configured</button>
+            <small className="service-field-help">A media upload domain does not exist yet, so no placeholder asset will be stored.</small>
+          </div>
+        </div>
+      </section>
+
+      <section className="service-form-section" aria-labelledby="service-pricing-heading">
+        <div className="service-form-section-heading">
+          <h2 id="service-pricing-heading">Pricing</h2>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-field" htmlFor="service-price">
+            <span>Price</span>
+            <input id="service-price" name="price" type="number" min="0" step="0.01" defaultValue={service?.price ?? 0} required />
+          </label>
+          <label className="service-field" htmlFor="service-currency">
+            <span>Currency</span>
+            <select id="service-currency" name="currency" defaultValue={service?.currency ?? "USD"}>
+              {['USD', 'PHP', 'EUR', 'GBP', 'CAD', 'AUD'].map((currency) => <option key={currency}>{currency}</option>)}
+            </select>
+          </label>
+          <label className="service-toggle service-field-wide">
+            <input
+              name="recurring"
+              type="checkbox"
+              defaultChecked={recurring}
+              onChange={(event) => setRecurring(event.currentTarget.checked)}
+            />
+            <span><strong>Recurring service</strong><small>Repeat on a validated interval.</small></span>
+          </label>
+          {recurring ? (
+            <div className="service-recurring-grid service-field-wide">
+              <label className="service-field" htmlFor="service-recurring-price">
+                <span>Recurring price</span>
+                <input id="service-recurring-price" name="recurring_price" type="number" min="0" step="0.01" defaultValue={service?.recurring_price ?? service?.price ?? ""} required />
+              </label>
+              <label className="service-field" htmlFor="service-interval-length">
+                <span>Every</span>
+                <input id="service-interval-length" name="recurring_interval_length" type="number" min="1" step="1" defaultValue={service?.recurring_interval_length ?? 1} required />
+              </label>
+              <label className="service-field" htmlFor="service-interval-unit">
+                <span>Interval unit</span>
+                <select id="service-interval-unit" name="recurring_interval_unit" defaultValue={service?.recurring_interval_unit ?? "M"} required>
+                  <option value="D">Day</option><option value="W">Week</option><option value="M">Month</option><option value="Y">Year</option>
+                </select>
+              </label>
+              <label className="service-field service-field-wide" htmlFor="service-recurring-action">
+                <span>Recurring action</span>
+                <select id="service-recurring-action" name="recurring_action" defaultValue={service?.recurring_action ?? "none"} required>
+                  <option value="none">Do nothing</option>
+                  <option value="reopen_order">Reopen Project</option>
+                  <option value="create_order">Create new Project</option>
+                  <option value="client_request">Allow client-requested Projects</option>
+                </select>
+              </label>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="service-form-section" aria-labelledby="service-fulfillment-heading">
+        <div className="service-form-section-heading">
+          <h2 id="service-fulfillment-heading">Fulfillment</h2>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-toggle service-field-wide">
+            <input name="group_quantities" type="checkbox" defaultChecked={service?.group_quantities ?? false} />
+            <span><strong>Group multiple quantities into one Project</strong><small>Keep one delivery record when quantity is greater than one.</small></span>
+          </label>
+          <label className="service-field" htmlFor="service-assignee">
+            <span>Assigned teammate <small>optional</small></span>
+            <select id="service-assignee" name="assigned_to_profile_id" defaultValue={service?.assigned_to_profile_id ?? ""}>
+              <option value="">None</option>
+              {assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.displayName}</option>)}
+            </select>
+          </label>
+          <div className="service-deadline-field">
+            <label className="service-field" htmlFor="service-deadline-amount">
+              <span>Deadline <small>optional</small></span>
+              <input id="service-deadline-amount" name="deadline_amount" type="number" min="1" step="1" defaultValue={service?.deadline_amount ?? ""} />
+            </label>
+            <label className="service-field" htmlFor="service-deadline-unit">
+              <span>Unit</span>
+              <select id="service-deadline-unit" name="deadline_unit" defaultValue={service?.deadline_unit ?? "D"}>
+                <option value="D">Day(s)</option><option value="H">Hour(s)</option>
+              </select>
+            </label>
+          </div>
+          <div className="service-field service-field-wide">
+            <span>Intake form <small>unavailable</small></span>
+            <select disabled aria-label="Intake form unavailable"><option>Forms domain is not implemented</option></select>
+            <small className="service-field-help">This will become selectable after real intake forms exist.</small>
+          </div>
+          <label className="service-toggle service-field-wide">
+            <input name="require_client_profile" type="checkbox" defaultChecked={service?.require_client_profile ?? false} />
+            <span><strong>Require client profile</strong><small>Only allow Project creation for clients with a linked profile.</small></span>
+          </label>
+        </div>
+      </section>
+
+      <section className="service-form-section" aria-labelledby="service-visibility-heading">
+        <div className="service-form-section-heading">
+          <h2 id="service-visibility-heading">Visibility</h2>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-toggle service-field-wide">
+            <input name="is_public" type="checkbox" defaultChecked={service?.is_public ?? true} />
+            <span><strong>Show in services page</strong><small>Visible to authenticated directory viewers while active.</small></span>
+          </label>
+          <label className="service-field" htmlFor="service-sort-order">
+            <span>Sort order</span>
+            <input id="service-sort-order" name="sort_order" type="number" min="0" step="1" defaultValue={service?.sort_order ?? 0} required />
+          </label>
+        </div>
+      </section>
+
+      <div className="service-form-actions">
+        <Link className="button-secondary" href={service ? `/services?folder=${service.folder_id ?? "unfiled"}` : "/services"}>Cancel</Link>
+        <SubmitButton mode={mode} />
+      </div>
+    </form>
+  );
+}
+
+============================================================
+FILE: .\src\app\actions\services.ts
+============================================================
+
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { toClientSafeError } from "../../lib/errors/application-error";
+import { getInternalContext } from "../../lib/supabase/next-server";
+
+export type CatalogFormState = {
+  error: string | null;
+};
+
+function optionalText(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value || null;
+}
+
+function requiredNumber(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value === "" ? Number.NaN : Number(value);
+}
+
+function optionalNumber(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value === "" ? null : Number(value);
+}
+
+function checked(formData: FormData, key: string) {
+  return formData.get(key) === "on";
+}
+
+function serviceInput(formData: FormData) {
+  const recurring = checked(formData, "recurring");
+  const deadlineAmount = optionalNumber(formData, "deadline_amount");
+
+  return {
+    name: String(formData.get("name") ?? "").trim(),
+    folder_id: optionalText(formData, "folder_id"),
+    description: optionalText(formData, "description"),
+    price: requiredNumber(formData, "price"),
+    currency: String(formData.get("currency") ?? "USD").trim().toUpperCase(),
+    image_url: null,
+    is_active: formData.get("is_active") !== "false",
+    is_public: checked(formData, "is_public"),
+    recurring,
+    recurring_price: recurring ? optionalNumber(formData, "recurring_price") : null,
+    recurring_interval_length: recurring
+      ? optionalNumber(formData, "recurring_interval_length")
+      : null,
+    recurring_interval_unit: recurring
+      ? optionalText(formData, "recurring_interval_unit")
+      : null,
+    recurring_action: recurring ? optionalText(formData, "recurring_action") : null,
+    group_quantities: checked(formData, "group_quantities"),
+    assigned_to_profile_id: optionalText(formData, "assigned_to_profile_id"),
+    deadline_amount: deadlineAmount,
+    deadline_unit: deadlineAmount == null ? null : optionalText(formData, "deadline_unit"),
+    require_client_profile: checked(formData, "require_client_profile"),
+    sort_order: requiredNumber(formData, "sort_order"),
+  };
+}
+
+function folderInput(formData: FormData) {
+  return {
+    name: String(formData.get("name") ?? "").trim(),
+    description: optionalText(formData, "description"),
+    parent_id: optionalText(formData, "parent_id"),
+    sort_order: requiredNumber(formData, "sort_order"),
+  };
+}
+
+function formError(error: unknown): CatalogFormState {
+  const safe = toClientSafeError(error);
+  return {
+    error: safe.code === "VALIDATION_ERROR"
+      ? "Check the highlighted service settings and try again."
+      : safe.message,
+  };
+}
+
+export async function createServiceAction(
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  void _state;
+  const context = await getInternalContext();
+  let serviceId: string;
+
+  try {
+    const service = await context.services.catalog.create({
+      request_id: String(formData.get("request_id") ?? ""),
+      ...serviceInput(formData),
+    }, context.actor);
+    serviceId = service.id;
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect(`/services/${serviceId}?created=1`);
+}
+
+export async function updateServiceAction(
+  serviceId: string,
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  void _state;
+  const context = await getInternalContext();
+  try {
+    await context.services.catalog.update(serviceId, serviceInput(formData), context.actor);
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  revalidatePath(`/services/${serviceId}`);
+  redirect(`/services/${serviceId}?saved=1`);
+}
+
+export async function duplicateServiceAction(
+  serviceId: string,
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  const context = await getInternalContext();
+  let duplicateId: string;
+  try {
+    const duplicate = await context.services.catalog.duplicate(
+      serviceId,
+      String(formData.get("request_id") ?? ""),
+      context.actor,
+    );
+    duplicateId = duplicate.id;
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect(`/services/${duplicateId}?duplicated=1`);
+}
+
+export async function archiveServiceAction(
+  serviceId: string,
+  _state: CatalogFormState,
+  _formData: FormData,
+): Promise<CatalogFormState> {
+  void _state;
+  void _formData;
+  const context = await getInternalContext();
+  try {
+    await context.services.catalog.archive(serviceId, context.actor);
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect("/services?archived=1");
+}
+
+export async function createServiceFolderAction(
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  const context = await getInternalContext();
+  let folderId: string;
+  try {
+    const folder = await context.services.catalog.createFolder({
+      request_id: String(formData.get("request_id") ?? ""),
+      ...folderInput(formData),
+    }, context.actor);
+    folderId = folder.id;
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect(`/services?folder=${folderId}&folderCreated=1`);
+}
+
+export async function updateServiceFolderAction(
+  folderId: string,
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  const context = await getInternalContext();
+  try {
+    await context.services.catalog.updateFolder(folderId, folderInput(formData), context.actor);
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  revalidatePath(`/services/folders/${folderId}`);
+  redirect(`/services/folders/${folderId}?saved=1`);
+}
+
+export async function archiveServiceFolderAction(
+  folderId: string,
+  _state: CatalogFormState,
+  _formData: FormData,
+): Promise<CatalogFormState> {
+  void _state;
+  void _formData;
+  const context = await getInternalContext();
+  try {
+    await context.services.catalog.archiveFolder(folderId, context.actor);
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect("/services?folderArchived=1");
+}
+
+============================================================
+FILE: .\src\services\catalog-service.ts
+============================================================
+
+import {
+  createServiceFolderSchema,
+  createServiceSchema,
+  updateServiceFolderSchema,
+  updateServiceSchema,
+} from "../domain/services/schema";
+import {
+  composeStoreCatalog,
+  toStoreServiceView,
+  type StoreCatalog,
+  type StoreServiceView,
+} from "../domain/services/store-projections";
+import { parseInput, uuidSchema } from "../domain/shared";
+import { ServiceRepository } from "../repositories/service-repository";
+import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
+
+export class CatalogService {
+  constructor(private readonly dependencies: ServiceDependencies<ServiceRepository>) {}
+
+  get(id: unknown) {
+    return this.dependencies.repository.getById(parseInput(uuidSchema, id));
+  }
+
+  listActive() {
+    return this.dependencies.repository.listActive();
+  }
+
+  listCatalog() {
+    return this.dependencies.repository.listCatalog();
+  }
+
+  listFolders() {
+    return this.dependencies.repository.listFolders();
+  }
+
+  /**
+   * The client Store catalog, composed from the same tables the internal
+   * Services module reads. There is no second catalog and no client-only
+   * service table; only the projection differs.
+   */
+  async listStoreCatalog(): Promise<StoreCatalog> {
+    const [folders, services] = await Promise.all([
+      this.dependencies.repository.listFolders(),
+      this.dependencies.repository.listStoreServices(),
+    ]);
+
+    return composeStoreCatalog(folders, services);
+  }
+
+  async getStoreService(id: unknown): Promise<StoreServiceView> {
+    return toStoreServiceView(
+      await this.dependencies.repository.getStoreService(parseInput(uuidSchema, id)),
+    );
+  }
+
+  getFolder(id: unknown) {
+    return this.dependencies.repository.getFolderById(parseInput(uuidSchema, id));
+  }
+
+  listAssignees() {
+    return this.dependencies.repository.listAssignees();
+  }
+
+  async create(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.create(parseInput(createServiceSchema, input));
+  }
+
+  async update(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.update(
+      parseInput(uuidSchema, id),
+      parseInput(updateServiceSchema, input),
+    );
+  }
+
+  async duplicate(id: unknown, requestId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.duplicate(
+      parseInput(uuidSchema, id),
+      parseInput(uuidSchema, requestId),
+    );
+  }
+
+  async archive(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.archive(parseInput(uuidSchema, id));
+  }
+
+  async createFolder(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.createFolder(parseInput(createServiceFolderSchema, input));
+  }
+
+  async updateFolder(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.updateFolder(
+      parseInput(uuidSchema, id),
+      parseInput(updateServiceFolderSchema, input),
+    );
+  }
+
+  async archiveFolder(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.archiveFolder(parseInput(uuidSchema, id));
+  }
+}
+
+============================================================
+FILE: .\src\repositories\service-repository.ts
+============================================================
+
+import { randomUUID } from "node:crypto";
+import type {
+  CreateServiceFolderInput,
+  CreateServiceInput,
+  UpdateServiceFolderInput,
+  UpdateServiceInput,
+} from "../domain/services/schema";
+import type { ServiceFolderRow, ServiceRow } from "../lib/supabase/database-rows";
+import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
+import type { UserMutationClient } from "./types";
+
+export type ServiceAssigneeOption = {
+  id: string;
+  displayName: string;
+};
+
+export class ServiceRepository {
+  constructor(private readonly client: UserMutationClient) {}
+
+  async create(input: CreateServiceInput): Promise<ServiceRow> {
+    const { request_id: requestId, ...payload } = input;
+    return unwrapOne(
+      await this.client.rpc("app_create_service", {
+        p_request_id: requestId ?? randomUUID(),
+        p_payload: payload,
+      }),
+      "Service",
+    );
+  }
+
+  async duplicate(id: string, requestId: string = randomUUID()): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_duplicate_service", {
+        p_request_id: requestId,
+        p_service_id: id,
+      }),
+      "Service",
+    );
+  }
+
+  async getById(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.from("services").select().eq("id", id).is("archived_at", null).single(),
+      "Service",
+    );
+  }
+
+  async listActive(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .order("name"),
+    );
+  }
+
+  async listCatalog(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  /**
+   * The client Store slice of the catalog. RLS already narrows a client session
+   * to public, active, non-archived services; the predicates are restated here
+   * so the query means the same thing whoever runs it.
+   */
+  async listStoreServices(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  async getStoreService(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client
+        .from("services")
+        .select()
+        .eq("id", id)
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .single(),
+      "Service",
+    );
+  }
+
+  async update(id: string, input: UpdateServiceInput): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_update_service", { p_service_id: id, p_patch: input }),
+      "Service",
+    );
+  }
+
+  async archive(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client.rpc("app_archive_service", { p_service_id: id }),
+      "Service",
+    );
+  }
+
+  async createFolder(input: CreateServiceFolderInput): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_create_service_folder", {
+        p_request_id: input.request_id ?? randomUUID(),
+        p_name: input.name,
+        p_description: input.description ?? undefined,
+        p_parent_id: input.parent_id ?? undefined,
+        p_sort_order: input.sort_order,
+      }),
+      "Service folder",
+    );
+  }
+
+  async getFolderById(id: string): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client
+        .from("service_folders")
+        .select()
+        .eq("id", id)
+        .is("archived_at", null)
+        .single(),
+      "Service folder",
+    );
+  }
+
+  async listFolders(): Promise<ServiceFolderRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("service_folders")
+        .select()
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  async updateFolder(id: string, input: UpdateServiceFolderInput): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_update_service_folder", {
+        p_folder_id: id,
+        p_patch: input,
+      }),
+      "Service folder",
+    );
+  }
+
+  async archiveFolder(id: string): Promise<ServiceFolderRow> {
+    return unwrapOne(
+      await this.client.rpc("app_archive_service_folder", { p_folder_id: id }),
+      "Service folder",
+    );
+  }
+
+  async listAssignees(): Promise<ServiceAssigneeOption[]> {
+    const [profiles, roles] = await Promise.all([
+      this.client
+        .from("profiles")
+        .select("id, display_name, role_id")
+        .is("archived_at", null),
+      this.client.from("roles").select("id, name"),
+    ]);
+    const internalRoleIds = new Set(
+      unwrapMany(roles)
+        .filter((role) => ["owner", "admin", "manager", "staff"].includes(role.name))
+        .map((role) => role.id),
+    );
+
+    return unwrapMany(profiles)
+      .filter((profile) => internalRoleIds.has(profile.role_id))
+      .map((profile) => ({
+        id: profile.id,
+        displayName: profile.display_name ?? "Unnamed teammate",
+      }))
+      .sort((left, right) => left.displayName.localeCompare(right.displayName));
+  }
+}
+
+============================================================
+FILE: .\src\domain\services\schema.ts
+============================================================
+
+import { z } from "zod";
+import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
+import { nonBlankTextSchema, nullableNonBlankTextSchema, uuidSchema } from "../shared";
+
+export type Service = ServiceRow;
+export type ServiceFolder = ServiceFolderRow;
+
+export const recurringIntervalUnits = ["D", "W", "M", "Y"] as const;
+export const recurringActions = ["none", "reopen_order", "create_order", "client_request"] as const;
+export const deadlineUnits = ["H", "D"] as const;
+
+const moneySchema = z.number().finite().nonnegative();
+const positiveIntegerSchema = z.number().int().positive();
+const sortOrderSchema = z.number().int().nonnegative();
+const currencySchema = z.string().regex(/^[A-Z]{3}$/, "Use a three-letter currency code.");
+
+const serviceFieldsSchema = z.object({
+  name: nonBlankTextSchema,
+  folder_id: uuidSchema.nullable().optional(),
+  description: nullableNonBlankTextSchema.optional(),
+  price: moneySchema.optional(),
+  currency: currencySchema.optional(),
+  image_url: nullableNonBlankTextSchema.optional(),
+  is_active: z.boolean().optional(),
+  is_public: z.boolean().optional(),
+  recurring: z.boolean().optional(),
+  recurring_price: moneySchema.nullable().optional(),
+  recurring_interval_length: positiveIntegerSchema.nullable().optional(),
+  recurring_interval_unit: z.enum(recurringIntervalUnits).nullable().optional(),
+  recurring_action: z.enum(recurringActions).nullable().optional(),
+  group_quantities: z.boolean().optional(),
+  assigned_to_profile_id: uuidSchema.nullable().optional(),
+  deadline_amount: positiveIntegerSchema.nullable().optional(),
+  deadline_unit: z.enum(deadlineUnits).nullable().optional(),
+  require_client_profile: z.boolean().optional(),
+  sort_order: sortOrderSchema.optional(),
+});
+
+function validateServiceConfiguration(
+  value: {
+    recurring?: boolean;
+    recurring_price?: number | null;
+    recurring_interval_length?: number | null;
+    recurring_interval_unit?: (typeof recurringIntervalUnits)[number] | null;
+    recurring_action?: (typeof recurringActions)[number] | null;
+    deadline_amount?: number | null;
+    deadline_unit?: (typeof deadlineUnits)[number] | null;
+  },
+  context: z.RefinementCtx,
+) {
+  const recurrenceValues = [
+    value.recurring_price,
+    value.recurring_interval_length,
+    value.recurring_interval_unit,
+    value.recurring_action,
+  ];
+
+  if (value.recurring && recurrenceValues.some((candidate) => candidate == null)) {
+    context.addIssue({
+      code: "custom",
+      path: ["recurring"],
+      message: "Recurring services require a price, interval, and action.",
+    });
+  }
+
+  if (value.recurring === false && recurrenceValues.some((candidate) => candidate != null)) {
+    context.addIssue({
+      code: "custom",
+      path: ["recurring"],
+      message: "Disable recurring settings when the service is not recurring.",
+    });
+  }
+
+  if ((value.deadline_amount == null) !== (value.deadline_unit == null)) {
+    context.addIssue({
+      code: "custom",
+      path: ["deadline_amount"],
+      message: "Deadline amount and unit must be supplied together.",
+    });
+  }
+}
+
+export const createServiceSchema = serviceFieldsSchema
+  .extend({
+    request_id: uuidSchema.optional(),
+    price: moneySchema.default(0),
+    currency: currencySchema.default("USD"),
+    is_active: z.boolean().default(true),
+    is_public: z.boolean().default(true),
+    recurring: z.boolean().default(false),
+    group_quantities: z.boolean().default(false),
+    require_client_profile: z.boolean().default(false),
+    sort_order: sortOrderSchema.default(0),
+  })
+  .superRefine(validateServiceConfiguration);
+
+export const updateServiceSchema = serviceFieldsSchema
+  .partial()
+  .superRefine((value, context) => {
+    if (Object.keys(value).length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "At least one service field must be supplied.",
+      });
+      return;
+    }
+    validateServiceConfiguration(value, context);
+  });
+
+export const createServiceFolderSchema = z.object({
+  request_id: uuidSchema.optional(),
+  name: nonBlankTextSchema,
+  description: nullableNonBlankTextSchema.optional(),
+  parent_id: uuidSchema.nullable().optional(),
+  sort_order: sortOrderSchema.default(0),
+});
+
+export const updateServiceFolderSchema = z.object({
+  name: nonBlankTextSchema.optional(),
+  description: nullableNonBlankTextSchema.optional(),
+  parent_id: uuidSchema.nullable().optional(),
+  sort_order: sortOrderSchema.optional(),
+}).refine(
+  (value) => Object.keys(value).length > 0,
+  "At least one folder field must be supplied.",
+);
+
+export type CreateServiceInput = z.input<typeof createServiceSchema>;
+export type UpdateServiceInput = z.infer<typeof updateServiceSchema>;
+export type CreateServiceFolderInput = z.input<typeof createServiceFolderSchema>;
+export type UpdateServiceFolderInput = z.infer<typeof updateServiceFolderSchema>;
+
+============================================================
+FILE: .\src\lib\supabase\database-rows.ts
+============================================================
+
+import type { Tables } from "./database.types";
+
+// PostgreSQL type generation cannot infer literal unions from CHECK
+// constraints over text columns, so domain-facing aliases refine those fields.
+export type RoleRow = Tables<"roles">;
+export type ProfileRow = Tables<"profiles">;
+export type CompanyRow = Tables<"companies">;
+export type CompanyWalletRow = Tables<"company_wallets">;
+export type CompanyWalletTransactionRow = Tables<"company_wallet_transactions">;
+export type WfCardMembershipRow = Tables<"wf_card_memberships">;
+export type ClientContactRow = Tables<"client_contacts">;
+export type ServiceRow = Tables<"services">;
+export type ServiceFolderRow = Tables<"service_folders">;
+export type CouponRow = Omit<Tables<"coupons">, "discount_type" | "recurring_duration"> & {
+  discount_type: "fixed" | "percentage";
+  recurring_duration: "forever" | "first_payment";
+};
+export type CouponDiscountRuleRow = Tables<"coupon_discount_rules">;
+export type CouponDiscountServiceRow = Tables<"coupon_discount_services">;
+export type CouponRedemptionRow = Tables<"coupon_redemptions">;
+export type ActivityEventRow = Omit<Tables<"activity_events">, "entity_type"> & {
+  entity_type: "company" | "client_contact" | "service_folder" | "service" | "order" | "order_task" | "profile" | "coupon" | "invoice" | "subscription" | "form" | "form_assignment" | "form_submission" | "ticket";
+};
+export type InvoiceRow = Omit<Tables<"invoices">, "status"> & {
+  status: "draft" | "unpaid" | "payment_pending" | "paid" | "void";
+};
+export type InvoiceItemRow = Tables<"invoice_items">;
+export type InvoicePaymentRow = Omit<Tables<"invoice_payments">, "status"> & {
+  status: "pending" | "succeeded" | "failed" | "cancelled";
+};
+export type InvoiceRefundRow = Omit<Tables<"invoice_refunds">, "status"> & {
+  status: "pending" | "succeeded" | "failed" | "cancelled";
+};
+export type SubscriptionRow = Omit<Tables<"subscriptions">, "status" | "plan_source"> & {
+  status: "active" | "past_due" | "paused" | "pending_cancellation" | "canceled";
+  plan_source: "admin_invoice" | "checkout" | "payment_link" | "service_purchase";
+};
+export type SubscriptionPlanVersionRow = Omit<
+  Tables<"subscription_plan_versions">,
+  "interval_unit" | "end_of_month_policy" | "recurring_action"
+> & {
+  interval_unit: "day" | "week" | "month" | "year";
+  end_of_month_policy: "clamp" | "skip";
+  recurring_action: "none" | "reopen_order" | "create_order" | "client_request";
+};
+export type SubscriptionPlanItemRow = Omit<
+  Tables<"subscription_plan_items">,
+  "coupon_recurring_duration"
+> & {
+  coupon_recurring_duration: "forever" | "first_payment" | null;
+};
+export type SubscriptionCycleRow = Omit<
+  Tables<"subscription_cycles">,
+  "status" | "fulfillment_status" | "fulfillment_action"
+> & {
+  status: "scheduled" | "invoiced" | "paid" | "past_due" | "voided" | "skipped";
+  fulfillment_status: "not_ready" | "pending" | "deferred" | "completed" | "not_applicable";
+  fulfillment_action: "none" | "reopen_order" | "create_order" | "client_request";
+};
+export type SubscriptionEventRow = Omit<Tables<"subscription_events">, "event_type" | "actor_type"> & {
+  event_type:
+    | "created"
+    | "cycle_scheduled"
+    | "invoice_generated"
+    | "payment_settled"
+    | "payment_failed"
+    | "past_due"
+    | "recovered"
+    | "paused"
+    | "resumed"
+    | "cancellation_scheduled"
+    | "cancellation_removed"
+    | "canceled"
+    | "terms_changed"
+    | "invoice_invalidated"
+    | "fulfillment_pending";
+  actor_type: "system" | "user" | "client" | "processor";
+};
+export type SubscriptionPaymentMethodRow = Omit<Tables<"subscription_payment_methods">, "provider"> & {
+  provider: "manual" | "wallet" | "wf_card" | "stripe" | "paypal" | "other";
+};
+export type SubscriptionDunningAttemptRow = Omit<Tables<"subscription_dunning_attempts">, "outcome"> & {
+  outcome: "succeeded" | "failed" | "skipped" | null;
+};
+export type OrderRow = Omit<Tables<"orders">, "status" | "priority"> & {
+  status: "pending" | "submitted" | "working" | "waiting_reply" | "pending_update" | "complete" | "canceled";
+  priority: "low" | "normal" | "high" | "urgent";
+};
+export type OrderTaskRow = Omit<Tables<"order_tasks">, "status"> & {
+  status: "todo" | "in_progress" | "blocked" | "complete" | "canceled";
+};
+export type FormRow = Omit<Tables<"forms">, "form_type" | "status" | "visibility"> & {
+  form_type: "order" | "contact" | "intake" | "onboarding";
+  status: "draft" | "published" | "inactive" | "archived";
+  visibility: "public" | "authenticated" | "assigned";
+};
+export type FormVersionRow = Omit<Tables<"form_versions">, "lifecycle_state" | "visibility"> & {
+  lifecycle_state: "draft" | "published" | "archived";
+  visibility: "public" | "authenticated" | "assigned";
+};
+export type FormVersionFieldRow = Omit<Tables<"form_version_fields">, "field_type"> & {
+  field_type:
+    | "optgroup" | "dropdown" | "fullname" | "email" | "password" | "address"
+    | "phone" | "optin" | "payment" | "text" | "textarea" | "richtext"
+    | "date" | "checkbox" | "data-option-group" | "data-dropdown" | "file"
+    | "data-spreadsheet" | "secret" | "hidden" | "signature" | "calendly"
+    | "break" | "pagebreak" | "html" | "captcha";
+};
+export type FormFieldOptionRow = Tables<"form_field_options">;
+export type FormRuleRow = Omit<Tables<"form_rules">, "action"> & {
+  action: "show" | "hide";
+};
+export type FormServiceLinkRow = Omit<Tables<"form_service_links">, "role"> & {
+  role: "offered_item" | "default_item" | "intake_assignment";
+};
+export type FormAssignmentRow = Omit<Tables<"form_assignments">, "assignment_type" | "status"> & {
+  assignment_type: "intake" | "onboarding";
+  status: "assigned" | "submitted" | "archived" | "canceled";
+};
+export type FormSubmissionRow = Omit<Tables<"form_submissions">, "orchestration_status"> & {
+  orchestration_status: "not_applicable" | "deferred" | "completed" | "failed";
+};
+export type FormSubmissionValueRow = Tables<"form_submission_values">;
+export type FormFileRow = Tables<"form_files">;
+export type TicketRow = Omit<Tables<"tickets">, "status" | "priority"> & {
+  status: "open" | "in_progress" | "waiting_on_client" | "waiting_on_team" | "resolved" | "closed";
+  priority: "low" | "normal" | "high" | "urgent";
+};
+export type TicketMessageRow = Omit<Tables<"ticket_messages">, "author_type" | "message_kind" | "visibility"> & {
+  author_type: "internal" | "client" | "guest" | "system";
+  message_kind: "initial_request" | "reply" | "internal_note";
+  visibility: "client" | "internal";
+};
+export type TicketAttachmentRow = Omit<Tables<"ticket_attachments">, "scan_status"> & {
+  scan_status: "pending" | "clean" | "rejected";
+};
+
+============================================================
+SERVICE CSS REFERENCES
+============================================================
+
+Path                                                            LineNumber Line 
+----                                                            ---------- ---- 
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2364 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-sec
+                                                                           tion,
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2365 .serv
+                                                                           ices-
+                                                                           catal
+                                                                           og-se
+                                                                           ction
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2413 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lis
+                                                                           t {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2420 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-row
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2429 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-row
+                                                                           :last
+                                                                           -chil
+                                                                           d {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2433 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-row
+                                                                           :hove
+                                                                           r {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2437 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-row
+                                                                           .is-a
+                                                                           ctive
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2442 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2452 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k >  
+                                                                           svg {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2459 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-row
+                                                                           .is-a
+                                                                           ctive
+                                                                            .ser
+                                                                           vices
+                                                                           -fold
+                                                                           er-li
+                                                                           nk > 
+                                                                           svg {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2463 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k >  
+                                                                           span 
+                                                                           {    
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2469 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k str
+                                                                           ong {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2475 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k sma
+                                                                           ll { 
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2483 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-lin
+                                                                           k b {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2496 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-edi
+                                                                           t {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2502 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-edi
+                                                                           t:hov
+                                                                           er { 
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2507 .serv
+                                                                           ices-
+                                                                           folde
+                                                                           r-edi
+                                                                           t    
+                                                                           svg {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2512 .serv
+                                                                           ices-
+                                                                           catal
+                                                                           og-he
+                                                                           ading
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2516 .serv
+                                                                           ices-
+                                                                           catal
+                                                                           og-se
+                                                                           ction
+                                                                            .fil
+                                                                           ter-c
+                                                                           ontro
+                                                                           l {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2520 .serv
+                                                                           ices-
+                                                                           table
+                                                                           -shel
+                                                                           l {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2528 .serv
+                                                                           ices-
+                                                                           table
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2533 .serv
+                                                                           ices-
+                                                                           table
+                                                                            th {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2542 .serv
+                                                                           ices-
+                                                                           table
+                                                                            th:f
+                                                                           irst-
+                                                                           child
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2546 .serv
+                                                                           ices-
+                                                                           table
+                                                                            th  
+                                                                           a {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2551 .serv
+                                                                           ices-
+                                                                           table
+                                                                            td {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2558 .serv
+                                                                           ices-
+                                                                           table
+                                                                            td:f
+                                                                           irst-
+                                                                           child
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2562 .serv
+                                                                           ices-
+                                                                           table
+                                                                           -name
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2570 .serv
+                                                                           ices-
+                                                                           table
+                                                                           -name
+                                                                           :hove
+                                                                           r {  
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2945 .serv
+                                                                           ice-f
+                                                                           older
+                                                                           -form
+                                                                            {   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2969   .se
+                                                                           rvice
+                                                                           s-fol
+                                                                           der-s
+                                                                           ectio
+                                                                           n,   
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2970   .se
+                                                                           rvice
+                                                                           s-cat
+                                                                           alog-
+                                                                           secti
+                                                                           on { 
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2974   .se
+                                                                           rvice
+                                                                           s-fol
+                                                                           der-l
+                                                                           ink {
+C:\Users\User\Documents\Wolf-Forge-Platform\src\app\globals.css       2978   .se
+                                                                           rvice
+                                                                           s-tab
+                                                                           le-sh
+                                                                           ell {
+
+
+
+
+============================================================
+CURRENT CLIENT STORE CAROUSEL CHANGES
+============================================================
+
+============================================================
+RELEVANT GIT STATUS
+============================================================
+?? src/app/(internal)/services/page.tsx.before-autocomplete-20260813-081338
+?? src/app/(internal)/services/page.tsx.before-global-ranked-search-20260813-080628
+?? src/app/(internal)/services/page.tsx.before-global-service-search-20260813-080155
+?? src/components/account/store/
+?? src/tests/store-folder-carousel.test.ts

@@ -1,51 +1,258 @@
 import { ArrowLeft, ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
+import { subscriptionAttention } from "../../domain/client-portal/attention";
+import {
+  recurringAmountLabel,
+  renewalCadence,
+} from "../../domain/client-portal/subscription-language";
 import type { SubscriptionDetail, SubscriptionSummary } from "../../domain/subscriptions/schema";
 import { formatCurrencyCents, formatDate } from "../../lib/format";
-import { formatSubscriptionInterval, invoiceDisplayNumber } from "../../lib/subscriptions/presentation";
-import { SubscriptionStatusBadge } from "./subscription-status-badge";
+import { invoiceDisplayNumber } from "../../lib/subscriptions/presentation";
+import { AttentionPill } from "../account/ui/attention-pill";
+import { ClientSubscriptionCalendarTrigger } from "./client-subscription-calendar-trigger";
 import type { SubscriptionInvoiceView } from "./subscription-detail";
-import styles from "./subscriptions.module.css";
+import { invoiceAttention } from "../../domain/client-portal/attention";
+
+/**
+ * Client Subscriptions.
+ *
+ * The calculations are the internal ones, untouched: amounts, next billing date
+ * and cycle history all come from app_list_subscription_summaries and
+ * app_get_subscription_detail, which already strip internal columns for a
+ * client caller. What changes here is the vocabulary — a client sees an
+ * investment in an ongoing service, not a recurring fulfillment plan version.
+ */
 
 export function ClientSubscriptionsList({ summaries }: { summaries: SubscriptionSummary[] }) {
+  const live = summaries.filter((summary) => summary.status !== "canceled");
+  const ended = summaries.filter((summary) => summary.status === "canceled");
+
+  function Row({ summary }: { summary: SubscriptionSummary }) {
+    const attention = subscriptionAttention(summary.status);
+
+    return (
+      <li key={summary.subscription_id}>
+        <Link
+          href={`/account/subscriptions/${summary.subscription_id}`}
+          className="portal-subscription-row"
+        >
+          <span className="portal-subscription-main">
+            <span className="portal-project-ref">{summary.public_ref}</span>
+            <strong>{summary.service_name}</strong>
+            <span>
+              {summary.status === "canceled"
+                ? "Ended"
+                : summary.next_payment_on
+                  ? `Next billing ${formatDate(summary.next_payment_on)}`
+                  : "No billing date scheduled"}
+            </span>
+          </span>
+
+          <AttentionPill tone={attention.tone} label={attention.label} />
+
+          <span className="portal-subscription-amount">
+            <strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong>
+            <span>{recurringAmountLabel(summary.interval_unit, summary.interval_count)}</span>
+          </span>
+
+          <ChevronRight aria-hidden="true" />
+        </Link>
+      </li>
+    );
+  }
+
   return (
-    <div className={styles.clientRoot}>
-      <header className={styles.clientPageHeader}><h1>Subscriptions</h1><p>Review your recurring Services, billing dates, and Invoice history.</p></header>
-      {summaries.length === 0 ? <section className={styles.clientEmpty}><h2>No subscriptions yet</h2><p>Your active and historical subscriptions will appear here.</p></section> : <div className={styles.clientList}>{summaries.map((summary) => <Link href={`/account/subscriptions/${summary.subscription_id}`} key={summary.subscription_id}>
-        <div className={styles.clientService}><strong>{summary.service_name}</strong><span className={styles.subscriptionReference}>{summary.public_ref}</span></div>
-        <SubscriptionStatusBadge status={summary.status} />
-        <div className={styles.clientAmount}><strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong><span>{formatSubscriptionInterval(summary.interval_unit, summary.interval_count)}</span></div>
-        <dl><div><dt>Next billing</dt><dd>{summary.status === "canceled" ? "â€”" : formatDate(summary.next_payment_on)}</dd></div><div><dt>Last payment</dt><dd>{formatDate(summary.last_payment_at)}</dd></div></dl>
-        <ChevronRight aria-hidden="true" />
-      </Link>)}</div>}
+    <div className="portal-page">
+      <header className="portal-page-head portal-page-head-actions">
+        <div>
+          <span className="portal-eyebrow">Billing</span>
+          <h1>Subscriptions</h1>
+          <p>Your ongoing services, what they cost and when they renew.</p>
+        </div>
+        <ClientSubscriptionCalendarTrigger />
+      </header>
+
+      {summaries.length === 0 ? (
+        <p className="portal-empty">
+          No subscriptions yet. Ongoing services appear here with their renewal dates and invoice
+          history.
+        </p>
+      ) : (
+        <>
+          {live.length > 0 ? (
+            <section className="portal-section" aria-labelledby="portal-subs-live">
+              <header className="portal-section-head">
+                <h2 id="portal-subs-live">Ongoing services</h2>
+              </header>
+              <ul className="portal-subscription-list">
+                {live.map((summary) => (
+                  <Row key={summary.subscription_id} summary={summary} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {ended.length > 0 ? (
+            <section className="portal-section" aria-labelledby="portal-subs-ended">
+              <header className="portal-section-head">
+                <h2 id="portal-subs-ended">Ended</h2>
+              </header>
+              <ul className="portal-subscription-list">
+                {ended.map((summary) => (
+                  <Row key={summary.subscription_id} summary={summary} />
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
 
-export function ClientSubscriptionDetail({ detail, summary, invoices }: { detail: SubscriptionDetail; summary: SubscriptionSummary; invoices: SubscriptionInvoiceView[] }) {
+export function ClientSubscriptionDetail({
+  detail,
+  summary,
+  invoices,
+}: {
+  detail: SubscriptionDetail;
+  summary: SubscriptionSummary;
+  invoices: SubscriptionInvoiceView[];
+}) {
   const { subscription, current_plan: plan, plan_items: items } = detail;
-  const currentInvoice = invoices.find((invoice) => ["unpaid", "overdue", "payment_pending"].includes(invoice.presentationState));
-  const amount = items.reduce((total, item) => total + item.quantity * (item.unit_amount_cents - item.unit_discount_cents), 0);
+  const attention = subscriptionAttention(summary.status);
+  const currentInvoice = invoices.find((invoice) =>
+    ["unpaid", "overdue", "payment_pending"].includes(invoice.presentationState),
+  );
+
+  // The internal calculation, unchanged: quantity × (unit − unit discount).
+  const amount = items.reduce(
+    (total, item) => total + item.quantity * (item.unit_amount_cents - item.unit_discount_cents),
+    0,
+  );
 
   return (
-    <article className={styles.clientDetail}>
-      <Link href="/account/subscriptions" className={styles.clientBack}><ArrowLeft aria-hidden="true" />All subscriptions</Link>
-      <header className={styles.clientHero}>
-        <div><h1>{summary.service_name}</h1><p className={styles.subscriptionReference}>{summary.public_ref}</p></div>
-        <SubscriptionStatusBadge status={summary.status} />
-      </header>
-      {summary.status === "past_due" ? <div className={styles.clientPastDue}><strong>Payment is required on your current Invoice.</strong>{currentInvoice ? <Link href={`/account/invoices/${currentInvoice.id}`}>View Invoice <ChevronRight aria-hidden="true" /></Link> : null}</div> : null}
-      {summary.health === "stalled" || summary.health === "requires_attention" ? <div className={styles.clientReviewNote}>Weâ€™re reviewing this Subscriptionâ€™s billing state. Your Invoice history remains available below.</div> : null}
+    <article className="portal-page">
+      <Link href="/account/subscriptions" className="portal-back">
+        <ArrowLeft aria-hidden="true" />
+        All subscriptions
+      </Link>
 
-      <dl className={styles.clientFacts}>
-        <div><dt>Current price</dt><dd>{formatCurrencyCents(amount, plan.currency)} {plan.currency}<small>{formatSubscriptionInterval(plan.interval_unit, plan.interval_count)}</small></dd></div>
-        <div><dt>Next billing</dt><dd>{summary.status === "canceled" ? "â€”" : formatDate(summary.next_payment_on)}</dd></div>
-        <div><dt>Started</dt><dd>{formatDate(subscription.started_at)}</dd></div>
+      <header className="portal-page-head portal-page-head-actions">
+        <div>
+          <span className="portal-eyebrow">{summary.public_ref}</span>
+          <h1>{summary.service_name}</h1>
+          <p>{renewalCadence(plan.interval_unit, plan.interval_count)}</p>
+        </div>
+        <AttentionPill tone={attention.tone} label={attention.label} />
+      </header>
+
+      {summary.status === "past_due" ? (
+        <div className="portal-callout" data-tone="payment_due">
+          <strong>A payment is due on this subscription.</strong>
+          {currentInvoice ? (
+            <span>
+              <Link href={`/account/invoices/${currentInvoice.id}`}>
+                View the open invoice
+              </Link>{" "}
+              to settle it.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/*
+       * "stalled" and "requires_attention" are internal billing-engine health
+       * states. A client is told plainly that Wolf Forge is looking at it,
+       * without being handed the engine's vocabulary.
+       */}
+      {summary.health === "stalled" || summary.health === "requires_attention" ? (
+        <div className="portal-callout" data-tone="in_progress">
+          <strong>Wolf Forge is reviewing this subscription&rsquo;s billing.</strong>
+          <span>Your invoice history below stays available while we do.</span>
+        </div>
+      ) : null}
+
+      <dl className="portal-fact-grid">
+        <div>
+          <dt>{recurringAmountLabel(plan.interval_unit, plan.interval_count)}</dt>
+          <dd>
+            {formatCurrencyCents(amount, plan.currency)} {plan.currency}
+          </dd>
+        </div>
+        <div>
+          <dt>Next billing</dt>
+          <dd>
+            {summary.status === "canceled"
+              ? "—"
+              : summary.next_payment_on
+                ? formatDate(summary.next_payment_on)
+                : "Not scheduled"}
+          </dd>
+        </div>
+        <div>
+          <dt>Started</dt>
+          <dd>{formatDate(subscription.started_at)}</dd>
+        </div>
+        <div>
+          <dt>Last payment</dt>
+          <dd>{summary.last_payment_at ? formatDate(summary.last_payment_at) : "—"}</dd>
+        </div>
       </dl>
 
-      <section className={styles.clientPlan}><h2>Current plan</h2><p>{items.map((item) => item.service_name_snapshot).join(", ")}</p><span>{items.length === 1 ? `${items[0]?.quantity ?? 1} recurring item` : `${items.length} recurring items`} Â· {plan.lead_days}-day Invoice lead Â· {plan.grace_days}-day grace</span></section>
+      <section className="portal-section" aria-labelledby="client-subscription-included">
+        <header className="portal-section-head">
+          <h2 id="client-subscription-included">What&rsquo;s included</h2>
+        </header>
+        <ul className="portal-included-list">
+          {items.map((item, index) => (
+            <li key={`${item.service_name_snapshot}-${index}`}>
+              <strong>{item.service_name_snapshot}</strong>
+              {item.quantity > 1 ? <span>×{item.quantity}</span> : null}
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      <section className={styles.clientInvoices} aria-labelledby="client-invoice-history"><h2 id="client-invoice-history">Invoice history</h2>{invoices.length === 0 ? <p>No Invoices have been generated.</p> : <div>{invoices.map((invoice) => <Link href={`/account/invoices/${invoice.id}`} key={invoice.id}><FileText aria-hidden="true" /><span><strong>{invoiceDisplayNumber(invoice.invoiceNumber)}</strong><small>Due {formatDate(invoice.dueAt)}</small></span><strong>{formatCurrencyCents(invoice.totalCents, invoice.currency)}</strong><span className={styles.cycleStatus} data-state={invoice.presentationState}>{invoice.presentationState.replaceAll("_", " ")}</span><ChevronRight aria-hidden="true" /></Link>)}</div>}</section>
+      <section className="portal-section" aria-labelledby="client-invoice-history">
+        <header className="portal-section-head">
+          <h2 id="client-invoice-history">Invoice history</h2>
+        </header>
+
+        {invoices.length === 0 ? (
+          <p className="portal-empty">No invoices have been issued for this subscription yet.</p>
+        ) : (
+          <ul className="portal-invoice-list">
+            {invoices.map((invoice) => {
+              const invoiceState = invoiceAttention(invoice.presentationState);
+
+              return (
+                <li key={invoice.id}>
+                  <Link href={`/account/invoices/${invoice.id}`} className="portal-invoice-row">
+                    <span className="portal-invoice-main">
+                      <strong>
+                        <FileText aria-hidden="true" />
+                        {invoiceDisplayNumber(invoice.invoiceNumber)}
+                      </strong>
+                      <span>Due {formatDate(invoice.dueAt)}</span>
+                    </span>
+
+                    <AttentionPill tone={invoiceState.tone} label={invoiceState.label} />
+
+                    <span className="portal-invoice-amounts">
+                      <strong>
+                        {formatCurrencyCents(invoice.totalCents, invoice.currency)}
+                      </strong>
+                    </span>
+
+                    <ChevronRight aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </article>
   );
 }

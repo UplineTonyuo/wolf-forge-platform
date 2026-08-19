@@ -18,6 +18,8 @@
 * { box-sizing: border-box; }
 html { background: var(--wf-warm-50); color: var(--wf-text); font-family: "Inter Variable", Inter, system-ui, sans-serif; }
 body { margin: 0; min-width: 360px; background: var(--wf-white); }
+/* The Subscription calendar portals above the app; the page behind it must not scroll. */
+body.wf-subscription-calendar-open { overflow: hidden; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
@@ -530,20 +532,19 @@ td {
 
   /*
     SETTINGS EXCEPTION:
-    retain the narrower centered presentation it already had.
+    a centered reading column rather than the full-bleed operational width the
+    list pages use. The horizontal padding is symmetric so the header, the
+    section grid and the footer action all sit on one axis with equal breathing
+    room on both sides. Content inside stays left aligned.
   */
   .settings-page-layout .page-frame {
-    width: min(100%, 1280px);
-    max-width: 1280px;
+    width: min(100%, 1060px);
+    max-width: 1060px;
 
     margin-left: auto;
     margin-right: auto;
 
-    padding:
-      24px
-      72px
-      48px
-      32px;
+    padding: 24px 40px 48px;
   }
 }
 
@@ -589,9 +590,16 @@ td {
     border: 1px solid var(--wf-border);
     border-radius: 999px;
 
+    /*
+      DEAD RULE SET. Nothing renders `.workspace-search-shell` any more ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
+      GlobalSearch moved to global-search.module.css, where `.root` carries
+      `flex: 1 1 auto; min-width: 160px` and is what actually contracts when
+      the shortcut rail expands. Left in place rather than deleted blind; safe
+      to remove in a dedicated cleanup. The `flex-basis`/`width` transitions
+      that used to sit here were inert even when the class was live, because
+      neither property is ever set on hover.
+    */
     transition:
-      flex-basis 320ms ease,
-      width 320ms ease,
       box-shadow 180ms ease,
       border-color 180ms ease;
 
@@ -695,12 +703,11 @@ td {
     stroke-width: 1.8;
   }
 
+  /* Movement is gated to fine pointers at the end of this file. */
   .workspace-command-button:hover {
     color: #000D51;
     border-color: #bfc5d2;
     background: #f8f9fc;
-
-    transform: translateY(-1px);
 
     box-shadow: 0 4px 14px rgba(0, 13, 81, 0.07);
   }
@@ -745,8 +752,6 @@ td {
 
   .workspace-command-profile .avatar-button:hover {
     border-color: #bfc5d2;
-
-    transform: translateY(-1px);
 
     box-shadow: 0 4px 14px rgba(0, 13, 81, 0.07);
   }
@@ -4614,44 +4619,539 @@ td {
 
 /* WF CARD CLIENT INVOICE FOUNDATION START */
 
-.client-account-shell {
+/* ---------------------------------------------------------------------------
+ * Client portal workspace shell.
+ *
+ * Structurally a sibling of the internal rail, visually its own thing: a navy
+ * field with restrained gold accents against the white client workspace. It
+ * shares nothing with .app-sidebar so the two can move independently.
+ * ------------------------------------------------------------------------- */
+
+.client-portal {
   min-height: 100vh;
-  background: #fff;
+  display: grid;
+  grid-template-columns: 252px minmax(0, 1fr);
+  background: var(--wf-white);
 }
 
-.client-account-header {
-  min-height: 72px;
+.portal-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 0 40px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 14px;
   color: #fff;
   background: var(--wf-navy);
-  border-bottom: 1px solid rgba(255, 255, 255, .12);
+  border-right: 1px solid rgba(255, 255, 255, .1);
+  overflow-y: auto;
 }
 
-.client-account-brand {
-  display: inline-flex;
+/*
+ * Logo only. The wordmark beside it repeated the page title and the browser
+ * tab, and crowded a 252px rail. Left-aligned on the same 10px optical edge as
+ * every navigation row so it reads as placed rather than as leftover.
+ */
+/*
+ * Density, weight and label treatment are matched to the internal rail (the
+ * "William POV" sidebar) so the two products read as one system. The
+ * navigation itself is untouched — only client routes are representable here —
+ * and the numbers below are the internal rail's, not new ones:
+ * brand 96px tall, 18px/12px nav padding, 24px between sections, 40px rows,
+ * 19px icons at 2.35 stroke, section labels in muted white rather than gold.
+ */
+/*
+ * Padding copied from the internal rail's .sidebar-brand so the mark lands on
+ * the same optical edge.
+ *
+ * There is deliberately no rule sizing the image: both rails render the same
+ * <WolfForgeMark>, which carries its own inline width/height/transform, and an
+ * inline style outranks a class. The old `.portal-brand img { width: 46px }`
+ * here never applied — the client mark has always drawn at the internal rail's
+ * size. Sizing it for real belongs in the component, not in a rule that loses.
+ */
+.portal-brand {
+  display: flex;
   align-items: center;
-  gap: 12px;
+  min-height: 96px;
+  padding: 21px 20px 18px;
   color: #fff;
-  font-family: "Sora Variable", Sora, sans-serif;
-  font-size: 14px;
-  font-weight: 650;
-  letter-spacing: .11em;
   text-decoration: none;
 }
 
-.client-account-brand svg { width: 34px; height: 34px; }
-.client-account-identity { display: flex; align-items: center; gap: 18px; font-size: 12px; }
-.client-account-identity span { color: rgba(255, 255, 255, .76); }
-.client-account-identity button { padding: 7px 0; border: 0; color: #fff; background: transparent; cursor: pointer; }
-.client-account-main { width: min(100%, 1120px); margin: 0 auto; padding: 44px 40px 80px; }
-.client-account-navigation { min-height: 50px; display: flex; align-items: stretch; gap: 28px; padding: 0 max(40px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid var(--wf-border); background: #fff; }
-.client-account-navigation a { min-height: 50px; display: inline-flex; align-items: center; position: relative; color: var(--wf-text-muted); font-size: 13px; font-weight: 550; text-decoration: none; }
-.client-account-navigation a[aria-current="page"] { color: var(--wf-navy); font-weight: 650; }
-.client-account-navigation a[aria-current="page"]::after { content: ""; position: absolute; inset: auto 0 -1px; height: 2px; background: #1d4fb6; }
+.portal-nav { flex: 1 1 auto; display: flex; flex-direction: column; gap: 24px; padding-top: 4px; }
+.portal-nav-section { display: flex; flex-direction: column; gap: 8px; }
+
+/*
+ * Gold is the accent for *state*, not for structure. Section labels moved to
+ * the internal rail's muted white so the only gold in the rail is the active
+ * row's icon, which is the thing worth finding.
+ */
+.portal-nav-section > h2 {
+  margin: 0;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, .58);
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.portal-nav-links { display: flex; flex-direction: column; gap: 4px; }
+
+.portal-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 40px;
+  padding: 0 11px;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, .80);
+  font-size: 14px;
+  font-weight: 520;
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease, transform 100ms ease;
+}
+
+.portal-nav-link svg { width: 19px; height: 19px; flex: 0 0 auto; stroke-width: 2.35; opacity: .85; }
+.portal-nav-link:hover { color: #fff; background: rgba(255, 255, 255, .075); }
+.portal-nav-link:active { transform: scale(.985); }
+.portal-nav-link.is-active {
+  color: #fff;
+  background: rgba(255, 255, 255, .13);
+  font-weight: 650;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025);
+}
+.portal-nav-link.is-active svg { opacity: 1; stroke-width: 2.55; color: var(--wf-gold); }
+
+/*
+ * The permanently expanded service-category list that used to live here is
+ * gone. Categories are reached through the cart action, which opens the
+ * chooser, so the rail stays a navigation surface rather than a catalog.
+ */
+
+.portal-account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: auto;
+  padding: 12px 8px 4px;
+  border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.portal-account-identity { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.portal-account-identity strong { color: #fff; font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-account-identity span { color: rgba(255, 255, 255, .55); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.portal-signout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, .6);
+  background: transparent;
+  cursor: pointer;
+  transition: background 140ms var(--wf-ease), color 140ms var(--wf-ease);
+}
+
+.portal-signout:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+.portal-signout svg { width: 15px; height: 15px; }
+
+.portal-topbar { display: none; }
+.portal-scrim { display: none; }
+
+.portal-main { min-width: 0; background: var(--wf-white); }
+.portal-main-inner { width: min(100%, 1040px); margin: 0 auto; padding: 44px 40px 80px; }
+
+/* --- Portal page furniture ------------------------------------------------ */
+
+.portal-page { display: flex; flex-direction: column; gap: 28px; }
+
+.portal-eyebrow {
+  color: var(--wf-gold);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.portal-page-head { display: flex; flex-direction: column; gap: 8px; }
+.portal-page-head h1 { margin: 0; font-family: "Sora Variable", Sora, sans-serif; font-size: 27px; font-weight: 620; letter-spacing: -.015em; }
+.portal-page-head > p { margin: 0; max-width: 62ch; color: var(--wf-text-muted); font-size: 13.5px; line-height: 1.6; }
+.portal-detail-head { align-items: flex-start; gap: 10px; }
+
+.portal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.portal-back:hover { color: var(--wf-navy); }
+.portal-back svg { width: 14px; height: 14px; }
+
+.portal-empty {
+  margin: 0;
+  padding: 26px 24px;
+  max-width: 62ch;
+  border: 1px dashed var(--wf-border);
+  border-radius: 10px;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+  background: var(--wf-warm-50);
+}
+
+.portal-note { margin: 0; color: var(--wf-text-muted); font-size: 12.5px; }
+.portal-note a { color: var(--wf-navy); font-weight: 600; }
+
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+}
+
+.portal-card > header { display: flex; flex-direction: column; gap: 5px; }
+.portal-card h2 { margin: 0; font-family: "Sora Variable", Sora, sans-serif; font-size: 15px; font-weight: 620; }
+.portal-card > header p, .portal-card > p { margin: 0; color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+
+.portal-primary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 7px;
+  color: #fff;
+  background: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 140ms var(--wf-ease);
+}
+
+.portal-primary-action:hover { background: var(--wf-navy-hover); }
+.portal-primary-action svg, .portal-secondary-action svg { width: 14px; height: 14px; }
+
+.portal-secondary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+  text-decoration: none;
+}
+
+.portal-secondary-action:hover { color: var(--wf-navy-hover); }
+
+/* --- Dashboard ------------------------------------------------------------ */
+
+.portal-dashboard { display: flex; flex-direction: column; gap: 26px; }
+
+.portal-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 34px 32px;
+  border-radius: 14px;
+  color: #fff;
+  background:
+    radial-gradient(120% 160% at 88% 8%, rgba(168, 131, 46, .28), transparent 58%),
+    var(--wf-navy);
+}
+
+.portal-welcome .portal-eyebrow { color: rgba(255, 255, 255, .62); }
+.portal-welcome h1 { margin: 0; font-family: "Sora Variable", Sora, sans-serif; font-size: 30px; font-weight: 620; letter-spacing: -.02em; }
+.portal-welcome p { margin: 0; max-width: 58ch; color: rgba(255, 255, 255, .76); font-size: 13.5px; line-height: 1.65; }
+
+.portal-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+
+.portal-checklist { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+.portal-checklist a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  border-radius: 9px;
+  text-decoration: none;
+  transition: background 140ms var(--wf-ease);
+}
+
+.portal-checklist a:hover { background: var(--wf-navy-wash); }
+.portal-checklist a > svg { width: 14px; height: 14px; margin-left: auto; flex: 0 0 auto; color: var(--wf-text-muted); }
+
+.portal-check {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--wf-border);
+  border-radius: 50%;
+}
+
+.portal-checklist .is-done .portal-check { border-color: var(--wf-gold); background: var(--wf-gold); }
+.portal-check-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-check-body strong { font-size: 13px; font-weight: 600; }
+.portal-check-body span { color: var(--wf-text-muted); font-size: 12px; }
+.portal-checklist .is-done .portal-check-body strong { color: var(--wf-text-muted); font-weight: 550; }
+
+.portal-card-support { gap: 12px; }
+.portal-card-support > svg { width: 20px; height: 20px; color: var(--wf-gold); }
+.portal-support-meta { color: var(--wf-text-muted); font-size: 11.5px; }
+
+.portal-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+
+.portal-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+  text-decoration: none;
+  background: var(--wf-white);
+  transition: border-color 140ms var(--wf-ease), background 140ms var(--wf-ease);
+}
+
+.portal-stat:hover { border-color: var(--wf-navy); background: var(--wf-navy-wash); }
+.portal-stat-label { color: var(--wf-text-muted); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.portal-stat-value { font-family: "Sora Variable", Sora, sans-serif; font-size: 25px; font-weight: 620; letter-spacing: -.02em; }
+.portal-stat-caption { color: var(--wf-text-muted); font-size: 11.5px; }
+
+.portal-store-chips { display: flex; flex-wrap: wrap; gap: 9px; }
+
+.portal-store-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 15px;
+  border: 1px solid var(--wf-border);
+  border-radius: 9px;
+  text-decoration: none;
+  transition: border-color 140ms var(--wf-ease), background 140ms var(--wf-ease);
+}
+
+.portal-store-chip:hover { border-color: var(--wf-navy); background: var(--wf-navy-wash); }
+.portal-store-chip strong { font-size: 12.5px; font-weight: 600; }
+.portal-store-chip span { color: var(--wf-text-muted); font-size: 11px; }
+
+/* --- Projects ------------------------------------------------------------- */
+
+.portal-project-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.portal-project-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+  text-decoration: none;
+  transition: border-color 140ms var(--wf-ease), background 140ms var(--wf-ease);
+}
+
+.portal-project-row:hover { border-color: var(--wf-navy); background: var(--wf-navy-wash); }
+.portal-project-row > svg { width: 15px; height: 15px; flex: 0 0 auto; color: var(--wf-text-muted); }
+.portal-project-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.portal-project-ref { color: var(--wf-gold); font-size: 10.5px; font-weight: 650; letter-spacing: .1em; }
+.portal-project-main strong { font-size: 14px; font-weight: 600; }
+.portal-project-main > span:last-child { color: var(--wf-text-muted); font-size: 12px; }
+.portal-project-meta { display: flex; align-items: center; gap: 18px; flex: 0 0 auto; }
+
+.portal-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.portal-status.is-open { border-color: rgba(0, 13, 81, .22); color: var(--wf-navy); background: var(--wf-navy-wash); }
+.portal-status[data-status="waiting_reply"], .portal-status[data-status="pending_update"] {
+  border-color: rgba(168, 131, 46, .35);
+  color: var(--wf-gold);
+  background: rgba(168, 131, 46, .08);
+}
+
+.portal-progress { display: inline-flex; align-items: center; gap: 8px; }
+.portal-progress-track { width: 74px; height: 5px; border-radius: 999px; background: var(--wf-warm-100); overflow: hidden; }
+.portal-progress-fill { display: block; height: 100%; border-radius: 999px; background: var(--wf-navy); }
+.portal-progress em { font-style: normal; color: var(--wf-text-muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.portal-progress-empty { color: var(--wf-text-muted); font-size: 12px; }
+
+.portal-fact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 18px 24px; margin: 0; }
+.portal-fact-grid > div { display: flex; flex-direction: column; gap: 4px; }
+.portal-fact-grid dt { color: var(--wf-text-muted); font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.portal-fact-grid dd { margin: 0; font-size: 13.5px; font-weight: 550; }
+
+/* --- Store ---------------------------------------------------------------- */
+
+.portal-store-section { display: flex; flex-direction: column; gap: 14px; }
+.portal-store-section > header { display: flex; flex-direction: column; gap: 4px; }
+.portal-store-section h2 { margin: 0; font-family: "Sora Variable", Sora, sans-serif; font-size: 17px; font-weight: 620; }
+.portal-store-section > header p { margin: 0; max-width: 62ch; color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+
+.portal-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-service-card > a {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 18px 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  text-decoration: none;
+  background: var(--wf-white);
+  transition: border-color 140ms var(--wf-ease), background 140ms var(--wf-ease);
+}
+
+.portal-service-card > a:hover { border-color: var(--wf-navy); background: var(--wf-navy-wash); }
+.portal-service-art { display: block; border-radius: 8px; overflow: hidden; background: var(--wf-warm-100); }
+.portal-service-art img { display: block; width: 100%; height: 116px; object-fit: cover; }
+.portal-service-body { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; }
+.portal-service-body strong { font-size: 14px; font-weight: 620; line-height: 1.35; }
+.portal-service-summary { color: var(--wf-text-muted); font-size: 12.5px; line-height: 1.55; }
+.portal-service-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.portal-service-foot svg { width: 14px; height: 14px; color: var(--wf-text-muted); }
+.portal-service-price { color: var(--wf-navy); font-size: 13.5px; font-weight: 650; }
+.portal-service-price.is-large { font-family: "Sora Variable", Sora, sans-serif; font-size: 20px; }
+
+.portal-service-hero { border-radius: 12px; overflow: hidden; background: var(--wf-warm-100); }
+.portal-service-hero img { display: block; width: 100%; max-height: 320px; object-fit: cover; }
+
+.portal-service-description { max-width: 72ch; color: var(--wf-text); font-size: 13.5px; line-height: 1.7; }
+.portal-service-description h1, .portal-service-description h2, .portal-service-description h3, .portal-service-description h4 {
+  margin: 22px 0 8px;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: .01em;
+}
+.portal-service-description h1:first-child, .portal-service-description h2:first-child { margin-top: 0; }
+.portal-service-description p, .portal-service-description div { margin: 0 0 8px; }
+.portal-service-description ul, .portal-service-description ol { margin: 8px 0; padding-left: 20px; }
+.portal-service-description li { margin-bottom: 4px; }
+.portal-service-description a { color: var(--wf-navy); font-weight: 600; }
+.portal-service-description hr { margin: 20px 0; border: 0; border-top: 1px solid var(--wf-border); }
+.portal-service-description blockquote { margin: 14px 0; padding-left: 14px; border-left: 2px solid var(--wf-gold); color: var(--wf-text-muted); }
+
+/* --- Portal responsive ---------------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .portal-dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Below this width the rail becomes a drawer behind the portal top bar. */
+@media (max-width: 900px) {
+  .client-portal { grid-template-columns: minmax(0, 1fr); }
+
+  .portal-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 0 14px;
+    color: #fff;
+    background: var(--wf-navy);
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+  }
+
+  .portal-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    color: #fff;
+    background: rgba(255, 255, 255, .1);
+    cursor: pointer;
+  }
+
+  .portal-drawer-toggle svg { width: 17px; height: 17px; }
+
+  .portal-topbar-title {
+    font-family: "Sora Variable", Sora, sans-serif;
+    font-size: 13px;
+    font-weight: 620;
+    letter-spacing: .01em;
+  }
+
+  .portal-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 13, 81, .42);
+    cursor: pointer;
+  }
+
+  .portal-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 80;
+    width: 268px;
+    transform: translateX(-100%);
+    transition: transform 180ms var(--wf-ease);
+  }
+
+  .portal-sidebar.is-open { transform: translateX(0); }
+
+  .portal-main-inner { padding: 26px 18px 56px; }
+  .skip-link { left: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-sidebar { transition: none; }
+}
+
+@media (max-width: 620px) {
+  .portal-welcome { padding: 26px 22px; }
+  .portal-welcome h1 { font-size: 24px; }
+  .portal-page-head h1 { font-size: 22px; }
+  .portal-project-row { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .portal-project-row > svg { display: none; }
+  .portal-project-meta { gap: 14px; }
+  .portal-service-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 .client-invoices-index > header { padding-bottom: 24px; border-bottom: 1px solid var(--wf-border); }
 .client-invoices-index > header > span,
@@ -4795,11 +5295,6 @@ td {
 @keyframes wf-dialog-in { from { opacity: 0; transform: translateY(4px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 @media (max-width: 760px) {
-  .client-account-header { min-height: 64px; padding: 0 18px; }
-  .client-account-brand { font-size: 12px; }
-  .client-account-brand svg { width: 30px; height: 30px; }
-  .client-account-identity > span { display: none; }
-  .client-account-main { padding: 28px 18px 56px; }
   .client-invoice-row { align-items: flex-start; }
   .client-invoice-hero { align-items: flex-start; flex-direction: column; gap: 22px; }
   .client-invoice-amount { text-align: left; }
@@ -6934,58 +7429,92 @@ td {
 /* WF COMMAND BAR SHORTCUT STABILITY START */
 
 /*
- * Closed state:
- * absolutely nothing inside the shortcut cluster may paint
- * outside its zero-width box.
+ * The shortcut rail is collapsed at rest and revealed when the command bar is
+ * hovered, focused, or holding an open notification panel. Search contracts
+ * because the rail takes real width in the flex row ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â that is the intended
+ * behaviour, so this geometry animation is deliberate rather than accidental.
+ *
+ * This block is the single source of truth for the reveal. It replaces an
+ * earlier version that also toggled `width: 0 -> auto` (not interpolable, so
+ * the rail snapped while max-width animated ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â the icon jump), `visibility`
+ * (never in the transition list, so hover-out killed the fade instantly) and
+ * `contain: paint -> none` (re-establishing a containment boundary mid-
+ * animation). One gesture now runs on one curve.
  */
 .workspace-command-shortcuts {
-  flex: 0 0 auto !important;
+  flex: 0 0 auto;
 
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
-  opacity: 0 !important;
-  visibility: hidden !important;
+  min-width: 0;
+  max-width: 0;
 
-  overflow: hidden !important;
-  pointer-events: none !important;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
 
-  transform: translateX(8px) !important;
+  transform: translateX(6px);
 
-  contain: paint;
+  transition:
+    max-width 220ms cubic-bezier(.2, .8, .2, 1),
+    transform 220ms cubic-bezier(.2, .8, .2, 1),
+    opacity 150ms ease;
 }
 
-
-/*
- * Reveal state:
- * give the controls enough real space BEFORE making them visible.
- * This prevents the Quick Action trigger from peeking over Search.
- */
-.workspace-command-bar:hover
-  .workspace-command-shortcuts,
-.workspace-command-bar:focus-within
-  .workspace-command-shortcuts {
-  width: auto !important;
-  max-width: 150px !important;
-
-  opacity: 1 !important;
-  visibility: visible !important;
-
-  overflow: visible !important;
-  pointer-events: auto !important;
-
-  transform: translateX(0) !important;
-
-  contain: none;
-}
-
-
-/*
- * Hidden descendants inherit the closed visibility.
- */
 .workspace-command-shortcuts > * {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+}
+
+/*
+ * The clamp must clear the widest rail, otherwise the last control is sliced.
+ * Owner/admin get Calendar 38 + Gallery 42 + Bell 42 + Quick Action 42 and
+ * three 8px gaps = 188px; Quick Action renders nothing for other roles, so the
+ * rail is intrinsically narrower and simply stops early.
+ */
+.workspace-command-bar:focus-within .workspace-command-shortcuts,
+.workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) {
+  max-width: 200px;
+
+  opacity: 1;
+  overflow: visible;
+  pointer-events: auto;
+
+  transform: translateX(0);
+}
+
+/*
+ * Hover is added separately so a tap on a touch screen cannot latch the rail
+ * open with no way to dismiss it. Focus and an open panel still reveal it on
+ * every device, which is how the rail is reached by keyboard and by touch.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .workspace-command-bar:hover .workspace-command-shortcuts {
+    max-width: 200px;
+
+    opacity: 1;
+    overflow: visible;
+    pointer-events: auto;
+
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-command-shortcuts {
+    transform: none;
+
+    transition:
+      max-width 150ms ease,
+      opacity 120ms ease;
+  }
+
+  .workspace-command-bar:hover .workspace-command-shortcuts,
+  .workspace-command-bar:focus-within .workspace-command-shortcuts,
+  .workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) {
+    transform: none;
+  }
 }
 
 /* WF COMMAND BAR SHORTCUT STABILITY END */
@@ -10031,3 +10560,2552 @@ td {
 }
 
 /* WF LOGIN PANEL BORDER TUNE END */
+
+/* WF UNIFIED NOTIFICATION UNREAD START */
+.workspace-notification-portal
+  .workspace-notification-item:hover {
+  background: #f8f9fc;
+}
+/* WF UNIFIED NOTIFICATION UNREAD END */
+
+/* WF NOTIFICATION LIVE FEEDBACK START */
+
+.workspace-notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #000d51;
+  background: #c9a449;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 3px 8px
+      rgba(0, 13, 81, .16);
+}
+
+.workspace-notification-trigger
+  > svg {
+  transform-origin: 50% 8%;
+}
+
+.workspace-notification-trigger.is-ringing
+  > svg {
+  animation:
+    wfNotificationBellRing
+    560ms
+    cubic-bezier(.36, .07, .19, .97)
+    both;
+}
+
+.workspace-notification-trigger.is-ringing
+  .workspace-notification-badge {
+  animation:
+    wfNotificationBadgePop
+    300ms
+    cubic-bezier(.16, 1, .3, 1)
+    both;
+}
+
+@keyframes wfNotificationBellRing {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  16% {
+    transform: rotate(18deg);
+  }
+
+  32% {
+    transform: rotate(-16deg);
+  }
+
+  48% {
+    transform: rotate(12deg);
+  }
+
+  64% {
+    transform: rotate(-9deg);
+  }
+
+  80% {
+    transform: rotate(5deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes wfNotificationBadgePop {
+  0% {
+    transform: scale(.72);
+  }
+
+  60% {
+    transform: scale(1.14);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/*
+ * One full-viewport overlay owns both tint and blur.
+ * The clickable backdrop remains transparent so it cannot create
+ * a separate compositing strip across the page.
+ */
+.client-balance-modal.is-open {
+  background:
+    rgba(0, 13, 81, .42)
+    !important;
+
+  -webkit-backdrop-filter:
+    blur(8px)
+    saturate(.84)
+    !important;
+
+  backdrop-filter:
+    blur(8px)
+    saturate(.84)
+    !important;
+}
+
+.client-balance-modal.is-open
+  .client-balance-backdrop {
+  background:
+    transparent
+    !important;
+
+  -webkit-backdrop-filter:
+    none
+    !important;
+
+  backdrop-filter:
+    none
+    !important;
+}
+
+.client-balance-modal.is-open
+  .client-balance-panel {
+  position: relative;
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-notification-trigger.is-ringing
+    > svg,
+  .workspace-notification-trigger.is-ringing
+    .workspace-notification-badge {
+    animation: none !important;
+  }
+}
+
+/* WF NOTIFICATION LIVE FEEDBACK END */
+
+/* WF NOTIFICATION ACTIONS ICONS START */
+.workspace-notification-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace-notification-mark-all {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(0, 13, 81, .12);
+  border-radius: 7px;
+  color: #000d51;
+  background: #fff;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.workspace-notification-mark-all:hover {
+  border-color: rgba(0, 13, 81, .24);
+  background: #f7f8fc;
+}
+
+.workspace-notification-mark-all:active { transform: scale(.97); }
+.workspace-notification-all-read { color: #9aa0ac; font-size: 9px; font-weight: 650; }
+.workspace-notification-kind { color: #000d51; background: rgba(0, 13, 81, .065); }
+.workspace-notification-kind svg { width: 14px; height: 14px; }
+.workspace-notification-item:hover .workspace-notification-kind { transform: translateY(-1px); }
+/* WF NOTIFICATION ACTIONS ICONS END */
+
+/* WF FIXED SIDEBAR NO INTERNAL SCROLL START
+   The rail itself stays fixed. Navigation does not own a scrollbar.
+   Short desktop windows use tighter spacing instead of an internal scroll track.
+*/
+@media (min-width: 768px) {
+  .app-sidebar {
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /*
+    The rail owns no visible scrollbar, but it must still be able to reach
+    every item. `overflow: visible` inside a clipped sidebar made navigation
+    below the fold unreachable on short windows; scrolling with a hidden
+    scrollbar keeps the clean look without losing items.
+  */
+  .sidebar-navigation {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    scrollbar-gutter: auto !important;
+    scrollbar-width: none !important;
+    padding-bottom: 10px !important;
+  }
+
+  .sidebar-navigation::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 900px) {
+  .sidebar-brand {
+    min-height: 82px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+
+  .sidebar-navigation {
+    padding-top: 10px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .sidebar-section + .sidebar-section {
+    margin-top: 14px !important;
+  }
+
+  .sidebar-section h2 {
+    margin-bottom: 5px !important;
+  }
+
+  .sidebar-link {
+    min-height: 36px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 760px) {
+  .sidebar-brand {
+    min-height: 68px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .sidebar-navigation {
+    padding-top: 6px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .sidebar-section + .sidebar-section {
+    margin-top: 9px !important;
+  }
+
+  .sidebar-section h2 {
+    margin-bottom: 3px !important;
+  }
+
+  .sidebar-link {
+    min-height: 31px !important;
+  }
+}
+/* WF FIXED SIDEBAR NO INTERNAL SCROLL END */
+
+
+/* WF DASHBOARD CALENDAR COMMAND BAR FIT START */
+
+/*
+  Superseded. The Calendar trigger's effect on the rail is now handled by the
+  single reveal definition in WF COMMAND BAR SHORTCUT STABILITY above, which
+  clamps at 200px. The 184px clamp that used to live here was 4px narrower than
+  an owner/admin rail and sliced the Quick Action button.
+*/
+
+/* WF DASHBOARD CALENDAR COMMAND BAR FIT END */
+
+
+/* WF SHELL POLISH START */
+
+/*
+  Brand lockup. This used to be an inline style on the element, which meant the
+  stylesheet could never adjust it per breakpoint.
+*/
+.sidebar-brand.is-mark-only {
+  justify-content: center;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/*
+  Press feedback for the command bar controls. Hover lifts live behind the
+  pointer query below; a press is momentary and correct on every input type.
+*/
+.workspace-command-button:active,
+.workspace-command-profile .avatar-button:active {
+  transform: scale(.96);
+  transition-duration: 100ms;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .workspace-command-button:hover,
+  .workspace-command-profile .avatar-button:hover {
+    transform: translateY(-1px);
+  }
+}
+
+/*
+  A touch pointer reports a hover on tap and then keeps it, which left a
+  non-current rail item looking selected. The current page keeps its own
+  treatment via .is-active.
+*/
+@media (hover: none), (pointer: coarse) {
+  .sidebar-link:not(.is-active):hover {
+    color: rgba(255, 255, 255, .80);
+    background: transparent;
+  }
+}
+
+/*
+  Account menu. Open and closed are two ends of one transition, so either
+  direction can be interrupted; `@starting-style` supplies the frame the menu
+  grows from on the render that mounts it. Dismissal runs shorter than the
+  opening ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â the system responding rather than the user deciding.
+*/
+.account-popover {
+  opacity: 1;
+  transform: none;
+  transform-origin: top right;
+
+  transition:
+    opacity 150ms cubic-bezier(.2, .8, .2, 1),
+    transform 150ms cubic-bezier(.2, .8, .2, 1);
+}
+
+@starting-style {
+  .account-popover {
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+  }
+}
+
+.account-popover[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(-6px) scale(.98);
+  pointer-events: none;
+  transition-duration: 110ms;
+}
+
+/* The sidebar menu opens upward, so it rises from its own bottom edge. */
+.account-popover-sidebar {
+  transform-origin: bottom left;
+}
+
+@starting-style {
+  .account-popover-sidebar {
+    transform: translateY(6px) scale(.98);
+  }
+}
+
+.account-popover-sidebar[data-state="closed"] {
+  transform: translateY(6px) scale(.98);
+}
+
+/* Sign out is the only action in here; give it a full-size target. */
+.account-popover form button,
+.account-sheet form button {
+  min-height: 44px;
+}
+
+/*
+  Below the desktop breakpoint the command bar has no layout of its own, so it
+  fell back to normal flow and the search sat unaligned above the shortcuts.
+*/
+@media (max-width: 1023px) {
+  .workspace-command-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* Coarse pointers get the full recommended target on the round controls. */
+@media (pointer: coarse) {
+  .workspace-command-button {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .account-popover,
+  .account-popover[data-state="closed"],
+  .account-popover-sidebar,
+  .account-popover-sidebar[data-state="closed"] {
+    transform: none;
+    transition: opacity 110ms ease;
+  }
+
+  /* Colour, border and shadow feedback stay; only movement is dropped. */
+  .workspace-command-button:hover,
+  .workspace-command-button:active,
+  .workspace-command-profile .avatar-button:hover,
+  .workspace-command-profile .avatar-button:active,
+  .sidebar-link:active {
+    transform: none;
+  }
+}
+
+/* WF SHELL POLISH END */
+
+/* WF CLIENT PORTAL V2 START */
+
+/* ---------------------------------------------------------------------------
+ * Client Portal, second pass.
+ *
+ * Extends the existing .portal-* system rather than replacing it: navy, white
+ * and restrained gold, strong type, hairlines instead of boxes. Everything here
+ * is additive, so the internal workspace is untouched.
+ *
+ * One status vocabulary drives every state colour, keyed off [data-tone] so a
+ * pill, a row and a callout cannot drift apart.
+ * ------------------------------------------------------------------------- */
+
+.client-portal {
+  /* Attention tones. Defined once; consumed by pills, rows and callouts. */
+  --portal-tone-wait: #8a6a12;
+  --portal-tone-wait-wash: rgba(168, 131, 46, .09);
+  --portal-tone-wait-line: rgba(168, 131, 46, .34);
+
+  --portal-tone-due: #8f2921;
+  --portal-tone-due-wash: rgba(143, 41, 33, .07);
+  --portal-tone-due-line: rgba(143, 41, 33, .26);
+
+  --portal-tone-progress: var(--wf-navy);
+  --portal-tone-progress-wash: var(--wf-navy-wash);
+  --portal-tone-progress-line: rgba(0, 13, 81, .18);
+
+  --portal-tone-done: #2c6146;
+  --portal-tone-done-wash: rgba(44, 97, 70, .07);
+  --portal-tone-done-line: rgba(44, 97, 70, .22);
+
+  --portal-tone-idle: var(--wf-text-muted);
+  --portal-tone-idle-wash: var(--wf-warm-50);
+  --portal-tone-idle-line: var(--wf-border);
+}
+
+/* --- Rail counts ---------------------------------------------------------- */
+
+.portal-nav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Work blocked on the client reads gold; work in flight stays quiet. */
+.portal-nav-count[data-actionable="true"] {
+  color: var(--wf-navy);
+  background: var(--wf-gold);
+}
+
+.portal-nav-count[data-actionable="false"] {
+  color: rgba(255, 255, 255, .72);
+  background: rgba(255, 255, 255, .13);
+}
+
+/* --- Page furniture ------------------------------------------------------- */
+
+.portal-page-head-actions {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.portal-page-head-actions > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.portal-section { display: flex; flex-direction: column; gap: 14px; }
+
+.portal-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.portal-section-head h2 {
+  margin: 0;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -.005em;
+}
+
+.portal-section-head p { margin: 5px 0 0; max-width: 62ch; color: var(--wf-text-muted); font-size: 12.5px; line-height: 1.6; }
+
+.portal-progress-line {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.portal-progress-line strong { font-family: "Sora Variable", Sora, sans-serif; font-size: 17px; font-weight: 620; }
+.portal-progress-line span { color: var(--wf-text-muted); font-size: 12.5px; }
+
+/* --- Attention pill ------------------------------------------------------- */
+
+.portal-attention-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-radius: 999px;
+  color: var(--portal-tone-idle);
+  background: var(--portal-tone-idle-wash);
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.portal-attention-pill[data-tone="waiting_on_you"] {
+  border-color: var(--portal-tone-wait-line);
+  color: var(--portal-tone-wait);
+  background: var(--portal-tone-wait-wash);
+}
+
+.portal-attention-pill[data-tone="payment_due"] {
+  border-color: var(--portal-tone-due-line);
+  color: var(--portal-tone-due);
+  background: var(--portal-tone-due-wash);
+}
+
+.portal-attention-pill[data-tone="in_progress"] {
+  border-color: var(--portal-tone-progress-line);
+  color: var(--portal-tone-progress);
+  background: var(--portal-tone-progress-wash);
+}
+
+.portal-attention-pill[data-tone="completed"] {
+  border-color: var(--portal-tone-done-line);
+  color: var(--portal-tone-done);
+  background: var(--portal-tone-done-wash);
+}
+
+/* --- Lists ---------------------------------------------------------------- */
+
+.portal-attention-list,
+.portal-work-list,
+.portal-message-list,
+.portal-invoice-list,
+.portal-onboarding-list,
+.portal-subscription-list,
+.portal-included-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-attention-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-left-width: 3px;
+  border-radius: 10px;
+  text-decoration: none;
+  background: var(--wf-white);
+  transition: background 150ms var(--wf-ease), border-color 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.portal-attention-row[data-tone="waiting_on_you"] { border-left-color: var(--wf-gold); }
+.portal-attention-row[data-tone="payment_due"] { border-left-color: var(--portal-tone-due); }
+
+.portal-attention-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.portal-attention-body strong { font-size: 13.5px; font-weight: 620; }
+.portal-attention-body > span {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portal-attention-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.portal-attention-cta svg { width: 14px; height: 14px; }
+
+/* --- Work / message / invoice / subscription rows ------------------------- */
+
+.portal-work-row,
+.portal-message-row,
+.portal-invoice-row,
+.portal-onboarding-row,
+.portal-subscription-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  text-decoration: none;
+  background: var(--wf-white);
+  transition: background 150ms var(--wf-ease), border-color 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.portal-work-main,
+.portal-message-main,
+.portal-invoice-main,
+.portal-subscription-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.portal-work-main strong,
+.portal-message-main strong,
+.portal-invoice-main strong,
+.portal-subscription-main strong {
+  font-size: 13.5px;
+  font-weight: 620;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portal-work-main > span:last-child,
+.portal-message-main > span:last-child,
+.portal-invoice-main > span:last-child,
+.portal-subscription-main > span:last-child {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.portal-work-meta,
+.portal-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 auto;
+}
+
+.portal-work-row > svg,
+.portal-message-meta > svg,
+.portal-invoice-row > svg,
+.portal-subscription-row > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+}
+
+.portal-invoice-amounts,
+.portal-subscription-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.portal-invoice-amounts strong,
+.portal-subscription-amount strong {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-invoice-amounts span,
+.portal-subscription-amount span { color: var(--wf-text-muted); font-size: 11.5px; }
+
+.portal-invoice-main strong { display: inline-flex; align-items: center; gap: 7px; }
+.portal-invoice-main strong svg { width: 14px; height: 14px; color: var(--wf-text-muted); }
+
+/* --- Client invoice row lead ---------------------------------------------- */
+
+/*
+ * Icon and invoice number share the title line; the issued/due line is indented
+ * past the icon so it hangs under the title rather than under the glyph. The
+ * icon carries no border, no plate and no pill ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â it is a mark beside the title,
+ * not a badge.
+ */
+.portal-invoice-main { gap: 4px; }
+
+.portal-invoice-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.portal-invoice-title svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  stroke-width: 1.7;
+  transition: color 150ms var(--wf-ease);
+}
+
+.portal-invoice-title strong {
+  min-width: 0;
+  letter-spacing: -.002em;
+}
+
+/* 17px icon + 9px gap keeps the second line flush with the title text. */
+.portal-invoice-sub {
+  padding-left: 26px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.portal-invoice-row:hover .portal-invoice-title svg { color: var(--wf-navy); }
+
+.portal-included-list { gap: 0; }
+
+.portal-included-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--wf-border);
+  font-size: 13px;
+}
+
+.portal-included-list li:last-child { border-bottom: 0; }
+.portal-included-list span { color: var(--wf-text-muted); font-size: 12px; }
+
+/* --- Onboarding ----------------------------------------------------------- */
+
+.portal-onboarding-row[data-done="true"] { background: var(--wf-warm-50); }
+
+.portal-onboarding-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border: 1.5px solid var(--wf-border);
+  border-radius: 50%;
+  color: var(--wf-white);
+}
+
+.portal-onboarding-row[data-done="true"] .portal-onboarding-mark {
+  border-color: var(--portal-tone-done);
+  background: var(--portal-tone-done);
+}
+
+.portal-onboarding-mark svg { width: 12px; height: 12px; }
+
+.portal-onboarding-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 auto; }
+.portal-onboarding-body strong { font-size: 13.5px; font-weight: 620; }
+.portal-onboarding-body span { color: var(--wf-text-muted); font-size: 12px; }
+.portal-onboarding-row[data-done="true"] .portal-onboarding-body strong { color: var(--wf-text-muted); font-weight: 550; }
+
+.portal-onboarding-meta { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+
+.portal-onboarding-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.portal-onboarding-cta svg { width: 14px; height: 14px; }
+
+/* --- Callouts ------------------------------------------------------------- */
+
+.portal-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 15px 18px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: var(--portal-tone-idle-wash);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.portal-callout strong { font-weight: 620; }
+.portal-callout span { color: var(--wf-text-muted); font-size: 12.5px; }
+.portal-callout a { color: var(--wf-navy); font-weight: 620; }
+
+.portal-callout[data-tone="waiting_on_you"] {
+  border-color: var(--portal-tone-wait-line);
+  border-left-color: var(--wf-gold);
+  background: var(--portal-tone-wait-wash);
+}
+
+.portal-callout[data-tone="payment_due"] {
+  border-color: var(--portal-tone-due-line);
+  border-left-color: var(--portal-tone-due);
+  background: var(--portal-tone-due-wash);
+}
+
+.portal-callout[data-tone="in_progress"] {
+  border-color: var(--portal-tone-progress-line);
+  border-left-color: var(--wf-navy);
+  background: var(--portal-tone-progress-wash);
+}
+
+/* --- Billing -------------------------------------------------------------- */
+
+.portal-billing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.portal-billing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+  background: var(--wf-white);
+}
+
+.portal-billing-label {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.portal-billing-figure {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 26px;
+  font-weight: 620;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-billing-figure.is-secondary { font-size: 16px; letter-spacing: -.005em; }
+.portal-billing-note { color: var(--wf-text-muted); font-size: 12px; line-height: 1.55; }
+.portal-billing-currency { display: flex; flex-direction: column; gap: 3px; }
+.portal-billing-currency + .portal-billing-currency { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--wf-border); }
+.portal-billing-currency-code { font-style: normal; color: var(--wf-gold); font-size: 10.5px; font-weight: 650; letter-spacing: .1em; }
+.portal-billing-card .portal-secondary-action { margin-top: 4px; }
+
+.portal-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 26px 28px;
+  border-radius: 13px;
+  color: #fff;
+  background:
+    radial-gradient(120% 170% at 90% 6%, rgba(168, 131, 46, .26), transparent 58%),
+    var(--wf-navy);
+}
+
+.portal-balance .portal-billing-label { color: rgba(255, 255, 255, .58); }
+.portal-balance .portal-billing-note { color: rgba(255, 255, 255, .72); }
+.portal-balance-figure {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 34px;
+  font-weight: 620;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-balance-currencies { display: flex; flex-wrap: wrap; gap: 26px 44px; }
+.portal-balance-currency { display: flex; flex-direction: column; gap: 3px; }
+
+/* --- Payment method ------------------------------------------------------- */
+
+.portal-method-card {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 26px;
+  align-items: center;
+  padding: 22px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+}
+
+.portal-method-visual { min-width: 0; }
+.portal-method-body { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+
+.portal-method-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 11px;
+  border: 1px solid var(--portal-tone-done-line);
+  border-radius: 999px;
+  color: var(--portal-tone-done);
+  background: var(--portal-tone-done-wash);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.portal-method-state svg { width: 13px; height: 13px; }
+
+.portal-method-state[data-inactive="true"] {
+  border-color: var(--portal-tone-idle-line);
+  color: var(--portal-tone-idle);
+  background: var(--portal-tone-idle-wash);
+}
+
+.portal-stored-method {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.portal-stored-method strong { font-size: 16px; font-weight: 650; letter-spacing: .02em; }
+.portal-stored-method span { color: var(--wf-text-muted); font-size: 12.5px; }
+.portal-stored-method em {
+  font-style: normal;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+/* --- Invoice detail ------------------------------------------------------- */
+
+.portal-invoice-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 26px;
+  flex-wrap: wrap;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.portal-invoice-hero > div:first-child { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.portal-invoice-hero h1 {
+  margin: 0;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 27px;
+  font-weight: 620;
+  letter-spacing: -.015em;
+}
+.portal-invoice-hero p { margin: 0; color: var(--wf-text-muted); font-size: 13px; }
+
+.portal-invoice-hero-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  text-align: right;
+}
+
+.portal-invoice-hero-amount strong {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 27px;
+  font-weight: 620;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-invoice-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+  gap: 30px;
+  align-items: start;
+}
+
+.portal-invoice-items h2,
+.portal-invoice-totals h2 {
+  margin: 0 0 12px;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.portal-invoice-item-head,
+.portal-invoice-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 96px 104px;
+  gap: 14px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.portal-invoice-item-head {
+  padding-bottom: 8px;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.portal-invoice-item-head > span:not(:first-child),
+.portal-invoice-item > span:not(:first-child),
+.portal-invoice-item > strong { text-align: right; font-variant-numeric: tabular-nums; }
+
+.portal-invoice-item > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.portal-invoice-item > div strong { font-size: 13px; font-weight: 600; }
+.portal-invoice-item > div span { color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; }
+.portal-invoice-item > span,
+.portal-invoice-item > strong { font-size: 13px; }
+
+.portal-invoice-totals {
+  padding: 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+  background: var(--wf-warm-50);
+}
+
+.portal-invoice-totals dl { display: flex; flex-direction: column; gap: 9px; margin: 0; }
+.portal-invoice-totals dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.portal-invoice-totals dt { color: var(--wf-text-muted); font-size: 12.5px; }
+.portal-invoice-totals dd { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.portal-invoice-total {
+  padding-top: 9px;
+  border-top: 1px solid var(--wf-border);
+}
+
+.portal-invoice-total dt { color: var(--wf-text); font-weight: 620; }
+.portal-invoice-total dd { font-size: 15px; font-weight: 650; }
+
+.portal-invoice-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* --- Zero and welcome states ---------------------------------------------- */
+
+.portal-zero-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 56px 32px;
+  border: 1px dashed var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-warm-50);
+  text-align: center;
+}
+
+.portal-zero-state > svg { width: 26px; height: 26px; color: var(--wf-gold); }
+.portal-zero-state h2 { margin: 0; font-family: "Sora Variable", Sora, sans-serif; font-size: 16px; font-weight: 620; }
+.portal-zero-state p { margin: 0; max-width: 48ch; color: var(--wf-text-muted); font-size: 13px; line-height: 1.65; }
+.portal-zero-state .portal-primary-action { margin-top: 6px; align-self: center; }
+
+.portal-next-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+
+.portal-next-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+  text-decoration: none;
+  transition: border-color 150ms var(--wf-ease), background 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.portal-next-action > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.portal-next-action strong { font-size: 13.5px; font-weight: 620; }
+.portal-next-action span span { color: var(--wf-text-muted); font-size: 12px; }
+.portal-next-action > svg { width: 15px; height: 15px; flex: 0 0 auto; color: var(--wf-text-muted); }
+
+/* --- Profile -------------------------------------------------------------- */
+
+.portal-profile-card { gap: 26px; }
+.portal-profile-avatar { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.portal-profile-avatar-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+.portal-form { display: flex; flex-direction: column; gap: 18px; }
+.portal-field { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.portal-field > span { color: var(--wf-text-muted); font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+
+.portal-field > input {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  color: var(--wf-text);
+  background: var(--wf-white);
+  font: inherit;
+  font-size: 13.5px;
+  transition: border-color 150ms var(--wf-ease), box-shadow 150ms var(--wf-ease);
+}
+
+.portal-field > input:focus {
+  outline: none;
+  border-color: var(--wf-navy);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, .1);
+}
+
+.portal-field > output { font-size: 13.5px; color: var(--wf-text-muted); }
+.portal-field-error { margin: 0; color: var(--portal-tone-due); font-size: 12px; }
+
+.portal-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  max-width: 480px;
+  cursor: pointer;
+}
+
+.portal-toggle input { width: 17px; height: 17px; margin-top: 2px; flex: 0 0 auto; accent-color: var(--wf-navy); }
+.portal-toggle > span { display: flex; flex-direction: column; gap: 2px; }
+.portal-toggle strong { font-size: 13px; font-weight: 600; }
+.portal-toggle span span { color: var(--wf-text-muted); font-size: 12px; }
+
+.portal-form-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.portal-form-saved { display: inline-flex; align-items: center; gap: 6px; color: var(--portal-tone-done); font-size: 12.5px; font-weight: 600; }
+.portal-form-saved svg { width: 14px; height: 14px; }
+
+/*
+ * The shared Security section is built for the internal reading column; inside
+ * the portal it simply inherits the surrounding width.
+ */
+.portal-security { display: block; }
+
+.portal-ghost-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms var(--wf-ease), background 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.portal-ghost-action svg { width: 15px; height: 15px; }
+.portal-ghost-action:disabled { opacity: .55; cursor: not-allowed; }
+
+/* --- Dialog --------------------------------------------------------------- */
+
+/*
+ * The native <dialog> styling that used to live here is gone with the element.
+ * Centering a modal <dialog> depends on the user agent's `margin: auto`, which
+ * Tailwind's preflight resets to 0 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â that is why the New message modal rendered
+ * in the top-left corner. Overlays now use .portal-overlay, which owns its own
+ * placement. Only the shared error line survives.
+ */
+.portal-dialog-error { margin: 0; color: var(--portal-tone-due); font-size: 12.5px; }
+
+/* --- Motion --------------------------------------------------------------- */
+
+/*
+ * Fine-pointer hover only: a 1px lift on a touch device fires on tap and reads
+ * as a glitch. Press is a small scale, matching the internal workspace.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .portal-attention-row:hover,
+  .portal-work-row:hover,
+  .portal-message-row:hover,
+  .portal-invoice-row:hover,
+  .portal-onboarding-row:hover,
+  .portal-subscription-row:hover,
+  .portal-next-action:hover {
+    border-color: var(--wf-navy);
+    background: var(--wf-navy-wash);
+    transform: translateY(-1px);
+  }
+
+  .portal-primary-action:hover,
+  .portal-ghost-action:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .portal-ghost-action:hover:not(:disabled) { border-color: var(--wf-navy); }
+}
+
+.portal-attention-row:active,
+.portal-work-row:active,
+.portal-message-row:active,
+.portal-invoice-row:active,
+.portal-onboarding-row:active,
+.portal-subscription-row:active,
+.portal-next-action:active,
+.portal-primary-action:active,
+.portal-ghost-action:active:not(:disabled) {
+  transform: scale(.975);
+  transition-duration: 90ms;
+}
+
+.portal-primary-action,
+.portal-secondary-action {
+  transition: background 160ms var(--wf-ease), color 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+/* One quiet entrance per page, no loops and nothing springy. */
+.portal-main-inner > * { animation: portal-page-enter 200ms var(--wf-ease) both; }
+
+@keyframes portal-page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-main-inner > * { animation: none; }
+
+  .portal-attention-row,
+  .portal-work-row,
+  .portal-message-row,
+  .portal-invoice-row,
+  .portal-onboarding-row,
+  .portal-subscription-row,
+  .portal-next-action,
+  .portal-primary-action,
+  .portal-secondary-action,
+  .portal-ghost-action {
+    transition: none;
+  }
+
+  .portal-attention-row:hover,
+  .portal-work-row:hover,
+  .portal-message-row:hover,
+  .portal-invoice-row:hover,
+  .portal-onboarding-row:hover,
+  .portal-subscription-row:hover,
+  .portal-next-action:hover,
+  .portal-primary-action:hover,
+  .portal-ghost-action:hover:not(:disabled),
+  .portal-attention-row:active,
+  .portal-work-row:active,
+  .portal-message-row:active,
+  .portal-invoice-row:active,
+  .portal-onboarding-row:active,
+  .portal-subscription-row:active,
+  .portal-next-action:active,
+  .portal-primary-action:active,
+  .portal-ghost-action:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .portal-invoice-content { grid-template-columns: minmax(0, 1fr); }
+  .portal-method-card { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  /*
+   * Rows become stacked blocks rather than squeezed columns, so nothing has to
+   * scroll sideways and every tap target stays a full-width band.
+   */
+  .portal-attention-row,
+  .portal-work-row,
+  .portal-message-row,
+  .portal-invoice-row,
+  .portal-onboarding-row,
+  .portal-subscription-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .portal-work-row > svg,
+  .portal-invoice-row > svg,
+  .portal-subscription-row > svg,
+  .portal-message-meta > svg { display: none; }
+
+  .portal-work-meta,
+  .portal-message-meta,
+  .portal-onboarding-meta {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .portal-invoice-amounts,
+  .portal-subscription-amount {
+    width: 100%;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .portal-attention-cta { align-self: flex-start; }
+
+  .portal-page-head-actions { flex-direction: column; align-items: stretch; }
+  .portal-page-head-actions .portal-primary-action { align-self: flex-start; }
+
+  .portal-balance { padding: 22px 20px; }
+  .portal-balance-figure { font-size: 28px; }
+  .portal-balance-currencies { gap: 18px; flex-direction: column; }
+
+  .portal-invoice-hero { flex-direction: column; gap: 16px; }
+  .portal-invoice-hero-amount { align-items: flex-start; text-align: left; }
+
+  /* Invoice lines become labelled stacks; the head row has nothing to head. */
+  .portal-invoice-item-head { display: none; }
+
+  .portal-invoice-item { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 14px 0; }
+
+  .portal-invoice-item > span:not(:first-child),
+  .portal-invoice-item > strong { display: flex; justify-content: space-between; gap: 12px; text-align: left; }
+
+  .portal-invoice-item > span[data-label]::before,
+  .portal-invoice-item > strong[data-label]::before {
+    content: attr(data-label);
+    color: var(--wf-text-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .portal-billing-grid { grid-template-columns: minmax(0, 1fr); }
+  .portal-next-actions { grid-template-columns: minmax(0, 1fr); }
+  .portal-profile-avatar { align-items: flex-start; flex-direction: column; }
+}
+
+/* Practical tap targets on touch, without inflating the desktop rail. */
+@media (pointer: coarse) {
+  .portal-primary-action,
+  .portal-ghost-action,
+  .portal-nav-link { min-height: 44px; }
+  .portal-secondary-action { padding: 8px 0; }
+}
+
+/* --- Print ---------------------------------------------------------------- */
+
+/*
+ * "Print or save as PDF" on an invoice prints the invoice, not the workspace.
+ */
+@media print {
+  .portal-sidebar,
+  .portal-topbar,
+  .portal-scrim,
+  .portal-back,
+  .portal-invoice-actions,
+  .invoice-payment-selector,
+  .skip-link { display: none !important; }
+
+  .client-portal { display: block; }
+  .portal-main-inner { width: 100%; max-width: none; padding: 0; }
+  .portal-main-inner > * { animation: none; }
+  .portal-invoice-content { grid-template-columns: minmax(0, 1fr) 260px; }
+}
+
+/* WF CLIENT PORTAL V2 END */
+
+/* WF CLIENT PORTAL COMMAND + OVERLAYS START */
+
+/* ---------------------------------------------------------------------------
+ * One overlay system for the client portal.
+ *
+ * The dialog, the chooser and the quick-action menu share these tokens, so
+ * corner treatment, shadow, easing and timing cannot drift apart. Durations
+ * match the brief: 160/180ms in, 120/130ms out, no bounce, no spring.
+ * ------------------------------------------------------------------------- */
+
+.client-portal,
+.portal-overlay,
+.portal-header-panel {
+  --portal-pop-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --portal-pop-in: 180ms;
+  --portal-pop-out: 130ms;
+  --portal-pop-radius: 14px;
+  --portal-pop-shadow: 0 24px 64px rgba(0, 13, 81, .18), 0 2px 8px rgba(0, 13, 81, .06);
+}
+
+/*
+ * One deliberate layer for every floating header surface. Page content ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
+ * which can carry its own stacking context (the portal-page entrance
+ * animation) ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â must never cover a header panel, and two panels must never
+ * out-stack each other (the manager already guarantees only one is open).
+ *
+ * Deliberate client-portal layers, low to high:
+ *   page content     auto / 0
+ *   header shell     sticky top bar (60 on mobile)
+ *   header panels    60      -- notifications, services, quick action
+ *   dialogs         9600     -- centered .portal-overlay
+ *
+ * All three header panels ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â notifications, services and quick action ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
+ * share this one layer, defined here on the portal root so every surface
+ * inherits the same value. A floating surface that needs to rise above
+ * page content belongs on it, nothing higher.
+ */
+.client-portal,
+.portal-overlay,
+.portal-header-panel {
+  --portal-layer-header-panel: 60;
+}
+
+/* --- Centered dialog ------------------------------------------------------ */
+
+/*
+ * Positioned here rather than relying on the native <dialog> element: Tailwind's
+ * preflight resets `margin: 0` on every element, which removes the `margin:auto`
+ * a modal <dialog> needs to centre itself. That reset is why the New message
+ * modal used to sit in the top-left corner.
+ */
+.portal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+/*
+ * Keyframes rather than transitions: the panel is mounted already open, so
+ * there is no hidden frame to transition away from. An animation carries its
+ * own "from" state, which also removes the double requestAnimationFrame the
+ * component would otherwise need before painting.
+ */
+.portal-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 13, 81, .38);
+  cursor: pointer;
+}
+
+.portal-overlay[data-phase="open"] .portal-overlay-backdrop {
+  animation: portal-backdrop-in 160ms var(--portal-pop-ease) both;
+}
+
+.portal-overlay[data-phase="closing"] .portal-overlay-backdrop {
+  animation: portal-backdrop-out 120ms var(--portal-pop-ease) both;
+}
+
+@keyframes portal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes portal-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+
+.portal-overlay-panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--wf-border);
+  border-radius: var(--portal-pop-radius);
+  background: var(--wf-white);
+  box-shadow: var(--portal-pop-shadow);
+}
+
+.portal-overlay-panel[data-size="wide"] { width: min(640px, 100%); }
+
+.portal-overlay[data-phase="open"] .portal-overlay-panel {
+  animation: portal-panel-in var(--portal-pop-in) var(--portal-pop-ease) both;
+}
+
+.portal-overlay[data-phase="closing"] .portal-overlay-panel {
+  animation: portal-panel-out var(--portal-pop-out) var(--portal-pop-ease) both;
+}
+
+@keyframes portal-panel-in {
+  from { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes portal-panel-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(4px) scale(.99); }
+}
+
+/*
+ * The `feature` size: a dialog that is the point of the interaction rather than
+ * a quick form. Larger, with the blurred backdrop and gold hairline the
+ * Subscription calendar established, and a longer entrance to match. Scoped to
+ * the variant so the New message dialog keeps exactly the treatment it had.
+ */
+.portal-overlay[data-size="feature"] .portal-overlay-backdrop {
+  background: rgba(0, 8, 48, .3);
+  backdrop-filter: blur(11px) saturate(.94);
+  -webkit-backdrop-filter: blur(11px) saturate(.94);
+}
+
+.portal-overlay-panel[data-size="feature"] {
+  width: min(820px, 100%);
+  max-height: min(84vh, calc(100dvh - 48px));
+  border-color: var(--wf-border);
+  border-radius: 20px;
+  box-shadow: 0 34px 100px rgba(0, 13, 81, .26);
+}
+
+/* The calendar's gold hairline, riding the top edge. */
+.portal-overlay-panel[data-size="feature"]::before {
+  content: "";
+  position: absolute;
+  inset: 0 20% auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--wf-gold) 80%, transparent),
+    transparent
+  );
+}
+
+.portal-overlay[data-size="feature"][data-phase="open"] .portal-overlay-panel {
+  animation: portal-feature-in 260ms var(--portal-pop-ease) both;
+}
+
+.portal-overlay[data-size="feature"][data-phase="closing"] .portal-overlay-panel {
+  animation: portal-feature-out 190ms var(--portal-pop-ease) both;
+}
+
+@keyframes portal-feature-in {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes portal-feature-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(10px) scale(.975); }
+}
+
+.portal-overlay-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.portal-overlay-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--wf-border);
+  border-radius: 50%;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  cursor: pointer;
+  transition: color 160ms var(--wf-ease), border-color 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.portal-overlay-close svg { width: 16px; height: 16px; }
+
+.portal-overlay-close:hover {
+  color: color-mix(in srgb, var(--wf-gold) 78%, #000);
+  border-color: color-mix(in srgb, var(--wf-gold) 40%, transparent);
+  transform: rotate(90deg);
+}
+
+.portal-overlay-close:active { transform: rotate(90deg) scale(.92); }
+
+@media (max-width: 720px) {
+  .portal-overlay { padding: 12px; }
+  .portal-overlay-panel[data-size="feature"] {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 16px;
+  }
+}
+
+.portal-overlay-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.portal-overlay-head h2 {
+  margin: 0;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -.005em;
+}
+
+.portal-overlay-head p {
+  margin: 5px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.portal-overlay-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.portal-overlay-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--wf-border);
+}
+
+/* --- Dialog form ---------------------------------------------------------- */
+
+.portal-dialog-form { display: flex; flex-direction: column; gap: 16px; }
+.portal-dialog-form label,
+/* A field whose control is not a native input, so it cannot be a <label>. */
+.portal-dialog-form .portal-dialog-field { display: flex; flex-direction: column; gap: 6px; }
+
+.portal-dialog-form label > span,
+.portal-dialog-form .portal-dialog-field > span {
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.portal-dialog-form input,
+.portal-dialog-form textarea {
+  padding: 11px 13px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  color: var(--wf-text);
+  background: var(--wf-white);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 150ms var(--wf-ease), box-shadow 150ms var(--wf-ease);
+}
+
+.portal-dialog-form input:focus,
+.portal-dialog-form textarea:focus {
+  outline: none;
+  border-color: var(--wf-navy);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, .1);
+}
+
+/* --- Header panels -------------------------------------------------------- */
+
+/*
+ * One anchored surface for every header trigger. Radius, shadow, spacing and
+ * animation live here only, so notifications, services and quick actions cannot
+ * drift apart or stack on top of one another.
+ */
+.portal-command-anchor { position: relative; display: inline-flex; }
+
+.portal-header-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: var(--portal-layer-header-panel, 60);
+  width: 288px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--wf-border);
+  border-radius: 14px;
+  background: var(--wf-white);
+  box-shadow: var(--portal-pop-shadow);
+  transform-origin: top right;
+}
+
+.portal-header-panel[data-width="wide"] {
+  width: min(400px, calc(100vw - 32px));
+  padding: 14px;
+}
+
+.portal-header-panel[data-phase="open"] {
+  animation: portal-header-panel-in 190ms var(--portal-pop-ease) both;
+}
+
+.portal-header-panel[data-phase="closing"] {
+  animation: portal-header-panel-out 150ms var(--portal-pop-ease) both;
+  pointer-events: none;
+}
+
+@keyframes portal-header-panel-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes portal-header-panel-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-4px) scale(.99); }
+}
+
+.portal-header-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px 4px 12px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.portal-header-panel-head strong {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.portal-header-panel-head span { color: var(--wf-text-muted); font-size: 12px; }
+
+.portal-menu-items { display: flex; flex-direction: column; gap: 2px; }
+
+.portal-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--wf-text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms var(--wf-ease);
+}
+
+.portal-menu-item svg { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 1px; color: var(--wf-gold); }
+.portal-menu-item > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.portal-menu-item strong { font-size: 13px; font-weight: 620; }
+.portal-menu-item span span { color: var(--wf-text-muted); font-size: 11.5px; }
+.portal-menu-item:hover { background: var(--wf-navy-wash); }
+
+/* --- Client command bar --------------------------------------------------- */
+
+/*
+ * Aligned to the same content column as the page beneath it, so the
+ * notification control sits in a row rather than floating alone in the corner.
+ */
+.portal-command-bar {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  padding: 18px 40px 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.portal-command-search {
+  flex: 0 1 320px;
+  min-width: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  background: var(--wf-white);
+  transition: border-color 160ms var(--wf-ease), box-shadow 160ms var(--wf-ease);
+}
+
+.portal-command-search:hover,
+.portal-command-search:focus-within {
+  border-color: rgba(0, 13, 81, .3);
+  box-shadow: 0 4px 16px rgba(0, 13, 81, .06);
+}
+
+.portal-command-search svg { width: 16px; height: 16px; flex: 0 0 auto; color: var(--wf-text-muted); }
+
+.portal-command-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.portal-command-search input::placeholder { color: var(--wf-text-muted); opacity: 1; }
+.portal-command-search input::-webkit-search-cancel-button { display: none; }
+
+.portal-command-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+.portal-command-button {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--wf-ease),
+    background 160ms var(--wf-ease),
+    box-shadow 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.portal-command-button svg { width: 18px; height: 18px; }
+
+.portal-command-button:hover {
+  border-color: rgba(0, 13, 81, .3);
+  background: var(--wf-navy-wash);
+  box-shadow: 0 4px 14px rgba(0, 13, 81, .07);
+}
+
+.portal-command-plus[aria-expanded="true"] {
+  color: #fff;
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.portal-command-avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: box-shadow 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.portal-command-avatar:hover { box-shadow: 0 0 0 2px rgba(0, 13, 81, .16); }
+
+/* The bell keeps its own trigger styling; only its footprint is normalised. */
+.portal-command-actions [class*="inCommandBar"] { display: inline-flex; }
+
+/*
+ * The oversized rail cart block was removed: the cart-oriented service entry
+ * now lives in the header command bar, so the rail is one consistent set of
+ * navigation rows again.
+ */
+
+/* --- Service chooser ------------------------------------------------------ */
+
+.chooser { display: flex; flex-direction: column; gap: 16px; }
+
+.chooser-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  background: var(--wf-white);
+  transition: border-color 150ms var(--wf-ease), box-shadow 150ms var(--wf-ease);
+}
+
+.chooser-search:focus-within {
+  border-color: var(--wf-navy);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, .1);
+}
+
+.chooser-search svg { width: 17px; height: 17px; flex: 0 0 auto; color: var(--wf-text-muted); }
+
+.chooser-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+}
+
+.chooser-search input::-webkit-search-cancel-button { display: none; }
+
+/* One quiet transition between category and service views ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â never a stagger. */
+.chooser-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: chooser-panel-in 160ms var(--portal-pop-ease) both;
+}
+
+@keyframes chooser-panel-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.chooser-caption {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.chooser-empty { margin: 0; color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+
+.chooser-grid,
+.chooser-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chooser-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+.chooser-category,
+.chooser-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  color: var(--wf-text);
+  background: var(--wf-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 150ms var(--wf-ease),
+    background 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.chooser-category > svg,
+.chooser-row > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--wf-text-muted);
+  transition: transform 150ms var(--wf-ease);
+}
+
+.chooser-category-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 9px;
+  color: var(--wf-gold);
+  background: rgba(168, 131, 46, .1);
+}
+
+.chooser-category-mark svg { width: 17px; height: 17px; }
+
+.chooser-category-copy,
+.chooser-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chooser-category-copy strong,
+.chooser-row-main strong { font-size: 13.5px; font-weight: 620; }
+.chooser-category-copy span,
+.chooser-row-main span { color: var(--wf-text-muted); font-size: 12px; }
+
+.chooser-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--wf-text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: color 150ms var(--wf-ease);
+}
+
+.chooser-back svg { width: 14px; height: 14px; }
+.chooser-back:hover { color: var(--wf-navy); }
+
+/* --- Motion --------------------------------------------------------------- */
+
+@media (hover: hover) and (pointer: fine) {
+  .portal-command-button:hover,
+  .portal-command-avatar:hover,
+  .chooser-category:hover,
+  .chooser-row:hover {
+    transform: translateY(-1px);
+  }
+
+  .chooser-category:hover,
+  .chooser-row:hover {
+    border-color: var(--wf-navy);
+    background: var(--wf-navy-wash);
+  }
+
+  .chooser-category:hover > svg,
+  .chooser-row:hover > svg { transform: translateX(2px); }
+
+  .portal-message-row:hover > .portal-message-meta > svg { transform: translateX(2px); }
+}
+
+.portal-message-meta > svg { transition: transform 150ms var(--wf-ease); }
+
+.portal-command-button:active,
+.portal-command-avatar:active,
+.portal-menu-item:active,
+.chooser-category:active,
+.chooser-row:active {
+  transform: scale(.97);
+  transition-duration: 90ms;
+}
+
+.portal-message-row:active { transform: scale(.99); }
+
+/* Disabled controls never move. */
+.portal-command-button:disabled,
+.portal-ghost-action:disabled,
+.portal-primary-action:disabled {
+  transform: none;
+  cursor: not-allowed;
+}
+
+.chooser-category:focus-visible,
+.chooser-row:focus-visible,
+.portal-menu-item:focus-visible,
+.portal-command-button:focus-visible,
+.portal-command-avatar:focus-visible,
+.portal-message-row:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * Opacity only: no travel, no scale. Deliberately not `animation: none` —
+   * that snapped a full-viewport 11px blur on at once and left it at full
+   * strength for the whole exit window after the panel had gone. A cross-fade
+   * is permitted under reduced motion; a hard snap of that much blur is the
+   * thing it exists to prevent. Durations match the JS unmount timers.
+   */
+  .portal-overlay[data-phase="open"] .portal-overlay-backdrop,
+  .portal-overlay[data-phase="open"] .portal-overlay-panel,
+  .portal-overlay[data-size="feature"][data-phase="open"] .portal-overlay-panel {
+    animation: portal-backdrop-in 120ms ease both;
+  }
+
+  .portal-overlay[data-phase="closing"] .portal-overlay-backdrop,
+  .portal-overlay[data-phase="closing"] .portal-overlay-panel {
+    animation: portal-backdrop-out 130ms ease both;
+  }
+
+  .portal-overlay[data-size="feature"][data-phase="closing"] .portal-overlay-backdrop,
+  .portal-overlay[data-size="feature"][data-phase="closing"] .portal-overlay-panel {
+    animation: portal-backdrop-out 190ms ease both;
+  }
+
+  .portal-overlay-close,
+  .portal-overlay-close:hover,
+  .portal-overlay-close:active { transition: none; transform: none; }
+
+  .portal-overlay-backdrop,
+  .portal-overlay-panel,
+  .portal-header-panel,
+  .portal-command-button,
+  .portal-command-avatar,
+  .chooser-category,
+  .chooser-row,
+  .chooser-category > svg,
+  .chooser-row > svg,
+  .portal-message-meta > svg {
+    transition: none;
+  }
+
+  .chooser-panel { animation: none; }
+
+  .portal-overlay-panel,
+  .portal-overlay[data-phase="closing"] .portal-overlay-panel {
+    transform: none;
+  }
+
+  .portal-header-panel[data-phase="open"],
+  .portal-header-panel[data-phase="closing"] {
+    animation: none;
+  }
+
+  .portal-command-button:hover,
+  .portal-command-avatar:hover,
+  .chooser-category:hover,
+  .chooser-row:hover,
+  .portal-command-button:active,
+  .portal-command-avatar:active,
+  .portal-menu-item:active,
+  .chooser-category:active,
+  .chooser-row:active,
+  .portal-message-row:active {
+    transform: none;
+  }
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .portal-command-bar { padding: 14px 18px 0; }
+}
+
+@media (max-width: 720px) {
+  /* Search keeps its own row so nothing is squeezed into a single strip. */
+  .portal-command-bar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  /* The field now lives inside the search anchor, which is what flexes. */
+  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
+  .portal-command-actions { order: 1; margin-left: auto; }
+}
+
+@media (max-width: 620px) {
+  .portal-overlay { padding: 14px 12px; }
+  .portal-overlay-panel { width: 100%; max-height: calc(100vh - 28px); }
+  .portal-overlay-head { padding: 18px 18px 14px; }
+  .portal-overlay-body { padding: 16px 18px; }
+  .portal-overlay-foot { padding: 14px 18px 18px; }
+
+  /* Full-width targets rather than a cramped right-aligned pair. */
+  .portal-overlay-foot { display: grid; grid-template-columns: 1fr 1fr; }
+  .portal-overlay-foot > * { width: 100%; justify-content: center; }
+
+  .chooser-grid { grid-template-columns: minmax(0, 1fr); }
+
+  .portal-header-panel { width: min(300px, calc(100vw - 24px)); }
+  .portal-header-panel[data-width="wide"] { width: calc(100vw - 24px); }
+}
+
+@media (pointer: coarse) {
+  .portal-command-button,
+  .portal-command-avatar { width: 42px; height: 42px; flex-basis: 42px; }
+  .portal-command-search { height: 44px; }
+  .portal-menu-item { padding: 13px 12px; }
+}
+
+/* WF CLIENT PORTAL COMMAND + OVERLAYS END */
+
+/* WF CLIENT PORTAL SEARCH START */
+
+/* ---------------------------------------------------------------------------
+ * Global client search.
+ *
+ * Reuses the header panel surface wholesale ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â radius, shadow, animation and
+ * close behaviour all come from .portal-header-panel. The only thing added
+ * here is the result list, plus the left-anchoring the search field needs
+ * because it sits at the start of the bar rather than the end.
+ * ------------------------------------------------------------------------- */
+
+.portal-command-search-anchor {
+  flex: 0 1 340px;
+  min-width: 0;
+}
+
+.portal-command-search-anchor .portal-command-search { width: 100%; }
+
+/* The field is on the left, so its panel grows rightward from the same edge. */
+.portal-command-search-anchor .portal-header-panel {
+  right: auto;
+  left: 0;
+  transform-origin: top left;
+  width: min(440px, calc(100vw - 32px));
+}
+
+.search-panel { display: flex; flex-direction: column; gap: 4px; }
+.search-group { display: flex; flex-direction: column; gap: 6px; }
+.search-group + .search-group { margin-top: 10px; }
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--wf-text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 150ms var(--wf-ease),
+    border-color 150ms var(--wf-ease);
+}
+
+/*
+ * One highlight, driven by the keyboard cursor. Pointer movement sets the same
+ * index, so hovering and arrowing cannot disagree about which row is active.
+ */
+.search-result[data-active="true"] {
+  border-color: var(--wf-border);
+  background: var(--wf-navy-wash);
+}
+
+.search-result > svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  stroke-width: 1.7;
+}
+
+.search-result[data-active="true"] > svg { color: var(--wf-navy); }
+
+.search-result-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.search-result-copy strong {
+  font-size: 13.5px;
+  font-weight: 620;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-copy > span {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The state already reads in the subtitle; the pill is the quiet echo of it. */
+.search-result .portal-attention-pill { flex: 0 0 auto; }
+
+.search-result:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: -2px;
+}
+
+@media (max-width: 720px) {
+  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
+
+  .portal-command-search-anchor .portal-header-panel {
+    width: calc(100vw - 24px);
+  }
+
+  /* The pill duplicates the subtitle's tail; drop it before the row wraps. */
+  .search-result .portal-attention-pill { display: none; }
+}
+
+/* WF CLIENT PORTAL SEARCH END */
+
+/* WF CLIENT SERVICE CHOOSER POLISH START */
+
+.chooser .portal-header-panel-head > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+
+.chooser .portal-header-panel-head strong {
+  display: block;
+  line-height: 1.25;
+}
+
+.chooser .portal-header-panel-head span {
+  display: block;
+  line-height: 1.45;
+}
+
+.chooser .chooser-category {
+  min-height: 64px;
+  gap: 14px;
+}
+
+.chooser .chooser-category-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  align-self: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--wf-gold);
+}
+
+.chooser .chooser-category-mark svg {
+  width: 26px;
+  height: 26px;
+}
+
+.chooser .chooser-category-copy {
+  gap: 3px;
+}
+
+.chooser .chooser-category-copy strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.chooser .chooser-category-copy span {
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+/* WF CLIENT SERVICE CHOOSER POLISH END */
+
+/* WF DESKTOP SHELL GUTTER STABILITY START */
+@media (min-width: 1024px) {
+  /*
+   * Keep the workspace's intentional 20px top inset inside the navy shell.
+   * flow-root prevents the workspace margin from escaping/collapsing through
+   * the shell on a fresh browser render.
+   */
+  .internal-app {
+    display: flow-root;
+    min-height: 100vh;
+    background: #000D51;
+  }
+}
+/* WF DESKTOP SHELL GUTTER STABILITY END */
+
+/* WF HEADER UTILITY ICONS START */
+
+/*
+ * One utility-icon treatment for both shells.
+ *
+ * The client header and the internal workspace header previously each drew
+ * their own bordered circle, which turned the top-right into a row of bubbles
+ * competing with the content. The icon now carries the weight: no border, no
+ * filled container, a larger glyph, and a hit target that stays comfortably
+ * larger than the mark it draws.
+ *
+ * Both selectors are styled together on purpose. They stay separate class names
+ * because the two shells are deliberately separate components — nothing
+ * internal should be reachable from client code — but there is one visual
+ * definition, so the two cannot drift.
+ *
+ * The `+` quick action and the profile avatar are deliberately excluded: they
+ * are the primary creation and identity controls, and their containers are what
+ * distinguish them from the utility row.
+ */
+.portal-command-button,
+.workspace-command-button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  border: 0;
+  border-radius: 9px;
+
+  /* The internal header's existing icon grey, so no third neutral is added. */
+  color: #667085;
+  background: transparent;
+  box-shadow: none;
+
+  cursor: pointer;
+
+  transition:
+    color 160ms var(--wf-ease),
+    background-color 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.portal-command-button svg,
+.workspace-command-button svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.85;
+}
+
+.portal-command-button:hover,
+.workspace-command-button:hover {
+  color: var(--wf-navy);
+  background: rgba(0, 13, 81, .06);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* An open panel reads as held-down, not as a ring. */
+.portal-command-button[aria-expanded="true"],
+.workspace-command-button[aria-expanded="true"],
+.workspace-command-button.is-open {
+  color: var(--wf-navy);
+  background: rgba(0, 13, 81, .1);
+}
+
+/*
+ * The quick action keeps its circle. It is the primary creation trigger, and
+ * the container is what separates it from the utility icons beside it.
+ */
+.portal-command-plus,
+.workspace-command-plus {
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  background: var(--wf-white);
+}
+
+.portal-command-plus svg,
+.workspace-command-plus svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.portal-command-plus:hover,
+.workspace-command-plus:hover {
+  border-color: rgba(0, 13, 81, .3);
+  background: var(--wf-navy-wash);
+}
+
+.portal-command-plus[aria-expanded="true"],
+.workspace-command-plus[aria-expanded="true"] {
+  color: #fff;
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+/*
+ * One count badge for every header utility icon, in both shells.
+ *
+ * The cart, the client bell and the internal bell each drew their own — one
+ * navy, one gold, at different sizes and offsets. A count is a count: navy
+ * disc, white number, sitting on the icon's upper-right corner with a white
+ * edge so it separates from the glyph beneath it.
+ *
+ * Deliberately not applied to sidebar counters (.portal-nav-count) or status
+ * chips: those carry meaning through colour and are not header utility counts.
+ */
+.wf-count-badge,
+.workspace-command-button .workspace-notification-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 1.5px solid var(--wf-white);
+  border-radius: 999px;
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* The row no longer needs to breathe around three containers. */
+.portal-command-actions { gap: 4px; }
+.workspace-command-shortcuts { gap: 4px; }
+
+@media (pointer: coarse) {
+  .portal-command-button,
+  .workspace-command-button {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-command-button,
+  .workspace-command-button { transition: color 120ms ease, background-color 120ms ease; }
+
+  .portal-command-button:hover,
+  .workspace-command-button:hover,
+  .portal-command-button:active,
+  .workspace-command-button:active { transform: none; }
+}
+
+/* WF HEADER UTILITY ICONS END */

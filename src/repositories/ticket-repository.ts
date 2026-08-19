@@ -25,7 +25,7 @@ export class TicketRepository {
   }
 
   async getById(id: string): Promise<TicketDetail> {
-    const result = await this.client.rpc("app_get_ticket_detail", { p_ticket_id: id });
+    const result = await this.client.rpc("app_get_ticket_detail_with_avatars", { p_ticket_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Ticket");
     if (result.data == null) throw mapDatabaseError({ code: "PGRST116" }, "Ticket");
     return result.data as TicketDetail;

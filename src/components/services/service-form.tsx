@@ -138,12 +138,15 @@ export function ServiceForm({
   descriptionHtml = "",
   folders,
   assignees,
+  preselectedFolderId,
 }: {
   mode: "create" | "edit";
   service?: ServiceRow;
   descriptionHtml?: string;
   folders: ServiceFolderRow[];
   assignees: ServiceAssigneeOption[];
+  /** Lock the folder when the create flow is entered from inside a folder. */
+  preselectedFolderId?: string;
 }) {
   const [requestId] = useState(() => crypto.randomUUID());
   const [recurring, setRecurring] = useState(service?.recurring ?? false);
@@ -172,10 +175,18 @@ export function ServiceForm({
           </label>
           <label className="service-field service-field-folder" htmlFor="service-folder">
             <span>Folder</span>
-            <select id="service-folder" name="folder_id" defaultValue={service?.folder_id ?? ""}>
+            <select
+              id="service-folder"
+              name="folder_id"
+              defaultValue={preselectedFolderId ?? service?.folder_id ?? ""}
+              disabled={preselectedFolderId != null}
+            >
               <option value="">Unfiled</option>
               {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
             </select>
+            {preselectedFolderId != null ? (
+              <input type="hidden" name="folder_id" value={preselectedFolderId} />
+            ) : null}
           </label>
           <div className="service-field service-field-wide">
             <label htmlFor="service-description">Description <small>optional</small></label>

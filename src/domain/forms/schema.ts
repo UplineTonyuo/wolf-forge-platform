@@ -282,7 +282,15 @@ export type FormAssignmentSummary = {
   form_version_id: string;
   version_number: number;
   title: string;
-  status: "assigned" | "submitted" | "archived" | "canceled";
+  /**
+   * The persisted lifecycle from public.form_assignments, verbatim.
+   *
+   * app_submit_form sets 'completed'; the table's own check constraint permits
+   * only these four. This previously read "submitted", a value the database
+   * cannot produce, so a finished assignment never compared equal to it and was
+   * shown to the client as still outstanding.
+   */
+  status: "assigned" | "completed" | "archived" | "canceled";
   required: boolean;
   due_at: string | null;
   assigned_at: string;

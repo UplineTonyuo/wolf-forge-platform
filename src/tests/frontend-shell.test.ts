@@ -3,16 +3,29 @@ import { navigationCategories, navigationForModules, titleForPath } from "../com
 
 describe("Phase 3A navigation registry", () => {
   it("renders the complete Phase 3A.1 sidebar structure", () => {
-    expect(navigationCategories.map((category) => category.label)).toEqual(["Activity", "Billing", "Marketing", "Setup"]);
+    expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Marketing", "Setup"]);
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.label))).toEqual([
-      "Projects", "Tickets", "Clients", "To Do", "Invoices", "Subscriptions", "Coupons", "Services", "Forms", "Team", "Settings",
+      "Dashboard", "Projects", "Tickets", "Clients", "To Do", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "Settings",
     ]);
   });
 
   it("routes every sidebar item", () => {
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.route))).toEqual([
-      "/orders", "/tickets", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/services", "/forms", "/team", "/settings",
+      "/dashboard", "/orders", "/tickets", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/settings",
     ]);
+  });
+
+  /*
+   * The executive dashboard is owner/admin only, enforced by the
+   * dashboard.executive_view capability behind the 'dashboard' module key. A
+   * role without that capability must not see the rail entry at all.
+   */
+  it("hides the dashboard from a role without the executive capability", () => {
+    const withoutDashboard = navigationForModules({ projects: true, tickets: true });
+    expect(withoutDashboard.map((category) => category.label)).toEqual(["Activity"]);
+    expect(
+      withoutDashboard.flatMap((category) => category.items.map((item) => item.id)),
+    ).not.toContain("dashboard");
   });
 
   it("keeps user-facing project terminology in the shell", () => {

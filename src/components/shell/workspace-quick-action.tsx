@@ -211,7 +211,7 @@ export function WorkspaceQuickAction({
   return (
     <>
       <button
-        className="workspace-command-button"
+        className="workspace-command-button workspace-command-plus"
         type="button"
         aria-label="Quick Action"
         title="Quick Action"

@@ -1,0 +1,243 @@
+/*
+ * The service a Store card opens into. Same system as store-catalog.module.css
+ * — navy structure, one gold beat, single navy-tinted lift — so arriving here
+ * from a card does not feel like leaving the Store.
+ */
+
+.detail {
+  /* Matches the Store's text-safe gold: --wf-gold is ~3.5:1 on white, which is
+     fine for the rule under the head but not for a 9.5px label. */
+  --store-gold-ink: #7d6120;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 30px 30px 26px;
+  border: 1px solid var(--wf-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(140% 200% at 100% 0%, rgba(0, 13, 81, .05), transparent 56%),
+    linear-gradient(180deg, var(--wf-white), var(--wf-warm-50));
+  animation: detailIn 380ms var(--wf-ease) both;
+}
+
+.head::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 30px;
+  width: 96px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--wf-gold), rgba(168, 131, 46, 0));
+}
+
+@keyframes detailIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  align-self: flex-start;
+  color: var(--store-gold-ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.eyebrow::after {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(168, 131, 46, .7), transparent);
+}
+
+.head h1 {
+  margin: 0;
+  max-width: 24ch;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 31px;
+  line-height: 1.14;
+  font-weight: 620;
+  letter-spacing: -.026em;
+  text-wrap: balance;
+}
+
+.headMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.tag[data-recurring="true"] {
+  color: var(--store-gold-ink);
+  border-color: rgba(168, 131, 46, .34);
+  background: rgba(168, 131, 46, .07);
+}
+
+.hero {
+  border: 1px solid var(--wf-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--wf-warm-100);
+}
+
+.hero img { display: block; width: 100%; max-height: 340px; object-fit: cover; }
+
+/* --- Body ----------------------------------------------------------------- */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 288px;
+  align-items: start;
+  gap: 32px;
+}
+
+.aside { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 14px; }
+
+.priceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--wf-border);
+  border-radius: 14px;
+  background: var(--wf-white);
+  box-shadow: 0 20px 38px -30px rgba(0, 13, 81, .38);
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -.026em;
+  font-variant-numeric: tabular-nums;
+}
+
+.price em {
+  color: var(--wf-text-muted);
+  font-family: var(--wf-font-ui);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 550;
+  letter-spacing: 0;
+}
+
+.facts { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+
+.facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.facts > div:last-child { padding-bottom: 0; border-bottom: 0; }
+
+.facts dt {
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0;
+  text-align: right;
+  color: var(--wf-text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Primary contact, then the quiet collect action. One column, not a row: the
+   two are different weights and a side-by-side pair reads as equal choices. */
+.actions { display: flex; flex-direction: column; gap: 9px; }
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+  text-decoration: none;
+  transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease),
+    box-shadow 160ms var(--wf-ease);
+}
+
+.cta:hover {
+  background: var(--wf-navy-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px -16px rgba(0, 13, 81, .9);
+}
+
+.cta:active { transform: translateY(0) scale(.98); }
+.cta svg { width: 15px; height: 15px; transition: transform 200ms var(--wf-ease); }
+.cta:hover svg { transform: translateX(3px); }
+
+.asideNote {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .body { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  /*
+   * Stacked, a sticky aside would trap the CTA halfway up the description, and
+   * a full-column price card reads as a slab rather than an action panel.
+   */
+  .aside { position: static; max-width: 420px; }
+}
+
+@media (max-width: 720px) {
+  .head { padding: 24px 20px 22px; border-radius: 14px; }
+  .head::before { left: 20px; }
+  .head h1 { font-size: 25px; }
+  .price { font-size: 26px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .head { animation: none; }
+  .cta, .cta svg { transition: none; }
+  .cta:hover, .cta:active { transform: none; }
+  .cta:hover svg { transform: none; }
+}

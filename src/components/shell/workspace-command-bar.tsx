@@ -1,14 +1,22 @@
 "use client";
 
-import { GlobalSearch } from "./global-search";
-
 import {
   Bell,
-  Images,
+  FileText,
+  Folder,
+Images,
+  MessageSquare,
   Minus,
   Plus,
+  Receipt,
   Search,
+  ShoppingCart,
+  Ticket,
+  UserPlus,
+  WalletCards,
 } from "lucide-react";
+import { GlobalSearch } from "./global-search";
+import { DashboardDateTrigger } from "../dashboard/dashboard-date-trigger";
 import Link from "next/link";
 import {
   useCallback,
@@ -21,8 +29,14 @@ import {
 } from "react-dom";
 import {
   getWalletNotificationsAction,
+  markNotificationReadAction,
+  markAllNotificationsReadAction,
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
+import {
+  playNotificationChime,
+  unlockNotificationAudio,
+} from "../../lib/notifications/browser-notification-feedback";
 import type {
   InternalUser,
 } from "../../lib/supabase/next-server";
@@ -49,6 +63,35 @@ function formatActivityTime(
   ).format(date);
 }
 
+function NotificationCategoryIcon({
+  category,
+}: {
+  category:
+    WalletNotificationItem["category"];
+}) {
+  const Icon =
+    category === "project"
+      ? Folder
+      : category === "client"
+        ? UserPlus
+        : category === "form"
+          ? FileText
+          : category === "coupon"
+            ? Ticket
+            : category === "ticket"
+              ? MessageSquare
+              : category === "payment"
+                ? Receipt
+                : category === "wallet"
+                  ? WalletCards
+                  : category === "store"
+                    ? ShoppingCart
+                    : Bell;
+
+  return (
+    <Icon aria-hidden="true" />
+  );
+}
 type NotificationPosition = {
   top: number;
   right: number;
@@ -103,27 +146,139 @@ export function WorkspaceCommandBar({
       right: 20,
     });
 
+  const [
+    notificationRinging,
+    setNotificationRinging,
+  ] = useState(false);
+
+  const notificationSeenIdsRef =
+    useRef<Set<string>>(
+      new Set(),
+    );
+
+  const notificationFeedInitializedRef =
+    useRef(false);
+
+  const notificationFeedbackTimersRef =
+    useRef<number[]>([]);
+
+  const noteIncomingNotifications =
+    useCallback(
+      (
+        items:
+          WalletNotificationItem[],
+      ) => {
+        const nextIds =
+          new Set(
+            items.map(
+              (item) =>
+                item.id,
+            ),
+          );
+
+        if (
+          !notificationFeedInitializedRef.current
+        ) {
+          notificationSeenIdsRef.current =
+            nextIds;
+
+          notificationFeedInitializedRef.current =
+            true;
+
+          return;
+        }
+
+        const incoming =
+          items.filter(
+            (item) =>
+              !item.readAt &&
+              !notificationSeenIdsRef.current.has(
+                item.id,
+              ),
+          );
+
+        notificationSeenIdsRef.current =
+          nextIds;
+
+        incoming.forEach(
+          (_, index) => {
+            const startTimer =
+              window.setTimeout(
+                () => {
+                  setNotificationRinging(
+                    true,
+                  );
+
+                  playNotificationChime();
+
+                  const stopTimer =
+                    window.setTimeout(
+                      () => {
+                        setNotificationRinging(
+                          false,
+                        );
+                      },
+                      560,
+                    );
+
+                  notificationFeedbackTimersRef.current.push(
+                    stopTimer,
+                  );
+                },
+                index * 680,
+              );
+
+            notificationFeedbackTimersRef.current.push(
+              startTimer,
+            );
+          },
+        );
+      },
+      [],
+    );
+
   const loadNotifications =
-    useCallback(async () => {
-      setNotificationsLoading(true);
+    useCallback(
+      async (
+        silent = false,
+      ) => {
+        if (!silent) {
+          setNotificationsLoading(
+            true,
+          );
+        }
 
-      const result =
-        await getWalletNotificationsAction();
+        const result =
+          await getWalletNotificationsAction();
 
-      if (result.ok) {
-        setNotifications(
-          result.notifications,
-        );
+        if (result.ok) {
+          noteIncomingNotifications(
+            result.notifications,
+          );
 
-        setNotificationsError(null);
-      } else {
-        setNotificationsError(
-          result.error,
-        );
-      }
+          setNotifications(
+            result.notifications,
+          );
 
-      setNotificationsLoading(false);
-    }, []);
+          setNotificationsError(
+            null,
+          );
+        } else if (!silent) {
+          setNotificationsError(
+            result.error,
+          );
+        }
+
+        if (!silent) {
+          setNotificationsLoading(
+            false,
+          );
+        }
+      },
+      [
+        noteIncomingNotifications,
+      ],
+    );
 
   const updatePanelPosition =
     useCallback(() => {
@@ -155,6 +310,98 @@ export function WorkspaceCommandBar({
 
     void loadNotifications();
   }, [loadNotifications]);
+
+  useEffect(() => {
+    const unlock = () => {
+      void unlockNotificationAudio();
+    };
+
+    window.addEventListener(
+      "pointerdown",
+      unlock,
+      {
+        once: true,
+        passive: true,
+      },
+    );
+
+    window.addEventListener(
+      "keydown",
+      unlock,
+      {
+        once: true,
+      },
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pointerdown",
+        unlock,
+      );
+
+      window.removeEventListener(
+        "keydown",
+        unlock,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden) {
+        void loadNotifications(
+          true,
+        );
+      }
+    };
+
+    const interval =
+      window.setInterval(
+        refresh,
+        4000,
+      );
+
+    window.addEventListener(
+      "focus",
+      refresh,
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      refresh,
+    );
+
+    return () => {
+      window.clearInterval(
+        interval,
+      );
+
+      window.removeEventListener(
+        "focus",
+        refresh,
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        refresh,
+      );
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    return () => {
+      notificationFeedbackTimersRef.current.forEach(
+        (timer) => {
+          window.clearTimeout(
+            timer,
+          );
+        },
+      );
+
+      notificationFeedbackTimersRef.current =
+        [];
+    };
+  }, []);
 
   useEffect(() => {
     if (!notificationsOpen) {
@@ -293,6 +540,50 @@ export function WorkspaceCommandBar({
       await loadNotifications();
     };
 
+  const unreadNotificationCount =
+    notifications.reduce(
+      (
+        total,
+        notification,
+      ) =>
+        total +
+        (notification.readAt
+          ? 0
+          : 1),
+      0,
+    );
+
+  const notificationBadgeLabel =
+    unreadNotificationCount > 99
+      ? "99+"
+      : String(
+          unreadNotificationCount,
+        );
+  const markAllAsRead = () => {
+    if (
+      unreadNotificationCount === 0
+    ) {
+      return;
+    }
+
+    const readAt =
+      new Date().toISOString();
+
+    setNotifications(
+      (current) =>
+        current.map(
+          (notification) =>
+            notification.readAt
+              ? notification
+              : {
+                  ...notification,
+                  readAt,
+                },
+        ),
+    );
+
+    void markAllNotificationsReadAction();
+  };
   const notificationPanel = (
     <section
       ref={panelRef}
@@ -319,19 +610,31 @@ export function WorkspaceCommandBar({
           </strong>
 
           <span>
-            Recent wallet activity
+            Recent activity
           </span>
         </div>
 
-        {notificationsLoading ? (
-          <span className="workspace-notification-refreshing">
-            Refreshing...
-          </span>
-        ) : notifications.length ? (
-          <span className="workspace-notification-count">
-            {notifications.length}
-          </span>
-        ) : null}
+        <div className="workspace-notification-header-actions">
+          {notificationsLoading ? (
+            <span className="workspace-notification-refreshing">
+              Refreshing...
+            </span>
+          ) : null}
+
+          {unreadNotificationCount > 0 ? (
+            <button
+              type="button"
+              className="workspace-notification-mark-all"
+              onClick={markAllAsRead}
+            >
+              Mark all as read
+            </button>
+          ) : (
+            <span className="workspace-notification-all-read">
+              All read
+            </span>
+          )}
+        </div>
       </header>
 
       <div className="workspace-notification-list">
@@ -343,7 +646,7 @@ export function WorkspaceCommandBar({
             0 &&
           !notificationsLoading ? (
           <div className="workspace-notification-empty">
-            No wallet activity yet.
+            No activity yet.
           </div>
         ) : (
           notifications.map(
@@ -356,11 +659,31 @@ export function WorkspaceCommandBar({
                   notification.href
                 }
                 className="workspace-notification-item"
-                onClick={() =>
+                onClick={() => {
+                  setNotifications(
+                    (current) =>
+                      current.map(
+                        (item) =>
+                          item.id ===
+                          notification.id
+                            ? {
+                                ...item,
+                                readAt:
+                                  item.readAt ??
+                                  new Date().toISOString(),
+                              }
+                            : item,
+                      ),
+                  );
+
+                  void markNotificationReadAction(
+                    notification.id,
+                  );
+
                   setNotificationsOpen(
                     false,
-                  )
-                }
+                  );
+                }}
               >
                 <span
                   className={
@@ -370,16 +693,11 @@ export function WorkspaceCommandBar({
                       : "workspace-notification-kind is-debit"
                   }
                 >
-                  {notification.kind ===
-                  "credit" ? (
-                    <Plus
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    <Minus
-                      aria-hidden="true"
-                    />
-                  )}
+                  <NotificationCategoryIcon
+                    category={
+                      notification.category
+                    }
+                  />
                 </span>
 
                 <span className="workspace-notification-copy">
@@ -430,6 +748,7 @@ export function WorkspaceCommandBar({
       >
         <GlobalSearch />
         <div className="workspace-command-shortcuts">
+        <DashboardDateTrigger />
           <button
             className="workspace-command-button"
             type="button"
@@ -443,11 +762,18 @@ export function WorkspaceCommandBar({
 
           <button
             ref={triggerRef}
-            className={
+            className={[
+              "workspace-command-button",
+              "workspace-notification-trigger",
               notificationsOpen
-                ? "workspace-command-button workspace-notification-trigger is-open"
-                : "workspace-command-button workspace-notification-trigger"
-            }
+                ? "is-open"
+                : "",
+              notificationRinging
+                ? "is-ringing"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             type="button"
             aria-label="Notifications"
             title="Notifications"
@@ -463,12 +789,13 @@ export function WorkspaceCommandBar({
               aria-hidden="true"
             />
 
-            {notifications.length >
-            0 ? (
+            {notifications.some((notification) => !notification.readAt) ? (
               <span
-                className="workspace-notification-dot"
-                aria-hidden="true"
-              />
+                className="workspace-notification-badge wf-count-badge"
+                aria-label={`${unreadNotificationCount} unread notifications`}
+              >
+                {notificationBadgeLabel}
+              </span>
             ) : null}
           </button>
 

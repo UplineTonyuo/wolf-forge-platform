@@ -71,11 +71,14 @@ export function FilterInput({
   initialValue = "",
   clearParamsOnSearch = EMPTY_VALUES,
   suggestions = EMPTY_VALUES,
+  placeholder,
 }: {
   label: string;
   initialValue?: string;
   clearParamsOnSearch?: string[];
   suggestions?: string[];
+  /** Shown when the label is presented visually hidden, as in a filter toolbar. */
+  placeholder?: string;
 }) {
   const [
     value,
@@ -216,6 +219,7 @@ export function FilterInput({
 
         <input
           value={value}
+          placeholder={placeholder}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) =>

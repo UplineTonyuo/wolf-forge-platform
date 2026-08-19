@@ -1,51 +1,148 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { signOutAction } from "../../app/actions/auth";
 import type { InternalUser } from "../../lib/supabase/next-server";
+import { AccountAvatar } from "../ui/account-avatar";
 
-function initials(name: string | null) {
-  if (!name) return "•";
-  return name.split(/\s+/u).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-}
+/**
+ * How long the menu's closing transition runs, in milliseconds. Must stay in
+ * step with the closed-state `transition-duration` in globals.css: it is the
+ * window the menu is held in the DOM so the exit is visible.
+ */
+const MENU_EXIT_MS = 110;
+
+/** `closing` is the menu animating out — mounted, but no longer interactive. */
+type MenuPhase = "closed" | "open" | "closing";
 
 export function AccountMenu({ user, mobile = false, sidebar = false }: { user: InternalUser; mobile?: boolean; sidebar?: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<MenuPhase>("closed");
+  const exitTimerRef = useRef<number | null>(null);
+  const open = phase === "open";
+
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  /* The sidebar and the command bar each render one of these, so ids collide. */
+  const identityId = useId();
+
+  /*
+   * Closing hands the menu to CSS and keeps it mounted for the length of the
+   * exit. Reopening before that lands cancels the timer, so the menu retargets
+   * from wherever it currently sits instead of restarting.
+   */
+  const close = useCallback(() => {
+    setPhase((current) => (current === "open" ? "closing" : current));
+
+    if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+
+    exitTimerRef.current = window.setTimeout(() => {
+      exitTimerRef.current = null;
+      setPhase((current) => (current === "closing" ? "closed" : current));
+    }, MENU_EXIT_MS);
+  }, []);
+
+  const openMenu = useCallback(() => {
+    if (exitTimerRef.current !== null) {
+      window.clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+
+    setPhase("open");
+  }, []);
+
+  useEffect(() => () => {
+    if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setOpen(false);
+        close();
         buttonRef.current?.focus();
       }
     };
+
+    /*
+     * Dismiss on any press outside the trigger and the menu. Without this the
+     * menu stayed open until Escape, which is unreachable with a pointer.
+     */
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    };
+
+    /* Tabbing past the last item closes the menu rather than stranding it open. */
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node;
+      if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      close();
+    };
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("focusin", onFocusIn);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("focusin", onFocusIn);
+    };
+  }, [close, open]);
 
   useEffect(() => {
     if (open) menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [open]);
 
+  const roleLabel = `${user.role[0]?.toUpperCase() ?? ""}${user.role.slice(1)}`;
+
   return (
     <div className={sidebar ? "account account-sidebar" : mobile ? "account account-mobile" : "account account-desktop"}>
-      <button ref={buttonRef} className="avatar-button" aria-label="Account" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-        <span className="avatar-initials">{initials(user.displayName)}</span>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="avatar-button"
+        aria-label="Account"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => (open ? close() : openMenu())}
+      >
+        {/*
+          One canonical avatar renderer: the stored photo when the account has
+          one, initials otherwise. The rail sits on navy, the command bar on
+          white, so only the treatment differs.
+        */}
+        <AccountAvatar
+          name={user.displayName}
+          avatarUrl={user.avatarUrl}
+          size={sidebar ? 32 : 30}
+          onNavy={sidebar}
+        />
         {sidebar ? <><span className="account-button-copy"><strong>{user.displayName ?? "Unnamed user"}</strong><small>{user.role}</small></span><ChevronDown aria-hidden="true" /></> : null}
       </button>
-      {open ? (
-        <div ref={menuRef} className={sidebar ? "account-popover account-popover-sidebar" : mobile ? "account-sheet" : "account-popover"} role="menu">
-          <div className="account-identity">
+      {phase !== "closed" ? (
+        <div
+          ref={menuRef}
+          className={sidebar ? "account-popover account-popover-sidebar" : mobile ? "account-sheet" : "account-popover"}
+          data-state={open ? "open" : "closed"}
+        >
+          {/*
+            The identity block is a heading for the menu, not an item in it, so
+            the menu role wraps only what is actually actionable.
+          */}
+          <div className="account-identity" id={identityId}>
             <strong>{user.displayName ?? "Unnamed user"}</strong>
-            <span>{user.role[0]?.toUpperCase()}{user.role.slice(1)}</span>
+            <span>{roleLabel}</span>
           </div>
-          <form action={signOutAction}>
-            <button type="submit" role="menuitem">Sign out</button>
-          </form>
+          <div role="menu" aria-labelledby={identityId}>
+            <form action={signOutAction} role="none">
+              <button type="submit" role="menuitem">Sign out</button>
+            </form>
+          </div>
         </div>
       ) : null}
     </div>

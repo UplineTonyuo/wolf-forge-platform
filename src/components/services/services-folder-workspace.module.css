@@ -1,0 +1,2100 @@
+.workspace {
+  display: grid;
+  grid-template-columns:
+    minmax(430px, .9fr)
+    minmax(520px, 1.1fr);
+  gap: clamp(30px, 4vw, 72px);
+  align-items: start;
+  min-height: 610px;
+  padding:
+    10px
+    clamp(4px, 1vw, 14px)
+    26px;
+}
+
+.deckColumn,
+.contentsColumn {
+  min-width: 0;
+}
+
+.columnHeader {
+  min-height: 58px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding:
+    0 2px 14px;
+}
+
+.columnHeader > div {
+  min-width: 0;
+}
+
+.columnHeader span {
+  display: block;
+  margin-bottom: 5px;
+  color: #8b91a2;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.columnHeader h2 {
+  margin: 0;
+  color: #000d51;
+  font-family:
+    "Sora Variable",
+    Sora,
+    Inter,
+    sans-serif;
+  font-size: clamp(17px, 1.55vw, 22px);
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.columnHeader small {
+  max-width: 190px;
+  color: #8b91a2;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.columnHeader > strong {
+  color: #8a610c;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.deckViewport {
+  position: relative;
+  height: 520px;
+  overflow: hidden;
+  outline: none;
+  touch-action: pan-x;
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.deckViewport:focus-visible {
+  border-radius: 28px;
+  box-shadow:
+    inset 0 0 0 2px
+    rgba(215, 169, 40, .48);
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+.folderSlot {
+  --desk-x: 0%;
+  --desk-y: 0%;
+  --desk-scale: 1;
+  --desk-rotate: 0deg;
+  --desk-opacity: 1;
+  --desk-z: 1;
+  --desk-drag: 0px;
+
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(520px, 86%);
+  height: 318px;
+  opacity: var(--desk-opacity);
+  z-index: var(--desk-z);
+  transform:
+    translate3d(
+      calc(-50% + var(--desk-x)),
+      calc(
+        -50% +
+        var(--desk-y) +
+        var(--desk-drag)
+      ),
+      0
+    )
+    rotate(var(--desk-rotate))
+    scale(var(--desk-scale));
+  transform-origin: center;
+  will-change: transform, opacity;
+  transition:
+    transform
+      760ms
+      cubic-bezier(.16, 1, .3, 1),
+    opacity
+      520ms
+      cubic-bezier(.22, 1, .36, 1),
+    filter
+      520ms ease;
+}
+
+.outgoingFolder {
+  transition:
+    transform
+      790ms
+      cubic-bezier(.18, .78, .14, 1),
+    opacity
+      580ms ease,
+    filter
+      580ms ease;
+}
+
+.incomingFolder {
+  transition:
+    transform
+      720ms
+      18ms
+      cubic-bezier(.16, 1, .3, 1),
+    opacity
+      560ms
+      18ms ease,
+    filter
+      560ms
+      18ms ease;
+}
+
+.sideFolderHit {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sideFolderHit:focus-visible {
+  outline:
+    2px solid
+    rgba(215, 169, 40, .82);
+  outline-offset: -8px;
+  border-radius: 24px;
+}
+
+.openFolderButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff4d0;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.openFolderButton:disabled {
+  cursor: default;
+  opacity: .62;
+}
+
+.openFolderButton svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.openFolderButton svg:last-child {
+  transition: transform 180ms ease;
+}
+
+.openFolderButton:hover:not(:disabled)
+svg:last-child {
+  transform: translateX(3px);
+}
+
+.openFolderButton:focus-visible {
+  outline:
+    2px solid
+    rgba(255, 244, 208, .88);
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+
+.deckHint {
+  color:
+    rgba(255, 249, 233, .70);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 720;
+}
+
+.contentsColumn {
+  position: relative;
+}
+
+.closedContents {
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding:
+    40px
+    clamp(12px, 3vw, 44px);
+  border-top:
+    1px solid
+    rgba(0, 13, 81, .08);
+  border-bottom:
+    1px solid
+    rgba(0, 13, 81, .08);
+}
+
+.closedGlyph {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border:
+    1px solid
+    rgba(0, 13, 81, .10);
+  border-radius: 50%;
+  color: #000d51;
+  background: #fafbff;
+}
+
+.closedGlyph svg {
+  width: 19px;
+  height: 19px;
+}
+
+.closedContents strong {
+  color: #111827;
+  font-family:
+    "Sora Variable",
+    Sora,
+    Inter,
+    sans-serif;
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.closedContents p {
+  max-width: 400px;
+  margin: 9px 0 0;
+  color: #7a8191;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.contentsBody {
+  min-height: 460px;
+  padding:
+    18px 0 8px;
+  border-top:
+    1px solid
+    rgba(0, 13, 81, .08);
+  border-bottom:
+    1px solid
+    rgba(0, 13, 81, .08);
+  transform-origin:
+    18% 0%;
+}
+
+.contentsOpening {
+  animation:
+    unpackContents
+    520ms
+    cubic-bezier(.16, 1, .3, 1)
+    both;
+}
+
+.contentsPacking {
+  animation:
+    packContents
+    350ms
+    cubic-bezier(.55, .06, .68, .19)
+    both;
+  pointer-events: none;
+}
+
+.serviceFilter {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+  padding: 0 13px;
+  border:
+    1px solid
+    #e1e4eb;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.serviceFilter:focus-within {
+  border-color:
+    rgba(0, 13, 81, .34);
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 13, 81, .05);
+}
+
+.serviceFilter svg {
+  width: 16px;
+  height: 16px;
+  color: #838a99;
+  flex: 0 0 auto;
+}
+
+.serviceFilter input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #111827;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+
+.serviceFilter input::placeholder {
+  color: #9aa0ad;
+}
+
+.serviceList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.serviceList > li {
+  opacity: 0;
+  transform:
+    translate3d(-12px, 7px, 0);
+  animation:
+    serviceRowUnpack
+    390ms
+    cubic-bezier(.22, 1, .36, 1)
+    forwards;
+  animation-delay:
+    calc(
+      95ms +
+      var(--service-index) * 34ms
+    );
+}
+
+.serviceRow {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns:
+    40px
+    minmax(0, 1fr)
+    auto
+    20px;
+  align-items: center;
+  gap: 12px;
+  padding:
+    11px 10px
+    11px 4px;
+  border: 0;
+  border-bottom:
+    1px solid
+    #eceef3;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    padding 160ms ease;
+}
+
+.serviceRow:hover {
+  padding-left: 10px;
+  background: #f8f9fc;
+}
+
+.serviceRow:focus-visible {
+  outline:
+    2px solid
+    rgba(0, 13, 81, .42);
+  outline-offset: -2px;
+}
+
+.serviceNumber {
+  color: #b08a31;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.serviceCopy {
+  min-width: 0;
+}
+
+.serviceCopy strong {
+  display: block;
+  overflow: hidden;
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serviceCopy small {
+  display: -webkit-box;
+  margin-top: 5px;
+  overflow: hidden;
+  color: #828897;
+  font-size: 10px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.servicePrice {
+  color: #000d51;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.serviceRow > svg {
+  width: 15px;
+  height: 15px;
+  color: #9a7a28;
+  transition:
+    transform 160ms ease;
+}
+
+.serviceRow:hover > svg {
+  transform: translateX(3px);
+}
+
+.emptyContents {
+  min-height: 300px;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.emptyContents strong {
+  color: #111827;
+  font-size: 13px;
+}
+
+.emptyContents p {
+  margin: 6px 0 0;
+  color: #8b91a2;
+  font-size: 11px;
+}
+
+.noFolders {
+  padding: 40px 0;
+  color: #7d8492;
+  font-size: 12px;
+}
+
+.modalLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modalBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background:
+    rgba(1, 8, 42, .56);
+  backdrop-filter:
+    blur(7px);
+  -webkit-backdrop-filter:
+    blur(7px);
+  cursor: default;
+  animation:
+    modalBackdropIn
+    220ms ease-out
+    both;
+}
+
+.serviceDialog {
+  position: relative;
+  z-index: 2;
+  width:
+    min(620px, calc(100vw - 38px));
+  max-height:
+    min(720px, calc(100vh - 48px));
+  overflow: auto;
+  border:
+    1px solid
+    rgba(215, 169, 40, .34);
+  border-radius: 12px;
+  color: #fff;
+  background:
+    #000d51;
+  box-shadow:
+    0 30px 90px
+    rgba(0, 6, 45, .38);
+  animation:
+    serviceDialogIn
+    330ms
+    cubic-bezier(.16, 1, .3, 1)
+    both;
+}
+
+.modalClosing
+.modalBackdrop {
+  animation:
+    modalBackdropOut
+    180ms ease-in
+    both;
+}
+
+.modalClosing
+.serviceDialog {
+  animation:
+    serviceDialogOut
+    200ms
+    cubic-bezier(.55, .06, .68, .19)
+    both;
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding:
+    25px 27px 21px;
+  border-bottom:
+    1px solid
+    rgba(255, 255, 255, .10);
+}
+
+.dialogHeader span {
+  display: block;
+  margin-bottom: 7px;
+  color: #d7a928;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.dialogHeader h2 {
+  margin: 0;
+  color: #fff;
+  font-family:
+    "Sora Variable",
+    Sora,
+    Inter,
+    sans-serif;
+  font-size:
+    clamp(22px, 3vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
+}
+
+.dialogClose {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border:
+    1px solid
+    rgba(255, 255, 255, .14);
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dialogClose:hover {
+  border-color:
+    rgba(215, 169, 40, .56);
+}
+
+.dialogClose svg {
+  width: 17px;
+  height: 17px;
+}
+
+.dialogFacts {
+  display: grid;
+  grid-template-columns:
+    repeat(3, 1fr);
+  border-bottom:
+    1px solid
+    rgba(255, 255, 255, .10);
+}
+
+.dialogFacts > div {
+  padding:
+    18px 27px;
+  border-right:
+    1px solid
+    rgba(255, 255, 255, .10);
+}
+
+.dialogFacts > div:last-child {
+  border-right: 0;
+}
+
+.dialogFacts span {
+  display: block;
+  margin-bottom: 7px;
+  color:
+    rgba(255, 255, 255, .54);
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.dialogFacts strong {
+  color: #fff6d8;
+  font-size: 13px;
+}
+
+.dialogFlags {
+  display: flex;
+  gap: 7px;
+  padding:
+    18px 27px 0;
+}
+
+.dialogFlags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border:
+    1px solid
+    rgba(215, 169, 40, .34);
+  border-radius: 999px;
+  color: #f3d982;
+  font-size: 9px;
+  font-weight: 760;
+}
+
+.dialogDescription {
+  padding:
+    20px 27px 26px;
+  color:
+    rgba(255, 255, 255, .78);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.dialogDescription
+:is(
+  p,
+  ul,
+  ol,
+  h1,
+  h2,
+  h3,
+  h4
+) {
+  margin-top: 0;
+}
+
+.dialogDescription a {
+  color: #f0d477;
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding:
+    17px 27px 21px;
+  border-top:
+    1px solid
+    rgba(255, 255, 255, .10);
+}
+
+.dialogEdit {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  border:
+    1px solid
+    rgba(215, 169, 40, .56);
+  border-radius: 5px;
+  color: #ffe79a;
+  font-size: 11px;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.dialogEdit:hover {
+  background:
+    rgba(215, 169, 40, .10);
+}
+
+.dialogEdit svg {
+  width: 14px;
+  height: 14px;
+}
+
+@keyframes
+unpackContents {
+  from {
+    opacity: 0;
+    transform:
+      translate3d(-12px, 14px, 0)
+      scale(.985);
+    clip-path:
+      inset(0 0 84% 0 round 4px);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translate3d(0, 0, 0)
+      scale(1);
+    clip-path:
+      inset(0 0 0 0 round 4px);
+  }
+}
+
+@keyframes
+packContents {
+  from {
+    opacity: 1;
+    transform:
+      translate3d(0, 0, 0)
+      scale(1);
+    clip-path:
+      inset(0 0 0 0 round 4px);
+  }
+
+  to {
+    opacity: 0;
+    transform:
+      translate3d(-10px, 10px, 0)
+      scale(.985);
+    clip-path:
+      inset(0 0 88% 0 round 4px);
+  }
+}
+
+@keyframes
+serviceRowUnpack {
+  to {
+    opacity: 1;
+    transform:
+      translate3d(0, 0, 0);
+  }
+}
+
+@keyframes
+modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes
+modalBackdropOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes
+serviceDialogIn {
+  from {
+    opacity: 0;
+    transform:
+      translate3d(0, 16px, 0)
+      scale(.975);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translate3d(0, 0, 0)
+      scale(1);
+  }
+}
+
+@keyframes
+serviceDialogOut {
+  from {
+    opacity: 1;
+    transform:
+      translate3d(0, 0, 0)
+      scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform:
+      translate3d(0, 11px, 0)
+      scale(.98);
+  }
+}
+
+@media
+(max-width: 1120px) {
+  .workspace {
+    grid-template-columns:
+      minmax(390px, .92fr)
+      minmax(430px, 1.08fr);
+    gap: 26px;
+  }
+
+  .folderSlot {
+    width: min(490px, 90%);
+  }
+}
+
+@media
+(max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .deckViewport {
+    height: 480px;
+  }
+
+  .contentsBody,
+  .closedContents {
+    min-height: 360px;
+  }
+
+  .columnHeader small {
+    display: none;
+  }
+}
+
+@media
+(max-width: 620px) {
+  .workspace {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .deckViewport {
+    height: 420px;
+  }
+
+  .folderSlot {
+    width: min(86vw, 410px);
+    height: 270px;
+  }
+
+  .serviceRow {
+    grid-template-columns:
+      32px
+      minmax(0, 1fr)
+      auto
+      18px;
+    gap: 8px;
+  }
+
+  .dialogFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .dialogFacts > div {
+    border-right: 0;
+    border-bottom:
+      1px solid
+      rgba(255, 255, 255, .10);
+  }
+
+  .dialogFacts > div:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media
+(prefers-reduced-motion: reduce) {
+  .folderSlot,
+  .contentsOpening,
+  .contentsPacking,
+  .serviceList > li,
+  .modalBackdrop,
+  .serviceDialog {
+    animation-duration:
+      1ms !important;
+    animation-delay:
+      0ms !important;
+    transition-duration:
+      1ms !important;
+    transition-delay:
+      0ms !important;
+  }
+
+  .modalBackdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* WF FOLDER DESK SCREEN FILL OVERRIDES */
+
+.workspace {
+  grid-template-columns:
+    minmax(470px, .95fr)
+    minmax(560px, 1.05fr);
+  gap: clamp(28px, 3.6vw, 60px);
+  align-items: stretch;
+  min-height: calc(100dvh - 170px);
+  padding-bottom: 8px;
+}
+
+.deckColumn,
+.contentsColumn {
+  min-height: 100%;
+}
+
+.deckColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.deckViewport {
+  flex: 1;
+  height: calc(100dvh - 245px);
+  min-height: 680px;
+}
+
+.folderSlot {
+  width: min(640px, 99%);
+  height: 356px;
+}
+
+@media (max-width: 1120px) {
+  .workspace {
+    grid-template-columns:
+      minmax(420px, .95fr)
+      minmax(460px, 1.05fr);
+    gap: 24px;
+  }
+
+  .deckViewport {
+    height: calc(100dvh - 260px);
+    min-height: 610px;
+  }
+
+  .folderSlot {
+    width: min(590px, 98%);
+    height: 336px;
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    min-height: auto;
+  }
+
+  .deckViewport {
+    height: 540px;
+    min-height: 540px;
+  }
+
+  .folderSlot {
+    width: min(88vw, 520px);
+    height: 312px;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .deckViewport {
+    height: 460px;
+    min-height: 460px;
+  }
+
+  .folderSlot {
+    width: min(92vw, 430px);
+    height: 276px;
+  }
+}
+
+/* WF SERVICES EDGE-TO-EDGE DESK START */
+
+/*
+ * The old column headers were removed from JSX. Keep this defensive rule
+ * so they cannot reserve vertical space if a stale render is present.
+ */
+.columnHeader {
+  display: none !important;
+}
+
+.workspace {
+  align-items: stretch !important;
+  min-height: calc(100dvh - 108px) !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.deckColumn,
+.contentsColumn {
+  min-height: 0 !important;
+}
+
+.deckColumn {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.deckViewport {
+  flex: 1 1 auto !important;
+  height: calc(100dvh - 118px) !important;
+  min-height: 620px !important;
+}
+
+/*
+ * Blank while packed/closed. The user does not need an instructional
+ * empty-state panel competing with the folder desk.
+ */
+.closedContents {
+  display: none !important;
+}
+
+.contentsColumn {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.contentsBody {
+  flex: 1 1 auto !important;
+  min-height: calc(100dvh - 128px) !important;
+  padding-top: 14px !important;
+}
+
+@media (max-width: 1120px) {
+  .workspace {
+    min-height: calc(100dvh - 108px) !important;
+  }
+
+  .deckViewport {
+    height: calc(100dvh - 118px) !important;
+    min-height: 600px !important;
+  }
+
+  .contentsBody {
+    min-height: calc(100dvh - 128px) !important;
+  }
+}
+
+/* WF SERVICES EDGE-TO-EDGE DESK END */
+
+/* WF SERVICES FIXED SCREEN START */
+
+.workspace {
+  height: calc(100dvh - 170px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.deckColumn,
+.contentsColumn {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.deckViewport {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+}
+
+.contentsBody {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+/* WF SERVICES FIXED SCREEN END */
+
+/* WF SERVICE MODAL FIX START */
+
+.modalLayer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  display: grid !important;
+  place-items: center !important;
+  pointer-events: auto !important;
+  isolation: isolate;
+}
+
+.modalBackdrop {
+  pointer-events: auto !important;
+}
+
+.serviceDialog {
+  pointer-events: auto !important;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalBackdropOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes serviceDialogIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(.965);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes serviceDialogOut {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(.975);
+  }
+}
+
+/* WF SERVICE MODAL FIX END */
+
+/* WF SERVICE CLICK LAYER FIX START */
+
+.contentsColumn {
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+.contentsBody {
+  position: relative !important;
+  z-index: 30 !important;
+  pointer-events: auto !important;
+}
+
+.serviceFilter {
+  position: relative !important;
+  z-index: 31 !important;
+  pointer-events: auto !important;
+}
+
+.serviceList {
+  position: relative !important;
+  z-index: 40 !important;
+  pointer-events: auto !important;
+}
+
+.serviceList > li {
+  position: relative !important;
+  z-index: 41 !important;
+  pointer-events: auto !important;
+}
+
+.serviceRow {
+  position: relative !important;
+  z-index: 42 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.serviceRow * {
+  pointer-events: none !important;
+}
+
+/* Keep folder hit targets confined to the folder deck only. */
+.deckColumn {
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+.sideFolderHit {
+  z-index: 50;
+}
+
+/* WF SERVICE CLICK LAYER FIX END */
+
+/* WF SERVICES RIGHT PANEL START */
+
+.contentsColumn {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.servicePanelHeader {
+  flex: 0 0 auto;
+  min-height: 74px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 7px 4px 16px;
+  border-bottom: 1px solid rgba(0, 13, 81, .09);
+}
+
+.servicePanelHeader h2 {
+  margin: 0;
+  color: #000d51;
+  font-family:
+    "Sora Variable",
+    Sora,
+    Inter,
+    sans-serif;
+  font-size: clamp(20px, 1.65vw, 27px);
+  line-height: 1.08;
+  font-weight: 760;
+  letter-spacing: -.035em;
+}
+
+.servicePanelHeader span {
+  flex: 0 0 auto;
+  padding-bottom: 2px;
+  color: #9a741b;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.panelActions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.newServiceLink {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 1px solid #000d51;
+  border-radius: 9px;
+  background: #000d51;
+  color: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgb(0 13 81 / 14%);
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.newServiceLink:hover {
+  background: #001a73;
+  box-shadow: 0 5px 14px rgb(0 13 81 / 18%);
+}
+
+.newServiceLink:active {
+  transform: scale(0.98);
+}
+
+.newServiceLink:focus-visible {
+  outline: 2px solid #000d51;
+  outline-offset: 2px;
+}
+
+.newServiceLink svg {
+  width: 14px;
+  height: 14px;
+}
+
+.emptyNewService {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border: 1px solid #000d51;
+  border-radius: 9px;
+  background: #000d51;
+  color: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.emptyNewService:hover {
+  background: #001a73;
+}
+
+.emptyNewService:focus-visible {
+  outline: 2px solid #000d51;
+  outline-offset: 2px;
+}
+
+.emptyNewService svg {
+  width: 14px;
+  height: 14px;
+}
+
+.closedContents {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+}
+
+.contentsBody {
+  position: relative !important;
+  z-index: 30 !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  padding: 16px 2px 16px !important;
+  border-top: 0 !important;
+  animation:
+    wfServicePanelIn
+    280ms
+    cubic-bezier(.16, 1, .3, 1)
+    both;
+}
+
+.serviceFilter {
+  position: sticky !important;
+  z-index: 35 !important;
+  top: 0;
+  background: #fff;
+}
+
+.serviceList {
+  position: relative !important;
+  z-index: 40 !important;
+  pointer-events: auto !important;
+}
+
+.serviceList > li {
+  position: relative !important;
+  pointer-events: auto !important;
+}
+
+.serviceRow {
+  position: relative !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.serviceRow * {
+  pointer-events: none !important;
+}
+
+@keyframes wfServicePanelIn {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contentsBody,
+  .serviceList > li {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* WF SERVICES RIGHT PANEL END */
+
+/* WF SERVICES CLEAN CARDS + FOLDER SCALE START */
+
+/* ----------------------------------------------------------
+   Folder deck only: make browser 100% resemble the approved
+   ~90% folder sizing without shrinking the shell/right panel.
+   The individual CSS scale property composes with the existing
+   transform-driven carousel animation.
+   ---------------------------------------------------------- */
+
+.folderSlot {
+  scale: .90 !important;
+  transform-origin: center center !important;
+}
+
+/* ----------------------------------------------------------
+   Right-side service list: title + attached price only.
+   Existing click handler remains untouched, so tapping a card
+   still opens the service detail modal and Edit service action.
+   ---------------------------------------------------------- */
+
+.serviceList {
+  display: grid !important;
+  gap: 11px !important;
+  margin: 0 !important;
+  padding: 4px 2px 18px !important;
+}
+
+.serviceList > li {
+  width: 100%;
+}
+
+/* Remove 01 / 02 / 03 ... */
+.serviceNumber {
+  display: none !important;
+}
+
+/* Remove list-level description/summary text. */
+.serviceCopy small {
+  display: none !important;
+}
+
+.serviceRow {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 64px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  padding: 12px 104px 12px 16px !important;
+
+  border: 1px solid #dfe4ed !important;
+  border-radius: 10px !important;
+
+  background: #ffffff !important;
+  color: #111827 !important;
+
+  overflow: hidden !important;
+  cursor: pointer !important;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 180ms ease,
+    background-color 160ms ease,
+    transform 140ms ease !important;
+}
+
+.serviceRow:hover {
+  padding-left: 16px !important;
+  border-color: #ccb060 !important;
+  background: #fffdf7 !important;
+  box-shadow:
+    0 8px 22px rgba(0, 13, 81, .055) !important;
+  transform: translateY(-1px);
+}
+
+.serviceRow:active {
+  transform: scale(.992);
+}
+
+.serviceRow:focus-visible {
+  outline: 2px solid rgba(0, 13, 81, .30) !important;
+  outline-offset: 2px !important;
+}
+
+.serviceCopy {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.serviceCopy strong {
+  display: block !important;
+  margin: 0 !important;
+
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+
+  color: #101a45 !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  font-weight: 740 !important;
+  letter-spacing: -.012em !important;
+}
+
+/* Price tag physically attached to the card's right border. */
+.servicePrice {
+  position: absolute !important;
+  top: -1px !important;
+  right: -1px !important;
+  bottom: -1px !important;
+
+  min-width: 88px !important;
+
+  display: grid !important;
+  place-items: center !important;
+
+  padding: 0 13px !important;
+
+  border-left: 1px solid #dfc477 !important;
+  border-radius: 0 10px 10px 0 !important;
+
+  background: #fff7dc !important;
+  color: #000d51 !important;
+
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 820 !important;
+  white-space: nowrap !important;
+
+  transition:
+    background-color 160ms ease,
+    color 160ms ease !important;
+}
+
+.serviceRow:hover .servicePrice {
+  background: #f8e8b5 !important;
+  color: #000d51 !important;
+}
+
+/* The attached price tag replaces the old row arrow. */
+.serviceRow > svg {
+  display: none !important;
+}
+
+@media (max-width: 1120px) {
+  .folderSlot {
+    scale: .88 !important;
+  }
+
+  .serviceRow {
+    min-height: 60px !important;
+    padding-right: 94px !important;
+  }
+
+  .servicePrice {
+    min-width: 80px !important;
+    padding: 0 10px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serviceRow,
+  .servicePrice {
+    transition: none !important;
+  }
+}
+
+/* WF SERVICES CLEAN CARDS + FOLDER SCALE END */
+
+/* WF SERVICES FOLDER VERTICAL FIT START */
+
+/*
+ * Browser 90% gives the deck more effective vertical room.
+ * At browser 100%, compensate by lifting only the folder stack
+ * slightly upward so the lower neighboring folder remains fully visible.
+ */
+.folderSlot {
+  top: 46.5% !important;
+}
+
+/* WF SERVICES FOLDER VERTICAL FIT END */
+
+/* WF SERVICE ROW MINIMAL START */
+
+/* ----------------------------------------------------------
+   Right-side service list ONLY.
+   Replaces the earlier bordered price-card treatment with a
+   quiet three-part row:
+
+     [icon] [title + short description]            [$price]
+
+   Folder deck, carousel, animations and workspace layout are
+   untouched: every selector below is scoped to the service
+   list inside the right-hand contents panel.
+   ---------------------------------------------------------- */
+
+.serviceList {
+  display: grid !important;
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 4px 2px 18px !important;
+}
+
+.serviceRow {
+  min-height: 0 !important;
+
+  display: grid !important;
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto !important;
+  align-items: center !important;
+  gap: 16px !important;
+
+  padding: 15px 8px 15px 4px !important;
+
+  border: 0 !important;
+  border-bottom:
+    1px solid
+    rgba(0, 13, 81, .07) !important;
+  border-radius: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+
+  overflow: visible !important;
+
+  transition:
+    background-color 150ms ease !important;
+}
+
+.serviceList > li:last-child .serviceRow {
+  border-bottom: 0 !important;
+}
+
+.serviceRow:hover {
+  padding-left: 4px !important;
+  border-color:
+    rgba(0, 13, 81, .12) !important;
+  background:
+    rgba(0, 13, 81, .022) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.serviceRow:active {
+  transform: none !important;
+}
+
+.serviceRow:focus-visible {
+  outline:
+    2px solid
+    rgba(0, 13, 81, .30) !important;
+  outline-offset: -2px !important;
+}
+
+/* Standalone icon: no border, circle, square, badge or fill. */
+.serviceIcon {
+  flex: 0 0 auto;
+  display: grid !important;
+  place-items: center !important;
+  width: 30px;
+  height: 38px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: #101a45 !important;
+}
+
+.serviceIcon svg {
+  display: block !important;
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.65;
+}
+
+.serviceCopy {
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.serviceCopy strong {
+  display: block !important;
+  margin: 0 !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  color: #101a45 !important;
+  font-size: 13.5px !important;
+  line-height: 1.32 !important;
+  font-weight: 700 !important;
+  letter-spacing: -.012em !important;
+}
+
+/* Short secondary description, one line with ellipsis. */
+.serviceCopy small {
+  display: block !important;
+  margin-top: 3px !important;
+
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
+  color: #7b8296 !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  font-weight: 450 !important;
+}
+
+/* Plain right-aligned navy price: no pill, badge, box or tag. */
+.servicePrice {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  min-width: 0 !important;
+
+  display: block !important;
+  place-items: normal !important;
+
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  background: none !important;
+  box-shadow: none !important;
+
+  color: #000d51 !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  text-align: right !important;
+
+  transition: none !important;
+}
+
+.serviceRow:hover .servicePrice {
+  background: none !important;
+  color: #000d51 !important;
+}
+
+@media (max-width: 1120px) {
+  .serviceRow {
+    min-height: 0 !important;
+    gap: 13px !important;
+    padding: 13px 6px 13px 4px !important;
+  }
+
+  .servicePrice {
+    min-width: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .serviceRow {
+    grid-template-columns:
+      auto
+      minmax(0, 1fr)
+      auto !important;
+    gap: 12px !important;
+  }
+
+  .serviceIcon {
+    width: 26px;
+  }
+
+  .serviceIcon svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serviceRow {
+    transition: none !important;
+  }
+}
+
+/* WF SERVICE ROW MINIMAL END */
+
+/* WF SERVICE ROW LINELESS + WHITE MODAL START */
+
+/* ----------------------------------------------------------
+   1. Service list: no separators at all.
+   Rhythm now comes from whitespace; hover is a soft tint on a
+   rounded block with no visible border.
+   ---------------------------------------------------------- */
+
+.serviceList {
+  gap: 4px !important;
+  padding: 6px 0 20px !important;
+}
+
+.serviceRow {
+  padding: 13px 12px !important;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.serviceList > li:last-child .serviceRow {
+  border-bottom: 0 !important;
+}
+
+.serviceRow:hover {
+  padding-left: 12px !important;
+  border: 0 !important;
+  background:
+    rgba(0, 13, 81, .035) !important;
+  box-shadow: none !important;
+}
+
+.serviceRow:focus-visible {
+  outline-offset: 1px !important;
+}
+
+/* ----------------------------------------------------------
+   2. Service detail modal: white sheet, not a navy box.
+   Structure and behaviour are unchanged - backdrop click,
+   Escape, and Edit service all still work.
+   ---------------------------------------------------------- */
+
+.modalBackdrop {
+  background:
+    rgba(6, 13, 40, .46) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.serviceDialog {
+  border:
+    1px solid
+    rgba(17, 26, 62, .10) !important;
+  border-radius: 13px !important;
+  color: #1c2340 !important;
+  background: #fff !important;
+  box-shadow:
+    0 26px 70px rgba(6, 13, 40, .22),
+    0 2px 8px rgba(6, 13, 40, .06) !important;
+}
+
+.dialogHeader {
+  padding: 24px 26px 19px !important;
+  border-bottom:
+    1px solid
+    rgba(17, 26, 62, .08) !important;
+}
+
+/* Small restrained gold eyebrow. */
+.dialogHeader span {
+  color: #9a741b !important;
+}
+
+.dialogHeader h2 {
+  color: #000d51 !important;
+  font-size:
+    clamp(20px, 2.4vw, 28px) !important;
+}
+
+.dialogClose {
+  width: 34px !important;
+  height: 34px !important;
+  border:
+    1px solid
+    rgba(17, 26, 62, .12) !important;
+  color: #4a5270 !important;
+  background: #fff !important;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.dialogClose:hover {
+  border-color:
+    rgba(17, 26, 62, .24) !important;
+  color: #000d51 !important;
+  background: #f5f7fb !important;
+}
+
+.dialogFacts {
+  border-bottom:
+    1px solid
+    rgba(17, 26, 62, .08) !important;
+}
+
+.dialogFacts > div {
+  padding: 17px 26px !important;
+  border-right:
+    1px solid
+    rgba(17, 26, 62, .08) !important;
+}
+
+.dialogFacts > div:last-child {
+  border-right: 0 !important;
+}
+
+.dialogFacts span {
+  color: #7b8296 !important;
+  font-size: 9.5px !important;
+}
+
+.dialogFacts strong {
+  color: #000d51 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.dialogFlags {
+  padding: 18px 26px 0 !important;
+}
+
+.dialogFlags span {
+  min-height: 25px !important;
+  padding: 0 10px !important;
+  border:
+    1px solid
+    rgba(17, 26, 62, .11) !important;
+  color: #3b4361 !important;
+  background: #f6f8fc !important;
+  font-size: 9.5px !important;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.dialogDescription {
+  padding: 18px 26px 26px !important;
+  color: #3c4360 !important;
+  font-size: 13px !important;
+  line-height: 1.72 !important;
+}
+
+.dialogDescription a {
+  color: #000d51 !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dialogDescription :is(strong, b) {
+  color: #101a45;
+}
+
+.dialogFooter {
+  padding: 16px 26px 20px !important;
+  border-top:
+    1px solid
+    rgba(17, 26, 62, .08) !important;
+}
+
+.dialogEdit {
+  min-height: 38px !important;
+  padding: 0 16px !important;
+  border:
+    1px solid #000d51 !important;
+  border-radius: 7px !important;
+  color: #fff !important;
+  background: #000d51 !important;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.dialogEdit:hover {
+  border-color: #142069 !important;
+  background: #142069 !important;
+}
+
+/* WF SERVICE ROW LINELESS + WHITE MODAL END */
+
+/* WF SERVICE CREATE PROJECT BUTTON START */
+
+/*
+ * Only the detail modal footer is affected.
+ * The folder carousel / folder artwork is intentionally untouched.
+ */
+.dialogFooter {
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.dialogCreateProject {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 38px !important;
+  padding: 0 16px !important;
+  border: 1px solid #d7a928 !important;
+  border-radius: 8px !important;
+  background: #d7a928 !important;
+  color: #000d51 !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  text-decoration: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease !important;
+}
+
+.dialogCreateProject:hover {
+  background: #edc54d !important;
+  border-color: #edc54d !important;
+  color: #000d51 !important;
+  transform: translateY(-1px) !important;
+}
+
+.dialogCreateProject:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, .88) !important;
+  outline-offset: 3px !important;
+}
+
+/* WF SERVICE CREATE PROJECT BUTTON END */

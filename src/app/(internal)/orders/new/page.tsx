@@ -8,8 +8,23 @@ import { getInternalContext } from "../../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "New Project" };
 
-export default async function NewProjectPage() {
+export default async function NewProjectPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    serviceId?: string | string[];
+  }>;
+}) {
   const context = await getInternalContext();
+
+  const params = searchParams
+    ? await searchParams
+    : {};
+
+  const requestedServiceId =
+    typeof params.serviceId === "string"
+      ? params.serviceId
+      : null;
 
   if (!context.user.projects.create) {
     return (
@@ -34,6 +49,15 @@ export default async function NewProjectPage() {
       context.services.catalog.listFolders(),
       context.services.catalog.listAssignees(),
     ]);
+
+    const initialServiceId =
+      requestedServiceId &&
+      services.some(
+        (service) =>
+          service.id === requestedServiceId,
+      )
+        ? requestedServiceId
+        : null;
 
     if (clients.length === 0) {
       return (
@@ -75,6 +99,7 @@ export default async function NewProjectPage() {
       >
         <ProjectForm
           mode="create"
+          initialServiceId={initialServiceId}
           clients={clients}
           services={services}
           folders={folders}

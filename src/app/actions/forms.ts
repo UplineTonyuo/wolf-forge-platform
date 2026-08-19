@@ -82,7 +82,10 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
   try {
     const assignment = await context.services.forms.assign(formId, input, context.actor);
     revalidatePath("/forms");
-    revalidatePath("/account/forms");
+    revalidatePath("/account/onboarding");
+    // The portal rail counts outstanding onboarding items, so a new assignment
+    // has to invalidate the shell as well as the page.
+    revalidatePath("/account");
     return { ok: true, data: { id: assignment.id } };
   } catch (error) {
     return failure(error);
@@ -93,7 +96,8 @@ export async function submitAssignedFormAction(input: SubmitFormInput): Promise<
   const context = await getClientContext();
   try {
     const submission = await context.services.forms.submit(input, context.actor);
-    revalidatePath("/account/forms");
+    revalidatePath("/account/onboarding");
+    revalidatePath("/account");
     return { ok: true, data: { id: submission.id } };
   } catch (error) {
     return failure(error);

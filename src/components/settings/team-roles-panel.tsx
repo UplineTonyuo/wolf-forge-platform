@@ -4,11 +4,10 @@ import {
   Check,
   ChevronRight,
   LoaderCircle,
-  LockKeyhole,
-  MoreHorizontal,
   Search,
   ShieldCheck,
   SlidersHorizontal,
+  UserCog,
   UserPlus,
   UsersRound,
 } from "lucide-react";
@@ -21,6 +20,7 @@ import type {
   PermissionPresetGrant,
   PermissionPresetOverview,
 } from "../../domain/permissions/schema";
+import { AccountAvatar } from "../ui/account-avatar";
 import styles from "./team-roles-panel.module.css";
 
 type View = "team" | "roles";
@@ -68,15 +68,6 @@ function categoryHeading(category: string) {
   );
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 function roleClass(presetKey: string) {
   if (presetKey === "owner") {
     return styles.roleOwner;
@@ -119,6 +110,64 @@ function blockedReason(
   }
 
   return null;
+}
+
+type RoleRowAffordance = "view" | "select";
+
+/**
+ * One preset in the role system. Used both for the Team view Role coverage
+ * companion panel and for the Roles & permissions rail so a role reads the
+ * same in both modes. Renders only real read-model data: name, member count,
+ * permission coverage, and the "X of Y permissions" count.
+ */
+function RoleRow({
+  preset,
+  active = false,
+  affordance,
+  onClick,
+}: {
+  preset: PermissionPresetOverview;
+  active?: boolean;
+  affordance: RoleRowAffordance;
+  onClick: () => void;
+}) {
+  const percent = preset.total_permission_count > 0
+    ? Math.round(
+      (preset.granted_permission_count / preset.total_permission_count) * 100,
+    )
+    : 0;
+
+  return (
+    <button
+      type="button"
+      className={active ? styles.roleRowActive : styles.roleRow}
+      aria-pressed={active ? true : undefined}
+      onClick={onClick}
+    >
+      <span className={styles.roleRowName}>{preset.preset_name}</span>
+
+      <span className={styles.roleRowCount}>
+        {preset.member_count} {preset.member_count === 1 ? "member" : "members"}
+      </span>
+
+      {affordance === "view" ? (
+        <span className={styles.roleRowGo}>
+          View permissions
+          <ChevronRight size={14} aria-hidden="true" />
+        </span>
+      ) : (
+        <ChevronRight size={15} className={styles.roleRowSelect} aria-hidden="true" />
+      )}
+
+      <span className={styles.roleRowMeter} aria-hidden="true">
+        <span style={{ width: `${percent}%` }} />
+      </span>
+
+      <small className={styles.roleRowPerms}>
+        {preset.granted_permission_count} of {preset.total_permission_count} permissions
+      </small>
+    </button>
+  );
 }
 
 export function TeamRolesPanel({
@@ -265,11 +314,6 @@ export function TeamRolesPanel({
     <section className={styles.page}>
       <header className={styles.pageHeader}>
         <div>
-          <div className={styles.eyebrow}>
-            <LockKeyhole size={13} aria-hidden="true" />
-            Access control
-          </div>
-
           <h1>Team &amp; Roles</h1>
 
           <p>
@@ -278,52 +322,67 @@ export function TeamRolesPanel({
         </div>
       </header>
 
-      <div className={styles.summaryStrip}>
-        <div>
-          <strong>{members.length}</strong>
-          <span>Members</span>
-        </div>
+      <div className={styles.summaryMeta}>
+        <div className={styles.summaryStats}>
+          <span className={styles.summaryStat}>
+            <strong>{members.length}</strong>
+            <span>Members</span>
+          </span>
 
-        <div>
-          <strong>{presets.length}</strong>
-          <span>Roles</span>
-        </div>
+          <span className={styles.summaryDot} aria-hidden="true">•</span>
 
-        <div>
-          <strong>{ownerCount}</strong>
-          <span>Owner</span>
-        </div>
+          <span className={styles.summaryStat}>
+            <strong>{presets.length}</strong>
+            <span>Roles</span>
+          </span>
 
-        <div className={styles.summaryNote}>
-          <ShieldCheck size={15} aria-hidden="true" />
-          Role changes apply immediately and are audited.
+          <span className={styles.summaryDot} aria-hidden="true">•</span>
+
+          <span className={styles.summaryStat}>
+            <strong>{ownerCount}</strong>
+            <span>Owner</span>
+          </span>
         </div>
       </div>
 
-      <div className={styles.viewBar}>
-        <button
-          type="button"
-          className={view === "team" ? styles.viewActive : styles.viewButton}
-          onClick={() => {
-            setView("team");
-            setNotice(null);
-          }}
-        >
-          <UsersRound size={15} aria-hidden="true" />
-          Team directory
-        </button>
+      <div className={styles.viewToolbar}>
+        <div className={styles.segmentBar}>
+          <button
+            type="button"
+            className={view === "team" ? styles.segmentActive : styles.segment}
+            aria-pressed={view === "team"}
+            onClick={() => {
+              setView("team");
+              setNotice(null);
+            }}
+          >
+            <UsersRound size={15} aria-hidden="true" />
+            Team directory
+          </button>
 
-        <button
-          type="button"
-          className={view === "roles" ? styles.viewActive : styles.viewButton}
-          onClick={() => {
-            setView("roles");
-            setNotice(null);
-          }}
-        >
-          <SlidersHorizontal size={15} aria-hidden="true" />
-          Roles &amp; permissions
-        </button>
+          <button
+            type="button"
+            className={view === "roles" ? styles.segmentActive : styles.segment}
+            aria-pressed={view === "roles"}
+            onClick={() => {
+              setView("roles");
+              setNotice(null);
+            }}
+          >
+            <SlidersHorizontal size={15} aria-hidden="true" />
+            Roles &amp; permissions
+          </button>
+        </div>
+
+        {canAddMembers ? (
+          <Link
+            href="/accounts/member/new"
+            className={styles.addUserButton}
+          >
+            <UserPlus size={15} aria-hidden="true" />
+            Add user
+          </Link>
+        ) : null}
       </div>
 
       {notice ? (
@@ -340,31 +399,21 @@ export function TeamRolesPanel({
         <div className={styles.teamWorkspace}>
           <section className={styles.directoryPanel}>
             <div className={styles.panelHeader}>
-              <div>
+              <div className={styles.panelHeading}>
                 <h2>Team directory</h2>
                 <p>Wolf Forge workspace members.</p>
               </div>
 
-              {canAddMembers ? (
-                <Link
-                  href="/accounts/member/new"
-                  className={styles.directoryAddButton}
-                >
-                  <UserPlus size={14} aria-hidden="true" />
-                  Add user
-                </Link>
-              ) : null}
-            </div>
+              <div className={styles.searchField}>
+                <Search size={15} aria-hidden="true" />
 
-            <div className={styles.searchRow}>
-              <Search size={15} aria-hidden="true" />
-
-              <input
-                type="search"
-                placeholder="Search people, email, or role"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
+                <input
+                  type="search"
+                  placeholder="Search people, email, or role"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
             </div>
 
             <div className={styles.teamList}>
@@ -374,7 +423,12 @@ export function TeamRolesPanel({
 
                 return (
                   <div className={styles.teamRow} key={member.profile_id}>
-                    <div className={styles.avatar}>{initials(name)}</div>
+                    <AccountAvatar
+                      name={name}
+                      avatarUrl={member.avatar_url}
+                      size={36}
+                      shape="rounded"
+                    />
 
                     <div className={styles.memberCopy}>
                       <strong>{name}</strong>
@@ -391,13 +445,14 @@ export function TeamRolesPanel({
 
                     <button
                       type="button"
-                      className={styles.moreButton}
+                      className={styles.roleChangeButton}
                       aria-label={`Change role for ${name}`}
                       title={blocked ?? `Change role for ${name}`}
                       disabled={blocked !== null}
                       onClick={() => openRoleChange(member)}
                     >
-                      <MoreHorizontal size={17} />
+                      <UserCog size={15} aria-hidden="true" />
+                      <span className={styles.roleChangeLabel}>Change role</span>
                     </button>
                   </div>
                 );
@@ -413,55 +468,23 @@ export function TeamRolesPanel({
             </div>
           </section>
 
-          <aside className={styles.roleMap}>
-            <div className={styles.roleMapHeader}>
+          <aside className={styles.coveragePanel}>
+            <div className={styles.coverageHeader}>
               <div>
-                <h2>Role map</h2>
+                <h2>Role coverage</h2>
                 <p>Access presets and current assignment.</p>
               </div>
-
-              <ShieldCheck size={18} aria-hidden="true" />
             </div>
 
-            <div className={styles.roleMapList}>
-              {presets.map((preset) => {
-                const percent = preset.total_permission_count > 0
-                  ? Math.round(
-                    (preset.granted_permission_count / preset.total_permission_count) * 100,
-                  )
-                  : 0;
-
-                return (
-                  <button
-                    type="button"
-                    key={preset.preset_key}
-                    className={styles.roleMapRow}
-                    onClick={() => openRole(preset.preset_key)}
-                  >
-                    <div className={styles.roleMapTop}>
-                      <div>
-                        <strong>{preset.preset_name}</strong>
-
-                        <span>
-                          {preset.member_count}{" "}
-                          {preset.member_count === 1 ? "member" : "members"}
-                        </span>
-                      </div>
-
-                      <ChevronRight size={15} />
-                    </div>
-
-                    <div className={styles.accessMeter}>
-                      <span style={{ width: `${percent}%` }} />
-                    </div>
-
-                    <small>
-                      {preset.granted_permission_count} of{" "}
-                      {preset.total_permission_count} permissions
-                    </small>
-                  </button>
-                );
-              })}
+            <div className={styles.roleRowList}>
+              {presets.map((preset) => (
+                <RoleRow
+                  key={preset.preset_key}
+                  preset={preset}
+                  affordance="view"
+                  onClick={() => openRole(preset.preset_key)}
+                />
+              ))}
             </div>
           </aside>
         </div>
@@ -472,32 +495,20 @@ export function TeamRolesPanel({
               <span>Role presets</span>
             </div>
 
-            {presets.map((preset) => {
-              const active = preset.preset_key === selected?.preset_key;
-
-              return (
-                <button
-                  type="button"
+            <div className={styles.roleRowList}>
+              {presets.map((preset) => (
+                <RoleRow
                   key={preset.preset_key}
-                  className={active ? styles.roleRailActive : styles.roleRailButton}
+                  preset={preset}
+                  active={preset.preset_key === selected?.preset_key}
+                  affordance="select"
                   onClick={() => {
                     setSelectedPreset(preset.preset_key);
                     setNotice(null);
                   }}
-                >
-                  <div>
-                    <strong>{preset.preset_name}</strong>
-
-                    <span>
-                      {preset.member_count}{" "}
-                      {preset.member_count === 1 ? "member" : "members"}
-                    </span>
-                  </div>
-
-                  <ChevronRight size={15} />
-                </button>
-              );
-            })}
+                />
+              ))}
+            </div>
           </aside>
 
           <section className={styles.permissionPanel}>

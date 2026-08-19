@@ -1,4 +1,5 @@
 export type NavigationItemId =
+  | "dashboard"
   | "projects"
   | "tickets"
   | "clients"
@@ -6,6 +7,7 @@ export type NavigationItemId =
   | "invoices"
   | "subscriptions"
   | "coupons"
+  | "investment_intent"
   | "services"
   | "forms"
   | "team"
@@ -18,12 +20,17 @@ export type NavigationItem = {
 };
 
 export type NavigationCategory = {
-  id: "activity" | "billing" | "marketing" | "setup";
+  id: "overview" | "activity" | "billing" | "marketing" | "setup";
   label: string;
   items: NavigationItem[];
 };
 
 export const navigationCategories: NavigationCategory[] = [
+  {
+    id: "overview",
+    label: "Overview",
+    items: [{ id: "dashboard", label: "Dashboard", route: "/dashboard" }],
+  },
   {
     id: "activity",
     label: "Activity",
@@ -45,7 +52,10 @@ export const navigationCategories: NavigationCategory[] = [
   {
     id: "marketing",
     label: "Marketing",
-    items: [{ id: "coupons", label: "Coupons", route: "/coupons" }],
+    items: [
+      { id: "coupons", label: "Coupons", route: "/coupons" },
+      { id: "investment_intent", label: "Investment Intent", route: "/investment-intent" },
+    ],
   },
   {
     id: "setup",

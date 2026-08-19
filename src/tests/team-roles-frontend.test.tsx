@@ -45,6 +45,7 @@ const members: InternalMember[] = [
     override_count: 0,
     is_self: false,
     created_at: "2026-08-01T00:00:00Z",
+    avatar_url: "http://127.0.0.1:54321/storage/v1/object/public/profile-avatars/50000000-0000-4000-8000-000000000001/photo.webp",
   },
   {
     profile_id: "50000000-0000-4000-8000-000000000002",
@@ -56,6 +57,7 @@ const members: InternalMember[] = [
     override_count: 0,
     is_self: true,
     created_at: "2026-08-02T00:00:00Z",
+    avatar_url: null,
   },
   {
     profile_id: "50000000-0000-4000-8000-000000000003",
@@ -67,6 +69,7 @@ const members: InternalMember[] = [
     override_count: 1,
     is_self: false,
     created_at: "2026-08-03T00:00:00Z",
+    avatar_url: null,
   },
 ];
 

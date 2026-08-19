@@ -1,31 +1,8 @@
-.viewTabs {
-  display: flex;
-  gap: 4px;
-  width: fit-content;
-  margin: 6px 0 16px;
-  padding: 3px;
-  border: 1px solid var(--wf-border);
-  border-radius: 6px;
-  background: #f7f8fa;
-}
-
-.viewTabs a {
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 13px;
-  border-radius: 4px;
-  color: var(--wf-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.viewTabs a.activeTab {
-  color: var(--wf-navy);
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 13, 81, 0.08);
-}
+/*
+ * The Active/Archived tabs that used to live here were replaced by the shared
+ * ListToolbar in components/ui, so Coupons and Invoices present one filter
+ * design instead of two near-identical local copies.
+ */
 
 .tableWrap {
   margin-top: 0;
@@ -336,14 +313,55 @@
 }
 
 .archiveDialog {
+  position: fixed;
+  inset: 0;
   width: min(470px, calc(100vw - 32px));
+  height: fit-content;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  overflow-y: auto;
   padding: 0;
   border: 0;
   border-radius: 9px;
-  box-shadow: 0 24px 80px rgba(0, 13, 81, 0.28);
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgb(0 13 81 / 28%);
+  animation: archiveDialogIn 170ms ease;
 }
 
-.archiveDialog::backdrop { background: rgba(0, 8, 48, 0.56); backdrop-filter: blur(2px); }
+.archiveDialog::backdrop {
+  background: rgb(0 8 48 / 56%);
+  backdrop-filter: blur(2px);
+  animation: archiveBackdropIn 170ms ease;
+}
+
+@keyframes archiveDialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes archiveBackdropIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archiveDialog,
+  .archiveDialog::backdrop {
+    animation: none;
+  }
+}
 .archiveDialogBody { padding: 26px; }
 .dialogIcon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: #8d3333; background: #fbefef; }
 .dialogIcon svg { width: 18px; height: 18px; }
@@ -360,7 +378,6 @@
 }
 
 @media (max-width: 767px) {
-  .viewTabs { margin-top: 0; }
   .form { margin-top: 0; }
   .formSection { grid-template-columns: 1fr; gap: 16px; padding: 22px 0 24px; }
   .fields { grid-template-columns: 1fr; }

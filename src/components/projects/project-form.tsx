@@ -45,6 +45,7 @@ const initialProjectFormState: ProjectFormState = {
 export function ProjectForm({
   mode,
   project,
+  initialServiceId,
   clients,
   services,
   folders,
@@ -53,6 +54,7 @@ export function ProjectForm({
 }: {
   mode: "create" | "edit";
   project?: OrderRow;
+  initialServiceId?: string | null;
   clients: CompanyRow[];
   services: ServiceRow[];
   folders: ServiceFolderRow[];
@@ -101,7 +103,7 @@ export function ProjectForm({
           <ProjectServicePicker
             folders={folders}
             services={services}
-            initialServiceId={project?.service_id ?? null}
+            initialServiceId={project?.service_id ?? initialServiceId ?? null}
             error={fieldError("service_id")}
           />
         </div>

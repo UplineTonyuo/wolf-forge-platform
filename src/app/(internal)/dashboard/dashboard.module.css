@@ -1,0 +1,977 @@
+.page {
+  --dash-navy: #000d51;
+  --dash-gold: #c79a22;
+  --dash-border: rgba(13, 29, 84, 0.11);
+
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+  padding: 20px 18px 34px 20px;
+  color: #101b4d;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0;
+  animation: heroIn 200ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.heroCopy {
+  min-width: 0;
+}
+
+/*
+ * Compact reporting-period control. The command-bar calendar icon now opens the
+ * Subscription calendar, so the metric window is selected here without adding a
+ * second permanent reporting card.
+ */
+.rangeFilter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  padding: 3px;
+  border: 1px solid var(--dash-border);
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+.rangeFilter a,
+.rangeFilter span {
+  padding: 6px 13px;
+  border-radius: 999px;
+  color: #7c849c;
+  font-size: 11.5px;
+  font-weight: 560;
+  letter-spacing: .01em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms cubic-bezier(.2,.8,.2,1);
+}
+
+/*
+ * Colour and border feedback stays available to every input type. Movement is
+ * gated to fine pointers further down, so a tap never leaves a card lifted.
+ */
+.rangeFilter a:hover {
+  color: var(--dash-navy);
+  background: rgba(0,13,81,.045);
+}
+
+.rangeFilter a:active {
+  transform: scale(.96);
+}
+
+.rangeFilter a[data-active="true"],
+.rangeFilter span[data-active="true"] {
+  color: #fff;
+  background: linear-gradient(140deg, #0b1d5c, var(--dash-navy));
+  box-shadow: 0 6px 16px rgba(0,13,81,.18);
+}
+
+.hero h1 {
+  margin: 0;
+  color: var(--dash-navy);
+  font-size: clamp(34px, 3.15vw, 47px);
+  font-weight: 620;
+  line-height: .96;
+  letter-spacing: -.048em;
+}
+
+.hero p {
+  max-width: 640px;
+  margin: 10px 0 0;
+  color: #7c849c;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricCard {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 166px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border: 1px solid var(--dash-border);
+  border-radius: 15px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.99), rgba(250,251,253,.96));
+  box-shadow:
+    0 8px 28px rgba(0,13,81,.035),
+    inset 0 1px 0 #fff;
+  animation: metricIn 230ms cubic-bezier(.2,.8,.2,1) both;
+  transition:
+    transform 190ms cubic-bezier(.2,.8,.2,1),
+    box-shadow 190ms ease,
+    border-color 190ms ease;
+}
+
+.metricCard:nth-child(1) { animation-delay: 30ms; }
+.metricCard:nth-child(2) { animation-delay: 60ms; }
+.metricCard:nth-child(3) { animation-delay: 90ms; }
+.metricCard:nth-child(4) { animation-delay: 120ms; }
+
+.metricCard::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0,13,81,.48),
+    transparent
+  );
+  transform: scaleX(.12);
+  opacity: 0;
+  transition:
+    opacity 190ms ease,
+    transform 300ms cubic-bezier(.2,.8,.2,1);
+}
+
+.metricCard:hover {
+  border-color: rgba(0,13,81,.18);
+  box-shadow:
+    0 16px 42px rgba(0,13,81,.09),
+    inset 0 1px 0 #fff;
+}
+
+.metricCard:hover::after {
+  opacity: 1;
+}
+
+.metricFeatured {
+  border-color: rgba(199,154,34,.32);
+  background:
+    radial-gradient(circle at 105% -10%, rgba(199,154,34,.18), transparent 38%),
+    linear-gradient(180deg, #fffdf7, #fff);
+}
+
+.metricFeatured::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(199,154,34,.88),
+    transparent
+  );
+}
+
+.metricHalo {
+  position: absolute;
+  z-index: -1;
+  top: -54px;
+  right: -40px;
+  width: 126px;
+  height: 126px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(0,13,81,.08),
+    transparent 68%
+  );
+  transform: scale(.8);
+  opacity: .55;
+  transition:
+    transform 300ms cubic-bezier(.2,.8,.2,1),
+    opacity 220ms ease;
+}
+
+.metricFeatured .metricHalo {
+  background: radial-gradient(
+    circle,
+    rgba(199,154,34,.22),
+    transparent 70%
+  );
+}
+
+.metricCard:hover .metricHalo {
+  opacity: .9;
+}
+
+.metricHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metricIcon,
+.panelIcon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--dash-navy);
+  background: rgba(0,13,81,.055);
+  transition:
+    transform 180ms cubic-bezier(.2,.8,.2,1),
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.metricCard:hover .metricIcon {
+  color: #fff;
+  background: var(--dash-navy);
+}
+
+.metricFeatured:hover .metricIcon {
+  color: var(--dash-navy);
+  background: rgba(199,154,34,.16);
+}
+
+.metricArrow {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #b0b5c4;
+  transition:
+    transform 190ms cubic-bezier(.2,.8,.2,1),
+    color 190ms ease,
+    background 190ms ease;
+}
+
+.metricCard:hover .metricArrow {
+  color: var(--dash-navy);
+  background: #f0f2f7;
+}
+
+.metricBody {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.metricLabel {
+  color: #8c93a8;
+  font-size: 9.5px;
+  font-weight: 820;
+  letter-spacing: .075em;
+  text-transform: uppercase;
+}
+
+.metricValue {
+  position: relative;
+  width: fit-content;
+  color: var(--dash-navy);
+  font-size: clamp(28px, 2.35vw, 37px);
+  font-weight: 680;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.metricFooter {
+  display: grid;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 13px;
+}
+
+.deltaPositive,
+.deltaNegative,
+.deltaNeutral {
+  font-size: 9.5px;
+  font-weight: 750;
+}
+
+.deltaPositive { color: #198155; }
+.deltaNegative { color: #bb4553; }
+.deltaNeutral { color: #949bad; }
+
+.metricNote {
+  overflow: hidden;
+  color: #a3a8b7;
+  font-size: 9.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.currencyRail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 13px;
+  border: 1px solid var(--dash-border);
+  border-radius: 11px;
+  background: rgba(250,251,253,.9);
+  color: #8d94a7;
+  font-size: 10px;
+}
+
+.currencyRail > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.currencyRail strong {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--dash-navy);
+  font-size: 11px;
+}
+
+.currencyRail small {
+  color: #a4a9b8;
+  font-size: 8.5px;
+}
+
+.salesPanel,
+.clientPanel,
+.subscriptionPanel {
+  border: 1px solid var(--dash-border);
+  border-radius: 17px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.99), rgba(252,252,254,.97));
+  box-shadow:
+    0 10px 34px rgba(0,13,81,.04),
+    inset 0 1px 0 #fff;
+}
+
+.salesPanel {
+  position: relative;
+  overflow: hidden;
+  min-height: 374px;
+  padding: 19px 19px 15px;
+  animation: panelIn 220ms 40ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.salesPanel::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 180px;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, var(--dash-gold), transparent);
+  opacity: .75;
+}
+
+.panelHead {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.panelTitle {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.panelTitle > div > span,
+.subscriptionHeader > span:last-child {
+  color: #9097aa;
+  font-size: 9.5px;
+  font-weight: 820;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.panelTitle h2 {
+  margin: 5px 0 3px;
+  color: var(--dash-navy);
+  font-size: 25px;
+  font-weight: 680;
+  line-height: 1;
+  letter-spacing: -.035em;
+}
+
+.panelTitle p {
+  margin: 0;
+  color: #9da2b1;
+  font-size: 10px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: #969cad;
+  font-size: 9.5px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--dash-navy);
+  box-shadow: 0 0 0 3px rgba(0,13,81,.06);
+}
+
+.legend strong {
+  color: #7d859a;
+  font-size: 9px;
+  text-transform: capitalize;
+}
+
+.chartViewport {
+  overflow-x: auto;
+  margin-top: 22px;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,13,81,.12) transparent;
+}
+
+.chart {
+  min-width: 720px;
+  height: 278px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+  align-items: end;
+  gap: 6px;
+  padding: 13px 2px 0;
+  border-bottom: 1px solid #e9ebf1;
+  background:
+    repeating-linear-gradient(
+      to top,
+      transparent 0,
+      transparent 53px,
+      rgba(0,13,81,.048) 54px
+    );
+}
+
+.chartColumn {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 32px;
+  gap: 8px;
+}
+
+.chartBlocks {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.chartBlocks span {
+  width: 100%;
+  min-height: 9px;
+  flex: 1 1 0;
+  max-height: 20px;
+  border-radius: 2px;
+  transform-origin: center bottom;
+  animation: blockRise 480ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.blockGhost {
+  background: rgba(0,13,81,.045);
+}
+
+.blockFilled {
+  background: linear-gradient(180deg, #102778, var(--dash-navy));
+  box-shadow: 0 2px 4px rgba(0,13,81,.08);
+}
+
+/* Chart column highlight is fine-pointer only — see the hover block below. */
+
+.chartLabel {
+  overflow: hidden;
+  align-self: center;
+  color: #989eae;
+  font-size: 8px;
+  font-weight: 650;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.zeroChart {
+  position: relative;
+  min-height: 278px;
+  margin-top: 22px;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(
+      to top,
+      transparent 0,
+      transparent 53px,
+      rgba(0,13,81,.045) 54px
+    );
+}
+
+.zeroGrid {
+  position: absolute;
+  inset: 28px 10px 16px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(18px, 1fr));
+  align-items: end;
+  gap: 8px;
+  opacity: .72;
+}
+
+.zeroColumn {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.zeroColumn span {
+  flex: 1 1 0;
+  min-height: 10px;
+  max-height: 18px;
+  border-radius: 2px;
+}
+
+.zeroBlock {
+  background: rgba(0,13,81,.026);
+}
+
+/*
+ * Empty state stays still. The taller blocks are read from their tint alone —
+ * an idle loop here animated the quietest state on the page forever.
+ */
+.zeroBlockActive {
+  background: rgba(0,13,81,.055);
+}
+
+.insightGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(290px, .75fr);
+  gap: 12px;
+}
+
+.clientPanel,
+.subscriptionPanel {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  padding: 19px;
+  animation: panelIn 220ms 60ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.pipeline {
+  display: grid;
+  grid-template-columns: 1fr 34px 1fr 34px 1fr 34px 1fr;
+  align-items: center;
+  gap: 6px;
+  margin-top: 26px;
+}
+
+.pipelineStage {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 14px 13px;
+  border: 1px solid rgba(0,13,81,.07);
+  border-radius: 11px;
+  background: #f8f9fb;
+  transition:
+    transform 180ms cubic-bezier(.2,.8,.2,1),
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.pipelineStage::after {
+  position: absolute;
+  right: -22px;
+  bottom: -28px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  content: "";
+  background: rgba(0,13,81,.035);
+  transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+}
+
+.pipelineStage:hover {
+  border-color: rgba(0,13,81,.13);
+  background: #fff;
+}
+
+.pipelineStage span {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: #9198aa;
+  font-size: 8.5px;
+  font-weight: 810;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.pipelineStage strong {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin-top: 5px;
+  color: var(--dash-navy);
+  font-size: 24px;
+  font-weight: 680;
+}
+
+.pipelineLine {
+  position: relative;
+  height: 1px;
+  overflow: hidden;
+  background: #e2e5ec;
+}
+
+.pipelineLine span {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dash-gold),
+    transparent
+  );
+  /*
+   * The gold connector is a static accent. It used to travel on a 2.8s loop,
+   * which implied live pipeline activity that isn't being reported.
+   */
+  transform: none;
+}
+
+.supportNote {
+  margin: 13px 0 0;
+  color: #a0a5b4;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.softEmpty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  margin-top: 18px;
+  border: 1px dashed rgba(0,13,81,.1);
+  border-radius: 11px;
+  color: #9ca2b2;
+  background: #fafbfc;
+  font-size: 10px;
+  text-align: center;
+}
+
+.subscriptionPanel {
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+}
+
+.subscriptionOrb {
+  position: absolute;
+  z-index: -1;
+  top: -70px;
+  right: -70px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(199,154,34,.18),
+    rgba(0,13,81,.04) 46%,
+    transparent 70%
+  );
+}
+
+.subscriptionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subscriptionHeader .panelIcon {
+  width: 32px;
+  height: 32px;
+}
+
+.subscriptionValue {
+  display: block;
+  margin-top: 18px;
+  color: var(--dash-navy);
+  font-size: 44px;
+  font-weight: 690;
+  line-height: .95;
+  letter-spacing: -.055em;
+}
+
+.subscriptionPanel > p {
+  max-width: 34ch;
+  margin: 8px 0 17px;
+  color: #949bac;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.subscriptionPanel > p strong {
+  color: var(--dash-navy);
+}
+
+.statusList {
+  display: grid;
+  gap: 0;
+  margin-top: auto;
+}
+
+.statusList > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #eceef3;
+}
+
+.statusList span {
+  color: #7f879b;
+  font-size: 9.5px;
+  text-transform: capitalize;
+}
+
+.statusList strong {
+  color: var(--dash-navy);
+  font-size: 10px;
+}
+
+.noStatus {
+  padding-top: 10px;
+  color: #9ca2b2 !important;
+}
+
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes metricIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blockRise {
+  from { opacity: 0; transform: scaleY(.15); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
+/* Opacity-only entrance used when the viewer has asked for reduced motion. */
+@keyframes reducedFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1180px) {
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .insightGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline {
+    grid-template-columns: 1fr;
+  }
+
+  .pipelineLine {
+    width: 1px;
+    height: 22px;
+    justify-self: center;
+  }
+
+  .pipelineLine span {
+    background: linear-gradient(
+      180deg,
+      transparent,
+      var(--dash-gold),
+      transparent
+    );
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    gap: 14px;
+    padding: 0 10px 24px;
+  }
+
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .hero p {
+    font-size: 12px;
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .metricCard {
+    min-height: 158px;
+  }
+
+  .salesPanel,
+  .clientPanel,
+  .subscriptionPanel {
+    border-radius: 14px;
+  }
+
+  .salesPanel {
+    min-height: 350px;
+    padding: 16px 13px 13px;
+  }
+
+  .legend {
+    display: none;
+  }
+
+  .zeroGrid {
+    gap: 4px;
+  }
+
+  .currencyRail {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .currencyRail > div {
+    justify-content: flex-start;
+  }
+}
+
+/*
+ * Every hover effect that MOVES something lives here. Touch pointers report a
+ * hover on tap and then keep it, which left cards lifted, icons rotated and a
+ * chart column gold long after the finger was gone.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .rangeFilter a:hover {
+    transform: translateY(-1px);
+  }
+
+  .metricCard:hover {
+    transform: translateY(-4px);
+  }
+
+  .metricCard:hover::after {
+    transform: scaleX(.82);
+  }
+
+  .metricCard:hover .metricHalo {
+    transform: scale(1.12);
+  }
+
+  .metricCard:hover .metricIcon {
+    transform: rotate(-5deg) scale(1.04);
+  }
+
+  .metricCard:hover .metricArrow {
+    transform: translateX(2px);
+  }
+
+  .chartColumn:hover .blockFilled {
+    background: linear-gradient(180deg, #caa039, #9d7614);
+  }
+
+  .pipelineStage:hover {
+    transform: translateY(-2px);
+  }
+
+  .pipelineStage:hover::after {
+    transform: scale(1.35);
+  }
+}
+
+/*
+ * Reduced motion drops travel, scale and rotation but keeps the surface
+ * responsive: entrances still fade, and colour, border, shadow and focus
+ * feedback are untouched.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .metricCard,
+  .salesPanel,
+  .clientPanel,
+  .subscriptionPanel {
+    animation: reducedFade 160ms ease both;
+  }
+
+  .metricCard:nth-child(1),
+  .metricCard:nth-child(2),
+  .metricCard:nth-child(3),
+  .metricCard:nth-child(4) {
+    animation-delay: 0ms;
+  }
+
+  .chartBlocks span {
+    animation: none;
+  }
+
+  .metricCard:hover,
+  .metricCard:hover .metricIcon,
+  .metricCard:hover .metricArrow,
+  .rangeFilter a:hover,
+  .rangeFilter a:active,
+  .pipelineStage:hover,
+  .pipelineStage:hover::after {
+    transform: none;
+  }
+
+  /* These two carry a resting transform, so hover holds it rather than resets. */
+  .metricCard:hover::after {
+    transform: scaleX(.12);
+  }
+
+  .metricCard:hover .metricHalo {
+    transform: scale(.8);
+  }
+
+  /* Press still registers, it just does so with tone instead of scale. */
+  .rangeFilter a:active {
+    background: rgba(0,13,81,.09);
+  }
+}

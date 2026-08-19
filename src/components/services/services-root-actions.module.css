@@ -1,0 +1,179 @@
+/* Root Services actions: [+ New Folder] [Actions] plus the folder-create modal. */
+
+.modalLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modalBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(1 8 42 / 56%);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  cursor: default;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.modalBackdropOpen {
+  opacity: 1;
+}
+
+.modalBackdropClosing {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.dialog {
+  position: relative;
+  z-index: 2;
+  width: min(420px, calc(100vw - 38px));
+  overflow: hidden;
+  border: 1px solid rgb(215 169 40 / 34%);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 24px 70px rgb(0 13 81 / 28%);
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition:
+    opacity 180ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialogOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.dialogClosing {
+  opacity: 0;
+  transform: translateY(4px) scale(0.985);
+  transition:
+    opacity 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid #eceef3;
+}
+
+.dialogHeader span {
+  color: #9a741b;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dialogHeader h2 {
+  margin: 5px 0 0;
+  color: #000d51;
+  font-family: "Sora Variable", Sora, Inter, sans-serif;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.dialogHeader button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e5ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5a6274;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.dialogHeader button:hover {
+  color: #000d51;
+  border-color: #c6ccd8;
+}
+
+.dialogHeader button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dialogBody {
+  display: grid;
+  gap: 8px;
+  padding: 18px 22px;
+}
+
+.dialogBody label {
+  display: grid;
+  gap: 6px;
+}
+
+.dialogBody label span {
+  color: #656c7c;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.dialogBody input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d8dce5;
+  border-radius: 8px;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 13px;
+  outline: 0;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.dialogBody input:focus {
+  border-color: #52629a;
+  outline: 3px solid rgb(0 13 81 / 8%);
+}
+
+.dialogError {
+  margin: 0;
+  border: 1px solid rgb(173 48 48 / 20%);
+  border-radius: 8px;
+  background: rgb(173 48 48 / 5.5%);
+  padding: 9px 11px;
+  color: #8f2929;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 14px 22px 20px;
+  border-top: 1px solid #eceef3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalBackdrop,
+  .modalBackdropOpen,
+  .modalBackdropClosing,
+  .dialog,
+  .dialogOpen,
+  .dialogClosing {
+    transition: none;
+  }
+}

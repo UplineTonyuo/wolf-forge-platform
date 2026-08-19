@@ -1,0 +1,217 @@
+/* Wolf Forge calendar date picker — trigger + popover calendar. */
+
+.root {
+  position: relative;
+}
+
+.trigger {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.trigger:hover {
+  border-color: #c6ccd8;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.trigger:disabled {
+  color: var(--wf-text-muted);
+  background: #f7f8fa;
+  cursor: not-allowed;
+}
+
+.triggerValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.triggerIcon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--wf-navy);
+}
+
+.calendar {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 18px 44px rgb(0 13 81 / 14%),
+    0 4px 12px rgb(0 13 81 / 6%);
+  outline: 0;
+  opacity: 0;
+  transform: translateY(-3px) scale(0.985);
+  transition: opacity 180ms ease, transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.calendarOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.calendarClosing {
+  opacity: 0;
+  transform: translateY(2px) scale(0.985);
+  transition: opacity 140ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.calendarTitle {
+  color: #17203b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.navButton {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4a5368;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.navButton:hover {
+  border-color: #c6ccd8;
+  color: var(--wf-navy);
+  background: #f6f7fa;
+}
+
+.navButton:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.navButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.weekdays span {
+  color: #8a91a1;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.day {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #2a3348;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.day:hover {
+  background: #eef0f6;
+  color: var(--wf-navy);
+}
+
+.day:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: -1px;
+}
+
+.daySelected {
+  background: var(--wf-navy);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.daySelected:hover {
+  background: #001a73;
+  color: #ffffff;
+}
+
+.dayToday {
+  border-color: #b58b20;
+}
+
+.dayToday.daySelected {
+  border-color: transparent;
+}
+
+.dayMuted {
+  color: #c2c7d2;
+}
+
+.dayMuted:hover {
+  color: #7b8292;
+}
+
+.dayCursor:not(.daySelected) {
+  outline: 2px solid rgb(0 13 81 / 22%);
+  outline-offset: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar,
+  .calendarOpen,
+  .calendarClosing {
+    transition: none;
+  }
+}

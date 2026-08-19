@@ -42,7 +42,7 @@
 .clientDetailHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }.clientDetailHeader a { color: var(--wf-text-muted); font-size: 11px; text-decoration: none; }.clientDetailHeader h1 { margin: 9px 0 6px; color: var(--wf-navy); font: 700 24px var(--wf-font-display); }.clientDetailHeader p { margin: 0; color: #896a19; font-size: 10px; font-weight: 750; letter-spacing: .06em; }.clientDetailGrid { display: grid; grid-template-columns: minmax(0,1fr) 250px; gap: 16px; align-items: start; }.clientSummary { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--wf-border); border-radius: 6px; background: #fff; }.clientSummary h2 { margin: 0; color: var(--wf-navy); font: 650 13px var(--wf-font-display); }.clientSummary dl { display: grid; gap: 12px; margin: 0; }.clientSummary dt { color: var(--wf-text-muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }.clientSummary dd { margin: 3px 0 0; font-size: 11px; }
 
 @media (max-width: 800px) {
-  .listToolbar { display: grid; grid-template-columns: 1fr 1fr; }.searchField { grid-column: 1 / -1; }.listToolbar select { width: 100%; min-width: 0; }.tableWrap { display: none; }.mobileList { display: grid; }.mobileList > a { display: grid; gap: 7px; padding: 14px; border-top: 1px solid #edf0f4; color: inherit; text-decoration: none; }.mobileList > a:first-child { border-top: 0; }.mobileList header,.mobileList footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.mobileList h2 { margin: 0; overflow-wrap: anywhere; color: var(--wf-navy); font-size: 13px; }.mobileList p { margin: 0; color: var(--wf-text-muted); font-size: 11px; }.mobileList footer > span:last-child { color: var(--wf-text-muted); font-size: 9px; }.detailGrid,.clientDetailGrid { grid-template-columns: 1fr; }.ticketSidebar { grid-row: 1; }.clientListHeader { align-items: stretch; flex-direction: column; }.clientListHeader button { width: 100%; justify-content: center; }.clientTicketList > a { grid-template-columns: 34px minmax(0,1fr) auto; padding: 13px; }.clientTicketList > a > svg { display: none; }.clientTicketList .statusBadge { grid-column: 2; }.message > header,.internalMessage > header { align-items: flex-start; flex-direction: column; gap: 5px; }.composer footer,.noteComposer footer { align-items: stretch; flex-direction: column; }.composer footer button,.noteComposer footer button { justify-content: center; }.clientDetailHeader { flex-direction: column-reverse; }.dialog form > footer { display: grid; grid-template-columns: 1fr 1fr; }
+  .listToolbar { display: grid; grid-template-columns: 1fr 1fr; }.searchField { grid-column: 1 / -1; }.listToolbar select { width: 100%; min-width: 0; }.addTicketButton { grid-column: 1 / -1; width: 100%; }.tableWrap { display: none; }.mobileList { display: grid; }.mobileList > a { display: grid; gap: 7px; padding: 14px; border-top: 1px solid #edf0f4; color: inherit; text-decoration: none; }.mobileList > a:first-child { border-top: 0; }.mobileList header,.mobileList footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.mobileList h2 { margin: 0; overflow-wrap: anywhere; color: var(--wf-navy); font-size: 13px; }.mobileList p { margin: 0; color: var(--wf-text-muted); font-size: 11px; }.mobileList footer > span:last-child { color: var(--wf-text-muted); font-size: 9px; }.detailGrid,.clientDetailGrid { grid-template-columns: 1fr; }.ticketSidebar { grid-row: 1; }.clientListHeader { align-items: stretch; flex-direction: column; }.clientListHeader button { width: 100%; justify-content: center; }.clientTicketList > a { grid-template-columns: 34px minmax(0,1fr) auto; padding: 13px; }.clientTicketList > a > svg { display: none; }.clientTicketList .statusBadge { grid-column: 2; }.message > header,.internalMessage > header { align-items: flex-start; flex-direction: column; gap: 5px; }.composer footer,.noteComposer footer { align-items: stretch; flex-direction: column; }.composer footer button,.noteComposer footer button { justify-content: center; }.clientDetailHeader { flex-direction: column-reverse; }.dialog form > footer { display: grid; grid-template-columns: 1fr 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .tableWrap tbody tr,.clientTicketList > a { transition: none; }.dialog::backdrop { backdrop-filter: none; } }
 
@@ -567,32 +567,50 @@
 
 
 /* ============================================================
-   ACTIONS
+   ADD TICKET
    ============================================================ */
 
-.actionsDropdown {
+.addTicketButton {
+  min-height: 40px;
   margin-left: auto;
-  min-width: 132px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 16px;
+  border: 1px solid #000d51;
+  border-radius: 8px;
+  background: #000d51;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgb(0 13 81 / 14%);
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
-.actionsTrigger {
-  min-width: 132px;
+.addTicketButton:hover {
+  background: #001a73;
+  box-shadow: 0 5px 14px rgb(0 13 81 / 18%);
 }
 
-.actionsMenu {
-  right: 0;
-  left: auto;
-  min-width: 190px;
+.addTicketButton:active {
+  transform: scale(0.98);
 }
 
-.actionMenuItem {
-  gap: 9px;
+.addTicketButton:focus-visible {
+  outline: 2px solid #000d51;
+  outline-offset: 2px;
 }
 
-.actionMenuItem svg {
-  width: 15px;
-  height: 15px;
-  color: #000d51;
+.addTicketButton svg {
+  width: 16px;
+  height: 16px;
 }
 
 
@@ -1009,19 +1027,6 @@
 
 
 @media (max-width: 720px) {
-
-  .actionsDropdown {
-    width:
-      100%;
-
-    margin-left:
-      0;
-  }
-
-  .actionsTrigger {
-    width:
-      100%;
-  }
 
   .internalCreateDialog {
     width:
@@ -1996,3 +2001,632 @@
 
 
 /* WF TICKET WYSIWYG UI END */
+
+/* WF TICKET CONVERSATION POLISH START */
+
+/* Conversation identity -------------------------------------------------- */
+
+.messageLayout {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.messageContent {
+  min-width: 0;
+}
+
+.messageContent > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 34px;
+}
+
+.messageSender {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-width: 0;
+}
+
+.messageSender strong {
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.internalMessage .messageSender > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #796020;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.internalMessage .messageSender > span svg {
+  width: 11px;
+  height: 11px;
+}
+
+.messageContent > header time {
+  flex: 0 0 auto;
+  padding-top: 1px;
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.messageAvatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #dfe3ed;
+  border-radius: 50%;
+  background: #f5f7fb;
+}
+
+.messageAvatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.messageAvatarFallback {
+  color: var(--wf-navy);
+  background:
+    radial-gradient(
+      circle at 32% 24%,
+      rgba(168, 131, 46, .11),
+      transparent 58%
+    ),
+    #f4f6fb;
+}
+
+.messageAvatarFallback svg {
+  width: 25px;
+  height: 25px;
+  max-width: 74%;
+  max-height: 74%;
+}
+
+.messageAvatarFallback img {
+  width: 27px;
+  height: auto;
+  object-fit: contain;
+}
+
+.messageContent .messageBody {
+  margin-top: 9px;
+}
+
+.messageContent .attachments {
+  margin-top: 12px;
+}
+
+.emptyConversation {
+  padding: 34px 18px;
+  text-align: center;
+}
+
+.emptyConversation p {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+/* Safe formatted message output ----------------------------------------- */
+
+.messageBody {
+  color: #303745;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.messageBody p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.messageBody p + p {
+  margin-top: 4px;
+}
+
+.messageBody h3 {
+  margin: 10px 0 6px;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.messageBody h3:first-child {
+  margin-top: 0;
+}
+
+.messageBody strong {
+  font-weight: 750;
+}
+
+.messageBody em {
+  font-style: italic;
+}
+
+.messageBody a {
+  color: #1d4fb5;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Compact shared reply editor ------------------------------------------- */
+
+.ticketRichEditor {
+  position: relative;
+  overflow: visible;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  background: #fff;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.ticketRichEditor:focus-within {
+  border-color: #8991b5;
+  box-shadow: 0 0 0 2px rgba(0, 13, 81, .07);
+}
+
+.ticketRichEditor[data-disabled="true"] {
+  opacity: .64;
+  background: #f7f8fa;
+}
+
+.ticketRichToolbar {
+  position: relative;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 6px;
+  border-bottom: 1px solid #e6e9ef;
+  border-radius: 6px 6px 0 0;
+  background: #fafbfc;
+}
+
+.ticketRichToolbar > button,
+.ticketRichLinkControl > button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: #697287;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.ticketRichToolbar > button:hover:not(:disabled),
+.ticketRichLinkControl > button:hover:not(:disabled),
+.ticketRichLinkControl > button[aria-expanded="true"] {
+  color: var(--wf-navy);
+  background: #eef1f7;
+}
+
+.ticketRichToolbar > button:active:not(:disabled),
+.ticketRichLinkControl > button:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+.ticketRichToolbar button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.ticketRichToolbar button:focus-visible {
+  outline: 2px solid rgba(0, 13, 81, .28);
+  outline-offset: 1px;
+}
+
+.ticketRichToolbar svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.9;
+}
+
+.ticketRichToolbarDivider {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 1px;
+  margin: 0 4px;
+  background: #dfe3eb;
+}
+
+.ticketRichComposer {
+  min-height: 108px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 11px 12px;
+  border-radius: 0 0 6px 6px;
+  outline: 0;
+  color: #303745;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ticketRichEditor[data-disabled="true"] .ticketRichComposer {
+  background: #f7f8fa;
+}
+
+.ticketRichComposer:empty::before {
+  content: attr(data-placeholder);
+  color: #9298a5;
+  pointer-events: none;
+}
+
+.ticketRichComposer strong,
+.ticketRichComposer b {
+  font-weight: 750;
+}
+
+.ticketRichComposer em,
+.ticketRichComposer i {
+  font-style: italic;
+}
+
+.ticketRichComposer h1,
+.ticketRichComposer h2,
+.ticketRichComposer h3 {
+  margin: 7px 0 5px;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 18px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.ticketRichComposer a {
+  color: #1d4fb5;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Link popover ----------------------------------------------------------- */
+
+.ticketRichLinkControl {
+  position: relative;
+  display: flex;
+}
+
+.ticketRichLinkPopover {
+  position: absolute;
+  z-index: 140;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 286px;
+  padding: 11px;
+  border: 1px solid #d5dbe7;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(0, 13, 81, .15);
+  animation:
+    wf-ticket-rich-popover-in
+    160ms
+    cubic-bezier(.16, 1, .3, 1)
+    both;
+}
+
+.ticketRichLinkPopover label {
+  display: grid;
+  gap: 5px;
+}
+
+.ticketRichLinkPopover label > span {
+  color: #30384a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ticketRichLinkPopover input {
+  width: 100%;
+  min-height: 37px;
+  padding: 0 9px;
+  border: 1px solid var(--wf-border);
+  border-radius: 5px;
+  outline: 0;
+  color: var(--wf-text);
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+}
+
+.ticketRichLinkPopover input:focus {
+  border-color: #8991b5;
+  box-shadow: 0 0 0 2px rgba(0, 13, 81, .07);
+}
+
+.ticketRichLinkActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.ticketRichLinkActions button {
+  min-height: 31px;
+  padding: 0 10px;
+  border: 1px solid var(--wf-border);
+  border-radius: 5px;
+  color: #343c4e;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ticketRichLinkActions button[data-primary="true"] {
+  border-color: var(--wf-navy);
+  color: #fff;
+  background: var(--wf-navy);
+}
+
+/* Date details ----------------------------------------------------------- */
+
+.ticketDateValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ticketDateValue svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: #8d95a4;
+  stroke-width: 1.8;
+}
+
+@keyframes wf-ticket-rich-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 800px) {
+  .messageLayout {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .messageAvatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .messageContent > header {
+    flex-direction: column;
+    gap: 3px;
+    min-height: 0;
+  }
+
+  .messageContent > header time {
+    padding-top: 0;
+  }
+
+  .ticketRichLinkPopover {
+    width: min(286px, calc(100vw - 70px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticketRichEditor,
+  .ticketRichToolbar button,
+  .ticketRichLinkPopover {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* WF TICKET CONVERSATION POLISH END */
+
+/* WF TICKET OPERATION SELECT SUPPORT */
+
+.operationNativeSelect {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.ticketSidebar .filterDropdown {
+  width: 100%;
+}
+
+.ticketSidebar .filterTrigger {
+  width: 100%;
+  min-width: 0;
+}
+
+.ticketSidebar .filterMenu {
+  width: 100%;
+  min-width: 0;
+  z-index: 40;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticketSidebar .filterMenu,
+  .ticketSidebar .filterChevron,
+  .ticketSidebar .filterOption,
+  .ticketSidebar .filterTrigger {
+    transition: none !important;
+  }
+}
+
+/* WF TICKET POLISH 2 START */
+
+/* Sender identity: name, then date -------------------------------------- */
+
+.messageContent > header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  min-height: 0;
+}
+
+.messageContent > header time {
+  flex: 0 0 auto;
+  padding-top: 0;
+  color: #7b8290;
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.messageContent .messageBody {
+  margin-top: 9px;
+}
+
+
+/* Rich editor lists ------------------------------------------------------ */
+
+.ticketRichComposer ul,
+.ticketRichComposer ol {
+  margin: 7px 0;
+  padding-left: 24px;
+  white-space: normal;
+}
+
+.ticketRichComposer ul {
+  list-style: disc;
+}
+
+.ticketRichComposer ol {
+  list-style: decimal;
+}
+
+.ticketRichComposer li {
+  margin: 2px 0;
+  padding-left: 2px;
+}
+
+
+/* Posted message lists --------------------------------------------------- */
+
+.messageBody ul,
+.messageBody ol {
+  margin: 7px 0;
+  padding-left: 22px;
+}
+
+.messageBody ul {
+  list-style: disc;
+}
+
+.messageBody ol {
+  list-style: decimal;
+}
+
+.messageBody li {
+  margin: 3px 0;
+  line-height: 1.65;
+}
+
+
+/* Wolf Forge private note composer -------------------------------------- */
+
+.noteComposer {
+  border-color: rgba(0, 13, 81, .24);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 13, 81, .018),
+      rgba(0, 13, 81, .035)
+    ),
+    #fbfcff;
+}
+
+.noteComposer textarea {
+  border-color: #d7dce8;
+  color: #303745;
+  background: #fff;
+}
+
+.noteComposer textarea:focus {
+  border-color: #7f89b1;
+  outline: 2px solid rgba(0, 13, 81, .08);
+}
+
+.noteComposer textarea::placeholder {
+  color: #858c9a;
+}
+
+
+/* Posted Wolf Forge-only notes ------------------------------------------ */
+
+.internalMessage {
+  border-color: rgba(0, 13, 81, .22);
+  background: #f7f8fc;
+}
+
+.internalMessage .messageSender > span {
+  color: var(--wf-navy);
+}
+
+.internalMessage .messageSender > span svg {
+  color: var(--wf-navy);
+}
+
+
+/* Mobile keeps date beneath name ---------------------------------------- */
+
+@media (max-width: 800px) {
+  .messageContent > header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+/* WF TICKET POLISH 2 END */

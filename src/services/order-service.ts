@@ -1,4 +1,5 @@
-﻿import { composeProjectRows, type ProjectListRow, type ProjectRelationRow } from "../domain/orders/projections";
+﻿import { composeClientProjectViews, type ClientProjectView } from "../domain/orders/client-projections";
+import { composeProjectRows, type ProjectListRow, type ProjectRelationRow } from "../domain/orders/projections";
 import { changeOrderStatusSchema, createOrderSchema, updateOrderSchema } from "../domain/orders/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
 import { OrderRepository, type ProjectLabelRow } from "../repositories/order-repository";
@@ -42,6 +43,25 @@ export class OrderService {
       complete: page.totalCount === null || page.totalCount <= page.rows.length,
       totalCount: page.totalCount,
     };
+  }
+
+  /**
+   * The client portal Projects read model. Company scoping stays with RLS; the
+   * repository selects a narrow column list and only aggregate task facts, so
+   * internal notes, staff identity and task titles never enter the projection.
+   */
+  async listClientProjects(): Promise<ClientProjectView[]> {
+    const rows = await this.dependencies.repository.listForClientPortal();
+    const taskFacts = await this.dependencies.repository.listClientTaskFacts(rows.map((row) => row.id));
+    return composeClientProjectViews(rows, taskFacts);
+  }
+
+  async getClientProject(id: unknown): Promise<ClientProjectView> {
+    const projectId = parseInput(uuidSchema, id);
+    const row = await this.dependencies.repository.getForClientPortal(projectId);
+    const taskFacts = await this.dependencies.repository.listClientTaskFacts([row.id]);
+    const [view] = composeClientProjectViews([row], taskFacts);
+    return view as ClientProjectView;
   }
 
   async create(input: unknown, actor: UserMutationActor) {

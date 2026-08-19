@@ -119,10 +119,16 @@ export function InvoicePaymentSelector({
 
       <div className={`invoice-payment-choice${isMember ? " is-selected" : " is-locked"}`}>
         <div className="invoice-payment-card-wrap">
+          {/*
+            This selector only ever renders on the client invoice page, so the
+            card is addressing the account holder directly. Admin surfaces keep
+            the component's default "Client Wallet" wording.
+          */}
           <WolfForgeWalletCard
             clientName={holderName}
             balanceCents={walletBalanceCents}
             currency={currency}
+            eyebrow="Your Wallet"
             compact
           />
           {!isMember ? (

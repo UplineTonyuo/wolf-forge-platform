@@ -67,6 +67,38 @@ export class ServiceRepository {
     );
   }
 
+  /**
+   * The client Store slice of the catalog. RLS already narrows a client session
+   * to public, active, non-archived services; the predicates are restated here
+   * so the query means the same thing whoever runs it.
+   */
+  async listStoreServices(): Promise<ServiceRow[]> {
+    return unwrapMany(
+      await this.client
+        .from("services")
+        .select()
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .order("sort_order")
+        .order("name"),
+    );
+  }
+
+  async getStoreService(id: string): Promise<ServiceRow> {
+    return unwrapOne(
+      await this.client
+        .from("services")
+        .select()
+        .eq("id", id)
+        .eq("is_public", true)
+        .eq("is_active", true)
+        .is("archived_at", null)
+        .single(),
+      "Service",
+    );
+  }
+
   async update(id: string, input: UpdateServiceInput): Promise<ServiceRow> {
     return unwrapOne(
       await this.client.rpc("app_update_service", { p_service_id: id, p_patch: input }),

@@ -1,0 +1,322 @@
+=== IDEMPOTENCY HELPERS ===
+
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:23:comment on function 
+private.normalize_authenticated_activity_event() is
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:24:  'Does not normalize actors inside SECURITY DEFINER app_* 
+functions because current_user is the definer; each RPC must 
+derive its actor directly from auth.uid().';
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:25:
+> supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:26:create or replace function private.find_create_request(
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:27:  p_actor_profile_id uuid,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:28:  p_operation text,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:29:  p_request_id uuid,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:30:  p_payload jsonb
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:31:)
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:32:returns uuid
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:33:language plpgsql
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:34:security definer
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:35:set search_path = ''
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:36:as $$
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:37:declare
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:38:  prior_request private.app_create_requests;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:39:begin
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:40:  -- Serialize equal retry keys. Hash collisions only 
+serialize unrelated calls.
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:41:  perform pg_catalog.pg_advisory_xact_lock(
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:42:    pg_catalog.hashtextextended(
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:43:      p_actor_profile_id::text || ':' || p_operation || ':' 
+|| p_request_id::text,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:44:      0
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:45:    )
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:46:  );
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:47:
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:48:  select request.* into prior_request
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:49:  from private.app_create_requests as request
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:50:  where request.actor_profile_id = p_actor_profile_id
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:51:    and request.operation = p_operation
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:52:    and request.request_id = p_request_id;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:53:
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:54:  if prior_request.entity_id is not null and 
+prior_request.payload <> p_payload then
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:55:    raise exception 'idempotency key was already used with 
+different input'
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:56:      using errcode = '23505';
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:60:end;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:61:$$;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:62:
+> supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:63:create or replace function private.remember_create_request(
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:64:  p_actor_profile_id uuid,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:65:  p_operation text,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:66:  p_request_id uuid,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:67:  p_payload jsonb,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:68:  p_entity_id uuid
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:69:)
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:70:returns void
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:71:language sql
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:72:security definer
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:73:set search_path = ''
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:74:as $$
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:75:  insert into private.app_create_requests (
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:76:    actor_profile_id, operation, request_id, payload, 
+entity_id
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:77:  ) values (
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:78:    p_actor_profile_id, p_operation, p_request_id, 
+p_payload, p_entity_id
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:79:  );
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:80:$$;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:81:
+> supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:82:revoke all on function private.find_create_request(uuid, 
+text, uuid, jsonb)
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:83:from public, anon, authenticated, service_role;
+> supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:84:revoke all on function 
+private.remember_create_request(uuid, text, uuid, jsonb, uuid)
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:85:from public, anon, authenticated, service_role;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:86:
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:87:-- Replace the pre-correction create/status signatures so 
+PostgREST exposes only
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:88:-- the retry-safe create contract and server-timestamped 
+completion contract.
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:89:drop function public.app_create_company(text);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:90:drop function public.app_create_contact(uuid, text, uuid, 
+text, text, text, boolean);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:91:drop function public.app_create_service(text, text, 
+boolean);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:92:drop function public.app_create_order(uuid, uuid, text, 
+uuid, text, timestamptz, timestamptz, text);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:93:drop function public.app_create_task(uuid, text, uuid, 
+text, timestamptz, integer);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:94:drop function public.app_change_order_status(uuid, text, 
+timestamptz);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:95:drop function public.app_change_task_status(uuid, text, 
+timestamptz);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:96:
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:97:create function public.app_create_company(
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:98:  p_request_id uuid,
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:99:  p_name text
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:100:)
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:101:returns public.companies
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:102:language plpgsql
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:103:security definer
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:104:set search_path = ''
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:105:as $$
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:106:declare
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:107:  actor_id uuid := private.require_internal_actor();
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:108:  request_payload jsonb := jsonb_build_object('name', 
+p_name);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:109:  existing_id uuid;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:110:  company_row public.companies;
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:111:begin
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:112:  existing_id := private.find_create_request(actor_id, 
+'company.create', p_request_id, request_payload);
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:113:  if existing_id is not null then
+  supabase\migrations\20260813020000_phase2b_final_corrections.sq
+l:114:    select company.* into company_row from 
+public.companies as company where company.id = existing_id;
+
+
+
+
+=== CLIENT DETAILS JSX ===
+ 216:             const Icon = tab.icon;
+ 217:             const href =
+ 218:               tab.id === "details"
+ 219:                 ? `/clients/${companyId}`
+ 220:                 : `/clients/${companyId}?tab=${tab.id}`;
+ 221: 
+ 222:             return (
+ 223:               <Link
+ 224:                 key={tab.id}
+ 225:                 href={href}
+ 226:                 className={
+ 227:                   activeTab === tab.id
+ 228:                     ? "client-detail-tab is-active"
+ 229:                     : "client-detail-tab"
+ 230:                 }
+ 231:               >
+ 232:                 <Icon aria-hidden="true" />
+ 233:                 {tab.label}
+ 234:               </Link>
+ 235:             );
+ 236:           })}
+ 237:         </nav>
+ 238: 
+ 239:         {activeTab === "details" ? (
+ 240:           <div className="client-detail-content">
+ 241:             <section className="client-information-panel">
+ 242:               <div className="client-section-heading">
+ 243:                 <div>
+ 244:                   <span>CLIENT INFORMATION</span>
+ 245:                   <h2>Account details</h2>
+ 246:                 </div>
+ 247:               </div>
+ 248: 
+ 249:               <dl className="client-information-list">
+ 250:                 <div>
+ 251:                   <dt>
+ 252:                     <BriefcaseBusiness aria-hidden="true" />
+ 253:                     Company
+ 254:                   </dt>
+ 255:                   <dd>{client.name}</dd>
+ 256:                 </div>
+ 257: 
+ 258:                 <div>
+ 259:                   <dt>
+ 260:                     <CalendarDays aria-hidden="true" />
+ 261:                     Created
+ 262:                   </dt>
+ 263:                   <dd>{formatDate(client.created_at)}</dd>
+ 264:                 </div>
+ 265: 
+ 266:                 <div>
+ 267:                   <dt>
+ 268:                     <UserRound aria-hidden="true" />
+ 269:                     Primary contact
+ 270:                   </dt>
+ 271:                   <dd>
+ 272:                     {primaryContact?.name ?? "Not set"}
+ 273:                   </dd>
+ 274:                 </div>
+ 275: 
+ 276:                 <div>
+ 277:                   <dt>
+ 278:                     <Mail aria-hidden="true" />
+ 279:                     Email
+ 280:                   </dt>
+ 281:                   <dd>
+ 282:                     {primaryContact?.email ?? "Not available"}
+ 283:                   </dd>
+ 284:                 </div>
+ 285: 
+ 286:                 <div>
+ 287:                   <dt>
+ 288:                     <Phone aria-hidden="true" />
+ 289:                     Phone
+ 290:                   </dt>
+ 291:                   <dd>
+ 292:                     {primaryContact?.phone ?? "Not available"}
+ 293:                   </dd>
+ 294:                 </div>
+ 295: 
+ 296:                 <div>
+ 297:                   <dt>
+ 298:                     <BriefcaseBusiness aria-hidden="true" />
+ 299:                     Job title
+ 300:                   </dt>
+ 301:                   <dd>
+ 302:                     {primaryContact?.job_title ?? "Not available"}
+ 303:                   </dd>
+ 304:                 </div>
+ 305:               </dl>
+ 306:             </section>
+ 307: 
+ 308:             <section className="client-side-summary">
+ 309:               <div className="client-section-heading">
+ 310:                 <div>
+ 311:                   <span>DELIVERY</span>
+ 312:                   <h2>Open projects</h2>
+ 313:                 </div>
+ 314: 
+ 315:                 <strong>{openProjects.length}</strong>
+ 316:               </div>
+ 317: 
+ 318:               {openProjects.length ? (
+ 319:                 <div className="client-project-summary">
+ 320:                   {openProjects
+ 321:                     .slice(0, 5)
+ 322:                     .map((project) => (
+ 323:                       <Link
+ 324:                         key={project.id}
+ 325:                         href={`/orders/${project.id}`}
+ 326:                         className="client-project-summary-row"
+ 327:                       >
+ 328:                         <div>
+ 329:                           <strong>
+ 330:                             #{project.order_number}{" "}

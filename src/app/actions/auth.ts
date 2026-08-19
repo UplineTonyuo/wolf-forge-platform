@@ -38,7 +38,7 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
   }
 
   const nextPath = safeNextPath(formData.get("next"));
-  redirect(nextPath.startsWith("/account/") ? nextPath : "/account/invoices");
+  redirect(nextPath.startsWith("/account") ? nextPath : "/account");
 }
 
 export async function signOutAction() {

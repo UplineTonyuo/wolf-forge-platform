@@ -12,8 +12,11 @@ const failure = (error: unknown): TicketMutationResult => ({ ok: false, error: t
 function refreshTicket(ticketId: string) {
   revalidatePath("/tickets");
   revalidatePath(`/tickets/${ticketId}`);
-  revalidatePath("/account/tickets");
-  revalidatePath(`/account/tickets/${ticketId}`);
+  revalidatePath("/account/messages");
+  revalidatePath(`/account/messages/${ticketId}`);
+  // The rail's "waiting on you" count and the Dashboard both read ticket state,
+  // so a reply has to refresh the portal shell as well as the conversation.
+  revalidatePath("/account");
 }
 
 export async function createClientTicketAction(input: { requestId: string; subject: string; message: string }): Promise<TicketMutationResult> {
@@ -25,8 +28,9 @@ export async function createClientTicketAction(input: { requestId: string; subje
   } catch (error) {
     return failure(error);
   }
-  revalidatePath("/account/tickets");
-  redirect(`/account/tickets/${ticketId}?created=1`);
+  revalidatePath("/account/messages");
+  revalidatePath("/account");
+  redirect(`/account/messages/${ticketId}?created=1`);
 }
 
 export type CreateInternalTicketResult =

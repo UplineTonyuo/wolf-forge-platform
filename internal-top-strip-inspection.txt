@@ -1,0 +1,1838 @@
+=== INTERNAL SHELL ===
+"use client";
+
+import {
+  CheckSquare2,
+  FileText,
+  FolderKanban,
+  FormInput,
+  HandCoins,
+  LayoutDashboard,
+  ReceiptText,
+  Settings,
+  ShieldCheck,
+  Tags,
+  TicketCheck,
+  UsersRound,
+  Wrench,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import type {
+  ComponentType,
+  MouseEvent,
+  ReactNode,
+} from "react";
+import type { InternalUser } from "../../lib/supabase/next-server";
+import { AccountMenu } from "./account-menu";
+import { navigationForModules, routeIsCurrent } from "./nav-registry";
+import { WolfForgeMark } from "./wolf-forge-mark";
+import { WorkspaceCommandBar } from "./workspace-command-bar";
+
+const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
+  dashboard: LayoutDashboard,
+  projects: FolderKanban,
+  tickets: TicketCheck,
+  clients: UsersRound,
+  todo: CheckSquare2,
+  invoices: ReceiptText,
+  subscriptions: HandCoins,
+  coupons: Tags,
+  services: Wrench,
+  forms: FormInput,
+  team: ShieldCheck,
+  settings: Settings,
+};
+
+type RouteTransitionPhase =
+  | "idle"
+  | "vacuum"
+  | "enter";
+
+function SidebarLink({
+  id,
+  label,
+  route,
+  active,
+  transitioning,
+  onNavigate,
+}: {
+  id: string;
+  label: string;
+  route: string;
+  active: boolean;
+  transitioning: boolean;
+  onNavigate: (
+    route: string,
+    event: MouseEvent<HTMLAnchorElement>,
+  ) => void;
+}) {
+  const Icon =
+    navigationIcons[id] ?? FileText;
+
+  const className = [
+    "sidebar-link",
+    active ? "is-active" : "",
+    transitioning
+      ? "is-transition-target"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <Link
+      className={className}
+      href={route}
+      aria-current={
+        active ? "page" : undefined
+      }
+      onClick={(event) =>
+        onNavigate(route, event)
+      }
+    >
+      <Icon aria-hidden={true} />
+      <span>{label}</span>
+    </Link>
+  );
+}
+
+export function InternalShell({
+  user,
+  children,
+}: {
+  user: InternalUser;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigationCategories = navigationForModules(user.modules);
+
+  const mainRef =
+    useRef<HTMLElement>(null);
+
+  const pendingRouteRef =
+    useRef<string | null>(null);
+
+  const exitTimerRef =
+    useRef<
+      ReturnType<typeof setTimeout> | null
+    >(null);
+
+  const frameRefs =
+    useRef<number[]>([]);
+
+  const [
+    transitionPhase,
+    setTransitionPhase,
+  ] =
+    useState<RouteTransitionPhase>(
+      "idle",
+    );
+
+  const [
+    transitionTarget,
+    setTransitionTarget,
+  ] =
+    useState<string | null>(null);
+
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) {
+        clearTimeout(
+          exitTimerRef.current,
+        );
+      }
+
+      frameRefs.current.forEach(
+        (frame) =>
+          window.cancelAnimationFrame(
+            frame,
+          ),
+      );
+    };
+  }, []);
+
+
+  useEffect(() => {
+    const pending =
+      pendingRouteRef.current;
+
+    if (!pending) {
+      return;
+    }
+
+    if (
+      !routeIsCurrent(
+        pending,
+        pathname,
+      )
+    ) {
+      return;
+    }
+
+    if (exitTimerRef.current) {
+      clearTimeout(
+        exitTimerRef.current,
+      );
+
+      exitTimerRef.current = null;
+    }
+
+    /*
+     * The new route has committed.
+     *
+     * Keep it hidden for one paint,
+     * then release it into the normal
+     * workspace position.
+     */
+    setTransitionPhase("enter");
+
+    frameRefs.current.forEach(
+      (frame) =>
+        window.cancelAnimationFrame(
+          frame,
+        ),
+    );
+
+    frameRefs.current = [];
+
+    const firstFrame =
+      window.requestAnimationFrame(
+        () => {
+          const secondFrame =
+            window.requestAnimationFrame(
+              () => {
+                setTransitionPhase(
+                  "idle",
+                );
+
+                setTransitionTarget(
+                  null,
+                );
+
+                pendingRouteRef.current =
+                  null;
+
+                frameRefs.current = [];
+              },
+            );
+
+          frameRefs.current = [
+            secondFrame,
+          ];
+        },
+      );
+
+    frameRefs.current = [
+      firstFrame,
+    ];
+  }, [pathname]);
+
+
+  function handleSidebarNavigate(
+    route: string,
+    event: MouseEvent<HTMLAnchorElement>,
+  ) {
+    /*
+     * Preserve normal browser behavior
+     * for new tabs / modified clicks.
+     */
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    if (
+      routeIsCurrent(
+        route,
+        pathname,
+      )
+    ) {
+      event.preventDefault();
+      return;
+    }
+
+    if (
+      transitionPhase !== "idle"
+    ) {
+      event.preventDefault();
+      return;
+    }
+
+    event.preventDefault();
+
+    /*
+     * Respect reduced-motion users and
+     * navigate immediately.
+     */
+    if (
+      window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches
+    ) {
+      router.push(route);
+      return;
+    }
+
+    const main =
+      mainRef.current;
+
+    if (!main) {
+      router.push(route);
+      return;
+    }
+
+    /*
+     * Warm the destination while the
+     * outgoing animation is playing.
+     */
+    router.prefetch(route);
+
+    const destinationRect =
+      event.currentTarget.getBoundingClientRect();
+
+    const mainRect =
+      main.getBoundingClientRect();
+
+    const destinationCenterY =
+      destinationRect.top +
+      destinationRect.height / 2;
+
+    /*
+     * Make the page collapse toward the
+     * vertical position of the sidebar
+     * item that was clicked.
+     */
+    const rawOriginY =
+      destinationCenterY -
+      mainRect.top;
+
+    const safeMinimum = 24;
+
+    const safeMaximum =
+      Math.max(
+        safeMinimum,
+        mainRect.height - 24,
+      );
+
+    const originY =
+      Math.min(
+        Math.max(
+          rawOriginY,
+          safeMinimum,
+        ),
+        safeMaximum,
+      );
+
+    main.style.setProperty(
+      "--wf-route-origin-y",
+      `${originY}px`,
+    );
+
+    pendingRouteRef.current =
+      route;
+
+    setTransitionTarget(route);
+
+    setTransitionPhase(
+      "vacuum",
+    );
+
+    const navigationFrame =
+      window.requestAnimationFrame(
+        () => {
+          router.push(route);
+        },
+      );
+
+    frameRefs.current.push(
+      navigationFrame,
+    );
+  }
+
+
+  const stageClassName = [
+    "workspace-route-stage",
+
+    transitionPhase === "vacuum"
+      ? "is-vacuuming"
+      : "",
+
+    transitionPhase === "enter"
+      ? "is-entering"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+
+  return (
+    <div className="internal-app">
+      <a
+        className="skip-link"
+        href="#main-content"
+      >
+        Skip to content
+      </a>
+
+      <aside className="app-sidebar">
+        <div
+          className="sidebar-brand is-mark-only"
+          aria-label="Wolf Forge"
+        >
+          <WolfForgeMark />
+        </div>
+
+        <nav
+          className="sidebar-navigation"
+          aria-label="Primary"
+        >
+          {navigationCategories.map(
+            (category) => (
+              <section
+                className="sidebar-section"
+                key={category.id}
+                aria-labelledby={
+                  `nav-${category.id}`
+                }
+              >
+                <h2
+                  id={`nav-${category.id}`}
+                >
+                  {category.label}
+                </h2>
+
+                <div className="sidebar-links">
+                  {category.items.map(
+                    (item) => (
+                      <SidebarLink
+                        key={item.id}
+                        id={item.id}
+                        label={item.label}
+                        route={item.route}
+                        active={routeIsCurrent(
+                          item.route,
+                          transitionTarget ?? pathname,
+                        )}
+                        transitioning={
+                          transitionTarget ===
+                          item.route
+                        }
+                        onNavigate={
+                          handleSidebarNavigate
+                        }
+                      />
+                    ),
+                  )}
+                </div>
+              </section>
+            ),
+          )}
+        </nav>
+
+        <div className="sidebar-account">
+          <AccountMenu
+            user={user}
+            sidebar
+          />
+        </div>
+      </aside>
+
+      <div
+        id="main-content"
+        className="workspace"
+      >
+        <WorkspaceCommandBar
+          user={user}
+        />
+
+        <main
+          ref={mainRef}
+          className={
+            stageClassName
+          }
+        >
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+=== COMMAND BAR ===
+"use client";
+
+import {
+  Bell,
+  FileText,
+  Folder,
+Images,
+  MessageSquare,
+  Minus,
+  Plus,
+  Receipt,
+  Search,
+  Ticket,
+  UserPlus,
+  WalletCards,
+} from "lucide-react";
+import { GlobalSearch } from "./global-search";
+import { DashboardDateTrigger } from "../dashboard/dashboard-date-trigger";
+import Link from "next/link";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  createPortal,
+} from "react-dom";
+import {
+  getWalletNotificationsAction,
+  markNotificationReadAction,
+  markAllNotificationsReadAction,
+  type WalletNotificationItem,
+} from "../../app/actions/notifications";
+import {
+  playNotificationChime,
+  unlockNotificationAudio,
+} from "../../lib/notifications/browser-notification-feedback";
+import type {
+  InternalUser,
+} from "../../lib/supabase/next-server";
+import {
+  AccountMenu,
+} from "./account-menu";
+import {
+  WorkspaceQuickAction,
+} from "./workspace-quick-action";
+
+function formatActivityTime(
+  value: string,
+) {
+  const date = new Date(value);
+
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    },
+  ).format(date);
+}
+
+function NotificationCategoryIcon({
+  category,
+}: {
+  category:
+    WalletNotificationItem["category"];
+}) {
+  const Icon =
+    category === "project"
+      ? Folder
+      : category === "client"
+        ? UserPlus
+        : category === "form"
+          ? FileText
+          : category === "coupon"
+            ? Ticket
+            : category === "ticket"
+              ? MessageSquare
+              : category === "payment"
+                ? Receipt
+                : category === "wallet"
+                  ? WalletCards
+                  : Bell;
+
+  return (
+    <Icon aria-hidden="true" />
+  );
+}
+type NotificationPosition = {
+  top: number;
+  right: number;
+};
+
+export function WorkspaceCommandBar({
+  user,
+}: {
+  user: InternalUser;
+}) {
+  const triggerRef =
+    useRef<HTMLButtonElement>(null);
+
+  const panelRef =
+    useRef<HTMLElement>(null);
+
+  const [
+    mounted,
+    setMounted,
+  ] = useState(false);
+
+  const [
+    notifications,
+    setNotifications,
+  ] = useState<
+    WalletNotificationItem[]
+  >([]);
+
+  const [
+    notificationsOpen,
+    setNotificationsOpen,
+  ] = useState(false);
+
+  const [
+    notificationsLoading,
+    setNotificationsLoading,
+  ] = useState(false);
+
+  const [
+    notificationsError,
+    setNotificationsError,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    notificationPosition,
+    setNotificationPosition,
+  ] =
+    useState<NotificationPosition>({
+      top: 76,
+      right: 20,
+    });
+
+  const [
+    notificationRinging,
+    setNotificationRinging,
+  ] = useState(false);
+
+  const notificationSeenIdsRef =
+    useRef<Set<string>>(
+      new Set(),
+    );
+
+  const notificationFeedInitializedRef =
+    useRef(false);
+
+  const notificationFeedbackTimersRef =
+    useRef<number[]>([]);
+
+  const noteIncomingNotifications =
+    useCallback(
+      (
+        items:
+          WalletNotificationItem[],
+      ) => {
+        const nextIds =
+          new Set(
+            items.map(
+              (item) =>
+                item.id,
+            ),
+          );
+
+        if (
+          !notificationFeedInitializedRef.current
+        ) {
+          notificationSeenIdsRef.current =
+            nextIds;
+
+          notificationFeedInitializedRef.current =
+            true;
+
+          return;
+        }
+
+        const incoming =
+          items.filter(
+            (item) =>
+              !item.readAt &&
+              !notificationSeenIdsRef.current.has(
+                item.id,
+              ),
+          );
+
+        notificationSeenIdsRef.current =
+          nextIds;
+
+        incoming.forEach(
+          (_, index) => {
+            const startTimer =
+              window.setTimeout(
+                () => {
+                  setNotificationRinging(
+                    true,
+                  );
+
+                  playNotificationChime();
+
+                  const stopTimer =
+                    window.setTimeout(
+                      () => {
+                        setNotificationRinging(
+                          false,
+                        );
+                      },
+                      560,
+                    );
+
+                  notificationFeedbackTimersRef.current.push(
+                    stopTimer,
+                  );
+                },
+                index * 680,
+              );
+
+            notificationFeedbackTimersRef.current.push(
+              startTimer,
+            );
+          },
+        );
+      },
+      [],
+    );
+
+  const loadNotifications =
+    useCallback(
+      async (
+        silent = false,
+      ) => {
+        if (!silent) {
+          setNotificationsLoading(
+            true,
+          );
+        }
+
+        const result =
+          await getWalletNotificationsAction();
+
+        if (result.ok) {
+          noteIncomingNotifications(
+            result.notifications,
+          );
+
+          setNotifications(
+            result.notifications,
+          );
+
+          setNotificationsError(
+            null,
+          );
+        } else if (!silent) {
+          setNotificationsError(
+            result.error,
+          );
+        }
+
+        if (!silent) {
+          setNotificationsLoading(
+            false,
+          );
+        }
+      },
+      [
+        noteIncomingNotifications,
+      ],
+    );
+
+  const updatePanelPosition =
+    useCallback(() => {
+      const trigger =
+        triggerRef.current;
+
+      if (!trigger) {
+        return;
+      }
+
+      const rect =
+        trigger.getBoundingClientRect();
+
+      const right =
+        Math.max(
+          12,
+          window.innerWidth -
+            rect.right,
+        );
+
+      setNotificationPosition({
+        top: rect.bottom + 10,
+        right,
+      });
+    }, []);
+
+  useEffect(() => {
+    setMounted(true);
+
+    void loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const unlock = () => {
+      void unlockNotificationAudio();
+    };
+
+    window.addEventListener(
+      "pointerdown",
+      unlock,
+      {
+        once: true,
+        passive: true,
+      },
+    );
+
+    window.addEventListener(
+      "keydown",
+      unlock,
+      {
+        once: true,
+      },
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pointerdown",
+        unlock,
+      );
+
+      window.removeEventListener(
+        "keydown",
+        unlock,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden) {
+        void loadNotifications(
+          true,
+        );
+      }
+    };
+
+    const interval =
+      window.setInterval(
+        refresh,
+        4000,
+      );
+
+    window.addEventListener(
+      "focus",
+      refresh,
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      refresh,
+    );
+
+    return () => {
+      window.clearInterval(
+        interval,
+      );
+
+      window.removeEventListener(
+        "focus",
+        refresh,
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        refresh,
+      );
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    return () => {
+      notificationFeedbackTimersRef.current.forEach(
+        (timer) => {
+          window.clearTimeout(
+            timer,
+          );
+        },
+      );
+
+      notificationFeedbackTimersRef.current =
+        [];
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsOpen) {
+      return;
+    }
+
+    updatePanelPosition();
+
+    const handleResize = () => {
+      updatePanelPosition();
+    };
+
+    const handleScroll = () => {
+      updatePanelPosition();
+    };
+
+    window.addEventListener(
+      "resize",
+      handleResize,
+    );
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      true,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize,
+      );
+
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+        true,
+      );
+    };
+  }, [
+    notificationsOpen,
+    updatePanelPosition,
+  ]);
+
+  useEffect(() => {
+    const closeForQuickAction = () => {
+      setNotificationsOpen(false);
+    };
+
+    window.addEventListener(
+      "wf:quick-action-open",
+      closeForQuickAction,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "wf:quick-action-open",
+        closeForQuickAction,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    const handlePointerDown = (
+      event: PointerEvent,
+    ) => {
+      if (!notificationsOpen) {
+        return;
+      }
+
+      const target =
+        event.target as Node;
+
+      const trigger =
+        triggerRef.current;
+
+      const panel =
+        panelRef.current;
+
+      if (
+        trigger?.contains(target) ||
+        panel?.contains(target)
+      ) {
+        return;
+      }
+
+      setNotificationsOpen(false);
+    };
+
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
+      if (
+        event.key === "Escape"
+      ) {
+        setNotificationsOpen(
+          false,
+        );
+      }
+    };
+
+    document.addEventListener(
+      "pointerdown",
+      handlePointerDown,
+    );
+
+    document.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        handlePointerDown,
+      );
+
+      document.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [notificationsOpen]);
+
+  const toggleNotifications =
+    async () => {
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+        return;
+      }
+
+      updatePanelPosition();
+
+      setNotificationsOpen(true);
+
+      await loadNotifications();
+    };
+
+  const unreadNotificationCount =
+    notifications.reduce(
+      (
+        total,
+        notification,
+      ) =>
+        total +
+        (notification.readAt
+          ? 0
+          : 1),
+      0,
+    );
+
+  const notificationBadgeLabel =
+    unreadNotificationCount > 9
+      ? "9+"
+      : String(
+          unreadNotificationCount,
+        );
+  const markAllAsRead = () => {
+    if (
+      unreadNotificationCount === 0
+    ) {
+      return;
+    }
+
+    const readAt =
+      new Date().toISOString();
+
+    setNotifications(
+      (current) =>
+        current.map(
+          (notification) =>
+            notification.readAt
+              ? notification
+              : {
+                  ...notification,
+                  readAt,
+                },
+        ),
+    );
+
+    void markAllNotificationsReadAction();
+  };
+  const notificationPanel = (
+    <section
+      ref={panelRef}
+      className={
+        notificationsOpen
+          ? "workspace-notification-portal is-open"
+          : "workspace-notification-portal"
+      }
+      style={{
+        top:
+          notificationPosition.top,
+        right:
+          notificationPosition.right,
+      }}
+      aria-hidden={
+        !notificationsOpen
+      }
+      aria-label="Notifications"
+    >
+      <header className="workspace-notification-header">
+        <div>
+          <strong>
+            Notifications
+          </strong>
+
+          <span>
+            Recent activity
+          </span>
+        </div>
+
+        <div className="workspace-notification-header-actions">
+          {notificationsLoading ? (
+            <span className="workspace-notification-refreshing">
+              Refreshing...
+            </span>
+          ) : null}
+
+          {unreadNotificationCount > 0 ? (
+            <button
+              type="button"
+              className="workspace-notification-mark-all"
+              onClick={markAllAsRead}
+            >
+              Mark all as read
+            </button>
+          ) : (
+            <span className="workspace-notification-all-read">
+              All read
+            </span>
+          )}
+        </div>
+      </header>
+
+      <div className="workspace-notification-list">
+        {notificationsError ? (
+          <div className="workspace-notification-empty">
+            {notificationsError}
+          </div>
+        ) : notifications.length ===
+            0 &&
+          !notificationsLoading ? (
+          <div className="workspace-notification-empty">
+            No activity yet.
+          </div>
+        ) : (
+          notifications.map(
+            (notification) => (
+              <Link
+                key={
+                  notification.id
+                }
+                href={
+                  notification.href
+                }
+                className="workspace-notification-item"
+                onClick={() => {
+                  setNotifications(
+                    (current) =>
+                      current.map(
+                        (item) =>
+                          item.id ===
+                          notification.id
+                            ? {
+                                ...item,
+                                readAt:
+                                  item.readAt ??
+                                  new Date().toISOString(),
+                              }
+                            : item,
+                      ),
+                  );
+
+                  void markNotificationReadAction(
+                    notification.id,
+                  );
+
+                  setNotificationsOpen(
+                    false,
+                  );
+                }}
+              >
+                <span
+                  className={
+                    notification.kind ===
+                    "credit"
+                      ? "workspace-notification-kind is-credit"
+                      : "workspace-notification-kind is-debit"
+                  }
+                >
+                  <NotificationCategoryIcon
+                    category={
+                      notification.category
+                    }
+                  />
+                </span>
+
+                <span className="workspace-notification-copy">
+                  <strong>
+                    {
+                      notification.title
+                    }
+                  </strong>
+
+                  <span className="workspace-notification-body">
+                    {
+                      notification.body
+                    }
+                  </span>
+
+                  {notification.reason ? (
+                    <span className="workspace-notification-reason">
+                      Reason:{" "}
+                      {
+                        notification.reason
+                      }
+                    </span>
+                  ) : null}
+
+                  <time
+                    dateTime={
+                      notification.createdAt
+                    }
+                  >
+                    {formatActivityTime(
+                      notification.createdAt,
+                    )}
+                  </time>
+                </span>
+              </Link>
+            ),
+          )
+        )}
+      </div>
+    </section>
+  );
+
+  return (
+    <>
+      <div
+        className="workspace-command-bar"
+        aria-label="Workspace controls"
+      >
+        <GlobalSearch />
+        <div className="workspace-command-shortcuts">
+        <DashboardDateTrigger />
+          <button
+            className="workspace-command-button"
+            type="button"
+            aria-label="Gallery"
+            title="Gallery"
+          >
+            <Images
+              aria-hidden="true"
+            />
+          </button>
+
+          <button
+            ref={triggerRef}
+            className={[
+              "workspace-command-button",
+              "workspace-notification-trigger",
+              notificationsOpen
+                ? "is-open"
+                : "",
+              notificationRinging
+                ? "is-ringing"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            type="button"
+            aria-label="Notifications"
+            title="Notifications"
+            aria-expanded={
+              notificationsOpen
+            }
+            aria-haspopup="dialog"
+            onClick={
+              toggleNotifications
+            }
+          >
+            <Bell
+              aria-hidden="true"
+            />
+
+            {notifications.some((notification) => !notification.readAt) ? (
+              <span
+                className="workspace-notification-badge"
+                aria-label={`${notificationBadgeLabel} unread notifications`}
+              >
+                {notificationBadgeLabel}
+              </span>
+            ) : null}
+          </button>
+
+          <WorkspaceQuickAction
+            user={user}
+          />
+        </div>
+
+        <div className="workspace-command-profile">
+          <AccountMenu
+            user={user}
+          />
+        </div>
+      </div>
+
+      {mounted
+        ? createPortal(
+            notificationPanel,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+=== RELATED CSS ===
+
+  src\app\globals.css:89:.filter-control button svg { left: 12px; }
+  src\app\globals.css:90:
+  src\app\globals.css:91:.desktop-table-wrap { margin-top: 8px; overflow-x: auto; border: 1px solid 
+var(--wf-border); border-radius: 6px; background: var(--wf-white); }
+  src\app\globals.css:92:table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+> src\app\globals.css:93:th { height: 40px; padding: 0 12px; position: sticky; top: 0; z-index: 1; 
+color: var(--wf-text-muted); background: var(--wf-warm-100); border-bottom: 1px solid 
+var(--wf-border); text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .03em; 
+text-transform: uppercase; }
+  src\app\globals.css:94:td { height: 52px; padding: 8px 12px; border-bottom: 1px solid 
+var(--wf-border); font-size: 13px; vertical-align: middle; }
+  src\app\globals.css:95:tbody tr:last-child td { border-bottom: 0; }
+  src\app\globals.css:96:tbody tr:hover { background: #fbfbfc; }
+  src\app\globals.css:97:.align-right { text-align: right; }
+  src\app\globals.css:98:.record-link { color: var(--wf-navy); font-weight: 500; text-decoration: 
+none; }
+  src\app\globals.css:99:.record-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  src\app\globals.css:100:.cell-subline { display: block; max-width: 260px; margin-top: 2px; overflow: 
+hidden; color: var(--wf-text-muted); text-overflow: ellipsis; white-space: nowrap; }
+  src\app\globals.css:101:.truncate-cell { max-width: 380px; overflow: hidden; text-overflow: 
+ellipsis; white-space: nowrap; color: var(--wf-text-muted); }
+  src\app\globals.css:102:.status-badge { display: inline-flex; align-items: center; min-height: 24px; 
+padding: 2px 7px; border: 1px solid var(--wf-border); border-radius: 4px; color: var(--wf-text); 
+background: var(--wf-white); font-size: 11px; font-weight: 500; white-space: nowrap; }
+  src\app\globals.css:103:.status-working { color: var(--wf-white); border-color: var(--wf-navy); 
+background: var(--wf-navy); }
+  src\app\globals.css:104:.status-waiting_reply, .status-pending_update { border-color: 
+var(--wf-gold); }
+  src\app\globals.css:105:.status-complete { background: var(--wf-warm-100); }
+  src\app\globals.css:557:  .workspace {
+  src\app\globals.css:558:    position: relative;
+  src\app\globals.css:559:  }
+  src\app\globals.css:560:
+> src\app\globals.css:561:  .workspace-command-bar {
+  src\app\globals.css:562:    position: absolute;
+  src\app\globals.css:563:    top: 10px;
+  src\app\globals.css:564:    right: 24px;
+  src\app\globals.css:565:    z-index: 40;
+  src\app\globals.css:566:
+  src\app\globals.css:567:    width: min(520px, calc(100% - 48px));
+  src\app\globals.css:568:    height: 44px;
+  src\app\globals.css:569:
+  src\app\globals.css:570:    display: flex;
+  src\app\globals.css:571:    align-items: center;
+  src\app\globals.css:572:    justify-content: flex-end;
+  src\app\globals.css:573:    gap: 8px;
+  src\app\globals.css:606:    overflow: hidden;
+  src\app\globals.css:607:  }
+  src\app\globals.css:608:
+  src\app\globals.css:609:  .workspace-search-shell:hover,
+> src\app\globals.css:610:  .workspace-command-bar:focus-within .workspace-search-shell {
+  src\app\globals.css:611:    border-color: #c8ccd8;
+  src\app\globals.css:612:    box-shadow: 0 4px 16px rgba(0, 13, 81, 0.06);
+  src\app\globals.css:613:  }
+  src\app\globals.css:614:
+  src\app\globals.css:615:  .workspace-search-shell svg {
+  src\app\globals.css:616:    width: 17px;
+  src\app\globals.css:617:    height: 17px;
+  src\app\globals.css:618:    flex: 0 0 auto;
+  src\app\globals.css:619:
+  src\app\globals.css:620:    color: #687083;
+  src\app\globals.css:621:    stroke-width: 1.8;
+  src\app\globals.css:622:  }
+  src\app\globals.css:642:    color: #7b8190;
+  src\app\globals.css:643:    opacity: 1;
+  src\app\globals.css:644:  }
+  src\app\globals.css:645:
+> src\app\globals.css:646:  .workspace-command-shortcuts {
+  src\app\globals.css:647:    flex: 0 0 auto;
+  src\app\globals.css:648:
+  src\app\globals.css:649:    display: flex;
+  src\app\globals.css:650:    align-items: center;
+  src\app\globals.css:651:    gap: 8px;
+  src\app\globals.css:652:
+  src\app\globals.css:653:    max-width: 0;
+  src\app\globals.css:654:    opacity: 0;
+  src\app\globals.css:655:    overflow: hidden;
+  src\app\globals.css:656:
+  src\app\globals.css:657:    transform: translateX(10px);
+  src\app\globals.css:658:
+  src\app\globals.css:661:      opacity 180ms ease,
+  src\app\globals.css:662:      transform 320ms cubic-bezier(.2,.8,.2,1);
+  src\app\globals.css:663:  }
+  src\app\globals.css:664:
+> src\app\globals.css:665:  .workspace-command-bar:hover .workspace-command-shortcuts,
+> src\app\globals.css:666:  .workspace-command-bar:focus-within .workspace-command-shortcuts {
+  src\app\globals.css:667:    max-width: 142px;
+  src\app\globals.css:668:    opacity: 1;
+  src\app\globals.css:669:    transform: translateX(0);
+  src\app\globals.css:670:  }
+  src\app\globals.css:671:
+> src\app\globals.css:672:  .workspace-command-button {
+  src\app\globals.css:673:    width: 42px;
+  src\app\globals.css:674:    height: 42px;
+  src\app\globals.css:675:    flex: 0 0 42px;
+  src\app\globals.css:676:
+  src\app\globals.css:677:    display: inline-flex;
+  src\app\globals.css:678:    align-items: center;
+  src\app\globals.css:679:    justify-content: center;
+  src\app\globals.css:680:
+  src\app\globals.css:681:    padding: 0;
+  src\app\globals.css:682:
+  src\app\globals.css:683:    border: 1px solid var(--wf-border);
+  src\app\globals.css:684:    border-radius: 999px;
+  src\app\globals.css:696:      transform 160ms ease,
+  src\app\globals.css:697:      box-shadow 160ms ease;
+  src\app\globals.css:698:  }
+  src\app\globals.css:699:
+> src\app\globals.css:700:  .workspace-command-button svg {
+  src\app\globals.css:701:    width: 18px;
+  src\app\globals.css:702:    height: 18px;
+  src\app\globals.css:703:    stroke-width: 1.8;
+  src\app\globals.css:704:  }
+  src\app\globals.css:705:
+  src\app\globals.css:706:  /* Movement is gated to fine pointers at the end of this file. */
+> src\app\globals.css:707:  .workspace-command-button:hover {
+  src\app\globals.css:708:    color: #000D51;
+  src\app\globals.css:709:    border-color: #bfc5d2;
+  src\app\globals.css:710:    background: #f8f9fc;
+  src\app\globals.css:711:
+  src\app\globals.css:712:    box-shadow: 0 4px 14px rgba(0, 13, 81, 0.07);
+  src\app\globals.css:713:  }
+  src\app\globals.css:714:
+> src\app\globals.css:715:  .workspace-command-profile {
+  src\app\globals.css:716:    width: 42px;
+  src\app\globals.css:717:    height: 42px;
+  src\app\globals.css:718:    flex: 0 0 42px;
+  src\app\globals.css:719:
+  src\app\globals.css:720:    position: relative;
+  src\app\globals.css:721:  }
+  src\app\globals.css:722:
+> src\app\globals.css:723:  .workspace-command-profile .account {
+  src\app\globals.css:724:    width: 42px;
+  src\app\globals.css:725:    height: 42px;
+  src\app\globals.css:726:    position: relative;
+  src\app\globals.css:727:  }
+  src\app\globals.css:728:
+> src\app\globals.css:729:  .workspace-command-profile .avatar-button {
+  src\app\globals.css:730:    width: 42px;
+  src\app\globals.css:731:    height: 42px;
+  src\app\globals.css:732:
+  src\app\globals.css:733:    display: flex;
+  src\app\globals.css:734:    align-items: center;
+  src\app\globals.css:735:    justify-content: center;
+  src\app\globals.css:736:
+  src\app\globals.css:737:    padding: 0;
+  src\app\globals.css:738:
+  src\app\globals.css:739:    border: 1px solid var(--wf-border);
+  src\app\globals.css:740:    border-radius: 999px;
+  src\app\globals.css:741:
+  src\app\globals.css:749:      box-shadow 160ms ease,
+  src\app\globals.css:750:      transform 160ms ease;
+  src\app\globals.css:751:  }
+  src\app\globals.css:752:
+> src\app\globals.css:753:  .workspace-command-profile .avatar-button:hover {
+  src\app\globals.css:754:    border-color: #bfc5d2;
+  src\app\globals.css:755:
+  src\app\globals.css:756:    box-shadow: 0 4px 14px rgba(0, 13, 81, 0.07);
+  src\app\globals.css:757:  }
+  src\app\globals.css:758:
+> src\app\globals.css:759:  .workspace-command-profile .avatar-initials {
+  src\app\globals.css:760:    display: flex;
+  src\app\globals.css:761:    align-items: center;
+  src\app\globals.css:762:    justify-content: center;
+  src\app\globals.css:763:
+  src\app\globals.css:764:    font-family: var(--wf-font-ui);
+  src\app\globals.css:765:    font-size: 12px;
+  src\app\globals.css:766:    font-weight: 700;
+  src\app\globals.css:767:    line-height: 1;
+  src\app\globals.css:768:  }
+  src\app\globals.css:769:
+> src\app\globals.css:770:  .workspace-command-profile .account-popover {
+  src\app\globals.css:771:    top: 50px;
+  src\app\globals.css:772:    right: 0;
+  src\app\globals.css:773:    left: auto;
+  src\app\globals.css:774:  }
+  src\app\globals.css:775:
+  src\app\globals.css:776:  /*
+  src\app\globals.css:777:    Keep page-specific buttons from sitting underneath
+  src\app\globals.css:778:    the global command bar.
+  src\app\globals.css:779:  */
+  src\app\globals.css:780:  .page-actions {
+  src\app\globals.css:781:    margin-right: 528px;
+  src\app\globals.css:782:  }
+  src\app\globals.css:783:}
+  src\app\globals.css:784:
+  src\app\globals.css:785:@media (max-width: 1250px) and (min-width: 1024px) {
+  src\app\globals.css:786:
+> src\app\globals.css:787:  .workspace-command-bar {
+  src\app\globals.css:788:    width: 430px;
+  src\app\globals.css:789:  }
+  src\app\globals.css:790:
+  src\app\globals.css:791:  .page-actions {
+  src\app\globals.css:792:    margin-right: 438px;
+  src\app\globals.css:793:  }
+  src\app\globals.css:794:}
+  src\app\globals.css:795:
+  src\app\globals.css:796:/* WF WORKSPACE COMMAND BAR END */
+  src\app\globals.css:797:
+  src\app\globals.css:798:
+  src\app\globals.css:799:/* WF CLIENT ACTION MENU START */
+  src\app\globals.css:4634:  background: var(--wf-white);
+  src\app\globals.css:4635:}
+  src\app\globals.css:4636:
+  src\app\globals.css:4637:.portal-sidebar {
+> src\app\globals.css:4638:  position: sticky;
+  src\app\globals.css:4639:  top: 0;
+  src\app\globals.css:4640:  height: 100vh;
+  src\app\globals.css:4641:  display: flex;
+  src\app\globals.css:4642:  flex-direction: column;
+  src\app\globals.css:4643:  gap: 6px;
+  src\app\globals.css:4644:  padding: 18px 14px 14px;
+  src\app\globals.css:4645:  color: #fff;
+  src\app\globals.css:4646:  background: var(--wf-navy);
+  src\app\globals.css:4647:  border-right: 1px solid rgba(255, 255, 255, .1);
+  src\app\globals.css:4648:  overflow-y: auto;
+  src\app\globals.css:4649:}
+  src\app\globals.css:4650:
+  src\app\globals.css:4740:
+  src\app\globals.css:4741:.portal-signout:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+  src\app\globals.css:4742:.portal-signout svg { width: 15px; height: 15px; }
+  src\app\globals.css:4743:
+> src\app\globals.css:4744:.portal-topbar { display: none; }
+  src\app\globals.css:4745:.portal-scrim { display: none; }
+  src\app\globals.css:4746:
+  src\app\globals.css:4747:.portal-main { min-width: 0; background: var(--wf-white); }
+  src\app\globals.css:4748:.portal-main-inner { width: min(100%, 1040px); margin: 0 auto; padding: 
+44px 40px 80px; }
+  src\app\globals.css:4749:
+  src\app\globals.css:4750:/* --- Portal page furniture 
+------------------------------------------------ */
+  src\app\globals.css:4751:
+  src\app\globals.css:4752:.portal-page { display: flex; flex-direction: column; gap: 28px; }
+  src\app\globals.css:4753:
+  src\app\globals.css:4754:.portal-eyebrow {
+  src\app\globals.css:4755:  color: var(--wf-gold);
+  src\app\globals.css:4756:  font-size: 10px;
+  src\app\globals.css:5051:/* Below this width the rail becomes a drawer behind the portal top bar. */
+  src\app\globals.css:5052:@media (max-width: 900px) {
+  src\app\globals.css:5053:  .client-portal { grid-template-columns: minmax(0, 1fr); }
+  src\app\globals.css:5054:
+> src\app\globals.css:5055:  .portal-topbar {
+> src\app\globals.css:5056:    position: sticky;
+  src\app\globals.css:5057:    top: 0;
+  src\app\globals.css:5058:    z-index: 60;
+  src\app\globals.css:5059:    display: flex;
+  src\app\globals.css:5060:    align-items: center;
+  src\app\globals.css:5061:    gap: 12px;
+  src\app\globals.css:5062:    min-height: 56px;
+  src\app\globals.css:5063:    padding: 0 14px;
+  src\app\globals.css:5064:    color: #fff;
+  src\app\globals.css:5065:    background: var(--wf-navy);
+  src\app\globals.css:5066:    border-bottom: 1px solid rgba(255, 255, 255, .12);
+  src\app\globals.css:5067:  }
+  src\app\globals.css:5068:
+  src\app\globals.css:5081:  }
+  src\app\globals.css:5082:
+  src\app\globals.css:5083:  .portal-drawer-toggle svg { width: 17px; height: 17px; }
+  src\app\globals.css:5084:
+> src\app\globals.css:5085:  .portal-topbar-title {
+  src\app\globals.css:5086:    font-family: "Sora Variable", Sora, sans-serif;
+  src\app\globals.css:5087:    font-size: 13px;
+  src\app\globals.css:5088:    font-weight: 620;
+  src\app\globals.css:5089:    letter-spacing: .01em;
+  src\app\globals.css:5090:  }
+  src\app\globals.css:5091:
+  src\app\globals.css:5092:  .portal-scrim {
+  src\app\globals.css:5093:    display: block;
+  src\app\globals.css:5094:    position: fixed;
+  src\app\globals.css:5095:    inset: 0;
+  src\app\globals.css:5096:    z-index: 70;
+  src\app\globals.css:5097:    width: 100%;
+  src\app\globals.css:6160:  Keep the command bar in its ORIGINAL top-right position.
+  src\app\globals.css:6161:  Only fix overflow / stacking for the notification dropdown.
+  src\app\globals.css:6162:*/
+  src\app\globals.css:6163:
+> src\app\globals.css:6164:.workspace-command-bar {
+  src\app\globals.css:6165:  z-index: 500;
+  src\app\globals.css:6166:  overflow: visible !important;
+  src\app\globals.css:6167:}
+  src\app\globals.css:6168:
+> src\app\globals.css:6169:.workspace-command-shortcuts {
+  src\app\globals.css:6170:  position: relative;
+  src\app\globals.css:6171:}
+  src\app\globals.css:6172:
+> src\app\globals.css:6173:.workspace-command-shortcuts:has(
+  src\app\globals.css:6174:  .workspace-notification-trigger.is-open
+  src\app\globals.css:6175:) {
+  src\app\globals.css:6176:  overflow: visible !important;
+  src\app\globals.css:6177:  z-index: 900;
+  src\app\globals.css:6178:}
+  src\app\globals.css:6179:
+  src\app\globals.css:6180:.workspace-notification-control {
+  src\app\globals.css:6181:  position: relative;
+  src\app\globals.css:6182:  z-index: 950;
+  src\app\globals.css:6183:}
+  src\app\globals.css:6184:
+  src\app\globals.css:6185:.workspace-notification-trigger {
+  src\app\globals.css:7417: * (never in the transition list, so hover-out killed the fade instantly) 
+and
+  src\app\globals.css:7418: * `contain: paint -> none` (re-establishing a containment boundary mid-
+  src\app\globals.css:7419: * animation). One gesture now runs on one curve.
+  src\app\globals.css:7420: */
+> src\app\globals.css:7421:.workspace-command-shortcuts {
+  src\app\globals.css:7422:  flex: 0 0 auto;
+  src\app\globals.css:7423:
+  src\app\globals.css:7424:  display: flex;
+  src\app\globals.css:7425:  align-items: center;
+  src\app\globals.css:7426:  gap: 8px;
+  src\app\globals.css:7427:
+  src\app\globals.css:7428:  min-width: 0;
+  src\app\globals.css:7429:  max-width: 0;
+  src\app\globals.css:7430:
+  src\app\globals.css:7431:  opacity: 0;
+  src\app\globals.css:7432:  overflow: hidden;
+  src\app\globals.css:7433:  pointer-events: none;
+  src\app\globals.css:7439:    transform 220ms cubic-bezier(.2, .8, .2, 1),
+  src\app\globals.css:7440:    opacity 150ms ease;
+  src\app\globals.css:7441:}
+  src\app\globals.css:7442:
+> src\app\globals.css:7443:.workspace-command-shortcuts > * {
+  src\app\globals.css:7444:  flex: 0 0 auto;
+  src\app\globals.css:7445:}
+  src\app\globals.css:7446:
+  src\app\globals.css:7447:/*
+  src\app\globals.css:7448: * The clamp must clear the widest rail, otherwise the last control is 
+sliced.
+  src\app\globals.css:7449: * Owner/admin get Calendar 38 + Gallery 42 + Bell 42 + Quick Action 42 and
+  src\app\globals.css:7450: * three 8px gaps = 188px; Quick Action renders nothing for other roles, so 
+the
+  src\app\globals.css:7451: * rail is intrinsically narrower and simply stops early.
+  src\app\globals.css:7452: */
+> src\app\globals.css:7453:.workspace-command-bar:focus-within .workspace-command-shortcuts,
+> src\app\globals.css:7454:.workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) {
+  src\app\globals.css:7455:  max-width: 200px;
+  src\app\globals.css:7456:
+  src\app\globals.css:7457:  opacity: 1;
+  src\app\globals.css:7458:  overflow: visible;
+  src\app\globals.css:7459:  pointer-events: auto;
+  src\app\globals.css:7460:
+  src\app\globals.css:7461:  transform: translateX(0);
+  src\app\globals.css:7462:}
+  src\app\globals.css:7463:
+  src\app\globals.css:7464:/*
+  src\app\globals.css:7465: * Hover is added separately so a tap on a touch screen cannot latch the 
+rail
+  src\app\globals.css:7466: * open with no way to dismiss it. Focus and an open panel still reveal it 
+on
+  src\app\globals.css:7467: * every device, which is how the rail is reached by keyboard and by touch.
+  src\app\globals.css:7468: */
+  src\app\globals.css:7469:@media (hover: hover) and (pointer: fine) {
+> src\app\globals.css:7470:  .workspace-command-bar:hover .workspace-command-shortcuts {
+  src\app\globals.css:7471:    max-width: 200px;
+  src\app\globals.css:7472:
+  src\app\globals.css:7473:    opacity: 1;
+  src\app\globals.css:7474:    overflow: visible;
+  src\app\globals.css:7475:    pointer-events: auto;
+  src\app\globals.css:7476:
+  src\app\globals.css:7477:    transform: translateX(0);
+  src\app\globals.css:7478:  }
+  src\app\globals.css:7479:}
+  src\app\globals.css:7480:
+  src\app\globals.css:7481:@media (prefers-reduced-motion: reduce) {
+> src\app\globals.css:7482:  .workspace-command-shortcuts {
+  src\app\globals.css:7483:    transform: none;
+  src\app\globals.css:7484:
+  src\app\globals.css:7485:    transition:
+  src\app\globals.css:7486:      max-width 150ms ease,
+  src\app\globals.css:7487:      opacity 120ms ease;
+  src\app\globals.css:7488:  }
+  src\app\globals.css:7489:
+> src\app\globals.css:7490:  .workspace-command-bar:hover .workspace-command-shortcuts,
+> src\app\globals.css:7491:  .workspace-command-bar:focus-within .workspace-command-shortcuts,
+> src\app\globals.css:7492:  .workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) 
+{
+  src\app\globals.css:7493:    transform: none;
+  src\app\globals.css:7494:  }
+  src\app\globals.css:7495:}
+  src\app\globals.css:7496:
+  src\app\globals.css:7497:/* WF COMMAND BAR SHORTCUT STABILITY END */
+  src\app\globals.css:7498:/* WF BALANCE MODAL PORTAL FIX START */
+  src\app\globals.css:7499:
+  src\app\globals.css:7500:/*
+  src\app\globals.css:7501: * Manage Balance is portaled directly to document.body.
+  src\app\globals.css:7502: * Keep it above the Wolf Forge command bar and cover the
+  src\app\globals.css:7503: * complete browser viewport, regardless of shell transforms.
+  src\app\globals.css:7504: */
+  src\app\globals.css:10837:/*
+  src\app\globals.css:10838:  Press feedback for the command bar controls. Hover lifts live behind the
+  src\app\globals.css:10839:  pointer query below; a press is momentary and correct on every input 
+type.
+  src\app\globals.css:10840:*/
+> src\app\globals.css:10841:.workspace-command-button:active,
+> src\app\globals.css:10842:.workspace-command-profile .avatar-button:active {
+  src\app\globals.css:10843:  transform: scale(.96);
+  src\app\globals.css:10844:  transition-duration: 100ms;
+  src\app\globals.css:10845:}
+  src\app\globals.css:10846:
+  src\app\globals.css:10847:@media (hover: hover) and (pointer: fine) {
+> src\app\globals.css:10848:  .workspace-command-button:hover,
+> src\app\globals.css:10849:  .workspace-command-profile .avatar-button:hover {
+  src\app\globals.css:10850:    transform: translateY(-1px);
+  src\app\globals.css:10851:  }
+  src\app\globals.css:10852:}
+  src\app\globals.css:10853:
+  src\app\globals.css:10854:/*
+  src\app\globals.css:10855:  A touch pointer reports a hover on tap and then keeps it, which left a
+  src\app\globals.css:10856:  non-current rail item looking selected. The current page keeps its own
+  src\app\globals.css:10857:  treatment via .is-active.
+  src\app\globals.css:10858:*/
+  src\app\globals.css:10859:@media (hover: none), (pointer: coarse) {
+  src\app\globals.css:10860:  .sidebar-link:not(.is-active):hover {
+  src\app\globals.css:10861:    color: rgba(255, 255, 255, .80);
+  src\app\globals.css:10918:  Below the desktop breakpoint the command bar has no layout of its own, 
+so it
+  src\app\globals.css:10919:  fell back to normal flow and the search sat unaligned above the 
+shortcuts.
+  src\app\globals.css:10920:*/
+  src\app\globals.css:10921:@media (max-width: 1023px) {
+> src\app\globals.css:10922:  .workspace-command-bar {
+  src\app\globals.css:10923:    display: flex;
+  src\app\globals.css:10924:    align-items: center;
+  src\app\globals.css:10925:    gap: 8px;
+  src\app\globals.css:10926:
+  src\app\globals.css:10927:    padding: 10px 16px;
+  src\app\globals.css:10928:    padding-right: max(16px, env(safe-area-inset-right));
+  src\app\globals.css:10929:  }
+  src\app\globals.css:10930:}
+  src\app\globals.css:10931:
+  src\app\globals.css:10932:/* Coarse pointers get the full recommended target on the round controls. 
+*/
+  src\app\globals.css:10933:@media (pointer: coarse) {
+> src\app\globals.css:10934:  .workspace-command-button {
+  src\app\globals.css:10935:    width: 44px;
+  src\app\globals.css:10936:    height: 44px;
+  src\app\globals.css:10937:    flex-basis: 44px;
+  src\app\globals.css:10938:  }
+  src\app\globals.css:10939:}
+  src\app\globals.css:10940:
+  src\app\globals.css:10941:@media (prefers-reduced-motion: reduce) {
+  src\app\globals.css:10942:  .account-popover,
+  src\app\globals.css:10943:  .account-popover[data-state="closed"],
+  src\app\globals.css:10944:  .account-popover-sidebar,
+  src\app\globals.css:10945:  .account-popover-sidebar[data-state="closed"] {
+  src\app\globals.css:10946:    transform: none;
+  src\app\globals.css:10947:    transition: opacity 110ms ease;
+  src\app\globals.css:10948:  }
+  src\app\globals.css:10949:
+  src\app\globals.css:10950:  /* Colour, border and shadow feedback stay; only movement is dropped. */
+> src\app\globals.css:10951:  .workspace-command-button:hover,
+> src\app\globals.css:10952:  .workspace-command-button:active,
+> src\app\globals.css:10953:  .workspace-command-profile .avatar-button:hover,
+> src\app\globals.css:10954:  .workspace-command-profile .avatar-button:active,
+  src\app\globals.css:10955:  .sidebar-link:active {
+  src\app\globals.css:10956:    transform: none;
+  src\app\globals.css:10957:  }
+  src\app\globals.css:10958:}
+  src\app\globals.css:10959:
+  src\app\globals.css:10960:/* WF SHELL POLISH END */
+  src\app\globals.css:10961:
+  src\app\globals.css:10962:/* WF CLIENT PORTAL V2 START */
+  src\app\globals.css:10963:
+  src\app\globals.css:10964:/* 
+---------------------------------------------------------------------------
+  src\app\globals.css:10965: * Client Portal, second pass.
+  src\app\globals.css:10966: *
+  src\app\globals.css:11924: * "Print or save as PDF" on an invoice prints the invoice, not the 
+workspace.
+  src\app\globals.css:11925: */
+  src\app\globals.css:11926:@media print {
+  src\app\globals.css:11927:  .portal-sidebar,
+> src\app\globals.css:11928:  .portal-topbar,
+  src\app\globals.css:11929:  .portal-scrim,
+  src\app\globals.css:11930:  .portal-back,
+  src\app\globals.css:11931:  .portal-invoice-actions,
+  src\app\globals.css:11932:  .invoice-payment-selector,
+  src\app\globals.css:11933:  .skip-link { display: none !important; }
+  src\app\globals.css:11934:
+  src\app\globals.css:11935:  .client-portal { display: block; }
+  src\app\globals.css:11936:  .portal-main-inner { width: 100%; max-width: none; padding: 0; }
+  src\app\globals.css:11937:  .portal-main-inner > * { animation: none; }
+  src\app\globals.css:11938:  .portal-invoice-content { grid-template-columns: minmax(0, 1fr) 260px; }
+  src\app\globals.css:11939:}
+  src\app\globals.css:11940:
+  src\app\globals.css:11967: * out-stack each other (the manager already guarantees only one is open).
+  src\app\globals.css:11968: *
+  src\app\globals.css:11969: * Deliberate client-portal layers, low to high:
+  src\app\globals.css:11970: *   page content     auto / 0
+> src\app\globals.css:11971: *   header shell     sticky top bar (60 on mobile)
+  src\app\globals.css:11972: *   header panels    60      -- notifications, services, quick action
+  src\app\globals.css:11973: *   dialogs         9600     -- centered .portal-overlay
+  src\app\globals.css:11974: *
+  src\app\globals.css:11975: * All three header panels — notifications, services and quick action —
+  src\app\globals.css:11976: * share this one layer, defined here on the portal root so every surface
+  src\app\globals.css:11977: * inherits the same value. A floating surface that needs to rise above
+  src\app\globals.css:11978: * page content belongs on it, nothing higher.
+  src\app\globals.css:11979: */
+  src\app\globals.css:11980:.client-portal,
+  src\app\globals.css:11981:.portal-overlay,
+  src\app\globals.css:11982:.portal-header-panel {
+  src\app\globals.css:11983:  --portal-layer-header-panel: 60;
+  src\app\globals.css:12232:/*
+  src\app\globals.css:12233: * Aligned to the same content column as the page beneath it, so the
+  src\app\globals.css:12234: * notification control sits in a row rather than floating alone in the 
+corner.
+  src\app\globals.css:12235: */
+> src\app\globals.css:12236:.portal-command-bar {
+  src\app\globals.css:12237:  width: min(100%, 1040px);
+  src\app\globals.css:12238:  margin: 0 auto;
+  src\app\globals.css:12239:  padding: 18px 40px 0;
+  src\app\globals.css:12240:  display: flex;
+  src\app\globals.css:12241:  align-items: center;
+  src\app\globals.css:12242:  justify-content: flex-end;
+  src\app\globals.css:12243:  gap: 10px;
+  src\app\globals.css:12244:}
+  src\app\globals.css:12245:
+  src\app\globals.css:12246:.portal-command-search {
+  src\app\globals.css:12247:  flex: 0 1 320px;
+  src\app\globals.css:12248:  min-width: 0;
+  src\app\globals.css:12584:
+  src\app\globals.css:12585:/* --- Responsive 
+----------------------------------------------------------- */
+  src\app\globals.css:12586:
+  src\app\globals.css:12587:@media (max-width: 900px) {
+> src\app\globals.css:12588:  .portal-command-bar { padding: 14px 18px 0; }
+  src\app\globals.css:12589:}
+  src\app\globals.css:12590:
+  src\app\globals.css:12591:@media (max-width: 720px) {
+  src\app\globals.css:12592:  /* Search keeps its own row so nothing is squeezed into a single strip. 
+*/
+> src\app\globals.css:12593:  .portal-command-bar {
+  src\app\globals.css:12594:    flex-wrap: wrap;
+  src\app\globals.css:12595:    justify-content: space-between;
+  src\app\globals.css:12596:    gap: 10px;
+  src\app\globals.css:12597:  }
+  src\app\globals.css:12598:
+  src\app\globals.css:12599:  /* The field now lives inside the search anchor, which is what flexes. */
+  src\app\globals.css:12600:  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
+  src\app\globals.css:12601:  .portal-command-actions { order: 1; margin-left: auto; }
+  src\app\globals.css:12602:}
+  src\app\globals.css:12603:
+  src\app\globals.css:12604:@media (max-width: 620px) {
+  src\app\globals.css:12605:  .portal-overlay { padding: 14px 12px; }
+
+
+

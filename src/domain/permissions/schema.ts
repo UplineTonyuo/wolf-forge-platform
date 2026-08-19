@@ -171,6 +171,8 @@ export type InternalMember = {
   override_count: number;
   is_self: boolean;
   created_at: string;
+  /** Public avatar URL from public.profiles, or null when initials are shown. */
+  avatar_url: string | null;
 };
 
 export type PermissionPresetOverview = {

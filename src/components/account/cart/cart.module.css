@@ -1,0 +1,561 @@
+/*
+ * The client request cart.
+ *
+ * Same system as the Store: navy structure, one gold beat, single navy-tinted
+ * lift, motion on --wf-ease. The contents render inside PortalDialog's
+ * `feature` size, which already owns the overlay, surface, radius, shadow and
+ * entrance — nothing here re-states those.
+ */
+
+/* --- Trigger badge -------------------------------------------------------- */
+
+/* Visuals come from the shared .wf-count-badge; this adds only the arrival. */
+.badge { animation: cartBadgePop 260ms var(--wf-ease) both; }
+
+@keyframes cartBadgePop {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Empty state ---------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 42px 24px 46px;
+  text-align: center;
+}
+
+.empty > svg {
+  width: 26px;
+  height: 26px;
+  color: var(--wf-gold);
+  stroke-width: 1.5;
+}
+
+.empty p {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 620;
+  text-decoration: none;
+  transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.emptyAction:hover { background: var(--wf-navy-hover); transform: translateY(-1px); }
+.emptyAction:active { transform: translateY(0) scale(.98); }
+.emptyAction svg { width: 14px; height: 14px; }
+
+/* --- Header action -------------------------------------------------------- */
+
+.clear {
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+  font-size: 11.5px;
+  font-weight: 620;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 140ms var(--wf-ease), border-color 140ms var(--wf-ease),
+    background-color 140ms var(--wf-ease);
+}
+
+.clear:hover,
+.clear[data-confirming] {
+  color: var(--wf-danger);
+  border-color: rgba(140, 47, 47, .3);
+  background: rgba(140, 47, 47, .06);
+}
+
+.clear[data-confirming] { border-color: rgba(140, 47, 47, .55); font-weight: 700; }
+
+/* --- Rows ----------------------------------------------------------------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 15px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+  overflow: hidden;
+  transition: border-color 180ms var(--wf-ease), box-shadow 180ms var(--wf-ease);
+}
+
+/*
+ * Exit only. The dialog's own entrance carries the list in; a row animating the
+ * other way fought the panel's direction of travel. Removing one collapses it
+ * so the list closes up rather than snapping.
+ */
+.row[data-leaving] {
+  animation: cartRowOut 200ms var(--wf-ease) both;
+  pointer-events: none;
+}
+
+/*
+ * Clearing plays every row out on the same curve as a single removal, offset by
+ * an inline animation-delay. One animation language, two triggers.
+ */
+.list[data-clearing] { pointer-events: none; }
+
+/* The totals and CTA soften out while the rows leave rather than snapping. */
+.foot[data-clearing] {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 180ms var(--wf-ease), transform 180ms var(--wf-ease);
+  pointer-events: none;
+}
+
+@keyframes cartRowOut {
+  from { opacity: 1; max-height: 220px; transform: none; }
+  to {
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: -10px;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-width: 0;
+    transform: translateX(10px);
+  }
+}
+
+.row:hover {
+  border-color: rgba(0, 13, 81, .2);
+  box-shadow: 0 16px 30px -26px rgba(0, 13, 81, .42);
+}
+
+.rowMain { display: flex; flex-direction: column; gap: 7px; flex: 1 1 auto; min-width: 0; }
+
+.rowHead { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.rowName {
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 14px;
+  font-weight: 620;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  text-decoration: none;
+}
+
+.rowName:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.rowCategory {
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.rowSummary {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  /* The Store detail page is where the full inclusions live. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.rowFoot { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+
+.rowPrice {
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rowCadence {
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.rowCadence[data-cadence="monthly"],
+.rowCadence[data-cadence="annual"],
+.rowCadence[data-cadence="other"] {
+  color: color-mix(in srgb, var(--wf-gold) 78%, #000);
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--wf-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 140ms var(--wf-ease), background-color 140ms var(--wf-ease);
+}
+
+.remove:hover { color: var(--wf-danger); background: rgba(140, 47, 47, .08); }
+.remove svg { width: 15px; height: 15px; }
+
+/* --- Footer --------------------------------------------------------------- */
+
+.foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+/*
+ * One-time, monthly and annual are never summed: there is no honest single
+ * number across three billing rhythms, so each keeps its own line.
+ */
+.totals { display: flex; flex-wrap: wrap; gap: 8px 26px; margin: 0; }
+.totals > div { display: flex; flex-direction: column; gap: 3px; }
+
+.totals dt {
+  color: var(--wf-text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.totals dd {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.footActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+  flex: 0 0 auto;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 20px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease),
+    box-shadow 160ms var(--wf-ease);
+}
+
+.cta:hover {
+  background: var(--wf-navy-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px -16px rgba(0, 13, 81, .9);
+}
+
+.cta:active { transform: translateY(0) scale(.98); }
+.cta svg { width: 15px; height: 15px; flex: 0 0 auto; transition: transform 200ms var(--wf-ease); }
+.cta:hover svg { transform: translateX(3px); }
+
+.note {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+/*
+ * A 28-30px control is fine for a mouse and too small for a thumb. The header
+ * utility icons already grow on coarse pointers; these follow the same rule.
+ */
+/*
+ * Coarse pointers get no hover, and a tap-to-expand/tap-again-to-add gesture
+ * would turn one action into two. The control stays a circular one-tap add.
+ */
+@media (hover: none) {
+  .addPrompt { display: none; }
+  .addIcon:hover,
+  .addIcon:focus-visible { gap: 0; padding: 0; }
+  .addIcon:hover:not([data-added="true"]) svg { transform: none; }
+}
+
+@media (pointer: coarse) {
+  .remove { width: 40px; height: 40px; }
+  .clear { height: 38px; padding: 0 14px; }
+
+  /* The card's add control keeps its 28px look and grows its hit area only. */
+  .addIcon::after { content: ""; position: absolute; inset: -7px; }
+}
+
+@media (max-width: 720px) {
+  .foot { flex-direction: column; align-items: stretch; gap: 16px; }
+  .footActions { align-items: stretch; }
+  .cta { width: 100%; }
+  .note { max-width: none; text-align: center; }
+  .totals { gap: 8px 20px; }
+  .row { padding: 14px; }
+}
+
+/* --- Add button ----------------------------------------------------------- */
+
+/*
+ * The control only. Placement belongs to whoever renders it: the Store card
+ * pins it to its corner, the flagship spotlight sits it in its action row.
+ * Owning `position: absolute` here meant the spotlight pinned it against the
+ * panel instead, where overflow: hidden clipped it into a half-dot under the
+ * CTA. Always visible rather than hover-revealed: a control that only exists on
+ * hover is undiscoverable and unreachable on touch.
+ */
+.addIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  /* min-width, not width: the circle grows into a pill on hover. 999px reads
+     identically to 50% while it is square, and stays correct once it is not. */
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 180ms var(--wf-ease),
+    border-color 180ms var(--wf-ease),
+    background-color 180ms var(--wf-ease),
+    padding 200ms var(--wf-ease),
+    gap 200ms var(--wf-ease),
+    transform 180ms var(--wf-ease);
+}
+
+/* The flagship sits beside a 40px CTA, so its control is scaled to match. */
+.addIcon[data-size="lg"] { min-width: 36px; height: 36px; }
+.addIcon[data-size="lg"] svg { width: 15px; height: 15px; }
+
+/*
+ * The label unfurls from zero width so the control's own box is the only thing
+ * that changes size — nothing around it reflows.
+ */
+/*
+ * max-width rather than the 0fr/1fr grid trick used elsewhere: this label lives
+ * inside a button whose own width is content-derived, where a fractional track
+ * has no free space to resolve against and collapses to zero.
+ */
+.addPrompt {
+  display: block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(-4px);
+  transition:
+    max-width 200ms var(--wf-ease),
+    opacity 150ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+.addPrompt > span {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .01em;
+}
+
+.addIcon:hover,
+.addIcon:focus-visible {
+  gap: 6px;
+  padding: 0 11px 0 9px;
+}
+
+.addIcon:hover .addPrompt,
+.addIcon:focus-visible .addPrompt {
+  max-width: 120px;
+  opacity: 1;
+  transform: none;
+}
+
+.addIcon:not([data-added="true"]) svg { transition: transform 200ms var(--wf-ease); }
+
+.addIcon:hover:not([data-added="true"]) svg,
+.addIcon:focus-visible:not([data-added="true"]) svg { transform: rotate(45deg); }
+
+.addIcon svg { width: 14px; height: 14px; }
+
+.addIcon:hover {
+  color: var(--wf-navy);
+  border-color: rgba(0, 13, 81, .3);
+  background: var(--wf-navy-wash);
+}
+
+.addIcon:active { transform: scale(.94); }
+
+/*
+ * Selected: the same navy the rest of the Store is built from. Gold is the
+ * accent for a highlight, not for the confirmed state of a control — a filled
+ * gold disc read as a warning badge rather than "this is in your cart".
+ */
+.addIcon[data-added="true"] {
+  color: var(--wf-white);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+  box-shadow: 0 6px 16px -9px rgba(0, 13, 81, .7);
+  /* Informational, not actionable: removal happens in the cart modal. */
+  cursor: default;
+}
+
+.addIcon[data-added="true"]:hover {
+  color: var(--wf-white);
+  border-color: var(--wf-navy-hover);
+  background: var(--wf-navy-hover);
+}
+
+.addIcon[data-added="true"]:active { transform: none; }
+
+/* One restrained beat on confirm. Not a bounce, not a celebration. */
+.addIcon[data-pulse] { animation: addConfirm 300ms var(--wf-ease); }
+
+@keyframes addConfirm {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.11); }
+  100% { transform: scale(1); }
+}
+
+/*
+ * The check is a new element when it replaces the plus, so this plays once.
+ * Deliberately no fill-mode: `both` paints the 0% frame before the animation
+ * starts, which leaves a permanently undersized check if the timeline is never
+ * advanced — a background or throttled tab does exactly that.
+ */
+.addIcon[data-added="true"] svg { animation: addCheckIn 240ms var(--wf-ease); }
+
+@keyframes addCheckIn {
+  from { opacity: 0; transform: scale(.7); }
+  to { opacity: 1; transform: none; }
+}
+
+/* The detail page's action column, beside the primary contact CTA. */
+.addFull {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  font-size: 12.5px;
+  font-weight: 620;
+  cursor: pointer;
+  transition:
+    color 160ms var(--wf-ease),
+    border-color 160ms var(--wf-ease),
+    background-color 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.addFull svg { width: 14px; height: 14px; }
+.addFull:hover { border-color: rgba(0, 13, 81, .3); background: var(--wf-navy-wash); }
+.addFull:active { transform: scale(.985); }
+
+.addFull[data-added="true"] {
+  color: var(--wf-navy);
+  border-color: rgba(0, 13, 81, .32);
+  background: var(--wf-navy-wash);
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge { animation: none; }
+
+  .row[data-leaving] { animation-duration: 1ms; animation-delay: 0ms !important; }
+  .foot[data-clearing] { transition: none; transform: none; }
+
+  .addIcon,
+  .addFull,
+  .cta,
+  .cta svg,
+  .row,
+  .remove,
+  .clear,
+  .emptyAction { transition: none; }
+
+  .emptyAction:hover,
+  .emptyAction:active { transform: none; }
+
+  .addPrompt { transition: none; transform: none; }
+  .addIcon:hover .addPrompt { max-width: 120px; }
+
+  /* No pulse and no drawn check: a plain crossfade into the selected state. */
+  .addIcon[data-pulse] { animation: none; }
+  .addIcon[data-added="true"] svg { animation: none; }
+
+  .addIcon,
+  .addIcon:not([data-added="true"]) svg,
+  .addIcon:hover:not([data-added="true"]) svg,
+  .addIcon:focus-visible:not([data-added="true"]) svg { transition: none; transform: none; }
+
+  .addIcon:hover,
+  .addIcon:active,
+  .addFull:active,
+  .cta:hover,
+  .cta:active { transform: none; }
+
+  .cta:hover svg { transform: none; }
+}

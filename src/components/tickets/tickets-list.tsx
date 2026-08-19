@@ -28,7 +28,7 @@ export function TicketsList({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
     const [priority, setPriority] = useState("all");
-  const [openFilter, setOpenFilter] = useState<"status" | "priority" | "actions" | null>(null);
+  const [openFilter, setOpenFilter] = useState<"status" | "priority" | null>(null);
   const filterAreaRef = useRef<HTMLDivElement>(null);
 
   const ticketDialogRef =
@@ -677,49 +677,14 @@ export function TicketsList({
           </div>
         </div>
         {canCreate ? (
-          <div
-            className={`${styles.filterDropdown} ${styles.actionsDropdown}`}
-            data-open={openFilter === "actions"}
+          <button
+            type="button"
+            className={styles.addTicketButton}
+            onClick={openTicketDialog}
           >
-            <button
-              className={`${styles.filterTrigger} ${styles.actionsTrigger}`}
-              type="button"
-              aria-expanded={openFilter === "actions"}
-              onClick={() =>
-                setOpenFilter((current) =>
-                  current === "actions"
-                    ? null
-                    : "actions"
-                )
-              }
-            >
-              <span>Actions</span>
-
-              <span
-                className={styles.filterChevron}
-                aria-hidden="true"
-              />
-            </button>
-
-            <div
-              className={`${styles.filterMenu} ${styles.actionsMenu}`}
-              aria-hidden={openFilter !== "actions"}
-            >
-              <button
-                type="button"
-                className={`${styles.filterOption} ${styles.actionMenuItem}`}
-                tabIndex={
-                  openFilter === "actions"
-                    ? 0
-                    : -1
-                }
-                onClick={openTicketDialog}
-              >
-                <Plus aria-hidden="true" />
-                <span>Add ticket</span>
-              </button>
-            </div>
-          </div>
+            <Plus size={16} aria-hidden="true" />
+            Add ticket
+          </button>
         ) : null}
       </div>
 

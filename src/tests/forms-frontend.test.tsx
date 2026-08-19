@@ -10,7 +10,6 @@ import { CreateForm } from "../components/forms/create-form";
 import { FormBuilder } from "../components/forms/form-builder";
 import { FormRenderer, isFormFieldVisible } from "../components/forms/form-renderer";
 import { FormAssignments } from "../components/forms/form-assignments";
-import { ClientForms } from "../components/forms/client-forms";
 import { FormSubmissions } from "../components/forms/form-submissions";
 import { SubmissionDetail } from "../components/forms/submission-detail";
 import * as actions from "../app/actions/forms";
@@ -102,7 +101,8 @@ describe("Forms admin list and creation", () => {
     fireEvent.click(screen.getByRole("button", { name: /Intake Forms/ }));
     fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Project Intake" } });
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Intake Service"), { target: { value: service.id } });
+    fireEvent.change(screen.getByLabelText("Intake Service"), { target: { value: "SEO" } });
+    fireEvent.click(screen.getByRole("option", { name: "SEO Strategy" }));
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeEnabled();
   });
 });
@@ -212,8 +212,11 @@ describe("renderer and safety", () => {
 });
 
 describe("assignments, submissions, and client experience", () => {
-  const assignment = { assignment_id: "assignment", form_id: "form", form_type: "onboarding" as const, form_version_id: "version", version_number: 2, title: "Client Onboarding", status: "assigned" as const, required: true, due_at: "2026-08-20T00:00:00Z", assigned_at: "2026-08-14T00:00:00Z", completed_at: null, company_id: "company-private", company_name: "Acme", client_profile_id: "client-private", client_name: "Jane Client", order_id: null, order_number: null, order_title: null, latest_submission_id: null };
-
+  /*
+   * The client-facing view of an assignment now lives in the portal's
+   * Onboarding surface and is covered by client-portal-dashboard.test.tsx.
+   * What remains here is the internal assignment and submission boundary.
+   */
   it("assigns Onboarding Forms through the real client boundary", async () => {
     render(<FormAssignments formId="form" formType="onboarding" assignments={[]} options={[{ id: "client", label: "Jane Client", detail: "Acme" }]} />);
     fireEvent.change(screen.getByLabelText("Client"), { target: { value: "client" } });
@@ -222,12 +225,6 @@ describe("assignments, submissions, and client experience", () => {
     expect(vi.mocked(actions.assignFormAction).mock.calls[0]![1].context).toMatchObject({ client_profile_id: "client" });
   });
 
-  it("renders the client required queue without internal identifiers", () => {
-    render(<ClientForms assignments={[assignment]} />);
-    expect(screen.getByText("Client Onboarding")).toBeInTheDocument();
-    expect(screen.queryByText("Jane Client")).not.toBeInTheDocument();
-    expect(screen.queryByText("company-private")).not.toBeInTheDocument();
-  });
 
   it("links submissions to exact historical detail and labels corrections", () => {
     render(<FormSubmissions submissions={[{ id: "submission", form_id: "form", form_version_id: "version-1", form_assignment_id: "assignment", company_id: "company", client_profile_id: "client", order_id: null, revision_number: 2, status: "submitted", submitted_at: "2026-08-14T00:00:00Z", submitted_by_profile_id: "client", supersedes_submission_id: "original" }]} />);

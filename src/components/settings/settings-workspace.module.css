@@ -1,0 +1,613 @@
+/*
+ * Wolf Forge Settings.
+ *
+ * Deliberately close to an operations console: hairline rules instead of cards,
+ * a single strong identity surface at the top, and one restrained gold moment
+ * on the role pill. No panels, no gradients, no decorative iconography.
+ */
+
+.page {
+  /* One shared grid for every section, so labels and fields keep one axis. */
+  --settings-label-column: 200px;
+  --settings-gap: 34px;
+  --settings-line: #e4e2de;
+  --settings-muted: #6b6660;
+
+  /* The centered reading column is owned by .settings-page-layout .page-frame. */
+  width: 100%;
+  display: grid;
+  gap: 0;
+
+  /* One page entrance for the whole surface; no per-field stagger. */
+  animation: settingsEnter 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes settingsEnter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ------------------------------------------------------------- identity */
+
+.identity {
+  display: grid;
+  grid-template-columns: var(--settings-label-column) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--settings-gap);
+  padding: 4px 0 26px;
+}
+
+.identityCopy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.identityName {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 25px;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.identityMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Role is presentation only here — it is never editable from Settings. */
+.rolePill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(168, 131, 46, 0.42);
+  border-radius: 999px;
+  color: #7d6220;
+  background: rgba(168, 131, 46, 0.08);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.identityEmail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--settings-muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- avatar */
+
+.avatarBlock {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.avatarFrame {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  /* The ring reads as a deliberate frame rather than a border on an image. */
+  box-shadow:
+    0 0 0 1px rgba(0, 13, 81, 0.1),
+    0 0 0 5px #ffffff,
+    0 0 0 6px rgba(0, 13, 81, 0.06);
+}
+
+.avatarButton {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #ffffff;
+  background: rgba(0, 13, 81, 0.62);
+  opacity: 0;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: opacity 160ms ease;
+}
+
+.avatarButton:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+  opacity: 1;
+}
+
+.avatarActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --------------------------------------------------------------- section */
+
+.section {
+  display: grid;
+  grid-template-columns: var(--settings-label-column) minmax(0, 1fr);
+  gap: var(--settings-gap);
+  padding: 26px 0 28px;
+  border-top: 1px solid var(--settings-line);
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading p {
+  margin: 6px 0 0;
+  color: var(--settings-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.fields {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.field > label,
+.field > span:first-child {
+  color: #4c5361;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.field input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dcdad6;
+  border-radius: 9px;
+  color: var(--wf-text);
+  background: #ffffff;
+  font-family: var(--wf-font-ui);
+  font-size: 13px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.field input:focus {
+  border-color: #9aa2bd;
+  outline: 2px solid rgba(0, 13, 81, 0.1);
+  outline-offset: 0;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--wf-danger);
+}
+
+.fieldError {
+  color: var(--wf-danger);
+  font-size: 11px;
+}
+
+.fieldHint {
+  color: #8b8781;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+/* A read-only projection of a value owned by another boundary. */
+.readOnlyValue {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px dashed #ded9d1;
+  border-radius: 9px;
+  color: #55504a;
+  background: #fbfaf8;
+  font-size: 13px;
+}
+
+.readOnlyValue svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: #a29c93;
+}
+
+/* ------------------------------------------------------------ preference */
+
+.toggleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.toggleCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.toggleCopy strong {
+  color: #313949;
+  font-size: 12.5px;
+  font-weight: 620;
+}
+
+.toggleCopy span {
+  color: var(--settings-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Native checkbox stays the control; only its presentation is replaced. */
+.switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switchTrack {
+  width: 46px;
+  height: 28px;
+  border: 1px solid #d7d3cd;
+  border-radius: 999px;
+  background: #efedea;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.switchThumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 13, 81, 0.22);
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.switch input:checked ~ .switchTrack {
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.switch input:checked ~ .switchThumb {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible ~ .switchTrack {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- security */
+
+/*
+ * Sign-in methods are hairline rows, not cards. Each row is one real identity
+ * returned by Supabase Auth; nothing here is speculative.
+ */
+.methodList {
+  display: grid;
+  border: 1px solid var(--settings-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.methodRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  background: #ffffff;
+}
+
+.methodRow + .methodRow {
+  border-top: 1px solid var(--settings-line);
+}
+
+.methodIcon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--wf-navy);
+  background: rgba(0, 13, 81, 0.055);
+}
+
+.methodIcon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.methodCopy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.methodCopy strong {
+  color: #313949;
+  font-size: 12.5px;
+  font-weight: 620;
+}
+
+.methodCopy span {
+  overflow: hidden;
+  color: var(--settings-muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The one restrained gold moment in this section. */
+.methodBadge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 3px 9px;
+  border: 1px solid rgba(168, 131, 46, 0.4);
+  border-radius: 999px;
+  color: #7d6220;
+  background: rgba(168, 131, 46, 0.07);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.securityNote {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 1px solid rgba(0, 13, 81, 0.16);
+  color: var(--settings-muted);
+  background: #fbfaf8;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- footer */
+
+.footer {
+  display: grid;
+  grid-template-columns: var(--settings-label-column) minmax(0, 1fr);
+  gap: var(--settings-gap);
+  padding: 20px 0 8px;
+  border-top: 1px solid var(--settings-line);
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.footerStatus {
+  margin-right: auto;
+  color: var(--settings-muted);
+  font-size: 11.5px;
+}
+
+.footerError {
+  margin-right: auto;
+  color: var(--wf-danger);
+  font-size: 11.5px;
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.primary,
+.secondary,
+.quiet {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-family: var(--wf-font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.primary {
+  border: 1px solid var(--wf-navy);
+  color: #ffffff;
+  background: var(--wf-navy);
+}
+
+.secondary {
+  border: 1px solid #d9d5cf;
+  color: var(--wf-navy);
+  background: #ffffff;
+}
+
+.quiet {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #6b6660;
+  background: transparent;
+  font-size: 11px;
+}
+
+.primary svg,
+.secondary svg,
+.quiet svg {
+  width: 14px;
+  height: 14px;
+}
+
+.primary:focus-visible,
+.secondary:focus-visible,
+.quiet:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled),
+.quiet:active:not(:disabled) {
+  transform: scale(0.975);
+  transition-duration: 110ms;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.quiet:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  /* Disabled controls never move. */
+  transform: none;
+}
+
+.danger {
+  color: #8c2f2f;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .avatarFrame:hover .avatarButton,
+  .avatarBlock:focus-within .avatarButton {
+    opacity: 1;
+  }
+
+  .primary:hover:not(:disabled) {
+    background: var(--wf-navy-hover);
+    transform: translateY(-1px);
+  }
+
+  .secondary:hover:not(:disabled) {
+    border-color: #bdb8b0;
+    background: #fbfaf8;
+    transform: translateY(-1px);
+  }
+
+  .quiet:hover:not(:disabled) {
+    color: var(--wf-navy);
+    background: #f4f2ef;
+  }
+
+  .danger:hover:not(:disabled) {
+    color: #8c2f2f;
+    background: #fdf4f4;
+  }
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 767px) {
+  .section {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 22px 0 24px;
+  }
+
+  .identity,
+  .footer {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .avatarBlock {
+    justify-items: start;
+  }
+
+  .footer {
+    flex-wrap: wrap;
+  }
+
+  .footerStatus,
+  .footerError {
+    flex: 1 1 100%;
+    margin-right: 0;
+  }
+
+  .footer .primary,
+  .footer .secondary {
+    flex: 1 1 auto;
+  }
+
+  .toggleRow {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    animation: none;
+  }
+
+  .primary,
+  .secondary,
+  .quiet,
+  .switchThumb,
+  .avatarButton,
+  .field input {
+    transition: none;
+  }
+
+  .primary:hover:not(:disabled),
+  .secondary:hover:not(:disabled),
+  .primary:active:not(:disabled),
+  .secondary:active:not(:disabled),
+  .quiet:active:not(:disabled) {
+    transform: none;
+  }
+
+  /* The overlay still appears; it just no longer fades. */
+  .switch input:checked ~ .switchThumb {
+    transform: translateX(18px);
+  }
+}

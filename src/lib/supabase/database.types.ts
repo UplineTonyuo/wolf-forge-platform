@@ -1468,6 +1468,82 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_profile_id: string | null
+          audience: string
+          body: string
+          category: string
+          company_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          event_key: string
+          href: string
+          id: string
+          read_at: string | null
+          recipient_profile_id: string
+          title: string
+          variant: string
+        }
+        Insert: {
+          actor_profile_id?: string | null
+          audience: string
+          body: string
+          category: string
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_key: string
+          href: string
+          id?: string
+          read_at?: string | null
+          recipient_profile_id: string
+          title: string
+          variant?: string
+        }
+        Update: {
+          actor_profile_id?: string | null
+          audience?: string
+          body?: string
+          category?: string
+          company_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          event_key?: string
+          href?: string
+          id?: string
+          read_at?: string | null
+          recipient_profile_id?: string
+          title?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_tasks: {
         Row: {
           archived_at: string | null
@@ -1755,28 +1831,37 @@ export type Database = {
       profiles: {
         Row: {
           archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          notification_sound_enabled: boolean
           role_id: string
           updated_at: string
         }
         Insert: {
           archived_at?: string | null
+          avatar_path?: string | null
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string
           display_name?: string | null
           id: string
+          notification_sound_enabled?: boolean
           role_id: string
           updated_at?: string
         }
         Update: {
           archived_at?: string | null
+          avatar_path?: string | null
+          avatar_url?: string | null
           company_id?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
+          notification_sound_enabled?: boolean
           role_id?: string
           updated_at?: string
         }
@@ -1897,6 +1982,89 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "service_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_interests: {
+        Row: {
+          add_count: number
+          company_id: string
+          contacted_at: string | null
+          contacted_by_profile_id: string | null
+          created_at: string
+          first_added_at: string
+          id: string
+          in_cart: boolean
+          last_activity_at: string
+          last_added_at: string
+          removed_at: string | null
+          service_id: string
+          signalled_by_profile_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          add_count?: number
+          company_id: string
+          contacted_at?: string | null
+          contacted_by_profile_id?: string | null
+          created_at?: string
+          first_added_at?: string
+          id?: string
+          in_cart?: boolean
+          last_activity_at?: string
+          last_added_at?: string
+          removed_at?: string | null
+          service_id: string
+          signalled_by_profile_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          add_count?: number
+          company_id?: string
+          contacted_at?: string | null
+          contacted_by_profile_id?: string | null
+          created_at?: string
+          first_added_at?: string
+          id?: string
+          in_cart?: boolean
+          last_activity_at?: string
+          last_added_at?: string
+          removed_at?: string | null
+          service_id?: string
+          signalled_by_profile_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_interests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_interests_contacted_by_profile_id_fkey"
+            columns: ["contacted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_interests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_interests_signalled_by_profile_id_fkey"
+            columns: ["signalled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3068,10 +3236,13 @@ export type Database = {
         }
         Returns: {
           archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          notification_sound_enabled: boolean
           role_id: string
           updated_at: string
         }
@@ -3269,6 +3440,12 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_clear_my_avatar: {
+        Args: never
+        Returns: {
+          previous_avatar_path: string
+        }[]
       }
       app_clear_profile_permission_override: {
         Args: { p_permission_key: string; p_profile_id: string }
@@ -3637,6 +3814,17 @@ export type Database = {
           permission_key: string
         }[]
       }
+      app_dashboard_overview: {
+        Args: {
+          p_bucket: string
+          p_end: string
+          p_previous_end: string
+          p_previous_start: string
+          p_start: string
+          p_time_zone: string
+        }
+        Returns: Json
+      }
       app_duplicate_service: {
         Args: { p_request_id: string; p_service_id: string }
         Returns: {
@@ -3747,6 +3935,21 @@ export type Database = {
           successful_refunds_cents: number
         }[]
       }
+      app_get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          avatar_url: string
+          created_at: string
+          display_name: string
+          email: string
+          notification_sound_enabled: boolean
+          preset_key: string
+          preset_name: string
+          profile_id: string
+          role_name: string
+        }[]
+      }
       app_get_profile_effective_permissions: {
         Args: { p_profile_id?: string }
         Returns: {
@@ -3777,6 +3980,10 @@ export type Database = {
         Returns: Json
       }
       app_get_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
+      app_get_ticket_detail_with_avatars: {
+        Args: { p_ticket_id: string }
+        Returns: Json
+      }
       app_get_wf_card_settings: {
         Args: never
         Returns: {
@@ -3855,6 +4062,7 @@ export type Database = {
       app_list_internal_members: {
         Args: never
         Returns: {
+          avatar_url: string
           created_at: string
           display_name: string
           email: string
@@ -3864,6 +4072,53 @@ export type Database = {
           preset_name: string
           profile_id: string
           sort_order: number
+        }[]
+      }
+      app_list_investment_intents: {
+        Args: { p_limit?: number }
+        Returns: {
+          add_count: number
+          company_id: string
+          company_name: string
+          contacted_at: string
+          contacted_by_name: string
+          contacted_by_profile_id: string
+          currency: string
+          first_added_at: string
+          folder_name: string
+          in_cart: boolean
+          intent_id: string
+          last_activity_at: string
+          last_added_at: string
+          price: number
+          recurring: boolean
+          recurring_interval_length: number
+          recurring_interval_unit: string
+          recurring_price: number
+          removed_at: string
+          service_id: string
+          service_name: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      app_list_my_notifications: {
+        Args: { p_limit?: number }
+        Returns: {
+          actor_profile_id: string
+          audience: string
+          body: string
+          category: string
+          company_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_key: string
+          href: string
+          id: string
+          read_at: string
+          title: string
+          variant: string
         }[]
       }
       app_list_permission_preset_grants: {
@@ -3960,6 +4215,11 @@ export type Database = {
           updated_at: string
         }[]
       }
+      app_mark_all_notifications_read: { Args: never; Returns: number }
+      app_mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: boolean
+      }
       app_pause_subscription: {
         Args: { p_resumes_at?: string; p_subscription_id: string }
         Returns: {
@@ -4012,10 +4272,13 @@ export type Database = {
         }
         Returns: {
           archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          notification_sound_enabled: boolean
           role_id: string
           updated_at: string
         }
@@ -4035,10 +4298,13 @@ export type Database = {
         }
         Returns: {
           archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          notification_sound_enabled: boolean
           role_id: string
           updated_at: string
         }
@@ -4137,6 +4403,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_record_store_interest: {
+        Args: { p_in_cart: boolean; p_service_ids: string[] }
+        Returns: number
       }
       app_refund_invoice: {
         Args: {
@@ -4361,6 +4631,38 @@ export type Database = {
           display_name: string
         }[]
       }
+      app_set_investment_intent_status: {
+        Args: { p_intent_id: string; p_status: string }
+        Returns: {
+          add_count: number
+          company_id: string
+          contacted_at: string | null
+          contacted_by_profile_id: string | null
+          created_at: string
+          first_added_at: string
+          id: string
+          in_cart: boolean
+          last_activity_at: string
+          last_added_at: string
+          removed_at: string | null
+          service_id: string
+          signalled_by_profile_id: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "service_interests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_set_my_avatar: {
+        Args: { p_avatar_path: string; p_avatar_url: string }
+        Returns: {
+          previous_avatar_path: string
+        }[]
+      }
       app_set_profile_permission_override: {
         Args: {
           p_allowed: boolean
@@ -4385,10 +4687,13 @@ export type Database = {
         Args: { p_preset_key: string; p_profile_id: string }
         Returns: {
           archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
           company_id: string | null
           created_at: string
           display_name: string | null
           id: string
+          notification_sound_enabled: boolean
           role_id: string
           updated_at: string
         }
@@ -4548,6 +4853,27 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "invoices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_update_my_profile: {
+        Args: { p_display_name: string; p_notification_sound_enabled: boolean }
+        Returns: {
+          archived_at: string | null
+          avatar_path: string | null
+          avatar_url: string | null
+          company_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          notification_sound_enabled: boolean
+          role_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
           isOneToOne: true
           isSetofReturn: false
         }

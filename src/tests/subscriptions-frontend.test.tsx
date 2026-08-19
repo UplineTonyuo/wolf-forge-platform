@@ -15,6 +15,11 @@ const actionMocks = vi.hoisted(() => ({
 const refresh = vi.hoisted(() => vi.fn());
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }), notFound: vi.fn() }));
+/* The portal calendar trigger imports a "use server" module; vitest cannot resolve server-only. */
+vi.mock("../app/actions/subscription-calendar", () => ({
+  loadClientSubscriptionCalendarAction: vi.fn(async () => ({ ok: true, sources: [] })),
+  loadOwnerSubscriptionCalendarAction: vi.fn(async () => ({ ok: true, sources: [] })),
+}));
 vi.mock("../app/actions/subscriptions", () => ({
   pauseSubscriptionAction: actionMocks.pause,
   resumeSubscriptionAction: actionMocks.resume,
@@ -258,12 +263,24 @@ describe("Client Subscription portal", () => {
     expect(screen.getByText("$807.30")).toBeInTheDocument();
   });
 
+  it("speaks client billing language rather than internal billing language", () => {
+    render(<ClientSubscriptionsList summaries={[baseSummary]} />);
+
+    expect(screen.getByText("Monthly investment")).toBeInTheDocument();
+    expect(screen.queryByText(/spend/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/plan version/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/recurring fulfillment/i)).not.toBeInTheDocument();
+  });
+
   it("renders a simple own-Subscription detail without internal controls or processor metadata", () => {
     render(<ClientSubscriptionDetail detail={detail} summary={{ ...pastDueSummary, service_name: baseSummary.service_name }} invoices={[invoice]} />);
-    expect(screen.getByText("Payment is required on your current Invoice.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /View Invoice/ })).toHaveAttribute("href", `/account/invoices/${invoice.id}`);
+    expect(screen.getByText("A payment is due on this subscription.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /View the open invoice/ })).toHaveAttribute("href", `/account/invoices/${invoice.id}`);
     expect(screen.queryByText("Edit plan")).not.toBeInTheDocument();
     expect(screen.queryByText("Pause")).not.toBeInTheDocument();
     expect(screen.queryByText(/processor/i)).not.toBeInTheDocument();
+    /* Internal health vocabulary must not reach a client. */
+    expect(screen.queryByText(/lead/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/grace/i)).not.toBeInTheDocument();
   });
 });

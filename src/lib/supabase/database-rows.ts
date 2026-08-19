@@ -19,7 +19,10 @@ export type CouponDiscountRuleRow = Tables<"coupon_discount_rules">;
 export type CouponDiscountServiceRow = Tables<"coupon_discount_services">;
 export type CouponRedemptionRow = Tables<"coupon_redemptions">;
 export type ActivityEventRow = Omit<Tables<"activity_events">, "entity_type"> & {
-  entity_type: "company" | "client_contact" | "service_folder" | "service" | "order" | "order_task" | "profile" | "coupon" | "invoice" | "subscription" | "form" | "form_assignment" | "form_submission" | "ticket";
+  entity_type: "company" | "client_contact" | "service_folder" | "service" | "order" | "order_task" | "profile" | "coupon" | "invoice" | "subscription" | "form" | "form_assignment" | "form_submission" | "ticket" | "service_interest";
+};
+export type ServiceInterestRow = Omit<Tables<"service_interests">, "status"> & {
+  status: "new" | "reviewing" | "contacted" | "qualified" | "closed" | "not_interested";
 };
 export type InvoiceRow = Omit<Tables<"invoices">, "status"> & {
   status: "draft" | "unpaid" | "payment_pending" | "paid" | "void";
@@ -115,7 +118,8 @@ export type FormServiceLinkRow = Omit<Tables<"form_service_links">, "role"> & {
 };
 export type FormAssignmentRow = Omit<Tables<"form_assignments">, "assignment_type" | "status"> & {
   assignment_type: "intake" | "onboarding";
-  status: "assigned" | "submitted" | "archived" | "canceled";
+  /** Mirrors the form_assignments_status_valid check constraint exactly. */
+  status: "assigned" | "completed" | "archived" | "canceled";
 };
 export type FormSubmissionRow = Omit<Tables<"form_submissions">, "orchestration_status"> & {
   orchestration_status: "not_applicable" | "deferred" | "completed" | "failed";

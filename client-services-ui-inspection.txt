@@ -1,0 +1,669 @@
+=== CLIENT SERVICES PANEL ===
+"use client";
+
+import { ArrowLeft, ArrowRight, Search, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import {
+  filterChooserServices,
+  servicesInFolder,
+  type ChooserService,
+  type ServiceChooserCatalog,
+} from "../../../domain/client-portal/service-chooser";
+import { useServiceChooser } from "../services/service-chooser-context";
+import { HeaderPanel, HeaderPanelAnchor, HeaderPanelTrigger } from "./header-panel";
+import { useHeaderPanels } from "./header-panels";
+
+/**
+ * The cart entry in the header, and the service chooser it opens.
+ *
+ * Previously a centered modal opened from the rail. It is now an anchored
+ * header panel on the same footing as notifications and quick actions, which
+ * is what lets the manager guarantee only one of them is ever open. The rail's
+ * Services entry went back to being a plain link to the Store page, so there is
+ * one cart-oriented entry point rather than two with different behaviour.
+ *
+ * Categories and services are the real, RLS-scoped catalog the layout already
+ * loads. Choosing a service hands off to the existing detail route.
+ */
+
+function ServiceRow({
+  service,
+  onChoose,
+}: {
+  service: ChooserService;
+  onChoose: (service: ChooserService) => void;
+}) {
+  return (
+    <li>
+      <button type="button" className="chooser-row" onClick={() => onChoose(service)}>
+        <span className="chooser-row-main">
+          <strong>{service.name}</strong>
+          <span>
+            {service.folderName ? `${service.folderName} ¬∑ ` : ""}
+            {service.recurringLabel ?? service.priceLabel}
+          </span>
+        </span>
+        <ArrowRight aria-hidden={true} />
+      </button>
+    </li>
+  );
+}
+
+function ChooserBody({
+  catalog,
+  onChoose,
+}: {
+  catalog: ServiceChooserCatalog;
+  onChoose: (service: ChooserService) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [folderId, setFolderId] = useState<string | null>(null);
+
+  const searching = query.trim().length > 0;
+
+  const results = useMemo(() => {
+    if (searching) return filterChooserServices(catalog.services, query);
+    if (folderId) return servicesInFolder(catalog.services, folderId);
+    return [];
+  }, [catalog.services, searching, query, folderId]);
+
+  const activeFolder = folderId
+    ? catalog.folders.find((folder) => folder.id === folderId) ?? null
+    : null;
+
+  return (
+    <div className="chooser">
+      <header className="portal-header-panel-head">
+        <div>
+          <strong>Explore Wolf Forge Services</strong>
+          <span>Choose what you want to invest in.</span>
+        </div>
+      </header>
+
+      <div className="chooser-search">
+        <Search aria-hidden={true} />
+        <input
+          type="search"
+          value={query}
+          placeholder="Search services..."
+          aria-label="Search services"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+
+      {searching ? (
+        <div className="chooser-panel" key="search">
+          {results.length === 0 ? (
+            <p className="chooser-empty">
+              No services match ‚Äú{query.trim()}‚Äù. Try a shorter word.
+            </p>
+          ) : (
+            <>
+              <p className="chooser-caption" role="status">
+                {results.length} {results.length === 1 ? "service" : "services"} found
+              </p>
+              <ul className="chooser-list">
+                {results.map((service) => (
+                  <ServiceRow key={service.id} service={service} onChoose={onChoose} />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      ) : activeFolder ? (
+        <div className="chooser-panel" key={activeFolder.id}>
+          <button type="button" className="chooser-back" onClick={() => setFolderId(null)}>
+            <ArrowLeft aria-hidden={true} />
+            All categories
+          </button>
+
+          <p className="chooser-caption">{activeFolder.name}</p>
+
+          <ul className="chooser-list">
+            {results.map((service) => (
+              <ServiceRow key={service.id} service={service} onChoose={onChoose} />
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="chooser-panel" key="categories">
+          <p className="chooser-caption">Categories</p>
+
+          {catalog.folders.length === 0 ? (
+            <p className="chooser-empty">No services are available to your account yet.</p>
+          ) : (
+            <ul className="chooser-grid">
+              {catalog.folders.map((folder) => (
+                <li key={folder.id}>
+                  <button
+                    type="button"
+                    className="chooser-category"
+                    onClick={() => setFolderId(folder.id)}
+                  >
+                    <span className="chooser-category-mark" aria-hidden="true">
+                      <ShoppingCart />
+                    </span>
+                    <span className="chooser-category-copy">
+                      <strong>{folder.name}</strong>
+                      <span>
+                        {folder.serviceCount}{" "}
+                        {folder.serviceCount === 1 ? "service" : "services"}
+                      </span>
+                    </span>
+                    <ArrowRight aria-hidden={true} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ClientServicesPanel() {
+  const chooser = useServiceChooser();
+  const panels = useHeaderPanels();
+  const router = useRouter();
+
+  if (!chooser?.available) return null;
+
+  const { catalog } = chooser;
+  const open = panels?.isOpen("services") ?? false;
+
+  const choose = (service: ChooserService) => {
+    panels?.close();
+    router.push(service.href);
+  };
+
+  return (
+    <HeaderPanelAnchor>
+      <HeaderPanelTrigger panel="services" label="Explore services">
+        <ShoppingCart aria-hidden={true} />
+      </HeaderPanelTrigger>
+
+      <HeaderPanel panel="services" label="Explore Wolf Forge Services" width="wide">
+        {/*
+         * Mounted only while open, so its query and category reset each time
+         * the panel opens without an effect watching the open flag.
+         */}
+        {open ? <ChooserBody catalog={catalog} onChoose={choose} /> : null}
+      </HeaderPanel>
+    </HeaderPanelAnchor>
+  );
+}
+
+=== HEADER PANEL ===
+"use client";
+
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useHeaderPanels, type HeaderPanelId } from "./header-panels";
+
+/**
+ * The shared header trigger and its anchored panel.
+ *
+ * Every floating surface in the client header renders through this pair, so
+ * corner radius, shadow, spacing rhythm, entrance and exit animation, and close
+ * behaviour are defined once. A panel that opted out of this would be the
+ * "patchy" case this replaces.
+ */
+
+/** Must match the exit duration on .portal-header-panel in globals.css. */
+const EXIT_MS = 150;
+
+export const HeaderPanelTrigger = forwardRef<
+  HTMLButtonElement,
+  {
+    panel: HeaderPanelId;
+    label: string;
+    children: ReactNode;
+    className?: string;
+    /** Rendered inside the trigger, e.g. the unread badge. */
+    badge?: ReactNode;
+  }
+>(function HeaderPanelTrigger({ panel, label, children, className, badge }, ref) {
+  const panels = useHeaderPanels();
+  const open = panels?.isOpen(panel) ?? false;
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={["portal-command-button", open ? "is-open" : "", className]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={label}
+      title={label}
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      onPointerEnter={(event) => {
+        // Touch fires pointerenter immediately before click; the manager
+        // already ignores hover on coarse pointers, and this keeps a stylus or
+        // synthetic pointer from opening on contact.
+        if (event.pointerType !== "mouse") return;
+        panels?.hoverOpen(panel);
+      }}
+      onPointerLeave={() => panels?.hoverLeave()}
+      onFocus={() => panels?.cancelClose()}
+      onClick={() => panels?.toggle(panel)}
+    >
+      {children}
+      {badge}
+    </button>
+  );
+});
+
+/**
+ * The anchored panel itself.
+ *
+ * Kept mounted through its exit animation so closing actually plays. Hovering
+ * the panel cancels the pending close, which is what lets the pointer travel
+ * from the trigger down into the content.
+ */
+export function HeaderPanel({
+  panel,
+  label,
+  children,
+  width = "default",
+}: {
+  panel: HeaderPanelId;
+  label: string;
+  children: ReactNode;
+  width?: "default" | "wide";
+}) {
+  const panels = useHeaderPanels();
+  const open = panels?.isOpen(panel) ?? false;
+
+  const [lastOpen, setLastOpen] = useState(open);
+  const [exiting, setExiting] = useState(false);
+
+  /* Adjust-state-on-prop-change: the closing frame has to render in the same
+     pass the panel closed, which an effect would miss by one frame. */
+  if (lastOpen !== open) {
+    setLastOpen(open);
+    setExiting(!open);
+  }
+
+  useEffect(() => {
+    if (!exiting) return;
+    const timer = setTimeout(() => setExiting(false), EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [exiting]);
+
+  const onPointerEnter = useCallback(() => panels?.cancelClose(), [panels]);
+  const onPointerLeave = useCallback(() => panels?.hoverLeave(), [panels]);
+
+  if (!open && !exiting) return null;
+
+  return (
+    <div
+      className="portal-header-panel"
+      data-phase={open ? "open" : "closing"}
+      data-width={width}
+      role="dialog"
+      aria-label={label}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Wraps one trigger and its panel.
+ *
+ * The marker attribute is what the manager's outside-click check looks for, so
+ * a click anywhere inside a trigger or its panel is never "outside".
+ */
+export function HeaderPanelAnchor({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  return (
+    <div
+      ref={ref}
+      data-header-panel-root=""
+      className={["portal-command-anchor", className].filter(Boolean).join(" ")}
+    >
+      {children}
+    </div>
+  );
+}
+
+=== RELATED STYLES ===
+
+  src\app\globals.css:4705:
+  src\app\globals.css:4706:/*
+> src\app\globals.css:4707: * The permanently expanded service-category list that used to live here is
+  src\app\globals.css:4708: * gone. Categories are reached through the cart action, which opens the
+  src\app\globals.css:4709: * chooser, so the rail stays a navigation surface rather than a catalog.
+  src\app\globals.css:4710: */
+  src\app\globals.css:4711:
+  src\app\globals.css:4712:.portal-account {
+  src\app\globals.css:4713:  display: flex;
+  src\app\globals.css:4714:  align-items: center;
+  src\app\globals.css:4715:  gap: 9px;
+  src\app\globals.css:11953:.client-portal,
+  src\app\globals.css:11954:.portal-overlay,
+> src\app\globals.css:11955:.portal-header-panel {
+  src\app\globals.css:11956:  --portal-pop-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  src\app\globals.css:11957:  --portal-pop-in: 180ms;
+  src\app\globals.css:11958:  --portal-pop-out: 130ms;
+  src\app\globals.css:11959:  --portal-pop-radius: 14px;
+  src\app\globals.css:11960:  --portal-pop-shadow: 0 24px 64px rgba(0, 13, 81, .18), 0 2px 8px rgba(0, 
+13, 81, .06);
+  src\app\globals.css:11961:}
+  src\app\globals.css:11962:
+  src\app\globals.css:11963:/*
+  src\app\globals.css:11980:.client-portal,
+  src\app\globals.css:11981:.portal-overlay,
+> src\app\globals.css:11982:.portal-header-panel {
+> src\app\globals.css:11983:  --portal-layer-header-panel: 60;
+  src\app\globals.css:11984:}
+  src\app\globals.css:11985:
+  src\app\globals.css:11986:/* --- Centered dialog 
+------------------------------------------------------ */
+  src\app\globals.css:11987:
+  src\app\globals.css:11988:/*
+  src\app\globals.css:11989: * Positioned here rather than relying on the native <dialog> element: 
+Tailwind's
+  src\app\globals.css:11990: * preflight resets `margin: 0` on every element, which removes the 
+`margin:auto`
+  src\app\globals.css:11991: * a modal <dialog> needs to centre itself. That reset is why the New 
+message
+  src\app\globals.css:12147:.portal-command-anchor { position: relative; display: inline-flex; }
+  src\app\globals.css:12148:
+> src\app\globals.css:12149:.portal-header-panel {
+  src\app\globals.css:12150:  position: absolute;
+  src\app\globals.css:12151:  top: calc(100% + 10px);
+  src\app\globals.css:12152:  right: 0;
+> src\app\globals.css:12153:  z-index: var(--portal-layer-header-panel, 60);
+  src\app\globals.css:12154:  width: 288px;
+  src\app\globals.css:12155:  max-height: min(70vh, 520px);
+  src\app\globals.css:12156:  overflow-y: auto;
+  src\app\globals.css:12157:  overscroll-behavior: contain;
+  src\app\globals.css:12158:  padding: 6px;
+  src\app\globals.css:12159:  border: 1px solid var(--wf-border);
+  src\app\globals.css:12160:  border-radius: 14px;
+  src\app\globals.css:12161:  background: var(--wf-white);
+  src\app\globals.css:12164:}
+  src\app\globals.css:12165:
+> src\app\globals.css:12166:.portal-header-panel[data-width="wide"] {
+  src\app\globals.css:12167:  width: min(400px, calc(100vw - 32px));
+  src\app\globals.css:12168:  padding: 14px;
+  src\app\globals.css:12169:}
+  src\app\globals.css:12170:
+> src\app\globals.css:12171:.portal-header-panel[data-phase="open"] {
+> src\app\globals.css:12172:  animation: portal-header-panel-in 190ms var(--portal-pop-ease) both;
+  src\app\globals.css:12173:}
+  src\app\globals.css:12174:
+> src\app\globals.css:12175:.portal-header-panel[data-phase="closing"] {
+> src\app\globals.css:12176:  animation: portal-header-panel-out 150ms var(--portal-pop-ease) both;
+  src\app\globals.css:12177:  pointer-events: none;
+  src\app\globals.css:12178:}
+  src\app\globals.css:12179:
+> src\app\globals.css:12180:@keyframes portal-header-panel-in {
+  src\app\globals.css:12181:  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  src\app\globals.css:12182:  to { opacity: 1; transform: translateY(0) scale(1); }
+  src\app\globals.css:12183:}
+  src\app\globals.css:12184:
+> src\app\globals.css:12185:@keyframes portal-header-panel-out {
+  src\app\globals.css:12186:  from { opacity: 1; transform: translateY(0) scale(1); }
+  src\app\globals.css:12187:  to { opacity: 0; transform: translateY(-4px) scale(.99); }
+  src\app\globals.css:12188:}
+  src\app\globals.css:12189:
+> src\app\globals.css:12190:.portal-header-panel-head {
+  src\app\globals.css:12191:  display: flex;
+  src\app\globals.css:12192:  flex-direction: column;
+  src\app\globals.css:12193:  gap: 3px;
+  src\app\globals.css:12194:  padding: 4px 4px 12px;
+  src\app\globals.css:12195:  border-bottom: 1px solid var(--wf-border);
+  src\app\globals.css:12196:}
+  src\app\globals.css:12197:
+> src\app\globals.css:12198:.portal-header-panel-head strong {
+  src\app\globals.css:12199:  font-family: "Sora Variable", Sora, sans-serif;
+  src\app\globals.css:12200:  font-size: 14px;
+  src\app\globals.css:12201:  font-weight: 620;
+  src\app\globals.css:12202:}
+  src\app\globals.css:12203:
+> src\app\globals.css:12204:.portal-header-panel-head span { color: var(--wf-text-muted); font-size: 
+12px; }
+  src\app\globals.css:12205:
+  src\app\globals.css:12206:.portal-menu-items { display: flex; flex-direction: column; gap: 2px; }
+  src\app\globals.css:12207:
+  src\app\globals.css:12208:.portal-menu-item {
+  src\app\globals.css:12209:  display: flex;
+  src\app\globals.css:12210:  align-items: flex-start;
+  src\app\globals.css:12211:  gap: 11px;
+  src\app\globals.css:12212:  width: 100%;
+  src\app\globals.css:12375:.chooser-search input::-webkit-search-cancel-button { display: none; }
+  src\app\globals.css:12376:
+> src\app\globals.css:12377:/* One quiet transition between category and service views ó never a 
+stagger. */
+  src\app\globals.css:12378:.chooser-panel {
+  src\app\globals.css:12379:  display: flex;
+  src\app\globals.css:12380:  flex-direction: column;
+  src\app\globals.css:12381:  gap: 10px;
+  src\app\globals.css:12382:  animation: chooser-panel-in 160ms var(--portal-pop-ease) both;
+  src\app\globals.css:12383:}
+  src\app\globals.css:12384:
+  src\app\globals.css:12385:@keyframes chooser-panel-in {
+  src\app\globals.css:12411:.chooser-grid { display: grid; grid-template-columns: repeat(auto-fit, 
+minmax(240px, 1fr)); }
+  src\app\globals.css:12412:
+> src\app\globals.css:12413:.chooser-category,
+  src\app\globals.css:12414:.chooser-row {
+  src\app\globals.css:12415:  display: flex;
+  src\app\globals.css:12416:  align-items: center;
+  src\app\globals.css:12417:  gap: 12px;
+  src\app\globals.css:12418:  width: 100%;
+  src\app\globals.css:12419:  padding: 13px 14px;
+  src\app\globals.css:12420:  border: 1px solid var(--wf-border);
+  src\app\globals.css:12421:  border-radius: 10px;
+  src\app\globals.css:12431:}
+  src\app\globals.css:12432:
+> src\app\globals.css:12433:.chooser-category > svg,
+  src\app\globals.css:12434:.chooser-row > svg {
+  src\app\globals.css:12435:  width: 15px;
+  src\app\globals.css:12436:  height: 15px;
+  src\app\globals.css:12437:  flex: 0 0 auto;
+  src\app\globals.css:12438:  margin-left: auto;
+  src\app\globals.css:12439:  color: var(--wf-text-muted);
+  src\app\globals.css:12440:  transition: transform 150ms var(--wf-ease);
+  src\app\globals.css:12441:}
+  src\app\globals.css:12442:
+> src\app\globals.css:12443:.chooser-category-mark {
+  src\app\globals.css:12444:  display: inline-flex;
+  src\app\globals.css:12445:  align-items: center;
+  src\app\globals.css:12446:  justify-content: center;
+  src\app\globals.css:12447:  width: 34px;
+  src\app\globals.css:12448:  height: 34px;
+  src\app\globals.css:12449:  flex: 0 0 34px;
+  src\app\globals.css:12450:  border-radius: 9px;
+  src\app\globals.css:12451:  color: var(--wf-gold);
+  src\app\globals.css:12453:}
+  src\app\globals.css:12454:
+> src\app\globals.css:12455:.chooser-category-mark svg { width: 17px; height: 17px; }
+  src\app\globals.css:12456:
+> src\app\globals.css:12457:.chooser-category-copy,
+  src\app\globals.css:12458:.chooser-row-main { display: flex; flex-direction: column; gap: 2px; 
+min-width: 0; }
+> src\app\globals.css:12459:.chooser-category-copy strong,
+  src\app\globals.css:12460:.chooser-row-main strong { font-size: 13.5px; font-weight: 620; }
+> src\app\globals.css:12461:.chooser-category-copy span,
+  src\app\globals.css:12462:.chooser-row-main span { color: var(--wf-text-muted); font-size: 12px; }
+  src\app\globals.css:12463:
+  src\app\globals.css:12464:.chooser-back {
+  src\app\globals.css:12465:  display: inline-flex;
+  src\app\globals.css:12466:  align-items: center;
+  src\app\globals.css:12467:  gap: 6px;
+  src\app\globals.css:12468:  align-self: flex-start;
+  src\app\globals.css:12469:  padding: 0;
+  src\app\globals.css:12486:  .portal-command-button:hover,
+  src\app\globals.css:12487:  .portal-command-avatar:hover,
+> src\app\globals.css:12488:  .chooser-category:hover,
+  src\app\globals.css:12489:  .chooser-row:hover {
+  src\app\globals.css:12490:    transform: translateY(-1px);
+  src\app\globals.css:12491:  }
+  src\app\globals.css:12492:
+> src\app\globals.css:12493:  .chooser-category:hover,
+  src\app\globals.css:12494:  .chooser-row:hover {
+  src\app\globals.css:12495:    border-color: var(--wf-navy);
+  src\app\globals.css:12496:    background: var(--wf-navy-wash);
+  src\app\globals.css:12497:  }
+  src\app\globals.css:12498:
+> src\app\globals.css:12499:  .chooser-category:hover > svg,
+  src\app\globals.css:12500:  .chooser-row:hover > svg { transform: translateX(2px); }
+  src\app\globals.css:12501:
+  src\app\globals.css:12502:  .portal-message-row:hover > .portal-message-meta > svg { transform: 
+translateX(2px); }
+  src\app\globals.css:12503:}
+  src\app\globals.css:12504:
+  src\app\globals.css:12505:.portal-message-meta > svg { transition: transform 150ms var(--wf-ease); }
+  src\app\globals.css:12506:
+  src\app\globals.css:12507:.portal-command-button:active,
+  src\app\globals.css:12508:.portal-command-avatar:active,
+  src\app\globals.css:12509:.portal-menu-item:active,
+> src\app\globals.css:12510:.chooser-category:active,
+  src\app\globals.css:12511:.chooser-row:active {
+  src\app\globals.css:12512:  transform: scale(.97);
+  src\app\globals.css:12513:  transition-duration: 90ms;
+  src\app\globals.css:12514:}
+  src\app\globals.css:12515:
+  src\app\globals.css:12516:.portal-message-row:active { transform: scale(.99); }
+  src\app\globals.css:12517:
+  src\app\globals.css:12518:/* Disabled controls never move. */
+  src\app\globals.css:12524:}
+  src\app\globals.css:12525:
+> src\app\globals.css:12526:.chooser-category:focus-visible,
+  src\app\globals.css:12527:.chooser-row:focus-visible,
+  src\app\globals.css:12528:.portal-menu-item:focus-visible,
+  src\app\globals.css:12529:.portal-command-button:focus-visible,
+  src\app\globals.css:12530:.portal-command-avatar:focus-visible,
+  src\app\globals.css:12531:.portal-message-row:focus-visible {
+  src\app\globals.css:12532:  outline: 2px solid var(--wf-navy);
+  src\app\globals.css:12533:  outline-offset: 2px;
+  src\app\globals.css:12534:}
+  src\app\globals.css:12546:  .portal-overlay-backdrop,
+  src\app\globals.css:12547:  .portal-overlay-panel,
+> src\app\globals.css:12548:  .portal-header-panel,
+  src\app\globals.css:12549:  .portal-command-button,
+  src\app\globals.css:12550:  .portal-command-avatar,
+> src\app\globals.css:12551:  .chooser-category,
+  src\app\globals.css:12552:  .chooser-row,
+> src\app\globals.css:12553:  .chooser-category > svg,
+  src\app\globals.css:12554:  .chooser-row > svg,
+  src\app\globals.css:12555:  .portal-message-meta > svg {
+  src\app\globals.css:12556:    transition: none;
+  src\app\globals.css:12557:  }
+  src\app\globals.css:12558:
+  src\app\globals.css:12559:  .chooser-panel { animation: none; }
+  src\app\globals.css:12560:
+  src\app\globals.css:12561:  .portal-overlay-panel,
+  src\app\globals.css:12564:  }
+  src\app\globals.css:12565:
+> src\app\globals.css:12566:  .portal-header-panel[data-phase="open"],
+> src\app\globals.css:12567:  .portal-header-panel[data-phase="closing"] {
+  src\app\globals.css:12568:    animation: none;
+  src\app\globals.css:12569:  }
+  src\app\globals.css:12570:
+  src\app\globals.css:12571:  .portal-command-button:hover,
+  src\app\globals.css:12572:  .portal-command-avatar:hover,
+> src\app\globals.css:12573:  .chooser-category:hover,
+  src\app\globals.css:12574:  .chooser-row:hover,
+  src\app\globals.css:12575:  .portal-command-button:active,
+  src\app\globals.css:12576:  .portal-command-avatar:active,
+  src\app\globals.css:12577:  .portal-menu-item:active,
+> src\app\globals.css:12578:  .chooser-category:active,
+  src\app\globals.css:12579:  .chooser-row:active,
+  src\app\globals.css:12580:  .portal-message-row:active {
+  src\app\globals.css:12581:    transform: none;
+  src\app\globals.css:12582:  }
+  src\app\globals.css:12583:}
+  src\app\globals.css:12584:
+  src\app\globals.css:12585:/* --- Responsive 
+----------------------------------------------------------- */
+  src\app\globals.css:12586:
+  src\app\globals.css:12615:  .chooser-grid { grid-template-columns: minmax(0, 1fr); }
+  src\app\globals.css:12616:
+> src\app\globals.css:12617:  .portal-header-panel { width: min(300px, calc(100vw - 24px)); }
+> src\app\globals.css:12618:  .portal-header-panel[data-width="wide"] { width: calc(100vw - 24px); }
+  src\app\globals.css:12619:}
+  src\app\globals.css:12620:
+  src\app\globals.css:12621:@media (pointer: coarse) {
+  src\app\globals.css:12622:  .portal-command-button,
+  src\app\globals.css:12623:  .portal-command-avatar { width: 42px; height: 42px; flex-basis: 42px; }
+  src\app\globals.css:12624:  .portal-command-search { height: 44px; }
+  src\app\globals.css:12625:  .portal-menu-item { padding: 13px 12px; }
+  src\app\globals.css:12626:}
+  src\app\globals.css:12634: *
+  src\app\globals.css:12635: * Reuses the header panel surface wholesale ó radius, shadow, animation 
+and
+> src\app\globals.css:12636: * close behaviour all come from .portal-header-panel. The only thing added
+  src\app\globals.css:12637: * here is the result list, plus the left-anchoring the search field needs
+  src\app\globals.css:12638: * because it sits at the start of the bar rather than the end.
+  src\app\globals.css:12639: * 
+------------------------------------------------------------------------- */
+  src\app\globals.css:12640:
+  src\app\globals.css:12641:.portal-command-search-anchor {
+  src\app\globals.css:12642:  flex: 0 1 340px;
+  src\app\globals.css:12643:  min-width: 0;
+  src\app\globals.css:12644:}
+  src\app\globals.css:12647:
+  src\app\globals.css:12648:/* The field is on the left, so its panel grows rightward from the same 
+edge. */
+> src\app\globals.css:12649:.portal-command-search-anchor .portal-header-panel {
+  src\app\globals.css:12650:  right: auto;
+  src\app\globals.css:12651:  left: 0;
+  src\app\globals.css:12652:  transform-origin: top left;
+  src\app\globals.css:12653:  width: min(440px, calc(100vw - 32px));
+  src\app\globals.css:12654:}
+  src\app\globals.css:12655:
+  src\app\globals.css:12656:.search-panel { display: flex; flex-direction: column; gap: 4px; }
+  src\app\globals.css:12657:.search-group { display: flex; flex-direction: column; gap: 6px; }
+  src\app\globals.css:12730:  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
+  src\app\globals.css:12731:
+> src\app\globals.css:12732:  .portal-command-search-anchor .portal-header-panel {
+  src\app\globals.css:12733:    width: calc(100vw - 24px);
+  src\app\globals.css:12734:  }
+  src\app\globals.css:12735:
+  src\app\globals.css:12736:  /* The pill duplicates the subtitle's tail; drop it before the row 
+wraps. */
+  src\app\globals.css:12737:  .search-result .portal-attention-pill { display: none; }
+  src\app\globals.css:12738:}
+  src\app\globals.css:12739:
+  src\app\globals.css:12740:/* WF CLIENT PORTAL SEARCH END */
+  src\components\account\client-notification-bell.module.css:102:   * in lockstep; 60 here only as a 
+fallback if the token is absent.
+  src\components\account\client-notification-bell.module.css:103:   */
+> src\components\account\client-notification-bell.module.css:104:  z-index: 
+var(--portal-layer-header-panel, 60);
+  src\components\account\client-notification-bell.module.css:105:  width: min(365px, calc(100vw - 
+24px));
+  src\components\account\client-notification-bell.module.css:106:  overflow: hidden;
+  src\components\account\client-notification-bell.module.css:107:  border: 1px solid #e2e5eb;
+  src\components\account\client-notification-bell.module.css:108:  border-radius: 14px;
+  src\components\account\client-notification-bell.module.css:109:  background: rgba(255, 255, 255, 
+.995);
+  src\components\account\client-notification-bell.module.css:110:  box-shadow: 0 20px 48px rgba(0, 13, 
+81, .16);
+  src\components\account\client-notification-bell.module.css:111:  opacity: 0;
+  src\components\account\client-notification-bell.module.css:112:  visibility: hidden;
+
+
+

@@ -1,4 +1,4 @@
-﻿import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PublicEnvironment } from "../env/index";
 import type { Database } from "./database.types";
 
@@ -30,13 +30,24 @@ export function createUserSupabaseClient(
   return client;
 }
 
-/** Verifies the token with Supabase Auth; decoded claims alone are never trusted. */
+/**
+ * Cryptographically verifies the user's access token before creating a
+ * VerifiedActor. getClaims() avoids the Auth user-record network request when
+ * the project uses asymmetric JWT signing while still rejecting invalid or
+ * expired tokens.
+ */
 export async function verifyActor(client: UserScopedClient): Promise<VerifiedActor> {
   const accessToken = accessTokens.get(client);
   if (!accessToken) throw new Error("User-scoped client has no verification token.");
-  const { data, error } = await client.auth.getUser(accessToken);
-  if (error || !data.user) throw new Error("Authenticated user verification failed.");
-  const actor = Object.freeze({ id: data.user.id }) as VerifiedActor;
+
+  const { data, error } = await client.auth.getClaims(accessToken);
+  const subject = data?.claims?.sub;
+
+  if (error || typeof subject !== "string" || subject.length === 0) {
+    throw new Error("Authenticated user verification failed.");
+  }
+
+  const actor = Object.freeze({ id: subject }) as VerifiedActor;
   verifiedActors.add(actor);
   return actor;
 }
