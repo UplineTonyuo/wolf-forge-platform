@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyQuickCompletedQuantity,
   blogPostsCompletedValue,
+  clearOneTimeSetupEvidence,
   createServiceReportDraft,
+  dropUnreportedOneTimeSection,
+  hasReportedOneTimeCompletion,
   parseBlogCompletedCount,
   quickCompletedQuantityOptions,
   recurringReportSectionOrder,
@@ -465,5 +468,108 @@ describe("applyQuickCompletedQuantity", () => {
   it("is a no-op for steps that have no quick quantity", () => {
     const draft = platinumDraft();
     expect(applyQuickCompletedQuantity(draft, "technical_seo", 3)).toEqual(draft);
+  });
+});
+
+describe("one-time setup skip semantics", () => {
+  const platinumDraft = () =>
+    createServiceReportDraft(
+      reportingProfileForService(reportingServiceIds.platinumSeo100)!,
+    );
+
+  function fillFirstEntry(
+    sections: ReportDraftSectionInput[],
+    patch: Partial<ReportDraftSectionInput["entries"][number]>,
+  ) {
+    return sections.map((section) =>
+      section.section_key === "one_time_setup"
+        ? {
+            ...section,
+            entries: section.entries.map((entry, index) =>
+              index === 0 ? { ...entry, ...patch } : entry,
+            ),
+          }
+        : section,
+    );
+  }
+
+  it("clears only the operator-authored evidence, keeping keys, labels and other sections", () => {
+    const draft = fillFirstEntry(platinumDraft(), {
+      value: "Completed",
+      url: "https://example.invalid/asset",
+      one_time_completed: true,
+    });
+
+    const cleared = clearOneTimeSetupEvidence(draft);
+
+    const oneTime = cleared.find((section) => section.section_key === "one_time_setup")!;
+    expect(oneTime.entries).toHaveLength(3);
+    for (const entry of oneTime.entries) {
+      expect(entry.value).toBeNull();
+      expect(entry.url).toBeNull();
+      expect(entry.one_time_completed).toBe(false);
+      expect(entry.one_time_item_key).toBeTruthy();
+      expect(entry.label).toBeTruthy();
+    }
+    // Recurring sections are untouched.
+    expect(cleared.find((section) => section.section_key === "technical_seo")).toEqual(
+      draft.find((section) => section.section_key === "technical_seo"),
+    );
+  });
+
+  it("hasReportedOneTimeCompletion requires explicit completion with evidence", () => {
+    const draft = platinumDraft();
+    expect(hasReportedOneTimeCompletion(draft)).toBe(false);
+
+    const statusOnly = fillFirstEntry(draft, { value: "In progress" });
+    expect(hasReportedOneTimeCompletion(statusOnly)).toBe(false);
+
+    const urlOnly = fillFirstEntry(draft, { url: "https://example.invalid/asset" });
+    expect(hasReportedOneTimeCompletion(urlOnly)).toBe(false);
+
+    const completedNoEvidence = fillFirstEntry(draft, { one_time_completed: true });
+    expect(hasReportedOneTimeCompletion(completedNoEvidence)).toBe(false);
+
+    const completedWithUrl = fillFirstEntry(draft, {
+      url: "https://example.invalid/asset",
+      one_time_completed: true,
+    });
+    expect(hasReportedOneTimeCompletion(completedWithUrl)).toBe(true);
+
+    const completedWithValue = fillFirstEntry(draft, {
+      value: "Completed",
+      one_time_completed: true,
+    });
+    expect(hasReportedOneTimeCompletion(completedWithValue)).toBe(true);
+  });
+
+  it("dropUnreportedOneTimeSection removes only an empty one-time section", () => {
+    const draft = platinumDraft();
+    const dropped = dropUnreportedOneTimeSection(draft);
+
+    expect(dropped.find((section) => section.section_key === "one_time_setup")).toBeUndefined();
+    expect(dropped).toHaveLength(draft.length - 1);
+    expect(dropped[0]).toEqual(draft[0]);
+  });
+
+  it("dropUnreportedOneTimeSection keeps a section with a completed evidenced entry", () => {
+    const draft = fillFirstEntry(platinumDraft(), {
+      value: "Completed",
+      url: "https://example.invalid/asset",
+      one_time_completed: true,
+    });
+
+    const kept = dropUnreportedOneTimeSection(draft);
+
+    expect(kept).toEqual(draft);
+    expect(kept.find((section) => section.section_key === "one_time_setup")).toBeDefined();
+  });
+
+  it("dropUnreportedOneTimeSection keeps other sections when one-time is empty", () => {
+    const draft = platinumDraft();
+    const dropped = dropUnreportedOneTimeSection(draft);
+    expect(dropped.map((section) => section.section_key)).not.toContain("one_time_setup");
+    expect(dropped.map((section) => section.section_key)).toContain("technical_seo");
+    expect(dropped).toHaveLength(7);
   });
 });

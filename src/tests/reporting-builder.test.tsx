@@ -2,6 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addEntry,
@@ -143,6 +144,41 @@ vi.mock("../app/actions/reporting", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
 }));
+
+/*
+ * The completion faces navigate by clicking a hidden <Link> (a Link resolves
+ * the current router at render time, which a captured router.push cannot do
+ * across the post-send route refresh). The real next/link talks to the router
+ * through internal context the mocked useRouter cannot see, so Link is mocked
+ * to a plain anchor that reports the same navigation to routerPush.
+ */
+type MockLinkProps = {
+  href?: string;
+  children?: ReactNode;
+  ref?: React.Ref<HTMLAnchorElement>;
+  [key: string]: unknown;
+};
+
+vi.mock("next/link", () => {
+  // React 19 passes ref as a regular prop to function components.
+  return {
+    default: function MockNextLink(props: MockLinkProps) {
+      const href = props.href;
+      return (
+        <a
+          ref={props.ref}
+          href={href}
+          onClick={(event) => {
+            event.preventDefault();
+            if (href) routerPush(href);
+          }}
+        >
+          {props.children}
+        </a>
+      );
+    },
+  };
+});
 
 const { ReportBuilder } = await import("../components/reporting/report-builder");
 const { ReportPreview } = await import("../components/reporting/report-preview");
@@ -658,7 +694,7 @@ describe("the builder", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
-    await screen.findByText("Draft saved");
+    await screen.findByRole("heading", { name: "Draft saved" });
 
     expect(saveReportDraftAction).toHaveBeenCalledTimes(1);
     const payload = saveReportDraftAction.mock.calls[0]![0];
@@ -672,7 +708,7 @@ describe("the builder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remove GEO Ranking" }));
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
-    await screen.findByText("Draft saved");
+    await screen.findByRole("heading", { name: "Draft saved" });
 
     const payload = saveReportDraftAction.mock.calls[0]![0];
     expect(payload.sections.map((item) => item.section_key)).toEqual([
@@ -687,7 +723,7 @@ describe("the builder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Move Technical SEO up" }));
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
-    await screen.findByText("Draft saved");
+    await screen.findByRole("heading", { name: "Draft saved" });
 
     const payload = saveReportDraftAction.mock.calls[0]![0];
     expect(payload.sections.map((item) => item.section_key)).toEqual([
@@ -738,7 +774,7 @@ describe("the builder", () => {
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByText("Draft saved");
+    await screen.findByRole("heading", { name: "Draft saved" });
   });
 
   it("surfaces a rejected save instead of pretending it landed", async () => {
@@ -763,7 +799,7 @@ describe("the builder", () => {
     render(<ReportBuilder document={documentFixture()} canSend />);
 
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByText("Draft saved");
+    await screen.findByRole("heading", { name: "Draft saved" });
 
     expect(sendReportDraftAction).not.toHaveBeenCalled();
   });
@@ -773,7 +809,7 @@ describe("the builder", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
 
-    const dialog = screen.getByRole("alertdialog");
+    const dialog = screen.getByRole("dialog");
     expect(
       within(dialog).getByText("Send this report to Northgate Dental?"),
     ).toBeInTheDocument();
@@ -789,13 +825,13 @@ describe("the builder", () => {
     expect(saveReportDraftAction).toHaveBeenCalledTimes(1);
   });
 
-  it("lets a cancelled confirmation change nothing", () => {
+  it("lets a cancelled confirmation change nothing", async () => {
     render(<ReportBuilder document={documentFixture()} canSend />);
 
     fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
-    fireEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }));
 
-    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(sendReportDraftAction).not.toHaveBeenCalled();
   });
 
@@ -1405,5 +1441,479 @@ describe("the service-aware report wizard", () => {
     render(<ReportWizard document={wizardDocument()} canSend />);
     expect(screen.getByRole("link", { name: "Advanced edit" }))
       .toHaveAttribute("href", `/reporting/${wizardDocument().report_id}?mode=advanced`);
+  });
+});
+
+describe("one-time setup — local editing never leaves the step", () => {
+  const oneTimeDocument = () => wizardDocument({ wizard_step_key: "one_time_setup" });
+
+  it("typing into Status or value only updates the wizard's local state", () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    const status = screen.getAllByLabelText("Status or value")[0]!;
+    fireEvent.change(status, { target: { value: "Completed" } });
+
+    expect(status).toHaveValue("Completed");
+    expect(screen.getByRole("heading", { name: "One-time Setup" })).toBeInTheDocument();
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    // No navigation, no save, no send, no durable completion consumption.
+    expect(saveReportDraftAction).not.toHaveBeenCalled();
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("typing a supporting URL only updates the wizard's local state", () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    const url = screen.getAllByLabelText("Supporting URL (optional)")[0]!;
+    fireEvent.change(url, { target: { value: "https://example.invalid/asset" } });
+
+    expect(url).toHaveValue("https://example.invalid/asset");
+    expect(screen.getByRole("heading", { name: "One-time Setup" })).toBeInTheDocument();
+    expect(saveReportDraftAction).not.toHaveBeenCalled();
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("toggling Completed and reported in this cycle only updates the wizard's local state", () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    // Evidence is required before the completion flag is offered.
+    fireEvent.change(screen.getAllByLabelText("Supporting URL (optional)")[0]!, {
+      target: { value: "https://example.invalid/asset" },
+    });
+    const check = screen.getAllByRole("checkbox", {
+      name: /Completed and reported in this cycle/,
+    })[0]!;
+    fireEvent.click(check);
+
+    expect(check).toBeChecked();
+    expect(screen.getByRole("heading", { name: "One-time Setup" })).toBeInTheDocument();
+    expect(saveReportDraftAction).not.toHaveBeenCalled();
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("custom additions typing never reads the event inside the state updater", () => {
+    render(<ReportWizard document={wizardDocument({ wizard_step_key: "custom_additions" })} canSend />);
+    fireEvent.click(screen.getByRole("button", { name: "Add report item" }));
+
+    const label = screen.getByLabelText("Report item");
+    fireEvent.change(label, { target: { value: "Custom deliverable" } });
+    const value = screen.getByLabelText("Value or status");
+    fireEvent.change(value, { target: { value: "Completed" } });
+    const url = screen.getByLabelText("Supporting URL (optional)");
+    fireEvent.change(url, { target: { value: "https://example.invalid/asset" } });
+
+    expect(label).toHaveValue("Custom deliverable");
+    expect(value).toHaveValue("Completed");
+    expect(url).toHaveValue("https://example.invalid/asset");
+    expect(screen.getByRole("heading", { name: "Custom additions" })).toBeInTheDocument();
+    expect(saveReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("custom section titles can be renamed without leaving the step", () => {
+    render(<ReportWizard document={wizardDocument({ wizard_step_key: "custom_additions" })} canSend />);
+    fireEvent.click(screen.getByRole("button", { name: "Add report item" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add custom section" }));
+
+    const titles = screen.getAllByLabelText("Custom section");
+    fireEvent.change(titles.at(-1)!, { target: { value: "Renamed section" } });
+
+    expect(screen.getByDisplayValue("Renamed section")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Custom additions" })).toBeInTheDocument();
+  });
+});
+
+describe("skip one-time setup", () => {
+  const oneTimeDocument = () => wizardDocument({ wizard_step_key: "one_time_setup" });
+
+  it("offers Skip One-time Setup only on the one-time step", () => {
+    const { unmount } = render(<ReportWizard document={wizardDocument()} canSend />);
+    expect(screen.queryByRole("button", { name: "Skip One-time Setup" })).not.toBeInTheDocument();
+    unmount();
+
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+    expect(screen.getByRole("button", { name: "Skip One-time Setup" })).toBeInTheDocument();
+  });
+
+  it("skip moves to the next applicable step and saves the cleared document", async () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    // Type draft-only evidence, then skip: none of it may reach the saved
+    // document, and nothing durable is consumed.
+    fireEvent.change(screen.getAllByLabelText("Status or value")[0]!, {
+      target: { value: "Completed" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Skip One-time Setup" }));
+
+    expect(await screen.findByRole("heading", { name: "Custom additions" }))
+      .toBeInTheDocument();
+    await vi.waitFor(() => expect(saveReportDraftAction).toHaveBeenCalledTimes(1));
+
+    const payload = saveReportDraftAction.mock.calls[0]![0];
+    expect(payload.wizardStepKey).toBe("custom_additions");
+    const oneTime = payload.sections.find((item) => item.section_key === "one_time_setup")!;
+    expect(oneTime.entries).toHaveLength(3);
+    for (const entry of oneTime.entries) {
+      expect(entry.value).toBeNull();
+      expect(entry.url).toBeNull();
+      expect(entry.one_time_completed).toBe(false);
+      expect(entry.one_time_item_key).toBeTruthy();
+    }
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("skip then Back returns to One-time Setup and filling normally still works", async () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip One-time Setup" }));
+    expect(await screen.findByRole("heading", { name: "Custom additions" }))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("heading", { name: "One-time Setup" }))
+      .toBeInTheDocument();
+
+    fireEvent.change(screen.getAllByLabelText("Status or value")[0]!, {
+      target: { value: "Completed" },
+    });
+    fireEvent.change(screen.getAllByLabelText("Supporting URL (optional)")[0]!, {
+      target: { value: "https://example.invalid/asset" },
+    });
+    fireEvent.click(screen.getAllByRole("checkbox", {
+      name: /Completed and reported in this cycle/,
+    })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await vi.waitFor(() => expect(saveReportDraftAction).toHaveBeenCalledTimes(3));
+
+    const payload = saveReportDraftAction.mock.calls[2]![0];
+    expect(payload.wizardStepKey).toBe("one_time_setup");
+    expect(
+      payload.sections
+        .find((item) => item.section_key === "one_time_setup")!
+        .entries[0],
+    ).toEqual(expect.objectContaining({
+      value: "Completed",
+      url: "https://example.invalid/asset",
+      one_time_completed: true,
+    }));
+    // Saving a draft consumes nothing durable.
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("a skipped one-time step is dropped from the document saved before send", async () => {
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip One-time Setup" }));
+    expect(await screen.findByRole("heading", { name: "Custom additions" }))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { name: "Review report" }))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send report" }));
+
+    await vi.waitFor(() => expect(sendReportDraftAction).toHaveBeenCalledTimes(1));
+    const lastSave = saveReportDraftAction.mock.calls.at(-1)![0];
+    expect(lastSave.sections.find((item) => item.section_key === "one_time_setup"))
+      .toBeUndefined();
+    expect(lastSave.sections.length).toBeGreaterThan(0);
+  });
+
+  it("a completed one-time step is kept in the document saved before send", async () => {
+    const completed = oneTimeDocument();
+    completed.sections = completed.sections.map((section) =>
+      section.section_key === "one_time_setup"
+        ? {
+            ...section,
+            entries: section.entries.map((entry, index) =>
+              index === 0
+                ? {
+                    ...entry,
+                    value: "Completed",
+                    url: "https://example.invalid/asset",
+                    one_time_completed: true,
+                  }
+                : entry,
+            ),
+          }
+        : section,
+    );
+    render(<ReportWizard document={completed} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { name: "Custom additions" }))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { name: "Review report" }))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send report" }));
+
+    await vi.waitFor(() => expect(sendReportDraftAction).toHaveBeenCalledTimes(1));
+    const lastSave = saveReportDraftAction.mock.calls.at(-1)![0];
+    const oneTime = lastSave.sections.find((item) => item.section_key === "one_time_setup")!;
+    expect(oneTime.entries[0]).toEqual(expect.objectContaining({
+      value: "Completed",
+      url: "https://example.invalid/asset",
+      one_time_completed: true,
+    }));
+  });
+
+  it("a failed send leaves the draft unchanged", async () => {
+    sendReportDraftAction.mockResolvedValueOnce({ ok: false, error: "Send failed" });
+    render(<ReportWizard document={oneTimeDocument()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip One-time Setup" }));
+    expect(await screen.findByRole("heading", { name: "Custom additions" }))
+      .toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { name: "Review report" }))
+      .toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send report" }));
+
+    await vi.waitFor(() => expect(sendReportDraftAction).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Send failed")).toBeInTheDocument();
+
+    // The final save restored the full document, one-time section included.
+    const lastSave = saveReportDraftAction.mock.calls.at(-1)![0];
+    expect(lastSave.sections.find((item) => item.section_key === "one_time_setup"))
+      .toBeDefined();
+  });
+});
+
+/* ============================================ save + send completion flow */
+
+describe("save + send completion flow", () => {
+  /** A Platinum wizard draft opened directly at the Review step. */
+  const reviewWizard = () => wizardDocument({ wizard_step_key: "review" });
+
+  async function openSendConfirmation() {
+    fireEvent.click(screen.getByRole("button", { name: "Send to client" }));
+    return screen.getByRole("dialog");
+  }
+
+  /* --- save draft --- */
+
+  it("save draft calls the existing save action once", async () => {
+    render(<ReportBuilder document={documentFixture()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await vi.waitFor(() => expect(saveReportDraftAction).toHaveBeenCalledTimes(1));
+  });
+
+  it("a successful save shows the Draft saved face", async () => {
+    render(<ReportWizard document={wizardDocument()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(await screen.findByRole("heading", { name: "Draft saved" })).toBeInTheDocument();
+    expect(screen.getByText("Your report is ready to continue later.")).toBeInTheDocument();
+  });
+
+  it("a successful save navigates to the Reporting list", async () => {
+    render(<ReportBuilder document={documentFixture()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    // The face navigates by clicking a hidden Link, which pushes with a
+    // scroll option — assert the destination, not the exact call signature.
+    await vi.waitFor(() => expect(routerPush).toHaveBeenCalled(), { timeout: 3000 });
+    expect(routerPush.mock.calls[0]![0]).toBe("/reporting");
+  });
+
+  it("a failed save stays on the page and does not navigate", async () => {
+    saveReportDraftAction.mockResolvedValue({
+      ok: false,
+      error: "Report links must start with http://.",
+    });
+    render(<ReportBuilder document={documentFixture()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(await screen.findByText("Report links must start with http://."))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Draft saved" })).not.toBeInTheDocument();
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("blocks a repeated save click while saving", async () => {
+    let releaseSave: ((result: ActionResult) => void) | undefined;
+    saveReportDraftAction.mockImplementation(
+      () => new Promise<ActionResult>((resolve) => { releaseSave = resolve; }),
+    );
+    render(<ReportBuilder document={documentFixture()} canSend />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(saveReportDraftAction).toHaveBeenCalledTimes(1);
+    releaseSave?.({ ok: true });
+  });
+
+  /* --- send confirmation --- */
+
+  it("send to client opens a dialog restating the recipient", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+
+    expect(
+      within(dialog).getByText("Send this report to Northgate Dental?"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("The client will receive this report in their portal."),
+    ).toBeInTheDocument();
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("renders the confirmation through a body portal, outside the report page", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+
+    // The overlay is a direct child of <body>; nothing in the report page —
+    // scroll position, a wrapper, a transform — can contain its fixed
+    // positioning (the D-055 rule).
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("cancel closes the dialog without sending", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("escape closes the dialog without sending", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    await openSendConfirmation();
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("focuses the safe action on open and returns focus on close", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const sendTrigger = screen.getByRole("button", { name: "Send to client" });
+    // A real pointer press focuses the trigger before the dialog opens; jsdom
+    // does not move focus on fireEvent.click, so it is simulated explicitly.
+    sendTrigger.focus();
+    const dialog = await openSendConfirmation();
+
+    // Cancel is focused, never Send: one Enter must not deliver the report.
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(sendTrigger).toHaveFocus();
+  });
+
+  it("locks body scroll while the confirmation is open", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    await openSendConfirmation();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // The restore runs in the same commit as the unmount; wait for it rather
+    // than asserting on the same tick the dialog leaves the DOM.
+    await vi.waitFor(() => expect(document.body.style.overflow).toBe(""));
+  });
+
+  /* --- send --- */
+
+  it("confirm send calls the existing send action once", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send report" }));
+
+    await vi.waitFor(() => expect(sendReportDraftAction).toHaveBeenCalledTimes(1));
+  });
+
+  it("disables the actions and shows the sending state while sending", async () => {
+    sendReportDraftAction.mockImplementation(() => new Promise<ActionResult>(() => {}));
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send report" }));
+
+    expect(
+      await within(screen.getByRole("dialog")).findByRole("button", { name: "Sending…" }),
+    ).toBeDisabled();
+    expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }))
+      .toBeDisabled();
+  });
+
+  it("a duplicate send click does not create a duplicate request", async () => {
+    sendReportDraftAction.mockImplementation(() => new Promise<ActionResult>(() => {}));
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    // Both clicks land on the same element reference: the label flips to
+    // "Sending…" after the first one, so a fresh query would miss the button.
+    const sendButton = within(dialog).getByRole("button", { name: "Send report" });
+    fireEvent.click(sendButton);
+    fireEvent.click(sendButton);
+
+    await vi.waitFor(() => expect(sendReportDraftAction).toHaveBeenCalledTimes(1));
+  });
+
+  it("a successful send shows the delivery outro", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send report" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Report delivered to client" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Northgate Dental can now view the report in their Wolf Forge portal."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Returning to Reporting/u)).toBeInTheDocument();
+  });
+
+  it("a successful send navigates to the Reporting list", async () => {
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send report" }));
+
+    // The outro navigates by clicking a hidden Link, which pushes with a
+    // scroll option — assert the destination, not the exact call signature.
+    await vi.waitFor(() => expect(routerPush).toHaveBeenCalled(), { timeout: 4000 });
+    expect(routerPush.mock.calls[0]![0]).toBe("/reporting");
+  });
+
+  it("a failed send stays on the editor with the error and no success face", async () => {
+    sendReportDraftAction.mockResolvedValue({ ok: false, error: "Send failed" });
+    render(<ReportWizard document={reviewWizard()} canSend />);
+
+    const dialog = await openSendConfirmation();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send report" }));
+
+    expect(await screen.findByText("Send failed")).toBeInTheDocument();
+    await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    expect(
+      screen.queryByRole("heading", { name: "Report delivered to client" }),
+    ).not.toBeInTheDocument();
+    expect(routerPush).not.toHaveBeenCalled();
+    // The editor is still there, still editable.
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send to client" })).toBeInTheDocument();
   });
 });

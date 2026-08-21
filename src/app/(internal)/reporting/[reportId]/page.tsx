@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ReportBuilder } from "../../../../components/reporting/report-builder";
-import { ReportWizard } from "../../../../components/reporting/report-wizard";
+import { ReportCompletionHost } from "../../../../components/reporting/report-completion-host";
 import { DataError } from "../../../../components/ui/list-states";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import type { InternalReportDocument } from "../../../../domain/reporting/schema";
-import { reportingProfileForService } from "../../../../domain/reporting/service-profiles";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
@@ -67,12 +65,12 @@ export default async function ReportPage({
     >
       {report === null ? (
         <DataError message={loadError ?? "This report could not be loaded."} />
-      ) : report.status === "draft"
-        && query.mode !== "advanced"
-        && reportingProfileForService(report.service_id) ? (
-        <ReportWizard document={report} canSend={user.reporting.send} />
       ) : (
-        <ReportBuilder document={report} canSend={user.reporting.send} />
+        <ReportCompletionHost
+          document={report}
+          canSend={user.reporting.send}
+          advanced={query.mode === "advanced"}
+        />
       )}
     </PageFrame>
   );

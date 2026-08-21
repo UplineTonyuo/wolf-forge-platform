@@ -17,6 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { PortalDialog } from "../account/ui/portal-dialog";
 import {
   discardReportDraftAction,
   saveReportDraftAction,
@@ -45,6 +46,7 @@ import {
 } from "../../domain/reporting/schema";
 import { formatDate } from "../../lib/format";
 import { ReportPreview } from "./report-preview";
+import { ReportSaveNotice, ReportSendOutro } from "./report-flow-status";
 import styles from "./reporting.module.css";
 
 /**
@@ -110,6 +112,17 @@ export function ReportBuilder({
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [sending, setSending] = useState(false);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  /* The completion faces: a confirmed save and a confirmed send both end
+      back on the Reporting list after their short pause. */
+  const [saveNotice, setSaveNotice] = useState(false);
+  const [sent, setSent] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  /*
+   * Same-tick re-entry guard. Disabling the buttons stops a human double
+   * click (React re-renders between clicks), but two clicks that land in the
+   * same tick would both read `sending === false`. The ref closes that gap.
+   */
+  const busyRef = useRef(false);
 
   /*
    * What is actually stored, as a comparable snapshot. State rather than a ref
@@ -139,6 +152,13 @@ export function ReportBuilder({
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty, readOnly]);
 
+  /*
+   * The completion faces play, then navigate back to the Reporting list
+   * themselves (report-flow-status.tsx): each face owns its display duration
+   * and clicks a hidden Link to /reporting. Save holds ~850ms, send ~1500ms —
+   * deliberately not animations, just a pause with a finish.
+   */
+
   async function saveDraft(): Promise<boolean> {
     if (readOnly) return false;
 
@@ -164,40 +184,61 @@ export function ReportBuilder({
     // Abandoned rows are dropped on save, so the editor shows what was stored.
     setSections(normalized);
     setSave({ kind: "saved" });
-    router.refresh();
     return true;
   }
 
-  async function send() {
-    if (sending) return;
-    setSending(true);
+  /**
+   * "Save draft" — the durable, deliberate save. A failed save stays on the
+   * page with the existing error; a successful one shows the "Draft saved"
+   * face for a beat and returns to the Reporting list.
+   */
+  async function saveDraftAndLeave() {
+    if (busyRef.current || readOnly || save.kind === "saving" || sending || saveNotice || sent) {
+      return;
+    }
+    busyRef.current = true;
+    try {
+      if (!(await saveDraft())) return;
+      setSaveNotice(true);
+    } finally {
+      busyRef.current = false;
+    }
+  }
 
-    /*
-     * Save first, always. Sending what is on screen rather than what was last
-     * saved is the only behaviour that cannot surprise the operator, and the
-     * send RPC reads the stored report.
-     */
-    const saved = await saveDraft();
-    if (!saved) {
+  async function send() {
+    if (busyRef.current || sending || saveNotice || sent) return;
+    busyRef.current = true;
+    try {
+      setSending(true);
+
+      /*
+       * Save first, always. Sending what is on screen rather than what was last
+       * saved is the only behaviour that cannot surprise the operator, and the
+       * send RPC reads the stored report.
+       */
+      const saved = await saveDraft();
+      if (!saved) {
+        setSending(false);
+        setConfirmingSend(false);
+        return;
+      }
+
+      const result = await sendReportDraftAction({
+        requestId: crypto.randomUUID(),
+        reportId: initial.report_id,
+      });
+
       setSending(false);
       setConfirmingSend(false);
-      return;
+
+      if (!result.ok) {
+        setSave({ kind: "error", message: result.error });
+        return;
+      }
+      setSent(true);
+    } finally {
+      busyRef.current = false;
     }
-
-    const result = await sendReportDraftAction({
-      requestId: crypto.randomUUID(),
-      reportId: initial.report_id,
-    });
-
-    setSending(false);
-    setConfirmingSend(false);
-
-    if (!result.ok) {
-      setSave({ kind: "error", message: result.error });
-      return;
-    }
-
-    router.refresh();
   }
 
   async function discard() {
@@ -470,7 +511,7 @@ export function ReportBuilder({
                 confirmingDiscard ? void discard() : setConfirmingDiscard(true)
               }
               onBlur={() => setConfirmingDiscard(false)}
-              disabled={sending || save.kind === "saving"}
+              disabled={sending || saveNotice || sent || save.kind === "saving"}
             >
               {confirmingDiscard ? "Discard for good?" : "Discard draft"}
             </button>
@@ -478,8 +519,8 @@ export function ReportBuilder({
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={() => void saveDraft()}
-              disabled={save.kind === "saving" || sending}
+              onClick={() => void saveDraftAndLeave()}
+              disabled={saveNotice || sent || save.kind === "saving" || sending}
             >
               {save.kind === "saving" ? (
                 <LoaderCircle aria-hidden="true" />
@@ -496,7 +537,9 @@ export function ReportBuilder({
                 type="button"
                 className={styles.primaryButton}
                 onClick={() => setConfirmingSend(true)}
-                disabled={sendBlocked || sending || save.kind === "saving"}
+                disabled={
+                  saveNotice || sent || sendBlocked || sending || save.kind === "saving"
+                }
                 title={sendBlocked ? "Fix the outstanding items first." : undefined}
               >
                 <Send aria-hidden="true" />
@@ -507,17 +550,62 @@ export function ReportBuilder({
         )}
       </div>
 
-      {confirmingSend ? (
-        <SendConfirmation
-          companyName={initial.company_name}
-          title={title}
-          packageLabel={packageLabel}
-          lane={lane}
-          sending={sending}
-          onCancel={() => setConfirmingSend(false)}
-          onConfirm={() => void send()}
-        />
-      ) : null}
+      {/*
+       * The one confirmation in the builder, rendered through PortalDialog
+       * (portaled to document.body, D-055): fixed to the viewport, centered
+       * no matter where in the report the operator scrolled, with the shared
+       * focus trap, focus return, Escape, backdrop close and scroll lock.
+       * Cancel takes the focus so one Enter cannot send by accident.
+       */}
+      <PortalDialog
+        open={confirmingSend}
+        onClose={() => setConfirmingSend(false)}
+        title={`Send this report to ${initial.company_name}?`}
+        description="The client will receive this report in their portal."
+        initialFocusRef={cancelRef}
+        footer={
+          <div className={styles.confirmActions}>
+            <button
+              ref={cancelRef}
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setConfirmingSend(false)}
+              disabled={sending}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void send()}
+              disabled={sending}
+            >
+              <Send aria-hidden="true" />
+              {sending ? "Sending…" : "Send report"}
+            </button>
+          </div>
+        }
+      >
+        <dl className={styles.confirmFacts}>
+          <div>
+            <dt>Client</dt>
+            <dd>{initial.company_name}</dd>
+          </div>
+          <div>
+            <dt>Report</dt>
+            <dd>{title.trim() || "Untitled report"}</dd>
+          </div>
+          <div>
+            <dt>Package</dt>
+            <dd>
+              {packageLabel} · {reportLaneLabels[lane]}
+            </dd>
+          </div>
+        </dl>
+      </PortalDialog>
+
+      <ReportSaveNotice open={saveNotice} />
+      <ReportSendOutro open={sent} companyName={initial.company_name} />
     </div>
   );
 }
@@ -653,95 +741,11 @@ function EntryRow({
 }
 
 /**
- * The one confirmation in the builder.
+ * The one confirmation in the builder now lives in PortalDialog above.
  *
  * Editing has no confirmations at all — undoing an edit is free. Sending is the
  * only irreversible act, so it is the only one that stops and restates who is
- * about to receive what.
+ * about to receive what. The dialog itself (focus trap, focus return, Escape,
+ * backdrop close, scroll lock, exit animation) is the shared PortalDialog —
+ * D-010 and D-055.
  */
-function SendConfirmation({
-  companyName,
-  title,
-  packageLabel,
-  lane,
-  sending,
-  onCancel,
-  onConfirm,
-}: {
-  companyName: string;
-  title: string;
-  packageLabel: string;
-  lane: ReportLane;
-  sending: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const headingId = useId();
-  const confirmRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    confirmRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onCancel]);
-
-  return (
-    <div className={styles.confirmBackdrop}>
-      <section
-        className={styles.confirm}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={headingId}
-      >
-        <h2 id={headingId}>Send this report to {companyName}?</h2>
-        <p>
-          Everyone with portal access at {companyName} will be notified and will be able to read
-          this report. It cannot be edited afterwards.
-        </p>
-
-        <dl className={styles.confirmFacts}>
-          <div>
-            <dt>Client</dt>
-            <dd>{companyName}</dd>
-          </div>
-          <div>
-            <dt>Report</dt>
-            <dd>{title.trim() || "Untitled report"}</dd>
-          </div>
-          <div>
-            <dt>Package</dt>
-            <dd>
-              {packageLabel} · {reportLaneLabels[lane]}
-            </dd>
-          </div>
-        </dl>
-
-        <div className={styles.confirmActions}>
-          <button
-            type="button"
-            className={styles.secondaryButton}
-            onClick={onCancel}
-            disabled={sending}
-          >
-            Cancel
-          </button>
-          <button
-            ref={confirmRef}
-            type="button"
-            className={styles.primaryButton}
-            onClick={onConfirm}
-            disabled={sending}
-          >
-            <Send aria-hidden="true" />
-            {sending ? "Sending…" : "Send report"}
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}

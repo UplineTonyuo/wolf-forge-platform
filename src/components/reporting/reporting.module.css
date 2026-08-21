@@ -883,6 +883,41 @@
   outline-offset: 2px;
 }
 
+/*
+ * "Skip One-time Setup" — a forward action that is clearly quieter than Next.
+ * Transparent and muted at rest, like the dangerButton frame but with the
+ * neutral navy hover, so it reads as "continue without this step", never as
+ * the primary way forward.
+ */
+.skipButton {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--wf-text-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  appearance: none;
+  cursor: pointer;
+  transition: color 160ms var(--wf-ease), border-color 160ms var(--wf-ease);
+}
+
+.skipButton:hover:not(:disabled) {
+  border-color: var(--wf-border);
+  color: var(--wf-navy);
+}
+
+.skipButton:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.skipButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* Armed, not fired. One more deliberate click removes an unsent draft. */
 .dangerButton[data-armed="true"] {
   border-color: var(--wf-danger);
@@ -1043,44 +1078,233 @@
   font-style: italic;
 }
 
-/* ==================================================== send confirmation */
+/* ============================================ save + send completion faces */
 
-.confirmBackdrop {
+/*
+ * The transient completion overlays ("Draft saved", "Report delivered").
+ * These are portaled to document.body (report-flow-status.tsx) so their
+ * fixed positioning measures the viewport no matter where the report editor
+ * sits — the D-055 rule. Presentation only: the wizard/builder owns the
+ * navigation timer. Motion is restrained — an entrance, a drawn check, a gold
+ * sweep — and fully disabled under prefers-reduced-motion.
+ */
+
+.saveNoticeBackdrop,
+.sendOutroBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-
-  background: rgb(0 6 47 / 42%);
-  backdrop-filter: blur(3px);
+  z-index: 9700;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
 }
 
-.confirm {
-  width: min(440px, 100%);
-  padding: 26px 26px 22px;
+.saveNoticeBackdrop {
+  background: rgb(0 6 47 / 30%);
+  backdrop-filter: blur(6px) saturate(.9);
+  -webkit-backdrop-filter: blur(6px) saturate(.9);
+  animation: report-face-in 180ms var(--wf-ease) both;
+}
 
+.sendOutroBackdrop {
+  background: rgb(0 8 48 / 44%);
+  backdrop-filter: blur(12px) saturate(.94);
+  -webkit-backdrop-filter: blur(12px) saturate(.94);
+  animation: report-face-in 260ms var(--wf-ease) both;
+}
+
+@keyframes report-face-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.saveNotice {
+  width: min(360px, 100%);
+  padding: 30px 28px 26px;
+  text-align: center;
   border: 1px solid var(--wf-border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--wf-white);
-  box-shadow: 0 24px 60px -30px rgb(0 6 47 / 65%);
+  box-shadow: 0 24px 70px -26px rgb(0 6 47 / 55%);
+  animation: report-card-in 220ms var(--wf-ease) both;
 }
 
-.confirm h2 {
+.saveNotice h2 {
   margin: 0;
   color: var(--wf-navy);
   font-family: var(--wf-font-display);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 
-.confirm > p {
-  margin: 10px 0 0;
+.saveNotice p {
+  margin: 8px 0 0;
   color: var(--wf-text-muted);
   font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* The navy disc with the gold ring, and the check that draws itself in. */
+.saveNoticeMark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--wf-gold) 60%, transparent),
+    0 12px 28px -14px rgb(0 13 81 / 60%);
+  animation: report-mark-in 260ms var(--wf-ease) both;
+}
+
+.saveNoticeMark svg {
+  width: 30px;
+  height: 30px;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: report-check-draw 300ms var(--wf-ease) 130ms both;
+}
+
+@keyframes report-mark-in {
+  from { opacity: 0; transform: scale(.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes report-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.sendOutro {
+  width: min(420px, 100%);
+  padding: 42px 32px 34px;
+  text-align: center;
+  border: 1px solid var(--wf-border);
+  border-radius: 20px;
+  background: var(--wf-white);
+  box-shadow: 0 34px 100px rgb(0 13 81 / 30%);
+  animation: report-card-in 300ms var(--wf-ease) both;
+}
+
+@keyframes report-card-in {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sendOutro h2 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display);
+  font-size: 22px;
+  font-weight: 700;
+  animation: report-rise-in 320ms var(--wf-ease) 60ms both;
+}
+
+.sendOutro p {
+  margin: 9px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+  animation: report-rise-in 320ms var(--wf-ease) 120ms both;
+}
+
+@keyframes report-rise-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* The gold mark on the navy disc, gold ring and a soft glow. */
+.sendOutroMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  background: var(--wf-navy);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--wf-gold) 75%, transparent),
+    0 0 0 5px rgb(0 8 48 / 8%),
+    0 18px 44px -16px rgb(0 13 81 / 65%);
+  animation: report-mark-in 340ms var(--wf-ease) both;
+}
+
+.sendOutroWolf {
+  width: 78px;
+  height: 59px;
+  display: block;
+  object-fit: contain;
+}
+
+/* The small gold check that lands on the disc corner after the mark. */
+.sendOutroCheck {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--wf-navy);
+  background: var(--wf-gold);
+  box-shadow: 0 0 0 2px var(--wf-white);
+  animation: report-check-pop 260ms var(--wf-ease) 300ms both;
+}
+
+.sendOutroCheck svg {
+  width: 16px;
+  height: 16px;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: report-check-draw 280ms var(--wf-ease) 380ms both;
+}
+
+@keyframes report-check-pop {
+  from { opacity: 0; transform: scale(.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* The gold hairline that sweeps across beneath the copy. */
+.sendOutroSweep {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 24px 0 14px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--wf-gold) 70%, transparent),
+    transparent
+  );
+  transform-origin: left center;
+  animation: report-sweep-in 700ms var(--wf-ease) 320ms both;
+}
+
+@keyframes report-sweep-in {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+.sendOutro em {
+  display: block;
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  animation: report-rise-in 300ms var(--wf-ease) 460ms both;
+}
+
+/* The note inside the send confirmation dialog (wizard one-time rule). */
+.confirmNote {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 13px;
   line-height: 1.55;
 }
 
@@ -1955,7 +2179,20 @@
   .setupFocus,
   .wizardStepIncoming,
   .wizardStepLeaving,
-  .quickCountCustom {
+  .quickCountCustom,
+  .saveNoticeBackdrop,
+  .sendOutroBackdrop,
+  .saveNotice,
+  .sendOutro,
+  .saveNoticeMark,
+  .saveNoticeMark svg,
+  .sendOutroMark,
+  .sendOutroCheck,
+  .sendOutroCheck svg,
+  .sendOutroSweep,
+  .sendOutro h2,
+  .sendOutro p,
+  .sendOutro em {
     animation: none;
   }
 

@@ -12,8 +12,8 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
+import { PortalDialog } from "../account/ui/portal-dialog";
 import {
   saveReportDraftAction,
   sendReportDraftAction,
@@ -31,7 +31,9 @@ import {
 import {
   applyQuickCompletedQuantity,
   blogPostsCompletedValue,
+  clearOneTimeSetupEvidence,
   completedQuantityValue,
+  dropUnreportedOneTimeSection,
   parseBlogCompletedCount,
   parseCompletedCount,
   quickCompletedQuantityOptions,
@@ -51,6 +53,7 @@ import type {
   ReportDraftSectionInput,
 } from "../../domain/reporting/schema";
 import { ReportPreview } from "./report-preview";
+import { ReportSaveNotice, ReportSendOutro } from "./report-flow-status";
 import styles from "./reporting.module.css";
 
 type SaveState =
@@ -154,7 +157,6 @@ export function ReportWizard({
   document: InternalReportDocument;
   canSend: boolean;
 }) {
-  const router = useRouter();
   const profile = requireReportingProfile(initial.service_id);
 
   const initialSteps = wizardStepsForSections(initial.sections);
@@ -173,7 +175,18 @@ export function ReportWizard({
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [sending, setSending] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
+  /* The completion faces: a confirmed save and a confirmed send both end
+      back on the Reporting list after their short pause. */
+  const [saveNotice, setSaveNotice] = useState(false);
+  const [sent, setSent] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /*
+   * Same-tick re-entry guard. Disabling the buttons stops a human double
+   * click (React re-renders between clicks), but two clicks that land in the
+   * same tick would both read `sending === false`. The ref closes that gap.
+   */
+  const busyRef = useRef(false);
   const [persisted, setPersisted] = useState(() =>
     snapshot(initial.title, firstStep, initial.sections),
   );
@@ -198,18 +211,32 @@ export function ReportWizard({
     [],
   );
 
-  async function persist(targetStep: ReportWizardStepKey = step): Promise<boolean> {
+  /*
+   * The completion faces play, then navigate back to the Reporting list
+   * themselves (report-flow-status.tsx): each face owns its display duration
+   * and clicks a hidden Link to /reporting. Save holds ~850ms, send ~1500ms —
+   * deliberately not animations, just a pause with a finish.
+   */
+
+  async function persist(
+    targetStep: ReportWizardStepKey = step,
+    sectionsOverride?: ReportDraftSectionInput[],
+  ): Promise<boolean> {
     setSave({ kind: "saving" });
     /*
      * A quick-select step commits its current selection only when the wizard
      * saves or continues. Rendering the step alone must never write a count;
      * the ref carries the visible selection (expected by default) and is
      * applied here, so Next / Save / Back confirms exactly what was on screen.
+     * The override exists for one-shot documents — skip and send — that must
+     * be saved before the wizard moves on; the live step's quick count never
+     * applies to them.
      */
+    const source = sectionsOverride ?? sections;
     const selection = quickCountRef.current;
     const committed = selection && selection.step === step
-      ? applyQuickCompletedQuantity(sections, selection.step, selection.count)
-      : sections;
+      ? applyQuickCompletedQuantity(source, selection.step, selection.count)
+      : source;
     // The YouTube Stack count is derived from the blog count, never entered
     // again. Deriving here (in addition to the Blog step's live update) keeps a
     // saved draft consistent even when it predates this rule.
@@ -246,33 +273,85 @@ export function ReportWizard({
 
   async function goTo(targetStep: ReportWizardStepKey) {
     const targetIndex = steps.indexOf(targetStep);
-    if (targetIndex < 0 || save.kind === "saving" || sending) return;
+    if (targetIndex < 0 || save.kind === "saving" || sending || saveNotice || sent) return;
     const nextDirection: Direction = targetIndex < stepPosition ? "back" : "forward";
     if (!(await persist(targetStep))) return;
     animateTo(targetStep, nextDirection);
   }
 
+  /**
+   * "Skip One-time Setup" — this report only.
+   *
+   * The section and its stable item keys stay in the document, so Back can
+   * return and fill the step normally, and nothing durable is consumed: no
+   * completion flag, no status, no URL, no deliverable record. Only the
+   * draft-only evidence the operator may have typed this cycle is cleared, so
+   * a skipped entry is never reported as completed or evidenced work. The
+   * wizard then continues to the next applicable step, exactly like Next.
+   */
+  async function skipOneTimeSetup() {
+    if (step !== "one_time_setup" || save.kind === "saving" || sending || saveNotice || sent) {
+      return;
+    }
+    const nextStep = steps[stepPosition + 1];
+    if (!nextStep) return;
+    if (!(await persist(nextStep, clearOneTimeSetupEvidence(sections)))) return;
+    animateTo(nextStep, "forward");
+  }
+
+  /**
+   * "Save draft" — the durable, deliberate save. A failed save stays on the
+   * page with the existing error; a successful one shows the "Draft saved"
+   * face for a beat and returns to the Reporting list.
+   */
+  async function saveDraftAndLeave() {
+    if (busyRef.current || save.kind === "saving" || sending || saveNotice || sent) return;
+    busyRef.current = true;
+    try {
+      if (!(await persist(step))) return;
+      setSaveNotice(true);
+    } finally {
+      busyRef.current = false;
+    }
+  }
+
   async function send() {
-    if (sending || problems.length > 0 || !title.trim()) return;
-    setSending(true);
-    if (!(await persist("review"))) {
+    if (busyRef.current || sending || saveNotice || sent || problems.length > 0 || !title.trim()) {
+      return;
+    }
+    busyRef.current = true;
+    try {
+      setSending(true);
+      /*
+       * A skipped (or never filled) one-time step must not surface as an empty
+       * section in the delivered report. The section is dropped from the saved
+       * document only for this send; if the send fails, the original draft is
+       * saved back unchanged, so a failed send alters nothing.
+       */
+      const originalSections = sections;
+      const forSend = dropUnreportedOneTimeSection(sections);
+      if (!(await persist("review", forSend))) {
+        setSending(false);
+        setConfirmingSend(false);
+        return;
+      }
+
+      const result = await sendReportDraftAction({
+        requestId: crypto.randomUUID(),
+        reportId: initial.report_id,
+      });
       setSending(false);
       setConfirmingSend(false);
-      return;
-    }
 
-    const result = await sendReportDraftAction({
-      requestId: crypto.randomUUID(),
-      reportId: initial.report_id,
-    });
-    setSending(false);
-    setConfirmingSend(false);
-
-    if (!result.ok) {
-      setSave({ kind: "error", message: result.error });
-      return;
+      if (!result.ok) {
+        await persist("review", originalSections).catch(() => {});
+        setSave({ kind: "error", message: result.error });
+        return;
+      }
+      setSent(true);
+    } finally {
+      busyRef.current = false;
     }
-    router.refresh();
   }
 
   const previous = steps[stepPosition - 1] ?? null;
@@ -355,7 +434,7 @@ export function ReportWizard({
               type="button"
               className={styles.secondaryButton}
               onClick={() => void goTo(previous)}
-              disabled={save.kind === "saving" || sending}
+              disabled={save.kind === "saving" || sending || saveNotice || sent}
             >
               <ArrowLeft aria-hidden="true" />
               Back
@@ -389,18 +468,28 @@ export function ReportWizard({
           <button
             type="button"
             className={styles.secondaryButton}
-            onClick={() => void persist(step)}
-            disabled={save.kind === "saving" || sending}
+            onClick={() => void saveDraftAndLeave()}
+            disabled={save.kind === "saving" || sending || saveNotice || sent}
           >
             {save.kind === "saving" ? <LoaderCircle aria-hidden="true" /> : <Save aria-hidden="true" />}
             Save draft
           </button>
+          {step === "one_time_setup" ? (
+            <button
+              type="button"
+              className={styles.skipButton}
+              onClick={() => void skipOneTimeSetup()}
+              disabled={save.kind === "saving" || sending || saveNotice || sent}
+            >
+              Skip One-time Setup
+            </button>
+          ) : null}
           {next ? (
             <button
               type="button"
               className={styles.primaryButton}
               onClick={() => void goTo(next)}
-              disabled={save.kind === "saving" || sending}
+              disabled={save.kind === "saving" || sending || saveNotice || sent}
             >
               Next
               <ArrowRight aria-hidden="true" />
@@ -410,7 +499,10 @@ export function ReportWizard({
               type="button"
               className={styles.primaryButton}
               onClick={() => setConfirmingSend(true)}
-              disabled={save.kind === "saving" || sending || problems.length > 0 || !title.trim()}
+              disabled={
+                save.kind === "saving" || sending || saveNotice || sent
+                || problems.length > 0 || !title.trim()
+              }
             >
               <Send aria-hidden="true" />
               Send to client
@@ -419,36 +511,50 @@ export function ReportWizard({
         </div>
       </footer>
 
-      {confirmingSend ? (
-        <div className={styles.confirmBackdrop}>
-          <section className={styles.confirm} role="alertdialog" aria-modal="true">
-            <h2>Send this report to {initial.company_name}?</h2>
-            <p>
-              The report will become read-only. Completed one-time items included here will not
-              return by default in this client Service&apos;s next report.
-            </p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => setConfirmingSend(false)}
-                disabled={sending}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={() => void send()}
-                disabled={sending}
-              >
-                <Send aria-hidden="true" />
-                {sending ? "Sending…" : "Send report"}
-              </button>
-            </div>
-          </section>
-        </div>
-      ) : null}
+      {/*
+       * The one confirmation in the wizard, rendered through PortalDialog
+       * (portaled to document.body, D-055): fixed to the viewport, centered
+       * no matter where in the report the operator scrolled, with the shared
+       * focus trap, focus return, Escape, backdrop close and scroll lock.
+       * Cancel takes the focus so one Enter cannot send by accident.
+       */}
+      <PortalDialog
+        open={confirmingSend}
+        onClose={() => setConfirmingSend(false)}
+        title={`Send this report to ${initial.company_name}?`}
+        description="The client will receive this report in their portal."
+        initialFocusRef={cancelRef}
+        footer={
+          <div className={styles.confirmActions}>
+            <button
+              ref={cancelRef}
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setConfirmingSend(false)}
+              disabled={sending}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void send()}
+              disabled={sending}
+            >
+              <Send aria-hidden="true" />
+              {sending ? "Sending…" : "Send report"}
+            </button>
+          </div>
+        }
+      >
+        <p className={styles.confirmNote}>
+          The report becomes read-only. Completed one-time items included here will not
+          return by default in this client Service&apos;s next report.
+        </p>
+      </PortalDialog>
+
+      <ReportSaveNotice open={saveNotice} />
+      <ReportSendOutro open={sent} companyName={initial.company_name} />
     </div>
   );
 }
@@ -743,11 +849,14 @@ function WizardStep({
                   <span>Status or value</span>
                   <input
                     value={item.value ?? ""}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      // Read the event value before the state updater runs:
+                      // currentTarget is gone once the handler has returned.
+                      const value = event.currentTarget.value;
                       onSectionsChange((current) =>
-                        updateEntry(current, target, index, { value: event.currentTarget.value }),
-                      )
-                    }
+                        updateEntry(current, target, index, { value }),
+                      );
+                    }}
                     placeholder="Completed, delivered, or in progress"
                     maxLength={4000}
                   />
@@ -764,13 +873,16 @@ function WizardStep({
                     type="checkbox"
                     checked={item.one_time_completed ?? false}
                     disabled={!hasEvidence}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      // Same rule as the status field: capture the flag while
+                      // the event is live, never inside the state updater.
+                      const checked = event.currentTarget.checked;
                       onSectionsChange((current) =>
                         updateEntry(current, target, index, {
-                          one_time_completed: event.currentTarget.checked,
+                          one_time_completed: checked,
                         }),
-                      )
-                    }
+                      );
+                    }}
                   />
                   <span>
                     <Check aria-hidden="true" />
@@ -805,11 +917,12 @@ function WizardStep({
                     <span>Custom section</span>
                     <input
                       value={section.title}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const title = event.currentTarget.value;
                         onSectionsChange((current) =>
-                          renameSection(current, target, event.currentTarget.value),
-                        )
-                      }
+                          renameSection(current, target, title),
+                        );
+                      }}
                       maxLength={200}
                     />
                   </label>
@@ -830,13 +943,12 @@ function WizardStep({
                       <span>Report item</span>
                       <input
                         value={item.label}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const label = event.currentTarget.value;
                           onSectionsChange((current) =>
-                            updateEntry(current, target, itemIndex, {
-                              label: event.currentTarget.value,
-                            }),
-                          )
-                        }
+                            updateEntry(current, target, itemIndex, { label }),
+                          );
+                        }}
                         placeholder="Custom deliverable"
                         maxLength={200}
                       />
@@ -845,13 +957,12 @@ function WizardStep({
                       <span>Value or status</span>
                       <input
                         value={item.value ?? ""}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const value = event.currentTarget.value;
                           onSectionsChange((current) =>
-                            updateEntry(current, target, itemIndex, {
-                              value: event.currentTarget.value,
-                            }),
-                          )
-                        }
+                            updateEntry(current, target, itemIndex, { value }),
+                          );
+                        }}
                         placeholder="Completed"
                         maxLength={4000}
                       />

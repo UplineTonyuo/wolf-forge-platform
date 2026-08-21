@@ -396,6 +396,67 @@ export function wizardStepsForSections(
   );
 }
 
+/**
+ * Clears the draft-only evidence on every One-time Setup entry.
+ *
+ * Skip means "do not include One-time Setup work in this report right now".
+ * The section and its stable item keys stay — Back must be able to return and
+ * fill it normally, and the item keys are the durable completion identity,
+ * which skip never touches. Only what the operator typed this cycle — status/
+ * value, asset URL and the completion flag — is cleared, so a skipped entry
+ * can never be mistaken for completed or evidenced work in the sent report.
+ */
+export function clearOneTimeSetupEvidence(
+  sections: readonly ReportDraftSectionInput[],
+): ReportDraftSectionInput[] {
+  return sections.map((section) =>
+    section.section_key === "one_time_setup"
+      ? {
+          ...section,
+          entries: section.entries.map((entry) => ({
+            ...entry,
+            value: null,
+            url: null,
+            one_time_completed: false,
+          })),
+        }
+      : section,
+  );
+}
+
+/**
+ * Whether the One-time Setup section carries an entry this report can stand
+ * behind: explicit completion with value and/or URL evidence — the same
+ * predicate the send RPC uses before consuming a durable completion.
+ */
+export function hasReportedOneTimeCompletion(
+  sections: readonly ReportDraftSectionInput[],
+): boolean {
+  return (
+    sections
+      .find((section) => section.section_key === "one_time_setup")
+      ?.entries.some(
+        (entry) =>
+          entry.one_time_completed
+          && Boolean(entry.value?.trim() || entry.url?.trim()),
+      ) ?? false
+  );
+}
+
+/**
+ * Drops the One-time Setup section when this report has nothing to report in
+ * it. Used at send time so a skipped (or never filled) one-time step cannot
+ * surface as an empty section in the client report or slideshow. A section
+ * carrying a completed evidenced entry is returned untouched.
+ */
+export function dropUnreportedOneTimeSection(
+  sections: readonly ReportDraftSectionInput[],
+): ReportDraftSectionInput[] {
+  return hasReportedOneTimeCompletion(sections)
+    ? [...sections]
+    : sections.filter((section) => section.section_key !== "one_time_setup");
+}
+
 export function completedQuantityValue(
   quantity: number | null,
   singular: string,
