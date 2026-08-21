@@ -442,8 +442,8 @@ select throws_ok(
   'Client A cannot spoof Company B by changing the company UUID'
 );
 
-select is((select count(*) from public.orders where id = '56000000-0000-0000-0000-000000000001'), 1::bigint, 'Client A can read Company A project');
-select is((select count(*) from public.orders where id = '56000000-0000-0000-0000-000000000002'), 0::bigint, 'Client A cannot read Company B project');
+select is((select count(*) from public.app_get_my_client_project('56000000-0000-0000-0000-000000000001')), 1::bigint, 'Client A can read Company A project through the safe projection');
+select is((select count(*) from public.app_get_my_client_project('56000000-0000-0000-0000-000000000002')), 0::bigint, 'Client A cannot read Company B project through the safe projection');
 select is((select count(*) from public.client_contacts), 0::bigint, 'Client A is not implicitly exposed private contact rows');
 
 select throws_ok(
@@ -480,8 +480,8 @@ select throws_ok(
   'Client B cannot spoof Company A by changing the company UUID'
 );
 
-select is((select count(*) from public.orders where id = '56000000-0000-0000-0000-000000000002'), 1::bigint, 'Client B can read Company B project');
-select is((select count(*) from public.orders where id = '56000000-0000-0000-0000-000000000001'), 0::bigint, 'Client B cannot read Company A project');
+select is((select count(*) from public.app_get_my_client_project('56000000-0000-0000-0000-000000000002')), 1::bigint, 'Client B can read Company B project through the safe projection');
+select is((select count(*) from public.app_get_my_client_project('56000000-0000-0000-0000-000000000001')), 0::bigint, 'Client B cannot read Company A project through the safe projection');
 
 -- -----------------------------------------------------------------------------
 -- Anonymous and catalog regression

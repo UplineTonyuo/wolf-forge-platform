@@ -9,7 +9,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState, type CSSProperties } from "react";
-import { profileInitials } from "../../domain/profile/schema";
+import { PersonSilhouette } from "./person-silhouette";
 import styles from "./account-avatar.module.css";
 
 /**
@@ -38,16 +38,19 @@ function safeAvatarSource(value: string | null | undefined): string | null {
 /**
  * The single avatar renderer for the product.
  *
- * Resolution is always: stored photo, otherwise initials. A photo that fails to
- * load falls back to initials rather than showing a broken-image glyph, so a
- * deleted or unreachable object degrades quietly.
+ * Resolution is always: stored photo, otherwise the neutral person silhouette.
+ * A photo that fails to load falls back the same way rather than showing a
+ * broken-image glyph, so a deleted or unreachable object degrades quietly.
+ *
+ * The fallback is deliberately not initials: it is one calm, identical
+ * placeholder for everyone, which reads as "no photo yet" instead of turning
+ * every account without one into a coloured monogram.
  *
  * The image is decorative wherever the account name is already rendered beside
  * it, which is the case on every current surface — hence the empty alt by
  * default. Pass `alt` explicitly where the avatar stands alone.
  */
 export function AccountAvatar({
-  name,
   avatarUrl,
   size = 36,
   shape = "circle",
@@ -55,7 +58,12 @@ export function AccountAvatar({
   alt = "",
   className,
 }: {
-  name: string | null | undefined;
+  /**
+   * Kept on the contract because every call site already has it and the
+   * component is the natural owner of any future name-derived treatment. The
+   * silhouette fallback is identical for everyone, so nothing reads it today.
+   */
+  name?: string | null | undefined;
   avatarUrl: string | null | undefined;
   size?: number;
   shape?: "circle" | "rounded";
@@ -75,8 +83,6 @@ export function AccountAvatar({
 
   const style = {
     "--wf-avatar-size": `${size}px`,
-    /* Initials scale with the circle so one component covers 30px and 92px. */
-    "--wf-avatar-font": `${Math.max(10, Math.round(size * 0.36))}px`,
   } as CSSProperties;
 
   return (
@@ -103,9 +109,7 @@ export function AccountAvatar({
           onError={() => setFailedSource(source)}
         />
       ) : (
-        <span className={styles.initials} aria-hidden="true">
-          {profileInitials(name)}
-        </span>
+        <PersonSilhouette className={styles.fallback} />
       )}
     </span>
   );

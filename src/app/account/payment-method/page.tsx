@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ClientPaymentMethodView } from "../../../components/account/billing/client-payment-method";
-import {
-  resolvePaymentMethodState,
-  resolveWalletFunding,
-} from "../../../domain/client-portal/payment-method";
+import { resolveWalletFunding } from "../../../domain/client-portal/payment-method";
+import { composeClientPaymentRails } from "../../../domain/payments/payment-rails";
 import { toClientSafeError } from "../../../lib/errors/application-error";
+import { readExternalPaymentRailAvailability } from "../../../lib/payments/payment-rail-configuration";
 import { getClientContext } from "../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "Payment method" };
@@ -51,20 +50,29 @@ export default async function ClientPaymentMethodPage() {
     );
   }
 
+  const funding = resolveWalletFunding({
+    membershipStatus: membership?.status ?? null,
+    balanceCents: wallet.balance_cents,
+    currency: wallet.currency,
+  });
+
+  /*
+   * The rails are composed on the server from two facts the browser has no part
+   * in: the wallet row RLS allowed this session to read, and whether Wolf Forge
+   * has connected PayPal or bank transfer.
+   *
+   * readExternalPaymentRailAvailability() lives in a `server-only` module and
+   * returns two enum strings. No credential, variable name or partial
+   * configuration state crosses to the client — a client learns only what this
+   * page tells them out loud, which is that neither is connected yet.
+   */
   return (
     <ClientPaymentMethodView
-      /*
-       * No arguments: the state resolves from the connected-provider list,
-       * which is empty. "No payment method on file" is therefore a derived
-       * result rather than fixed copy someone could forget to remove once a
-       * provider is integrated.
-       */
-      state={resolvePaymentMethodState()}
-      wallet={resolveWalletFunding({
-        membershipStatus: membership?.status ?? null,
-        balanceCents: wallet.balance_cents,
-        currency: wallet.currency,
+      rails={composeClientPaymentRails({
+        wallet: funding,
+        availability: readExternalPaymentRailAvailability(),
       })}
+      wallet={funding}
       holderName={context.user.displayName ?? context.user.companyName}
     />
   );

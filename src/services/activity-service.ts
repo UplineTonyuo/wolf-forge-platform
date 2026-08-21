@@ -1,16 +1,10 @@
 ﻿import {
   activityEntityTypeSchema,
   systemActivitySchema,
-  userActivitySchema,
   type SystemActivityInput,
-  type UserActivityInput,
 } from "../domain/activity/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
-import {
-  ActivityRepository,
-  SystemActivityRepository,
-  UserActivityRepository,
-} from "../repositories/activity-repository";
+import { ActivityRepository, SystemActivityRepository } from "../repositories/activity-repository";
 
 export class ActivityService {
   constructor(private readonly repository: ActivityRepository) {}
@@ -24,14 +18,6 @@ export class ActivityService {
 
 }
 
-export class UserActivityService {
-  constructor(private readonly repository: UserActivityRepository) {}
-
-  record(input: unknown) {
-    return this.repository.create(parseInput(userActivitySchema, input));
-  }
-}
-
 export class SystemActivityService {
   constructor(private readonly repository: SystemActivityRepository) {}
 
@@ -40,6 +26,5 @@ export class SystemActivityService {
   }
 }
 
-export type UserActivityWriter = Pick<UserActivityService, "record">;
 export type SystemActivityWriter = Pick<SystemActivityService, "record">;
-export type { SystemActivityInput, UserActivityInput };
+export type { SystemActivityInput };

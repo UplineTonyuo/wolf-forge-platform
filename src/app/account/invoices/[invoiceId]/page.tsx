@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
+import { InvoiceItemScope } from "../../../../components/account/billing/invoice-item-scope";
 import { PrintInvoiceButton } from "../../../../components/account/billing/print-invoice-button";
 import { AttentionPill } from "../../../../components/account/ui/attention-pill";
 import { InvoicePaymentSelector } from "../../../../components/invoices/invoice-payment-selector";
 import { invoiceAttention } from "../../../../domain/client-portal/attention";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
+import { composeClientPaymentRails } from "../../../../domain/payments/payment-rails";
+import { resolveWalletFunding } from "../../../../domain/client-portal/payment-method";
+import { composeServiceScope } from "../../../../domain/services/service-summary";
 import { formatCurrencyCents, formatDate } from "../../../../lib/format";
-import { serviceDescriptionToPlainText } from "../../../../lib/service-description-html";
+import { readExternalPaymentRailAvailability } from "../../../../lib/payments/payment-rail-configuration";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "Invoice" };
@@ -34,6 +38,11 @@ export default async function ClientInvoiceDetailPage({
 
     const { invoice, financials, items } = detail;
     const attention = invoiceAttention(financials.presentation_state);
+    const membershipStatus = (membership?.status ?? "inactive") as
+      | "inactive"
+      | "pending"
+      | "active"
+      | "cancelled";
 
     /*
      * Collectibility is the database's answer, not a UI guess: a refunded or
@@ -107,8 +116,14 @@ export default async function ClientInvoiceDetailPage({
               <div className="portal-invoice-item" key={item.id}>
                 <div>
                   <strong>{item.name}</strong>
+                  {/*
+                    * The captured description, structured rather than flattened.
+                    * Collapsed by default to one honest line; the deliverables
+                    * are behind the toggle. Composed on the server so the
+                    * parsing cost is not paid in the browser.
+                    */}
                   {item.description ? (
-                    <span>{serviceDescriptionToPlainText(item.description)}</span>
+                    <InvoiceItemScope scope={composeServiceScope(item.description)} />
                   ) : null}
                 </div>
                 <span data-label="Quantity">{item.quantity}</span>
@@ -177,9 +192,14 @@ export default async function ClientInvoiceDetailPage({
         </div>
 
         {/*
-         * The WF Card wallet is the only settlement path that exists. The
-         * selector states that plainly and offers nothing it cannot perform —
-         * there is no card provider behind it and it does not pretend otherwise.
+         * Balance first, then the rest. The selector shows the real split — what
+         * the Wolf Forge Balance covers and what would remain — and offers only
+         * what the platform can actually perform. A full wallet settlement is
+         * the one executable path today; the remainder is stated, never faked.
+         *
+         * The rails are composed here so their availability comes from server
+         * configuration through a `server-only` module, exactly as
+         * /account/payment-method does it.
          */}
         <InvoicePaymentSelector
           invoiceId={invoice.id}
@@ -187,12 +207,19 @@ export default async function ClientInvoiceDetailPage({
           invoiceBalanceCents={financials.balance_due_cents}
           currency={invoice.currency}
           walletBalanceCents={wallet.balance_cents}
-          membershipStatus={
-            (membership?.status ?? "inactive") as "inactive" | "pending" | "active" | "cancelled"
-          }
+          walletCurrency={wallet.currency}
+          membershipStatus={membershipStatus}
           membershipPriceCents={offer.membershipPriceCents}
           membershipCurrency={offer.membershipCurrency}
           collectible={collectible}
+          paymentRails={composeClientPaymentRails({
+            wallet: resolveWalletFunding({
+              membershipStatus,
+              balanceCents: wallet.balance_cents,
+              currency: wallet.currency,
+            }),
+            availability: readExternalPaymentRailAvailability(),
+          })}
         />
       </article>
     );

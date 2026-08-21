@@ -52,15 +52,13 @@ export class OrderService {
    */
   async listClientProjects(): Promise<ClientProjectView[]> {
     const rows = await this.dependencies.repository.listForClientPortal();
-    const taskFacts = await this.dependencies.repository.listClientTaskFacts(rows.map((row) => row.id));
-    return composeClientProjectViews(rows, taskFacts);
+    return composeClientProjectViews(rows);
   }
 
   async getClientProject(id: unknown): Promise<ClientProjectView> {
     const projectId = parseInput(uuidSchema, id);
     const row = await this.dependencies.repository.getForClientPortal(projectId);
-    const taskFacts = await this.dependencies.repository.listClientTaskFacts([row.id]);
-    const [view] = composeClientProjectViews([row], taskFacts);
+    const [view] = composeClientProjectViews([row]);
     return view as ClientProjectView;
   }
 

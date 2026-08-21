@@ -118,12 +118,13 @@ export function composeClientBalance(
 }
 
 /**
- * A short factual breakdown line, or null when nothing is owed.
+ * The factual parts of a balance, in reading order.
  *
- * Deliberately returns null rather than "0 invoices" so the caller renders the
- * caught-up state instead of a zero it has to explain.
+ * Split out so a surface can stack them on separate lines without restating the
+ * wording. describeCurrencyBalance joins the same parts, which is what keeps the
+ * dashboard strip and the Invoices page from ever disagreeing about a count.
  */
-export function describeCurrencyBalance(balance: ClientCurrencyBalance): string {
+export function currencyBalanceFacts(balance: ClientCurrencyBalance): string[] {
   const parts: string[] = [
     `${balance.invoiceCount} unpaid ${balance.invoiceCount === 1 ? "invoice" : "invoices"}`,
   ];
@@ -136,5 +137,15 @@ export function describeCurrencyBalance(balance: ClientCurrencyBalance): string 
     );
   }
 
-  return parts.join(" · ");
+  return parts;
+}
+
+/**
+ * A short factual breakdown line, or null when nothing is owed.
+ *
+ * Deliberately returns null rather than "0 invoices" so the caller renders the
+ * caught-up state instead of a zero it has to explain.
+ */
+export function describeCurrencyBalance(balance: ClientCurrencyBalance): string {
+  return currencyBalanceFacts(balance).join(" · ");
 }

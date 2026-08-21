@@ -18,8 +18,8 @@ export default async function ClientProjectsPage() {
   try {
     /*
      * The module boundary is the authority, not the rail. A typed URL reaches
-     * this call and is rejected exactly like a hidden nav item. Company scoping
-     * is separately enforced by orders_client_select_own_company.
+     * this call and is rejected exactly like a hidden nav item. The Project RPC
+     * independently derives company scope and exposes only the portal DTO.
      */
     await services.permissions.requireModuleAccess("portal_projects");
     // Memoized for the request, so the rail's in-progress count and this page

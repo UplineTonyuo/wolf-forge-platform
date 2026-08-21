@@ -107,6 +107,204 @@ export type Database = {
           },
         ]
       }
+      client_report_entries: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          one_time_completed: boolean
+          one_time_item_key: string | null
+          section_id: string
+          sort_order: number
+          updated_at: string
+          url: string | null
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          one_time_completed?: boolean
+          one_time_item_key?: string | null
+          section_id: string
+          sort_order?: number
+          updated_at?: string
+          url?: string | null
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          one_time_completed?: boolean
+          one_time_item_key?: string | null
+          section_id?: string
+          sort_order?: number
+          updated_at?: string
+          url?: string | null
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_entries_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_report_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_report_reads: {
+        Row: {
+          profile_id: string
+          read_at: string
+          report_id: string
+        }
+        Insert: {
+          profile_id: string
+          read_at?: string
+          report_id: string
+        }
+        Update: {
+          profile_id?: string
+          read_at?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_reads_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_report_reads_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "client_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_report_sections: {
+        Row: {
+          created_at: string
+          id: string
+          report_id: string
+          section_key: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_id: string
+          section_key: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_id?: string
+          section_key?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_report_sections_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "client_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_reports: {
+        Row: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          package_label: string
+          report_lane: string
+          sent_at: string | null
+          sent_by_profile_id: string
+          service_id: string | null
+          status: string
+          subscription_id: string | null
+          title: string
+          updated_at: string
+          wizard_step_key: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          package_label: string
+          report_lane: string
+          sent_at?: string | null
+          sent_by_profile_id: string
+          service_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          title: string
+          updated_at?: string
+          wizard_step_key?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          package_label?: string
+          report_lane?: string
+          sent_at?: string | null
+          sent_by_profile_id?: string
+          service_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          title?: string
+          updated_at?: string
+          wizard_step_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reports_sent_by_profile_id_fkey"
+            columns: ["sent_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reports_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_reports_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           archived_at: string | null
@@ -114,6 +312,7 @@ export type Database = {
           id: string
           name: string
           status: string
+          stripe_customer_id: string | null
           updated_at: string
         }
         Insert: {
@@ -122,6 +321,7 @@ export type Database = {
           id?: string
           name: string
           status?: string
+          stripe_customer_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -130,6 +330,7 @@ export type Database = {
           id?: string
           name?: string
           status?: string
+          stripe_customer_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1998,6 +2199,7 @@ export type Database = {
           in_cart: boolean
           last_activity_at: string
           last_added_at: string
+          last_notified_at: string | null
           removed_at: string | null
           service_id: string
           signalled_by_profile_id: string | null
@@ -2015,6 +2217,7 @@ export type Database = {
           in_cart?: boolean
           last_activity_at?: string
           last_added_at?: string
+          last_notified_at?: string | null
           removed_at?: string | null
           service_id: string
           signalled_by_profile_id?: string | null
@@ -2032,6 +2235,7 @@ export type Database = {
           in_cart?: boolean
           last_activity_at?: string
           last_added_at?: string
+          last_notified_at?: string | null
           removed_at?: string | null
           service_id?: string
           signalled_by_profile_id?: string | null
@@ -3036,6 +3240,7 @@ export type Database = {
           id: string
           name: string
           status: string
+          stripe_customer_id: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -3478,6 +3683,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_count_my_unread_reports: { Args: never; Returns: number }
       app_create_company: {
         Args: { p_name: string; p_request_id: string }
         Returns: {
@@ -3486,6 +3692,7 @@ export type Database = {
           id: string
           name: string
           status: string
+          stripe_customer_id: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -3639,6 +3846,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_create_report_draft: {
+        Args: { p_payload: Json; p_request_id: string }
+        Returns: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          package_label: string
+          report_lane: string
+          sent_at: string | null
+          sent_by_profile_id: string
+          service_id: string | null
+          status: string
+          subscription_id: string | null
+          title: string
+          updated_at: string
+          wizard_step_key: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_reports"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3825,6 +4057,10 @@ export type Database = {
         }
         Returns: Json
       }
+      app_discard_report_draft: {
+        Args: { p_report_id: string }
+        Returns: boolean
+      }
       app_duplicate_service: {
         Args: { p_request_id: string; p_service_id: string }
         Returns: {
@@ -3922,6 +4158,7 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      app_get_internal_report: { Args: { p_report_id: string }; Returns: Json }
       app_get_invoice_financials: {
         Args: { p_invoice_id: string }
         Returns: {
@@ -3935,6 +4172,23 @@ export type Database = {
           successful_refunds_cents: number
         }[]
       }
+      app_get_my_client_project: {
+        Args: { p_project_id: string }
+        Returns: {
+          completed_at: string
+          created_at: string
+          due_at: string
+          id: string
+          order_number: number
+          service_name: string
+          started_at: string
+          status: string
+          task_open: number
+          task_total: number
+          title: string
+        }[]
+      }
+      app_get_my_client_report: { Args: { p_report_id: string }; Returns: Json }
       app_get_my_profile: {
         Args: never
         Returns: {
@@ -4025,6 +4279,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_link_company_stripe_customer: {
+        Args: { p_company_id: string; p_stripe_customer_id: string }
+        Returns: string
+      }
       app_list_assigned_forms: {
         Args: never
         Returns: {
@@ -4047,6 +4305,17 @@ export type Database = {
           status: string
           title: string
           version_number: number
+        }[]
+      }
+      app_list_client_company_directory: {
+        Args: never
+        Returns: {
+          archived_at: string
+          created_at: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
         }[]
       }
       app_list_due_subscription_work: {
@@ -4072,6 +4341,23 @@ export type Database = {
           preset_name: string
           profile_id: string
           sort_order: number
+        }[]
+      }
+      app_list_internal_reports: {
+        Args: { p_limit?: number; p_status?: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          entry_count: number
+          package_label: string
+          report_id: string
+          report_lane: string
+          section_count: number
+          sent_at: string
+          sent_by_name: string
+          status: string
+          title: string
+          updated_at: string
         }[]
       }
       app_list_investment_intents: {
@@ -4100,6 +4386,34 @@ export type Database = {
           service_name: string
           status: string
           updated_at: string
+        }[]
+      }
+      app_list_my_client_projects: {
+        Args: { p_limit?: number }
+        Returns: {
+          completed_at: string
+          created_at: string
+          due_at: string
+          id: string
+          order_number: number
+          service_name: string
+          started_at: string
+          status: string
+          task_open: number
+          task_total: number
+          title: string
+        }[]
+      }
+      app_list_my_client_reports: {
+        Args: { p_limit?: number }
+        Returns: {
+          is_read: boolean
+          package_label: string
+          report_id: string
+          report_lane: string
+          report_url: string
+          sent_at: string
+          title: string
         }[]
       }
       app_list_my_notifications: {
@@ -4173,6 +4487,23 @@ export type Database = {
           transaction_id: string
         }[]
       }
+      app_list_reported_one_time_deliverables: {
+        Args: {
+          p_company_id: string
+          p_service_id: string
+          p_subscription_id?: string
+        }
+        Returns: string[]
+      }
+      app_list_reporting_service_options: {
+        Args: { p_company_id: string; p_supported_service_ids: string[] }
+        Returns: {
+          service_id: string
+          service_name: string
+          subscription_id: string
+          subscription_status: string
+        }[]
+      }
       app_list_subscription_summaries: {
         Args: never
         Returns: {
@@ -4216,6 +4547,10 @@ export type Database = {
         }[]
       }
       app_mark_all_notifications_read: { Args: never; Returns: number }
+      app_mark_client_report_read: {
+        Args: { p_report_id: string }
+        Returns: boolean
+      }
       app_mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: boolean
@@ -4587,6 +4922,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_save_report_draft: {
+        Args: { p_payload: Json; p_report_id: string }
+        Returns: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          package_label: string
+          report_lane: string
+          sent_at: string | null
+          sent_by_profile_id: string
+          service_id: string | null
+          status: string
+          subscription_id: string | null
+          title: string
+          updated_at: string
+          wizard_step_key: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       app_schedule_subscription_cancellation: {
         Args: { p_reason?: string; p_subscription_id: string }
         Returns: {
@@ -4631,6 +4991,56 @@ export type Database = {
           display_name: string
         }[]
       }
+      app_send_client_report: {
+        Args: { p_payload: Json; p_request_id: string }
+        Returns: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          package_label: string
+          report_lane: string
+          sent_at: string | null
+          sent_by_profile_id: string
+          service_id: string | null
+          status: string
+          subscription_id: string | null
+          title: string
+          updated_at: string
+          wizard_step_key: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_send_report_draft: {
+        Args: { p_report_id: string; p_request_id: string }
+        Returns: {
+          archived_at: string | null
+          company_id: string
+          created_at: string
+          id: string
+          package_label: string
+          report_lane: string
+          sent_at: string | null
+          sent_by_profile_id: string
+          service_id: string | null
+          status: string
+          subscription_id: string | null
+          title: string
+          updated_at: string
+          wizard_step_key: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "client_reports"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       app_set_investment_intent_status: {
         Args: { p_intent_id: string; p_status: string }
         Returns: {
@@ -4644,6 +5054,7 @@ export type Database = {
           in_cart: boolean
           last_activity_at: string
           last_added_at: string
+          last_notified_at: string | null
           removed_at: string | null
           service_id: string
           signalled_by_profile_id: string | null
@@ -4745,6 +5156,7 @@ export type Database = {
           id: string
           name: string
           status: string
+          stripe_customer_id: string | null
           updated_at: string
         }
         SetofOptions: {

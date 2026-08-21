@@ -5,13 +5,13 @@ describe("Phase 3A navigation registry", () => {
   it("renders the complete Phase 3A.1 sidebar structure", () => {
     expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Marketing", "Setup"]);
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.label))).toEqual([
-      "Dashboard", "Projects", "Tickets", "Clients", "To Do", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "Settings",
+      "Dashboard", "Projects", "Tickets", "Reporting", "Clients", "To Do", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "Settings",
     ]);
   });
 
   it("routes every sidebar item", () => {
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.route))).toEqual([
-      "/dashboard", "/orders", "/tickets", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/settings",
+      "/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/settings",
     ]);
   });
 

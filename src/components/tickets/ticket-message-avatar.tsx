@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
-import { WolfForgeMark } from "../shell/wolf-forge-mark";
+import { PersonSilhouette } from "../ui/person-silhouette";
 import styles from "./tickets.module.css";
 
 function safeAvatarSource(
@@ -80,7 +80,12 @@ export function TicketMessageAvatar({
       aria-hidden="true"
       data-testid="ticket-avatar-fallback"
     >
-      <WolfForgeMark />
+      {/*
+        * A person, not the Wolf Forge mark. A message author is a human, and
+        * the brand in that slot read as though Wolf Forge itself had written
+        * the message rather than a member of the team.
+        */}
+      <PersonSilhouette />
     </span>
   );
 }

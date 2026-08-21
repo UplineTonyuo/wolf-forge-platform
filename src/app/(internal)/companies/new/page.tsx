@@ -3,13 +3,10 @@ import { ProvisioningPlaceholder } from "../../../../components/accounts/provisi
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
 export default async function AddCompanyPage() {
-  const { user } =
-    await getInternalContext();
+  const context = await getInternalContext();
+  await context.services.permissions.requireModuleAccess("clients");
 
-  if (
-    user.role !== "owner" &&
-    user.role !== "admin"
-  ) {
+  if (!context.user.clients.create) {
     redirect("/");
   }
 

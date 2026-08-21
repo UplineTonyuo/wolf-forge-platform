@@ -1,0 +1,412 @@
+.page {
+  max-width: 1160px;
+}
+
+.header {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, .8fr);
+  gap: 48px;
+  align-items: end;
+  margin-top: 24px;
+  padding: clamp(28px, 4vw, 52px);
+  border-radius: 16px;
+  background: var(--wf-navy);
+  color: var(--wf-white);
+  box-shadow: 0 18px 44px rgba(0, 13, 81, .12);
+}
+
+.header::after {
+  content: "";
+  position: absolute;
+  right: -72px;
+  bottom: -96px;
+  width: 260px;
+  height: 260px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.identity,
+.facts {
+  position: relative;
+  z-index: 1;
+}
+
+.identity h1 {
+  max-width: 18ch;
+  margin: 0;
+  color: inherit;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: clamp(30px, 4.2vw, 52px);
+  font-weight: 620;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.identity p {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, .68);
+  font-size: 14px;
+}
+
+.facts {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: minmax(100px, .75fr) minmax(0, 1.25fr);
+  gap: 16px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+}
+
+.facts dt {
+  color: rgba(255, 255, 255, .58);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0;
+  color: var(--wf-white);
+  font-size: 13px;
+  font-weight: 570;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.reportLayout {
+  display: block;
+  margin-top: clamp(24px, 3.5vw, 42px);
+}
+
+.reportLayout[data-with-contents] {
+  display: grid;
+  grid-template-columns: minmax(170px, 210px) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+
+.contents {
+  position: sticky;
+  top: 92px;
+  min-width: 0;
+}
+
+.contents h2 {
+  margin: 0 0 14px;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -.01em;
+}
+
+.contents ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contents a {
+  display: block;
+  padding: 7px 0;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition: color 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.contents a:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+  color: var(--wf-navy);
+}
+
+.document {
+  min-width: 0;
+  padding: clamp(22px, 3vw, 40px);
+  border: 1px solid var(--wf-border);
+  border-radius: 16px;
+  background: var(--wf-white);
+}
+
+.section {
+  scroll-margin-top: 100px;
+  min-width: 0;
+}
+
+.section + .section {
+  margin-top: clamp(30px, 3.6vw, 44px);
+  padding-top: clamp(20px, 2.6vw, 30px);
+  border-top: 1px solid var(--wf-border);
+}
+
+.section h2 {
+  margin: 0 0 16px;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: clamp(20px, 2.4vw, 27px);
+  font-weight: 620;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A section holding a single entry carries less rhythm than a full section:
+ * one heading, one row, then the next heading. The heading still breathes, it
+ * just does not echo.
+ */
+.section[data-sparse] h2 {
+  margin: 0 0 12px;
+}
+
+.section[data-sparse] .entry {
+  padding: 0 0 12px;
+}
+
+/*
+ * The section a contents link most recently targeted keeps a restrained gold
+ * accent beside its heading, so "where did I jump to" is answered without a
+ * scroll-spy. The bar sits in the document gutter, never over the content.
+ */
+.section:target h2 {
+  position: relative;
+}
+
+.section:target h2::before {
+  content: "";
+  position: absolute;
+  top: 0.12em;
+  bottom: 0.12em;
+  left: -20px;
+  width: 3px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--wf-gold) 82%, transparent);
+}
+
+.entries {
+  margin: 0;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(150px, .72fr) minmax(0, 1.28fr);
+  gap: clamp(18px, 3vw, 40px);
+  align-items: start;
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--wf-border) 76%, transparent);
+}
+
+.entry:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.entry dt {
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.entry dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 18px;
+  min-width: 0;
+  margin: 0;
+}
+
+/*
+ * A single entry whose label repeats its section title keeps the label in the
+ * accessibility tree but takes it out of the visual row, so the report does
+ * not print the same phrase twice. The value then spans the whole row.
+ */
+.entrySingle {
+  position: relative;
+}
+
+.entryLabelHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.entrySingle dd {
+  grid-column: 1 / -1;
+}
+
+.entry p {
+  flex: 1 1 280px;
+  min-width: 0;
+  margin: 0;
+  color: var(--wf-text);
+  font-size: 14px;
+  line-height: 1.72;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.asset {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  color: var(--wf-navy);
+  background: var(--wf-warm-50);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: border-color 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.asset svg {
+  width: 14px;
+  height: 14px;
+}
+
+.asset:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+  border-color: var(--wf-navy);
+}
+
+.noDetail,
+.emptySection,
+.emptyReport {
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.emptySection {
+  margin: 0;
+}
+
+.emptyReport {
+  margin: 32px 0 0;
+  padding: 28px;
+  border: 1px solid var(--wf-border);
+  border-radius: 14px;
+  background: var(--wf-white);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .contents a:hover {
+    color: var(--wf-navy);
+    transform: translateX(3px);
+  }
+
+  .asset:hover {
+    border-color: var(--wf-navy);
+    transform: translateY(-1px);
+  }
+}
+
+@media (max-width: 900px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 34px;
+  }
+
+  .reportLayout[data-with-contents] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 26px;
+  }
+
+  .contents {
+    position: static;
+    padding: 20px 22px;
+    border: 1px solid var(--wf-border);
+    border-radius: 14px;
+    background: var(--wf-white);
+  }
+
+  .contents ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+}
+
+@media (max-width: 620px) {
+  .header {
+    margin-top: 18px;
+    padding: 26px 22px;
+    border-radius: 14px;
+  }
+
+  .identity h1 {
+    font-size: clamp(27px, 9vw, 38px);
+  }
+
+  .facts div,
+  .entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .contents {
+    padding: 18px;
+  }
+
+  .contents ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .document {
+    padding: 28px 20px;
+    border-radius: 14px;
+  }
+
+  .entry {
+    padding: 17px 0;
+  }
+
+  .entry dd {
+    gap: 12px;
+  }
+
+  .asset {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contents a,
+  .asset {
+    transition: none;
+  }
+
+  .contents a:hover,
+  .asset:hover {
+    transform: none;
+  }
+}

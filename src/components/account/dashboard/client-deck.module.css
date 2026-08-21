@@ -1,0 +1,710 @@
+/*
+ * The client deck: Active Work, Billing and Recent Conversations.
+ *
+ * Three sections that deliberately do NOT look alike. The dashboard's problem
+ * was that everything below the attention queue had settled into the same
+ * bordered rectangle, so the eye had no reason to move and no way to tell an
+ * operations view from a financial one.
+ *
+ *   Active work    a dossier rail — full-width rows on a state track
+ *   Billing        one continuous surface divided by hairlines, not three cards
+ *   Conversations  an inbox stack — quiet rows that lean forward on approach
+ *
+ * Colour comes from the portal's existing [data-tone] vocabulary, so a state
+ * here can never drift from the same state on the Projects or Invoices page.
+ * Every value is a token that already existed.
+ */
+
+/* --- Shared motion -------------------------------------------------------- */
+
+@keyframes wfDeckEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  --wf-deck-stagger: 55ms;
+}
+
+/* --- Active work: the project rail ---------------------------------------- */
+
+/*
+ * One surface holding stacked rows rather than free-floating cards. The
+ * container owns the border; rows are separated by hairlines, which is what
+ * makes it read as a dossier rather than a grid.
+ */
+.rail {
+  display: flex;
+  flex-direction: column;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+  overflow: hidden;
+}
+
+.railItem {
+  animation: wfDeckEnter 300ms var(--wf-ease) both;
+  animation-delay: calc(var(--wf-deck-index, 0) * var(--wf-deck-stagger));
+}
+
+.railItem + .railItem { border-top: 1px solid var(--wf-border); }
+
+/*
+ * The row. A leading state track carries the project's tone the whole height,
+ * which is the one piece of colour in the section — enough to scan by, quiet
+ * enough not to become a wall of pills.
+ */
+.project {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+
+  padding: 17px 20px 17px 22px;
+
+  color: var(--wf-text);
+  text-decoration: none;
+
+  transition:
+    background-color 200ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+.project::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--portal-tone-idle-line);
+  transition: background-color 200ms var(--wf-ease);
+}
+
+.project[data-tone="waiting_on_you"]::before { background: var(--portal-tone-wait); }
+.project[data-tone="payment_due"]::before { background: var(--portal-tone-due); }
+.project[data-tone="in_progress"]::before { background: var(--portal-tone-progress); }
+.project[data-tone="completed"]::before { background: var(--portal-tone-done); }
+
+.projectMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/*
+ * Name first, identifier after. Wrapping is allowed so a long title on a narrow
+ * screen drops the code to the next line instead of forcing an overflow.
+ */
+.projectTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 9px;
+  min-width: 0;
+}
+
+.projectTitle {
+  min-width: 0;
+  color: var(--wf-navy);
+  font-size: 14.5px;
+  font-weight: 660;
+  letter-spacing: -.006em;
+  overflow-wrap: anywhere;
+}
+
+/* Separator between the name and its code. Hidden once the code wraps under. */
+.projectRefDot {
+  flex: 0 0 auto;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--wf-text-muted);
+  opacity: .4;
+  transform: translateY(-3px);
+}
+
+.projectRef {
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 620;
+  letter-spacing: .07em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.projectMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+}
+
+.projectMeta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaDot {
+  flex: 0 0 auto;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .45;
+}
+
+/* The state word, coloured by tone. Replaces a pill: same fact, less furniture. */
+.projectState {
+  flex: 0 0 auto;
+  font-weight: 640;
+  color: var(--portal-tone-idle);
+}
+
+.project[data-tone="waiting_on_you"] .projectState { color: var(--portal-tone-wait); }
+.project[data-tone="payment_due"] .projectState { color: var(--portal-tone-due); }
+.project[data-tone="in_progress"] .projectState { color: var(--portal-tone-progress); }
+.project[data-tone="completed"] .projectState { color: var(--portal-tone-done); }
+
+.projectAside {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Only drawn when a real completed/total ratio exists. */
+.progress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  width: 128px;
+}
+
+.progressValue {
+  color: var(--wf-navy);
+  font-size: 11.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--wf-navy-wash);
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--wf-rail-percent, 0%);
+  border-radius: 999px;
+  background: var(--wf-navy);
+  transform-origin: left center;
+  animation: wfRailFill 560ms var(--wf-ease) both;
+}
+
+@keyframes wfRailFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* No measurable progress: say so, rather than draw an empty bar. */
+.progressAbsent {
+  width: 128px;
+  text-align: right;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+}
+
+.projectArrow {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--wf-text-muted);
+  opacity: .5;
+  transition:
+    transform 200ms var(--wf-ease),
+    opacity 200ms var(--wf-ease),
+    color 200ms var(--wf-ease);
+}
+
+/* --- Billing: one financial surface --------------------------------------- */
+
+/*
+ * A single bordered strip split by hairlines. Three zones, one object — the
+ * opposite of the three separate cards this replaced, and the reason it reads
+ * as an account summary rather than as widgets that happen to sit together.
+ */
+/*
+ * Asymmetric on purpose. The balance is the anchor and carries roughly 42% of
+ * the strip; the two supporting states share the rest. Equal thirds is what made
+ * this read as three boxes that happened to be adjacent.
+ */
+.billing {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr) minmax(0, 1.05fr);
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+  overflow: hidden;
+
+  animation: wfDeckEnter 320ms var(--wf-ease) both;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  padding: 22px 24px;
+
+  color: var(--wf-text);
+  text-decoration: none;
+
+  transition:
+    background-color 200ms var(--wf-ease),
+    box-shadow 200ms var(--wf-ease);
+}
+
+.zone + .zone { border-left: 1px solid var(--wf-border); }
+
+.zoneLabel {
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+/* The anchor figure. Larger in the first zone, quieter in the others. */
+.figure {
+  display: inline-block;
+  transition: transform 220ms var(--wf-ease), color 200ms var(--wf-ease);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -.015em;
+  font-variant-numeric: tabular-nums;
+  color: var(--wf-navy);
+}
+
+.figureSecondary {
+  font-size: 15px;
+  font-weight: 630;
+  letter-spacing: -.005em;
+  line-height: 1.35;
+}
+
+/* Real urgency only: money that is genuinely past its due date. */
+.figure[data-overdue] { color: var(--portal-tone-due); }
+
+.zoneNote {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.currencyRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.currencyCode {
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 650;
+  letter-spacing: .05em;
+}
+
+.zoneAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: auto;
+  padding-top: 12px;
+
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 640;
+}
+
+.zoneAction svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 200ms var(--wf-ease);
+}
+
+/* The anchor zone breathes more than the supporting two. */
+.zonePrimary { padding: 24px 28px 22px; }
+
+.currencyBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.factList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+}
+
+.fact {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  transition: color 200ms var(--wf-ease);
+}
+
+/* Restrained: the overdue line alone, never the figure and never the surface. */
+.fact[data-overdue] {
+  color: var(--portal-tone-due);
+  font-weight: 620;
+}
+
+/* --- Next billing zone ---------------------------------------------------- */
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoneIcon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--wf-gold);
+  transition: transform 220ms var(--wf-ease);
+}
+
+.dateValue {
+  color: var(--wf-navy);
+  font-size: 15.5px;
+  font-weight: 640;
+  letter-spacing: -.005em;
+}
+
+.zoneAmount {
+  color: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.zoneState {
+  color: var(--wf-navy);
+  font-size: 13.5px;
+  font-weight: 620;
+  line-height: 1.4;
+}
+
+/* --- Payment method zone -------------------------------------------------- */
+
+.cardRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cardCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+/*
+ * An abstract outline, never a brand. It carries no number and no logo, which
+ * is what makes it safe to show while no provider is connected.
+ */
+.cardMark {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 25px;
+  color: var(--wf-navy);
+  opacity: .32;
+  transition:
+    transform 220ms var(--wf-ease),
+    opacity 220ms var(--wf-ease);
+}
+
+/* --- Recent conversations: the inbox stack -------------------------------- */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+  overflow: hidden;
+}
+
+.stackItem {
+  animation: wfDeckEnter 300ms var(--wf-ease) both;
+  animation-delay: calc(var(--wf-deck-index, 0) * var(--wf-deck-stagger));
+}
+
+.stackItem + .stackItem { border-top: 1px solid var(--wf-border); }
+
+.conversation {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+
+  padding: 15px 20px 15px 22px;
+
+  color: var(--wf-text);
+  text-decoration: none;
+
+  transition:
+    background-color 200ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+/*
+ * The leading mark is present for every conversation but only carries colour
+ * when one is genuinely waiting on the client. There is no unread model in the
+ * ticket schema, so nothing here pretends to show unread.
+ */
+.conversation::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: transparent;
+  transition: background-color 200ms var(--wf-ease);
+}
+
+.conversation[data-tone="waiting_on_you"]::before { background: var(--portal-tone-wait); }
+
+.conversationMain {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.conversationTop {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.conversationSubject {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--wf-navy);
+  font-size: 14px;
+  font-weight: 630;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversationOpen {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 640;
+
+  opacity: .55;
+  transition:
+    opacity 200ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+.conversationOpen svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* --- Interaction ---------------------------------------------------------- */
+
+/*
+ * focus-visible mirrors hover exactly. Every enhancement below is decoration on
+ * information that is already visible, so nothing is reachable only by pointer.
+ */
+.project:focus-visible,
+.zone:focus-visible,
+.conversation:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: -2px;
+  background: var(--wf-navy-wash);
+}
+
+.project:focus-visible .projectArrow,
+.conversation:focus-visible .conversationOpen {
+  opacity: 1;
+  transform: translateX(3px);
+}
+
+.project:focus-visible .projectArrow { color: var(--wf-navy); }
+
+/*
+ * Each zone answers in its own way, so the three do not feel interchangeable:
+ * the balance figure lifts a hair and its counts darken, the billing date's
+ * calendar leans, and the card outline slides forward and gains presence.
+ * focus-visible gets all of it, so none of this is pointer-only.
+ */
+.zone:focus-visible .zoneAction svg { transform: translateX(3px); }
+.zonePrimary:focus-visible .figure { transform: translateY(-1px); }
+.zonePrimary:focus-visible .fact { color: var(--wf-text); }
+.zonePrimary:focus-visible .fact[data-overdue] { color: var(--portal-tone-due); }
+.zone:focus-visible .zoneIcon { transform: translateY(-1px) rotate(-4deg); }
+.zone:focus-visible .cardMark { opacity: .5; transform: translateX(2px) translateY(-1px); }
+
+@media (hover: hover) and (pointer: fine) {
+  .project:hover,
+  .conversation:hover {
+    background: var(--wf-navy-wash);
+    transform: translateX(2px);
+  }
+
+  .project:hover .projectArrow {
+    color: var(--wf-navy);
+    opacity: 1;
+    transform: translateX(3px);
+  }
+
+  .conversation:hover .conversationOpen {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+
+  .zone:hover {
+    background: var(--wf-navy-wash);
+    /* Reads as the zone lifting off the strip without moving the strip itself. */
+    box-shadow: inset 0 0 0 1px rgba(0, 13, 81, .07);
+  }
+
+  .zone:hover .zoneAction svg { transform: translateX(3px); }
+  .zonePrimary:hover .figure { transform: translateY(-1px); }
+  .zonePrimary:hover .fact { color: var(--wf-text); }
+  .zonePrimary:hover .fact[data-overdue] { color: var(--portal-tone-due); }
+  .zone:hover .zoneIcon { transform: translateY(-1px) rotate(-4deg); }
+  .zone:hover .cardMark { opacity: .5; transform: translateX(2px) translateY(-1px); }
+
+  /* The surface acknowledges the pointer without competing with its zones. */
+  .billing:hover { border-color: #d9d5cd; }
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .billing { grid-template-columns: minmax(0, 1fr); }
+
+  /* Hairlines turn horizontal so the strip stays one object when stacked. */
+  .zone + .zone {
+    border-left: 0;
+    border-top: 1px solid var(--wf-border);
+  }
+
+  .zoneAction { padding-top: 8px; }
+}
+
+@media (max-width: 767px) {
+  .project,
+  .conversation {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    /* Comfortably past the 44px tap target once stacked. */
+    padding: 15px 16px 15px 18px;
+  }
+
+  .projectAside {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .progress,
+  .progressAbsent { width: auto; flex: 1 1 auto; }
+  .progressAbsent { text-align: left; }
+
+  .conversationOpen { opacity: 1; }
+
+  .figure { font-size: 22px; }
+  .zone { padding: 18px 18px; }
+}
+
+/* --- Reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .railItem,
+  .stackItem,
+  .billing,
+  .progressFill {
+    animation: none;
+  }
+
+  .project,
+  .conversation,
+  .zone,
+  .billing,
+  .projectArrow,
+  .conversationOpen,
+  .zoneAction svg,
+  .figure,
+  .fact,
+  .zoneIcon,
+  .cardMark {
+    transition: none;
+  }
+
+  /* Colour feedback survives; every displacement is removed. */
+  .zonePrimary:hover .figure,
+  .zonePrimary:focus-visible .figure,
+  .zone:hover .zoneIcon,
+  .zone:focus-visible .zoneIcon,
+  .zone:hover .cardMark,
+  .zone:focus-visible .cardMark { transform: none; }
+
+  /* Colour feedback stays; movement goes. */
+  .project:hover,
+  .conversation:hover,
+  .project:focus-visible,
+  .conversation:focus-visible { transform: none; }
+
+  .project:hover .projectArrow,
+  .conversation:hover .conversationOpen,
+  .project:focus-visible .projectArrow,
+  .conversation:focus-visible .conversationOpen,
+  .zone:hover .zoneAction svg,
+  .zone:focus-visible .zoneAction svg { transform: none; }
+}

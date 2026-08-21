@@ -4,6 +4,7 @@
   DatabaseError,
   NotFoundError,
   PermissionDeniedError,
+  RateLimitedError,
   ValidationError,
 } from "./application-error";
 
@@ -26,6 +27,11 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
     case "42501":
     case "PGRST301":
       return new PermissionDeniedError(error);
+    // private.consume_rate_limit raises this custom SQLSTATE. It is not a
+    // permission failure and not a validation failure: the same request would
+    // have succeeded a moment earlier and will succeed again later.
+    case "WF429":
+      return new RateLimitedError(error);
     case "23505":
       return new ConflictError("A record with these values already exists.", error);
     case "23503":

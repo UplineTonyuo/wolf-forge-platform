@@ -1,14 +1,15 @@
 ﻿import { describe, expect, it } from "vitest";
-import { systemActivitySchema, userActivitySchema } from "../domain/activity/schema";
+import { systemActivitySchema } from "../domain/activity/schema";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import { toClientSafeError } from "../lib/errors/application-error";
 
 const id = "10000000-0000-4000-8000-000000000001";
 
 describe("activity action construction", () => {
-  it("requires an actor_profile_id to be supplied", () => {
-    const result = userActivitySchema.safeParse({ entity_type: "order", entity_id: id, action: "order.updated", summary: "Updated order" });
-    expect(result.success).toBe(false);
+  it("still validates the entity/action taxonomy for a trusted actor-bearing event", () => {
+    const result = systemActivitySchema.safeParse({ entity_type: "order", entity_id: id, action: "order.updated", summary: "Updated order", actor_profile_id: id });
+    expect(result.success).toBe(true);
+    expect(systemActivitySchema.safeParse({ entity_type: "order", entity_id: id, action: "order.invented", summary: "Updated order", actor_profile_id: id }).success).toBe(false);
   });
 
   it("allows actorless trusted system activity", () => {

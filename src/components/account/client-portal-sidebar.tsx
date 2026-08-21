@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   CircleUserRound,
   FolderKanban,
   HandCoins,
@@ -31,6 +32,7 @@ const portalIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   portal_projects: FolderKanban,
   portal_tickets: MessagesSquare,
   portal_forms: ListChecks,
+  portal_reporting: BarChart3,
   portal_invoices: ReceiptText,
   portal_store: ShoppingCart,
   portal_subscriptions: HandCoins,

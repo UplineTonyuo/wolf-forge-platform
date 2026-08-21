@@ -26,6 +26,7 @@ export type PortalNavigationItemId =
   | "portal_dashboard"
   | "portal_projects"
   | "portal_tickets"
+  | "portal_reporting"
   | "portal_store"
   | "portal_forms"
   | "portal_invoices"
@@ -48,6 +49,7 @@ const moduleGateFor: Record<PortalNavigationItemId, string | null> = {
   portal_dashboard: "portal_dashboard",
   portal_projects: "portal_projects",
   portal_tickets: "portal_tickets",
+  portal_reporting: "portal_reporting",
   portal_store: "portal_store",
   portal_forms: "portal_forms",
   portal_invoices: "portal_invoices",
@@ -97,6 +99,7 @@ export const portalNavigationCategories: PortalNavigationCategory[] = [
       { id: "portal_projects", label: "Projects", route: "/account/projects" },
       { id: "portal_forms", label: "Onboarding", route: "/account/onboarding" },
       { id: "portal_tickets", label: "Messages", route: "/account/messages" },
+      { id: "portal_reporting", label: "Reporting", route: "/account/reporting" },
     ],
   },
   {
@@ -142,6 +145,12 @@ const countSources: Array<{
   { id: "portal_projects", key: "projects", actionable: false },
   { id: "portal_forms", key: "onboarding", actionable: true },
   { id: "portal_tickets", key: "messages", actionable: true },
+  /*
+   * Unopened reports. Actionable because a report the client has not seen is
+   * something waiting for them; the count is a real row count from
+   * app_count_my_unread_reports and is absent when Reporting is not granted.
+   */
+  { id: "portal_reporting", key: "reporting", actionable: true },
 ];
 
 function withCount(
@@ -154,9 +163,9 @@ function withCount(
   if (!source) return item;
 
   const value = counts[source.key];
-  // null means the module is denied; 0 means nothing is pending. Neither earns
-  // a badge, so both fall through to no count at all.
-  if (value === null || value === 0) return item;
+  // null means the module is denied, undefined means the count was not gathered,
+  // 0 means nothing is pending. None earns a badge, so all fall through.
+  if (value === null || value === undefined || value === 0) return item;
 
   return { ...item, count: value, countIsActionable: source.actionable };
 }

@@ -2,7 +2,7 @@
 
 import { ArrowRight, ShoppingCart, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   cadenceShortLabels,
   cartCtaLabel,
@@ -12,7 +12,7 @@ import {
 import { useHeaderPanels } from "../command/header-panels";
 import { useServiceChooser } from "../services/service-chooser-context";
 import { PortalDialog } from "../ui/portal-dialog";
-import { clearCart, removeItem, useCart } from "./cart-store";
+import { clearCart, onCartAdd, removeItem, useCart } from "./cart-store";
 import styles from "./cart.module.css";
 
 /**
@@ -127,6 +127,30 @@ export function ClientCartPanel() {
   const panels = useHeaderPanels();
   const items = useCart();
   const [open, setOpen] = useState(false);
+
+  /*
+   * The arrival beat, and nothing more.
+   *
+   * Two interchangeable tokens rather than a boolean: re-applying the same CSS
+   * animation to an element that already carries it does not restart it, so a
+   * second add inside the first beat would be swallowed. Alternating the token
+   * changes the animation-name, which restarts it every time — on the same
+   * element, with no remount and nothing rendered.
+   *
+   * null at rest, so a first paint, a restored cart and a re-render are all
+   * still. Nothing here is derived from the item count, and the count is never
+   * derived from this.
+   */
+  const [bump, setBump] = useState<"a" | "b" | null>(null);
+
+  useEffect(
+    () =>
+      onCartAdd(() => {
+        if (prefersReducedMotion()) return;
+        setBump((current) => (current === "a" ? "b" : "a"));
+      }),
+    [],
+  );
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [clearing, setClearing] = useState(false);
 
@@ -178,7 +202,16 @@ export function ClientCartPanel() {
           setOpen(true);
         }}
       >
-        <ShoppingCart aria-hidden={true} />
+        {/*
+          * One cart icon, for the whole session. It is never keyed and never
+          * replaced: the add event only re-labels it for the length of one
+          * animation, so this is the same DOM node before, during and after.
+          */}
+        <ShoppingCart
+          className={styles.triggerIcon}
+          data-bump={bump ?? undefined}
+          aria-hidden={true}
+        />
         {count > 0 ? (
           <em
             key={count}

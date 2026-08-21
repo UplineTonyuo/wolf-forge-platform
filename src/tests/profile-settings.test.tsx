@@ -117,11 +117,13 @@ describe("existing profile data is rendered", () => {
 });
 
 describe("avatar fallback and rendering", () => {
-  it("falls back to initials when the account has no photo", () => {
+  it("falls back to the neutral person silhouette when the account has no photo", () => {
     render(<SettingsWorkspace identities={testIdentities} profile={baseProfile} />);
 
-    expect(screen.getByText("WJ")).toBeInTheDocument();
+    expect(screen.getByTestId("avatar-fallback")).toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    // Not initials, and never the Wolf Forge mark: a person slot shows a person.
+    expect(screen.queryByText("WJ")).not.toBeInTheDocument();
   });
 
   it("renders the stored photo when one exists", () => {
@@ -131,12 +133,12 @@ describe("avatar fallback and rendering", () => {
     expect(image).toHaveAttribute("src", AVATAR_URL);
   });
 
-  it("falls back to initials rather than a broken image when loading fails", () => {
+  it("falls back to the silhouette rather than a broken image when loading fails", () => {
     render(<SettingsWorkspace identities={testIdentities} profile={{ ...baseProfile, avatarUrl: AVATAR_URL }} />);
 
     fireEvent.error(screen.getByRole("presentation"));
 
-    expect(screen.getByText("WJ")).toBeInTheDocument();
+    expect(screen.getByTestId("avatar-fallback")).toBeInTheDocument();
     expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
   });
 

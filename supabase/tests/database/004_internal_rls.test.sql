@@ -35,6 +35,11 @@ insert into public.profile_permission_overrides (
   allowed
 )
 values
+  ('20000000-0000-0000-0000-000000000003', 'clients.create', true),
+  ('20000000-0000-0000-0000-000000000004', 'clients.view', true),
+  ('20000000-0000-0000-0000-000000000004', 'clients.create', true),
+  ('20000000-0000-0000-0000-000000000004', 'services.create', true),
+  ('20000000-0000-0000-0000-000000000004', 'services.edit', true),
   ('20000000-0000-0000-0000-000000000004', 'projects.create', true),
   ('20000000-0000-0000-0000-000000000004', 'projects.edit', true),
   ('20000000-0000-0000-0000-000000000004', 'projects.assign', true);
@@ -235,7 +240,10 @@ select isnt_empty(
   'staff can update an order task'
 );
 
-select lives_ok(
+-- M-02: the browser has no INSERT privilege on the audit stream at all. An
+-- authenticated staff session can no longer author an activity event, forge an
+-- actor, or backdate one -- the attempt fails before any policy is consulted.
+select throws_ok(
   $$
     insert into public.activity_events (
       id, actor_profile_id, entity_type, entity_id, action, summary, created_at
@@ -250,32 +258,43 @@ select lives_ok(
       '2000-01-01 00:00:00+00'::timestamptz
     )
   $$,
-  'staff can append an activity event'
+  '42501',
+  'permission denied for table activity_events',
+  'staff cannot append an activity event directly'
 );
 
+-- The legitimate path still works: the task RPC above wrote its own audit row
+-- through private.record_authenticated_activity.
 select is(
   (
-    select actor_profile_id
-    from public.activity_events
-    where id = '70000000-0000-0000-0000-000000000010'
+    select activity_row.actor_profile_id
+    from public.activity_events as activity_row
+    where activity_row.entity_type = 'order_task'
+      and activity_row.entity_id = (select task_id from internal_rpc_ids)
+      and activity_row.action = 'task.status_changed'
   ),
   '20000000-0000-0000-0000-000000000004'::uuid,
-  'authenticated staff cannot forge another activity actor'
+  'the trusted task RPC attributes its audit row to the real actor'
 );
 
-select is(
+select ok(
   (
-    select created_at
-    from public.activity_events
-    where id = '70000000-0000-0000-0000-000000000010'
+    select activity_row.created_at > '2020-01-01 00:00:00+00'::timestamptz
+    from public.activity_events as activity_row
+    where activity_row.entity_type = 'order_task'
+      and activity_row.entity_id = (select task_id from internal_rpc_ids)
+      and activity_row.action = 'task.status_changed'
   ),
-  now(),
-  'authenticated staff cannot backdate an activity event'
+  'the trusted task RPC timestamps its audit row server-side'
 );
 
-select is(
-  (select count(*) from public.activity_events where id = '70000000-0000-0000-0000-000000000010'),
-  1::bigint,
+select ok(
+  (
+    select count(*) >= 2
+    from public.activity_events
+    where entity_type = 'order_task'
+      and entity_id = (select task_id from internal_rpc_ids)
+  ),
   'staff can read operational activity events'
 );
 

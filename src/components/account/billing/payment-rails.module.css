@@ -1,0 +1,583 @@
+/*
+ * The client payment-method surface.
+ *
+ * A vertical stack rather than a card grid, on purpose. Three equal-width cards
+ * would say the three rails are equal choices; they are not. Wolf Forge Balance
+ * is the account's payment method and the only one that can settle an invoice
+ * today, so it takes a full-width anchor and the alternatives sit beneath it as
+ * a quieter list.
+ *
+ * Motion budget for the whole file: 180-260ms on --wf-ease, a 2px lift, a 3px
+ * arrow travel, no bounce, no glow. Every transform is dropped under
+ * prefers-reduced-motion at the foot of the file.
+ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* --- The anchor: Wolf Forge Balance --------------------------------------- */
+
+.anchor {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+
+  padding: 24px;
+  border: 1px solid var(--wf-border);
+  border-radius: 14px;
+  background: var(--wf-white);
+}
+
+.anchorVisual { min-width: 0; }
+
+.anchorBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.anchorHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.anchorTitle {
+  margin: 0;
+  font-family: var(--wf-font-display);
+  font-size: 19px;
+  font-weight: 620;
+  letter-spacing: -.01em;
+}
+
+/*
+ * "Default" is a fact about this account, not a badge of quality, so it is a
+ * quiet navy chip rather than the gold reserved for member state.
+ */
+.defaultChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 3px 10px;
+  border-radius: 999px;
+
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.defaultChip svg { width: 12px; height: 12px; }
+
+.figureRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.figure {
+  font-family: var(--wf-font-display);
+  font-size: 30px;
+  font-weight: 620;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.figureUnit {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  font-weight: 560;
+  letter-spacing: .01em;
+}
+
+.anchorCopy {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/*
+ * The membership gate, stated rather than implied. app_pay_invoice_with_wallet
+ * refuses a non-member, so the surface says so instead of offering a rail that
+ * would fail at the invoice.
+ */
+.anchorNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding: 10px 12px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-radius: 10px;
+  background: var(--portal-tone-idle-wash);
+
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.anchorNotice svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+
+.anchorActions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+/* --- The alternatives ----------------------------------------------------- */
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.groupLabel {
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.groupNote {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.rails {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Individually bordered rows rather than one container with dividers: a row
+ * inside a shared container cannot lift on hover without tearing away from its
+ * neighbours. Same conclusion the Reporting vault reached.
+ */
+.rail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+
+  padding: 16px 18px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+
+  transition:
+    transform 220ms var(--wf-ease),
+    border-color 220ms var(--wf-ease),
+    box-shadow 220ms var(--wf-ease);
+}
+
+.railMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+
+  transition: transform 220ms var(--wf-ease);
+}
+
+.railMark svg { width: 19px; height: 19px; }
+
+.railText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.railLabel {
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -.005em;
+}
+
+.railDesc {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/*
+ * The honest state. Neutral, never a warning: a rail Wolf Forge has not
+ * connected yet is not the client's problem to solve, so it must not carry the
+ * red the overdue vocabulary uses.
+ */
+.railStatus {
+  justify-self: end;
+
+  padding: 4px 11px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--portal-tone-idle-wash);
+
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.rail[data-available="true"] .railStatus {
+  border-color: var(--portal-tone-done-line);
+  color: var(--portal-tone-done);
+  background: var(--portal-tone-done-wash);
+}
+
+/* An unavailable rail reads as present-but-inert, never as broken. */
+.rail[data-available="false"] .railMark {
+  color: var(--wf-text-muted);
+  background: var(--portal-tone-idle-wash);
+}
+
+/* --- The selector dialog -------------------------------------------------- */
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.optionsLegend {
+  padding: 0;
+  margin-bottom: 4px;
+
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+/*
+ * The whole row is the label, so the target is the row rather than a 16px
+ * radio. Grid rather than flex because the mark, the copy and the state must
+ * stay in three columns while the copy wraps.
+ */
+.option {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+
+  padding: 15px 17px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+
+  cursor: pointer;
+
+  transition:
+    transform 200ms var(--wf-ease),
+    border-color 200ms var(--wf-ease),
+    background-color 200ms var(--wf-ease),
+    box-shadow 200ms var(--wf-ease);
+}
+
+.option[data-available="false"] {
+  cursor: not-allowed;
+  background: var(--portal-tone-idle-wash);
+}
+
+.option[data-selected="true"] {
+  border-color: rgba(0, 13, 81, .34);
+  box-shadow: 0 0 0 1px rgba(0, 13, 81, .16);
+}
+
+/*
+ * The native input, kept in the accessibility tree and kept operable — it is
+ * the thing the keyboard drives and the thing a screen reader announces. It is
+ * visually replaced by .radio, not removed.
+ */
+.optionInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.radio {
+  position: relative;
+  flex: 0 0 auto;
+
+  width: 19px;
+  height: 19px;
+  border: 1.5px solid var(--wf-border);
+  border-radius: 50%;
+
+  transition:
+    border-color 200ms var(--wf-ease),
+    background-color 200ms var(--wf-ease);
+}
+
+.radio::after {
+  content: "";
+  position: absolute;
+  inset: 3.5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: scale(.4);
+  transition:
+    opacity 200ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+.option[data-selected="true"] .radio {
+  border-color: var(--wf-navy);
+  color: var(--wf-navy);
+}
+
+.option[data-selected="true"] .radio::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Focus lives on the visual control, because the input itself is clipped. */
+.optionInput:focus-visible + .radio {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+}
+
+.optionText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.optionLabel {
+  font-size: 15px;
+  font-weight: 640;
+  letter-spacing: -.005em;
+}
+
+.optionDetail {
+  color: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionDesc {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.optionStatus {
+  justify-self: end;
+
+  padding: 4px 11px;
+  border: 1px solid var(--portal-tone-idle-line);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.dialogNote {
+  margin: 16px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+/* --- Interaction ---------------------------------------------------------- */
+
+/*
+ * Hover and focus-visible answer identically, so nothing here is pointer-only.
+ * A 2px lift and a warmer border; the arrow on the change control travels 3px.
+ */
+.rail:hover,
+.rail:focus-within,
+.option[data-available="true"]:hover,
+.option[data-available="true"]:focus-within {
+  transform: translateY(-2px);
+  border-color: rgba(0, 13, 81, .26);
+  box-shadow: 0 10px 24px -18px rgba(0, 13, 81, .5);
+}
+
+.rail:hover .railMark,
+.option[data-available="true"]:hover .railMark {
+  transform: scale(1.03);
+}
+
+.rail[data-available="false"]:hover,
+.rail[data-available="false"]:focus-within {
+  /* Present, but it does not promise anything: no lift on a rail that cannot be used. */
+  transform: none;
+  box-shadow: none;
+  border-color: var(--wf-border);
+}
+
+.option[data-available="false"]:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.changeAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 10px 18px;
+  border: 1px solid var(--wf-navy);
+  border-radius: 999px;
+  background: var(--wf-navy);
+  color: #fff;
+
+  font: inherit;
+  font-size: 13px;
+  font-weight: 620;
+  cursor: pointer;
+
+  transition:
+    background-color 200ms var(--wf-ease),
+    border-color 200ms var(--wf-ease),
+    transform 200ms var(--wf-ease);
+}
+
+.changeAction svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 200ms var(--wf-ease);
+}
+
+.changeAction:hover,
+.changeAction:focus-visible {
+  background: var(--wf-navy-hover);
+  border-color: var(--wf-navy-hover);
+  transform: translateY(-1px);
+}
+
+.changeAction:hover svg,
+.changeAction:focus-visible svg { transform: translateX(3px); }
+
+.changeAction:active { transform: translateY(0); }
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .anchor {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stack { gap: 22px; }
+
+  .anchor { padding: 18px; }
+
+  .figure { font-size: 26px; }
+
+  /*
+   * The state moves under the copy rather than squeezing a third column into a
+   * narrow screen: two columns, with the state spanning beneath the text.
+   */
+  .rail,
+  .option {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 10px;
+  }
+
+  .railStatus,
+  .optionStatus {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  /* Comfortable tap targets on the rows the finger actually lands on. */
+  .rail { padding: 16px; }
+  .option { padding: 16px; }
+
+  .changeAction {
+    width: 100%;
+    justify-content: center;
+    padding: 13px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stack *,
+  .rail,
+  .option,
+  .radio,
+  .radio::after,
+  .changeAction,
+  .changeAction svg,
+  .railMark {
+    transition-duration: 1ms !important;
+  }
+
+  .rail:hover,
+  .rail:focus-within,
+  .option:hover,
+  .option:focus-within,
+  .changeAction:hover,
+  .changeAction:focus-visible,
+  .changeAction:hover svg,
+  .changeAction:focus-visible svg,
+  .rail:hover .railMark,
+  .option:hover .railMark {
+    transform: none;
+  }
+
+  /* The selected dot still appears; it just is not animated into place. */
+  .option[data-selected="true"] .radio::after { transform: scale(1); }
+}

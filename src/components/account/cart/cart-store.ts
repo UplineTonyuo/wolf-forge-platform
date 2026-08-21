@@ -33,8 +33,37 @@ let hydrated = false;
 
 const listeners = new Set<() => void>();
 
+/*
+ * Separate from `listeners` on purpose.
+ *
+ * `listeners` is the cart's *state* channel — it fires whenever the contents
+ * change, for any reason, and drives the item count. This one is an *event*
+ * channel: it fires only when a client genuinely adds an investment, carries no
+ * value, and is never read as a number. Keeping them apart is what stops the
+ * count and the animation from being derived from one another.
+ */
+const addListeners = new Set<() => void>();
+
 function emit() {
   for (const listener of listeners) listener();
+}
+
+/** Announces a genuine add. Removal, clearing, hydration and sync never call it. */
+function emitAdd() {
+  for (const listener of addListeners) listener();
+}
+
+/**
+ * Subscribes to genuine additions.
+ *
+ * Deliberately a subscription rather than a counter: an arrival is a moment, not
+ * a quantity, and nothing downstream should be able to render it.
+ */
+export function onCartAdd(listener: () => void): () => void {
+  addListeners.add(listener);
+  return () => {
+    addListeners.delete(listener);
+  };
 }
 
 function persist() {
@@ -118,6 +147,7 @@ export function addItem(item: CartItem) {
   items = next;
   persist();
   emit();
+  emitAdd();
   signalInterest([item.id], true);
 }
 
@@ -150,6 +180,7 @@ export function resetCartForTests() {
   items = emptyCart;
   hydrated = false;
   listeners.clear();
+  addListeners.clear();
   try {
     window.localStorage.removeItem(storageKey);
   } catch {

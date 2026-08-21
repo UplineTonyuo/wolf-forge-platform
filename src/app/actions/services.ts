@@ -83,6 +83,14 @@ export async function createServiceAction(
 ): Promise<CatalogFormState> {
   void _state;
   const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.create) {
+    return { error: "You do not have permission to create Services." };
+  }
   let serviceId: string;
 
   try {
@@ -107,6 +115,14 @@ export async function updateServiceAction(
   void _state;
   const context = await getInternalContext();
   try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.edit) {
+    return { error: "You do not have permission to edit Services." };
+  }
+  try {
     await context.services.catalog.update(serviceId, serviceInput(formData), context.actor);
   } catch (error) {
     return formError(error);
@@ -123,6 +139,14 @@ export async function duplicateServiceAction(
   formData: FormData,
 ): Promise<CatalogFormState> {
   const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.create) {
+    return { error: "You do not have permission to duplicate Services." };
+  }
   let duplicateId: string;
   try {
     const duplicate = await context.services.catalog.duplicate(
@@ -148,6 +172,14 @@ export async function archiveServiceAction(
   void _formData;
   const context = await getInternalContext();
   try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.archive) {
+    return { error: "You do not have permission to archive Services." };
+  }
+  try {
     await context.services.catalog.archive(serviceId, context.actor);
   } catch (error) {
     return formError(error);
@@ -162,6 +194,14 @@ export async function createServiceFolderAction(
   formData: FormData,
 ): Promise<CatalogFormState> {
   const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.create) {
+    return { error: "You do not have permission to create Service folders." };
+  }
   let folderId: string;
   try {
     const folder = await context.services.catalog.createFolder({
@@ -184,6 +224,14 @@ export async function updateServiceFolderAction(
 ): Promise<CatalogFormState> {
   const context = await getInternalContext();
   try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.edit) {
+    return { error: "You do not have permission to edit Service folders." };
+  }
+  try {
     await context.services.catalog.updateFolder(folderId, folderInput(formData), context.actor);
   } catch (error) {
     return formError(error);
@@ -202,6 +250,14 @@ export async function archiveServiceFolderAction(
   void _state;
   void _formData;
   const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.archive) {
+    return { error: "You do not have permission to archive Service folders." };
+  }
   try {
     await context.services.catalog.archiveFolder(folderId, context.actor);
   } catch (error) {

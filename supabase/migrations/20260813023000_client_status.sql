@@ -1,4 +1,4 @@
-﻿-- Wolf Forge Platform
+-- Wolf Forge Platform
 -- Persistent client/company lifecycle status.
 
 alter table public.companies

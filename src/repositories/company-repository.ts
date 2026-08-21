@@ -27,9 +27,17 @@ export class CompanyRepository {
   }
 
   async listActive(): Promise<CompanyRow[]> {
-    return unwrapMany(
-      await this.client.from("companies").select().is("archived_at", null).order("name"),
+    const rows = unwrapMany(
+      await this.client.rpc("app_list_client_company_directory"),
     );
+
+    // The operational directory intentionally excludes processor identity.
+    // Preserve the existing CompanyRow-facing component contract without
+    // inventing or exposing a Stripe value.
+    return rows.map((row) => ({
+      ...row,
+      stripe_customer_id: null,
+    }));
   }
 
   async update(id: string, input: UpdateCompanyInput): Promise<CompanyRow> {

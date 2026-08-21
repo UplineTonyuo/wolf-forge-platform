@@ -13,6 +13,14 @@ const moneySchema = z.number().finite().nonnegative();
 const positiveIntegerSchema = z.number().int().positive();
 const sortOrderSchema = z.number().int().nonnegative();
 const currencySchema = z.string().regex(/^[A-Z]{3}$/, "Use a three-letter currency code.");
+const safeRemoteImageUrlSchema = z.string().trim().max(2048).refine((value) => {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}, "Use an http:// or https:// image URL.");
 
 const serviceFieldsSchema = z.object({
   name: nonBlankTextSchema,
@@ -20,7 +28,7 @@ const serviceFieldsSchema = z.object({
   description: nullableNonBlankTextSchema.optional(),
   price: moneySchema.optional(),
   currency: currencySchema.optional(),
-  image_url: nullableNonBlankTextSchema.optional(),
+  image_url: safeRemoteImageUrlSchema.nullable().optional(),
   is_active: z.boolean().optional(),
   is_public: z.boolean().optional(),
   recurring: z.boolean().optional(),

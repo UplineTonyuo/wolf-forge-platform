@@ -184,8 +184,18 @@ export const submitFormSchema = z.object({
     order_id: uuidSchema.optional(),
     company_id: uuidSchema.optional(),
     client_profile_id: uuidSchema.optional(),
+    /**
+     * Single-use bot-challenge token for a PUBLIC Form. `app_submit_form`
+     * consumes it through `private.require_bot_verification`, and strips it out
+     * of the remembered idempotency payload so rotating a token cannot turn a
+     * legitimate retry into a duplicate-key error. See
+     * `lib/security/bot-verification-gateway.ts` — no provider is connected yet,
+     * so this is optional and nothing enforces it.
+     */
+    bot_token: z.string().trim().min(1).max(4096).optional(),
   }).strict().default({}),
-  values: z.array(formSubmissionValueSchema).max(500),
+  /** Matches the database cap in `private.enforce_form_payload_limits`. */
+  values: z.array(formSubmissionValueSchema).max(300),
   files: z.array(z.never()).default([]),
 }).strict().superRefine((input, context) => {
   const keys = input.values.map((value) => value.field_key);
@@ -196,7 +206,8 @@ export const submitFormSchema = z.object({
 
 export const correctFormSubmissionSchema = z.object({
   request_id: uuidSchema,
-  values: z.array(formSubmissionValueSchema).max(500),
+  /** Matches the database cap in `private.enforce_form_payload_limits`. */
+  values: z.array(formSubmissionValueSchema).max(300),
 }).strict();
 
 export type Form = FormRow;

@@ -1,0 +1,639 @@
+/*
+ * The client Dashboard's next-action flow.
+ *
+ * Same system as the rest of the portal: navy structure, one restrained gold
+ * beat, warm-neutral surfaces, motion on --wf-ease. Nothing here introduces a
+ * colour, a radius or a shadow the portal did not already have — the premium
+ * feeling is meant to come from hierarchy and response, not from decoration.
+ *
+ * Every entrance is CSS keyed off --wf-action-index, so the whole section stays
+ * server rendered with no client bundle behind it.
+ */
+
+/* --- Shared motion -------------------------------------------------------- */
+
+@keyframes wfActionEnter {
+  from { opacity: 0; transform: translateY(11px) scale(.994); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wfHeroEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wfCountEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Hero ----------------------------------------------------------------- */
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+
+  padding: 34px 32px;
+  border-radius: 14px;
+
+  color: #fff;
+  background:
+    radial-gradient(120% 160% at 88% 8%, rgba(168, 131, 46, .28), transparent 58%),
+    var(--wf-navy);
+
+  animation: wfHeroEnter 320ms var(--wf-ease) both;
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.heroCopy h1 {
+  margin: 0;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 30px;
+  font-weight: 620;
+  letter-spacing: -.02em;
+}
+
+.heroCopy p {
+  margin: 0;
+  max-width: 58ch;
+  color: rgba(255, 255, 255, .76);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.heroCopy :global(.portal-eyebrow) { color: rgba(255, 255, 255, .62); }
+
+.heroAside {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/*
+ * The counter is a link to the queue below. A quiet translucent panel rather
+ * than a glowing badge: it is a wayfinding control, not an alarm.
+ */
+.counter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+
+  padding: 12px 18px 11px;
+
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .08);
+
+  color: #fff;
+  text-decoration: none;
+
+  transition:
+    transform 180ms var(--wf-ease),
+    border-color 180ms var(--wf-ease),
+    background-color 180ms var(--wf-ease);
+}
+
+.counterValue {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 27px;
+  font-weight: 680;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+
+  /* Replays whenever the real count changes, because React remounts on the key. */
+  animation: wfCountEnter 260ms var(--wf-ease) both;
+}
+
+.counterLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  color: rgba(255, 255, 255, .66);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.counterLabel svg {
+  width: 11px;
+  height: 11px;
+  transition: transform 180ms var(--wf-ease);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 4px 10px;
+
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+
+  color: rgba(255, 255, 255, .82);
+
+  font-size: 10.5px;
+  font-weight: 620;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+/* The one gold beat in the panel, and only for money that is genuinely late. */
+.chip[data-tone="payment_due"] {
+  color: #fff;
+  border-color: rgba(201, 164, 73, .58);
+  background: rgba(201, 164, 73, .18);
+}
+
+/* --- Section -------------------------------------------------------------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  /* The hero counter links here; keeps the heading clear of the sticky header. */
+  scroll-margin-top: 92px;
+}
+
+/* --- The queue ------------------------------------------------------------ */
+
+.flow {
+  /*
+   * Declared on the queue rather than :root, which CSS Modules rejects as a
+   * global selector. This is also the more honest home for it: the only
+   * consumers are the cards directly inside this list, so the stagger inherits
+   * exactly as far as it is used and no further.
+   */
+  --wf-action-stagger: 60ms;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The featured action always spans the full width, whatever follows it. */
+.featuredItem { grid-column: 1 / -1; }
+
+.featuredItem,
+.secondaryItem {
+  min-width: 0;
+  animation: wfActionEnter 340ms var(--wf-ease) both;
+  animation-delay: calc(var(--wf-action-index, 0) * var(--wf-action-stagger));
+}
+
+/* --- Featured card -------------------------------------------------------- */
+
+.featured {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  padding: 24px 26px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+
+  color: var(--wf-text);
+  background: var(--wf-white);
+  box-shadow: 0 2px 4px rgba(0, 13, 81, .04), 0 10px 26px rgba(0, 13, 81, .07);
+
+  text-decoration: none;
+  overflow: hidden;
+
+  transition:
+    transform 200ms var(--wf-ease),
+    box-shadow 200ms var(--wf-ease),
+    border-color 200ms var(--wf-ease);
+}
+
+/*
+ * Urgency is a hairline along the top edge, not a red card. It reads at a
+ * glance and still leaves the surface calm enough to read the amount on.
+ */
+.featured::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--wf-navy);
+}
+
+.featured[data-urgent]::before { background: #a3242a; }
+.featured[data-tone="waiting_on_you"]::before { background: var(--wf-gold); }
+
+.featuredHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.featuredTitle {
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 19px;
+  font-weight: 620;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+  color: var(--wf-navy);
+}
+
+.featuredDetail {
+  max-width: 62ch;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.amount {
+  flex: 0 0 auto;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 21px;
+  font-weight: 660;
+  font-variant-numeric: tabular-nums;
+  color: var(--wf-navy);
+}
+
+.featuredCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-top: 6px;
+
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.featuredCta svg {
+  width: 15px;
+  height: 15px;
+  transition: transform 200ms var(--wf-ease);
+}
+
+/* --- Secondary cards ------------------------------------------------------ */
+
+.card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  padding: 18px 20px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+
+  color: var(--wf-text);
+  background: var(--wf-white);
+
+  text-decoration: none;
+
+  transition:
+    transform 200ms var(--wf-ease),
+    box-shadow 200ms var(--wf-ease),
+    border-color 200ms var(--wf-ease);
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 640;
+  line-height: 1.4;
+  color: var(--wf-navy);
+}
+
+.cardDetail {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: auto;
+  padding-top: 8px;
+
+  color: var(--wf-navy);
+  font-size: 12.5px;
+  font-weight: 640;
+}
+
+.cardCta svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 200ms var(--wf-ease);
+}
+
+/* --- Shared card parts ---------------------------------------------------- */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: var(--wf-text-muted);
+
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 13px;
+  height: 13px;
+  color: var(--wf-navy);
+  opacity: .68;
+}
+
+.featured[data-urgent] .eyebrow { color: #a3242a; }
+.featured[data-urgent] .eyebrow svg { color: #a3242a; opacity: 1; }
+
+.meta {
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Active work ---------------------------------------------------------- */
+
+.projects {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projectItem {
+  min-width: 0;
+  animation: wfActionEnter 320ms var(--wf-ease) both;
+  animation-delay: calc(var(--wf-action-index, 0) * 45ms);
+}
+
+.project {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 16px 18px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 11px;
+
+  color: var(--wf-text);
+  background: var(--wf-white);
+
+  text-decoration: none;
+
+  transition:
+    transform 200ms var(--wf-ease),
+    box-shadow 200ms var(--wf-ease),
+    border-color 200ms var(--wf-ease);
+}
+
+.projectHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.projectRef {
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .06em;
+}
+
+.projectTitle {
+  font-size: 13.5px;
+  font-weight: 630;
+  line-height: 1.4;
+  color: var(--wf-navy);
+}
+
+.projectService,
+.projectDue,
+.projectState {
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+}
+
+.projectFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+/* Only ever drawn when a real completed/total ratio exists. */
+.rail {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.railTrack {
+  position: relative;
+  flex: 1 1 auto;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--wf-navy-wash);
+}
+
+.railFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--wf-rail-percent, 0%);
+  border-radius: 999px;
+  background: var(--wf-navy);
+  transform-origin: left center;
+  animation: wfRailFill 520ms var(--wf-ease) both;
+}
+
+@keyframes wfRailFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.railValue {
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Interaction ---------------------------------------------------------- */
+
+/*
+ * Focus-visible mirrors hover exactly, so a keyboard reaches every affordance a
+ * pointer does. The outline is the shared one from globals.css.
+ */
+.featured:focus-visible,
+.card:focus-visible,
+.project:focus-visible,
+.counter:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+}
+
+.featured:focus-visible,
+.card:focus-visible,
+.project:focus-visible {
+  border-color: #c9c4bb;
+}
+
+.featured:focus-visible .featuredCta svg,
+.card:focus-visible .cardCta svg { transform: translateX(3px); }
+
+@media (hover: hover) and (pointer: fine) {
+  .featured:hover {
+    transform: translateY(-4px);
+    border-color: #c9c4bb;
+    box-shadow: 0 4px 8px rgba(0, 13, 81, .05), 0 16px 34px rgba(0, 13, 81, .1);
+  }
+
+  .card:hover,
+  .project:hover {
+    transform: translateY(-3px);
+    border-color: #c9c4bb;
+    box-shadow: 0 8px 20px rgba(0, 13, 81, .08);
+  }
+
+  .featured:hover .featuredCta svg,
+  .card:hover .cardCta svg { transform: translateX(3px); }
+
+  .counter:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, .38);
+    background: rgba(255, 255, 255, .13);
+  }
+
+  .counter:hover .counterLabel svg { transform: translateY(2px); }
+}
+
+.featured:active,
+.card:active,
+.project:active {
+  transform: translateY(-1px);
+  transition-duration: 90ms;
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  /*
+   * The counter and its chips sit on one line below the greeting rather than
+   * stacking to the right, so the panel does not become a tall column.
+   */
+  .heroAside {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .chips { justify-content: flex-start; }
+  .counter { flex-direction: row; align-items: baseline; gap: 8px; padding: 9px 14px; }
+  .counterValue { font-size: 21px; }
+}
+
+@media (max-width: 767px) {
+  .hero { padding: 26px 22px; }
+  .heroCopy h1 { font-size: 24px; }
+
+  /* One column: an action queue read top to bottom is the whole point. */
+  .flow { grid-template-columns: minmax(0, 1fr); }
+
+  .featured { padding: 20px; }
+  .featuredTitle { font-size: 17px; }
+  .featuredHead { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .amount { font-size: 19px; }
+
+  .projects { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Reduced motion ------------------------------------------------------- */
+
+/*
+ * Everything arrives at its final state immediately. Entrances are removed
+ * rather than shortened, and hover keeps its colour change while losing the
+ * movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .hero,
+  .featuredItem,
+  .secondaryItem,
+  .projectItem,
+  .counterValue,
+  .railFill {
+    animation: none;
+  }
+
+  .featured,
+  .card,
+  .project,
+  .counter,
+  .featuredCta svg,
+  .cardCta svg,
+  .counterLabel svg {
+    transition: none;
+  }
+
+  .featured:hover,
+  .card:hover,
+  .project:hover,
+  .counter:hover,
+  .featured:active,
+  .card:active,
+  .project:active {
+    transform: none;
+  }
+}

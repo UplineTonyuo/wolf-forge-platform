@@ -7,7 +7,13 @@ import {
   type ClientPortalSources,
   type ClientPortalSummary,
 } from "../../domain/client-portal/summary";
+import { resolveWalletFunding } from "../../domain/client-portal/payment-method";
 import type { FormAssignmentSummary } from "../../domain/forms/schema";
+import {
+  composeClientPaymentRails,
+  type ClientPaymentRail,
+} from "../../domain/payments/payment-rails";
+import { readExternalPaymentRailAvailability } from "../payments/payment-rail-configuration";
 import type { ClientProjectView } from "../../domain/orders/client-projections";
 import type { SubscriptionSummary } from "../../domain/subscriptions/schema";
 import type { ClientTicketSummary } from "../../domain/tickets/schema";
@@ -112,6 +118,61 @@ export async function getClientPortalSummary(): Promise<ClientPortalSummary> {
 }
 
 /**
+ * Reports this person has not opened.
+ *
+ * Its own read rather than part of the summary sources: read state is per
+ * profile while every other source is per company, and the RPC already returns
+ * 0 for an account without the Reporting grant, so the rail can ask
+ * unconditionally.
+ */
+export const readUnreadReportCount = cache(async (): Promise<number> => {
+  const context = await getClientContext();
+  if (context.user.modules.portal_reporting !== true) return 0;
+  return context.services.reporting.countUnread();
+});
+
+/**
+ * How this account can pay, for surfaces that only need to *show* it.
+ *
+ * Gated on `portal_invoices` rather than a module of its own: paying is part of
+ * the account's billing surface, which is the same reasoning
+ * `/account/payment-method` already uses. An account without that grant gets
+ * null and the Dashboard omits the zone rather than rendering an empty one.
+ *
+ * Every input is server-derived. The company comes from
+ * `app_get_client_account_context` via the verified session, never from the
+ * browser; the balance comes from `public.company_wallets` under RLS; the
+ * external rails' availability comes from server configuration through a
+ * `server-only` module. Nothing a client sends can reach any of them, which is
+ * what makes a forged balance or a forged "PayPal is connected" impossible.
+ */
+export const readClientPaymentRails = cache(async (): Promise<ClientPaymentRail[] | null> => {
+  const context = await getClientContext();
+
+  return whenGranted(context.user.modules.portal_invoices, async () => {
+    const [wallet, membership] = await Promise.all([
+      context.services.wallets.getForCompany(context.user.companyId),
+      context.services.wfCard.getMembership(context.user.companyId),
+    ]);
+
+    return composeClientPaymentRails({
+      /*
+       * A missing wallet row reads as a zero balance rather than as an error:
+       * the Dashboard is a summary, and "$0.00 available" is both true and
+       * useless to break a page over. The Payment method page keeps its own
+       * stricter read, because that page is *about* the wallet.
+       */
+      wallet: resolveWalletFunding({
+        membershipStatus: membership?.status ?? null,
+        balanceCents: wallet?.balance_cents ?? 0,
+        currency: wallet?.currency ?? "USD",
+      }),
+      availability: readExternalPaymentRailAvailability(),
+    });
+  });
+});
+
+/**
  * The rail's counts only.
  *
  * Reads three resources rather than five: billing state is not something the
@@ -119,10 +180,11 @@ export async function getClientPortalSummary(): Promise<ClientPortalSummary> {
  * page just to render a rail.
  */
 export async function getClientNavCounts(): Promise<ClientNavCounts> {
-  const [projects, assignments, tickets] = await Promise.all([
+  const [projects, assignments, tickets, reporting] = await Promise.all([
     readClientProjects(),
     readClientAssignments(),
     readClientTickets(),
+    readUnreadReportCount(),
   ]);
 
   const { counts } = composeClientPortalSummary({
@@ -133,5 +195,5 @@ export async function getClientNavCounts(): Promise<ClientNavCounts> {
     subscriptions: null,
   });
 
-  return counts;
+  return { ...counts, reporting };
 }

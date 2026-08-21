@@ -506,6 +506,24 @@ select throws_ok(
   'service_role cannot delete activity events'
 );
 
+-- M-02 fixture. The audit row the append-only, privilege and cascade
+-- assertions below depend on is now created by a trusted writer, because no
+-- browser role holds INSERT on the audit stream any more.
+reset role;
+
+insert into public.activity_events (
+  id, actor_profile_id, entity_type, entity_id, action, summary, created_at
+)
+values (
+  '70000000-0000-0000-0000-000000000002',
+  '20000000-0000-0000-0000-000000000001',
+  'order',
+  '50000000-0000-0000-0000-000000000002',
+  'order.updated',
+  'Trusted audit row for privilege assertions',
+  now()
+);
+
 -- Authenticated internal writes must use audited RPCs. Direct operational DML
 -- is denied even when RLS would otherwise recognize the caller as internal.
 reset role;
@@ -551,42 +569,48 @@ select throws_ok(
   'authenticated internal users cannot truncate operational tables'
 );
 
-select lives_ok(
+-- M-02: the audit stream is not browser-writable at all, so an authenticated
+-- internal session can no longer author an event, forge an actor or backdate
+-- one. The normalization trigger's authenticated branch is now unreachable
+-- from a session, and actor/timestamp derivation lives in the trusted RPCs.
+select throws_ok(
   $$
     insert into public.activity_events (
       id, actor_profile_id, entity_type, entity_id, action, summary, created_at
     )
     values (
-      '70000000-0000-0000-0000-000000000002',
+      '70000000-0000-0000-0000-000000000012',
       '10000000-0000-0000-0000-000000000001',
       'order',
       '50000000-0000-0000-0000-000000000002',
       'forgery_attempt',
-      'Authenticated event normalization test',
+      'Authenticated event forgery test',
       '1999-01-01 00:00:00+00'::timestamptz
     )
   $$,
-  'authenticated internal staff can append an activity event'
+  '42501',
+  'permission denied for table activity_events',
+  'authenticated internal staff cannot append an activity event'
+);
+
+select ok(
+  has_table_privilege('authenticated', 'public.activity_events', 'SELECT')
+    and not has_table_privilege('authenticated', 'public.activity_events', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.activity_events', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.activity_events', 'DELETE'),
+  'the browser role keeps scoped read access to the audit stream and nothing else'
 );
 
 select is(
   (
-    select actor_profile_id
-    from public.activity_events
-    where id = '70000000-0000-0000-0000-000000000002'
+    select count(*)
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'activity_events'
+      and cmd = 'INSERT'
   ),
-  '20000000-0000-0000-0000-000000000001'::uuid,
-  'authenticated activity actor is forced to auth.uid()'
-);
-
-select is(
-  (
-    select created_at
-    from public.activity_events
-    where id = '70000000-0000-0000-0000-000000000002'
-  ),
-  now(),
-  'authenticated activity timestamp is forced to the current transaction time'
+  0::bigint,
+  'no INSERT policy remains on the audit stream'
 );
 
 select throws_ok(

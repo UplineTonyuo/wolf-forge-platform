@@ -279,15 +279,15 @@ set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '60000000-0000-0000-0000-000000000001';
 
 select is(
-  (select count(*) from public.orders),
+  (select count(*) from public.app_list_my_client_projects()),
   1::bigint,
-  'a client session reads only its own company projects'
+  'a client session reads only its own company Projects through the safe projection'
 );
 
 select is(
-  (select title from public.orders),
+  (select title from public.app_list_my_client_projects()),
   'Project A',
-  'the visible project is the client own company project'
+  'the safe Project projection returns the client own company Project'
 );
 
 select is(
@@ -428,9 +428,9 @@ set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '60000000-0000-0000-0000-000000000002';
 
 select is(
-  (select title from public.orders),
+  (select title from public.app_list_my_client_projects()),
   'Project B',
-  'client B reads only its own project'
+  'client B reads only its own Project through the safe projection'
 );
 
 select is(

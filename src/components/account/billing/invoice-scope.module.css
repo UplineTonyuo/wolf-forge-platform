@@ -1,0 +1,164 @@
+/*
+ * Invoice line-item scope.
+ *
+ * Restraint is the brief. An invoice is a record, not a sales page, so the
+ * deliverables read as a quiet ledger: hairline marks, muted text, no emoji, no
+ * colour beyond the navy/gold already in the system. The collapsed state is one
+ * line — everything else is behind the toggle.
+ */
+
+.scope {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 4px;
+}
+
+.summary {
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 0;
+  border: 0;
+  background: none;
+
+  color: var(--wf-navy);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 620;
+  cursor: pointer;
+
+  transition: color 200ms var(--wf-ease);
+}
+
+.toggle:hover { color: var(--wf-navy-hover); }
+
+.toggle:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.chevron {
+  width: 13px;
+  height: 13px;
+  transition: transform 200ms var(--wf-ease);
+}
+
+.toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 14px 16px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  background: var(--wf-navy-wash);
+
+  animation: invoice-scope-reveal 200ms var(--wf-ease);
+}
+
+/* `hidden` must win over the panel's own display, or the list stays visible. */
+.panel[hidden] { display: none; }
+
+@keyframes invoice-scope-reveal {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+
+  color: var(--wf-text);
+  font-size: 12.5px;
+  line-height: 1.5;
+
+  /* Long uninterrupted capture text must wrap, never widen the row. */
+  overflow-wrap: anywhere;
+}
+
+.mark {
+  width: 13px;
+  height: 13px;
+  margin-top: 3px;
+  color: var(--wf-gold);
+}
+
+/*
+ * A dash rather than a check for requirements: a check would read as something
+ * already provided, and these are things the client still owes us.
+ */
+.dash {
+  width: 9px;
+  height: 1.5px;
+  margin-top: 8px;
+  border-radius: 1px;
+  background: var(--wf-text-muted);
+}
+
+.list[data-tone="requirement"] .item { color: var(--wf-text-muted); }
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wf-border);
+}
+
+.groupLabel {
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.note {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .panel { padding: 13px 14px; }
+
+  /* A comfortable tap target without turning the link into a button. */
+  .toggle { padding: 4px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel { animation: none; }
+  .chevron,
+  .toggle { transition-duration: 1ms; }
+  .toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+}

@@ -1,23 +1,21 @@
 import { formatDate } from "../../lib/format";
-import type { ProjectTaskCounts, ProjectTaskFact } from "./projections";
-import { projectStatusLabels, summarizeProjectTasks } from "./projections";
+import type { ProjectTaskCounts } from "./projections";
+import { projectStatusLabels } from "./projections";
 import type { OrderStatus } from "./schema";
 
 /**
  * The client-facing Project read model.
  *
- * public.orders is company-scoped for a client by
- * orders_client_select_own_company, so RLS already decides which rows exist.
- * What this module decides is which *columns* ever reach the portal.
+ * The caller-scoped Project RPC decides both which rows and which columns may
+ * reach the portal. Direct client SELECT on orders/order_tasks is denied.
  *
  * Deliberately absent, and asserted absent by test:
  *   - notes                   internal working notes
  *   - assigned_to_profile_id  internal staff identity
  *   - individual task titles  internal operational phrasing
  *
- * Tasks contribute aggregate counts only. The repository selects an explicit
- * column list rather than `*`, so a column added to orders later cannot appear
- * here without someone choosing it.
+ * Tasks contribute aggregate counts inside the database RPC. No individual
+ * task row enters the client read model.
  */
 export type ClientProjectSourceRow = {
   id: string;
@@ -28,7 +26,9 @@ export type ClientProjectSourceRow = {
   due_at: string | null;
   started_at: string | null;
   completed_at: string | null;
-  services: { name: string } | null;
+  service_name: string | null;
+  task_total: number;
+  task_open: number;
 };
 
 export type ClientProjectProgress = {
@@ -80,30 +80,23 @@ function toProgress(counts: ProjectTaskCounts): ClientProjectProgress {
 
 export function composeClientProjectViews(
   rows: ClientProjectSourceRow[],
-  taskFacts: ProjectTaskFact[],
-  now: Date = new Date(),
 ): ClientProjectView[] {
-  const timestamp = now.getTime();
-  const factsByOrder = new Map<string, ProjectTaskFact[]>();
-
-  for (const fact of taskFacts) {
-    const existing = factsByOrder.get(fact.order_id);
-    if (existing) existing.push(fact);
-    else factsByOrder.set(fact.order_id, [fact]);
-  }
-
   return rows.map((row) => ({
     id: row.id,
     reference: projectReference(row.order_number),
     title: row.title,
     status: row.status,
     statusLabel: projectStatusLabels[row.status] ?? row.status,
-    serviceName: row.services?.name ?? null,
+    serviceName: row.service_name,
     createdLabel: formatDate(row.created_at),
     dueLabel: row.due_at ? formatDate(row.due_at) : null,
     startedLabel: row.started_at ? formatDate(row.started_at) : null,
     completedLabel: row.completed_at ? formatDate(row.completed_at) : null,
-    progress: toProgress(summarizeProjectTasks(factsByOrder.get(row.id) ?? [], timestamp)),
+    progress: toProgress({
+      total: row.task_total,
+      open: row.task_open,
+      overdue: 0,
+    }),
   }));
 }
 

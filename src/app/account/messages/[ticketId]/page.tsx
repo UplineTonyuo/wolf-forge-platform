@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, History } from "lucide-react";
+import { ArrowLeft, CalendarDays, History, MailCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,10 +44,16 @@ export default async function ClientMessageDetailPage({
           All messages
         </Link>
 
+        {/*
+          * Wolf Forge's own confirmation rather than a generic success alert.
+          * The wording is unchanged; only the treatment is, and it sits on the
+          * same left edge as the conversation below it.
+          */}
         {query.created ? (
-          <div className="success-banner">
+          <p className="portal-sent-banner" role="status">
+            <MailCheck aria-hidden={true} />
             Your message was sent. Wolf Forge will reply in this conversation.
-          </div>
+          </p>
         ) : null}
 
         <header className="portal-page-head portal-page-head-actions">

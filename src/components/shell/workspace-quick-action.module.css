@@ -161,11 +161,29 @@
 }
 
 .options {
+  display: grid;
+  gap: 10px;
   padding: 18px;
 }
 
+/*
+ * One frame for every action, whether it is a link or a button.
+ *
+ * A <button> carries user-agent defaults an <a> does not — intrinsic width,
+ * centred text, its own font and border — so the reporting action rendered
+ * narrower and centred beside the member link. Resetting them here rather than
+ * nudging one call site with margins is what keeps the two aligned as more
+ * actions are added.
+ */
 .option {
+  width: 100%;
   min-height: 82px;
+
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
 
   display: grid;
 
@@ -301,4 +319,307 @@
   .arrow {
     transition: none !important;
   }
+
+  .view { animation: none !important; }
+}
+/* --- Reporting form ------------------------------------------------------- */
+
+/*
+ * The Quick Action panel's second face. Same fields, buttons and spacing scale
+ * as the rest of the internal product — nothing here introduces a form system.
+ */
+.reportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 24px;
+}
+
+.reportLanes {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.reportLanes legend,
+.reportField > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--wf-text-muted);
+  font-size: 10.5px;
+  font-weight: 680;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.typeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.typeOption {
+  min-height: 36px;
+  padding: 0 15px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+
+  font-size: 12.5px;
+  font-weight: 630;
+  cursor: pointer;
+
+  transition:
+    color 180ms var(--wf-ease),
+    border-color 180ms var(--wf-ease),
+    background-color 180ms var(--wf-ease);
+}
+
+.typeOption[aria-pressed="true"] {
+  color: var(--wf-white);
+  border-color: var(--wf-navy);
+  background: var(--wf-navy);
+}
+
+.reportField {
+  display: block;
+}
+
+.reportField input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 7px;
+
+  color: var(--wf-text);
+  background: var(--wf-white);
+  font-size: 13.5px;
+}
+
+.reportFieldError {
+  display: block;
+  margin-top: 6px;
+  color: #a3242a;
+  font-size: 11.5px;
+  font-style: normal;
+}
+
+.reportError {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(163, 36, 42, .3);
+  border-radius: 8px;
+  color: #a3242a;
+  background: rgba(163, 36, 42, .05);
+  font-size: 12.5px;
+}
+
+.reportActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.reportBack,
+.reportSubmit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  min-height: 40px;
+  padding: 0 16px;
+
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 640;
+  cursor: pointer;
+
+  transition:
+    background-color 180ms var(--wf-ease),
+    border-color 180ms var(--wf-ease),
+    opacity 180ms var(--wf-ease);
+}
+
+.reportBack {
+  border: 1px solid var(--wf-border);
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+}
+
+.reportSubmit {
+  border: 1px solid var(--wf-navy);
+  color: var(--wf-white);
+  background: var(--wf-navy);
+}
+
+.reportSubmit:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.reportBack svg,
+.reportSubmit svg { width: 14px; height: 14px; }
+
+.reportBack:focus-visible,
+.reportSubmit:focus-visible,
+.typeOption:focus-visible,
+.reportField input:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+/* --- Sent acknowledgement ------------------------------------------------- */
+
+.sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 30px 24px 26px;
+  text-align: center;
+}
+
+.sentMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+}
+
+.sentMark svg { width: 20px; height: 20px; }
+.sent strong { color: var(--wf-navy); font-size: 15px; font-weight: 650; }
+.sent > span { color: var(--wf-text-muted); font-size: 12.5px; line-height: 1.55; }
+
+.sentActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typeOption,
+  .reportBack,
+  .reportSubmit { transition: none; }
+}
+
+/* --- View transitions ----------------------------------------------------- */
+
+/*
+ * The panel has one face at a time. Each face is keyed on the view name so
+ * React remounts it and the entrance replays; the direction attribute decides
+ * which side it arrives from, so going into the form and coming back out read
+ * as forward and back rather than as two identical flickers.
+ *
+ * The panel keeps its own opacity/scale entrance — this only moves the contents
+ * inside it, so no second modal is introduced and focus is never re-parented
+ * mid-animation.
+ */
+.view {
+  animation: wfQuickViewIn 260ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.view:focus-visible {
+  outline: none;
+}
+
+.view[data-direction="back"] {
+  animation-name: wfQuickViewBack;
+}
+
+@keyframes wfQuickViewIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes wfQuickViewBack {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Success ------------------------------------------------------------- */
+
+/*
+ * The check draws itself, the disc settles behind it, and the copy arrives a
+ * beat later. Restrained on purpose: navy and gold, one gesture, done in under
+ * half a second — an acknowledgement, not a celebration.
+ */
+.sentMark svg { width: 22px; height: 22px; }
+
+.sentMark {
+  animation: wfSentDisc 320ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.sentCheck {
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+
+  /* Length of the path; animating the dash offset draws it. */
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: wfSentCheck 340ms cubic-bezier(.65, 0, .35, 1) 140ms both;
+}
+
+/* A single gold ring that expands once and fades — the one flourish. */
+.sentMark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--wf-gold);
+  opacity: 0;
+  animation: wfSentRing 620ms cubic-bezier(.22, 1, .36, 1) 120ms both;
+}
+
+.sent strong { animation: wfSentCopy 300ms cubic-bezier(.22, 1, .36, 1) 220ms both; }
+.sent > span { animation: wfSentCopy 300ms cubic-bezier(.22, 1, .36, 1) 300ms both; }
+.sentActions { animation: wfSentCopy 300ms cubic-bezier(.22, 1, .36, 1) 380ms both; }
+
+@keyframes wfSentDisc {
+  from { opacity: 0; transform: scale(.82); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wfSentCheck {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes wfSentRing {
+  0% { opacity: .65; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+@keyframes wfSentCopy {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sentMark,
+  .sentCheck,
+  .sentMark::after,
+  .sent strong,
+  .sent > span,
+  .sentActions {
+    animation: none !important;
+    /* The check must still be drawn, just not drawn *in*. */
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  .sentMark::after { opacity: 0; }
 }

@@ -95,6 +95,7 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
 export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
   const context = await getClientContext();
   try {
+    await context.services.permissions.requireModuleAccess("portal_forms");
     const submission = await context.services.forms.submit(input, context.actor);
     revalidatePath("/account/onboarding");
     revalidatePath("/account");

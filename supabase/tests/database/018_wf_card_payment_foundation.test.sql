@@ -1,6 +1,6 @@
 begin;
 
-select plan(45);
+select plan(51);
 
 -- -----------------------------------------------------------------------------
 -- Structure, centralized offer, and least privilege
@@ -42,7 +42,8 @@ values
   ('29000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'wf-card-admin@example.invalid', now(), now()),
   ('19000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'wf-card-client-a@example.invalid', now(), now()),
   ('19000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'wf-card-client-b@example.invalid', now(), now()),
-  ('19000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'wf-card-client-c@example.invalid', now(), now());
+  ('19000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'wf-card-client-c@example.invalid', now(), now()),
+  ('19000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'wf-card-invoices-denied@example.invalid', now(), now());
 
 update public.profiles as profile_row
 set role_id = role_row.id, display_name = 'WF Card Admin'
@@ -60,18 +61,24 @@ update public.profiles
 set company_id = case id
   when '19000000-0000-0000-0000-000000000001' then '39000000-0000-0000-0000-000000000001'::uuid
   when '19000000-0000-0000-0000-000000000002' then '39000000-0000-0000-0000-000000000002'::uuid
+  when '19000000-0000-0000-0000-000000000004' then '39000000-0000-0000-0000-000000000001'::uuid
   else '39000000-0000-0000-0000-000000000003'::uuid
 end,
 display_name = case id
   when '19000000-0000-0000-0000-000000000001' then 'Client Alpha'
   when '19000000-0000-0000-0000-000000000002' then 'Client Beta'
+  when '19000000-0000-0000-0000-000000000004' then 'Client Invoices Denied'
   else 'Client Gamma'
 end
 where id in (
   '19000000-0000-0000-0000-000000000001',
   '19000000-0000-0000-0000-000000000002',
-  '19000000-0000-0000-0000-000000000003'
+  '19000000-0000-0000-0000-000000000003',
+  '19000000-0000-0000-0000-000000000004'
 );
+
+insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+values ('19000000-0000-0000-0000-000000000004', 'invoices.view', false);
 
 update public.company_wallets
 set balance_cents = case company_id
@@ -104,7 +111,12 @@ values
   ('49000000-0000-0000-0000-000000000004', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'void', 'USD', 9004, 'manual', now(), now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', now()),
   ('49000000-0000-0000-0000-000000000005', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'payment_pending', 'USD', 9005, 'manual', now(), now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', null),
   ('49000000-0000-0000-0000-000000000006', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'paid', 'USD', 9006, 'manual', now(), now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', null),
-  ('49000000-0000-0000-0000-000000000007', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'unpaid', 'EUR', 9007, 'manual', now(), now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', null);
+  ('49000000-0000-0000-0000-000000000007', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'unpaid', 'EUR', 9007, 'manual', now(), now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', null),
+  ('49000000-0000-0000-0000-000000000008', '39000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000004', 'draft', 'USD', null, 'manual', null, now() + interval '7 days', 10000, 0, 0, 10000, '29000000-0000-0000-0000-000000000001', '29000000-0000-0000-0000-000000000001', null);
+
+update public.invoices
+set status = 'unpaid', invoice_number = 9008, issued_at = now()
+where id = '49000000-0000-0000-0000-000000000008';
 
 insert into public.invoice_payments (
   id, invoice_id, amount_cents, currency, status, payment_method, settled_at,
@@ -139,6 +151,44 @@ set local role anon;
 select throws_ok($$select count(*) from public.wf_card_memberships$$, '42501', 'permission denied for table wf_card_memberships', 'anonymous cannot read membership-private data');
 select throws_ok($$select * from public.app_get_wf_card_settings()$$, '42501', 'permission denied for function app_get_wf_card_settings', 'anonymous cannot read the private offer RPC');
 reset role;
+
+select is(
+  (select count(*) from public.notifications
+   where recipient_profile_id = '19000000-0000-0000-0000-000000000004'
+     and event_key = 'client-invoice-issued:49000000-0000-0000-0000-000000000008'),
+  0::bigint,
+  'client denied invoices.view receives no issued-invoice notification metadata'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.role" = 'authenticated';
+set local "request.jwt.claim.sub" = '19000000-0000-0000-0000-000000000004';
+select is(
+  (select count(*) from public.wf_card_memberships),
+  0::bigint,
+  'client denied portal_invoices cannot read wallet membership context directly'
+);
+select throws_ok(
+  $$select public.app_get_company_wallet('39000000-0000-0000-0000-000000000001')$$,
+  '42501', 'permission denied: invoices.view',
+  'client denied portal_invoices cannot read company wallet context by RPC'
+);
+select throws_ok(
+  $$select * from public.app_pay_invoice_with_wallet('89000000-0000-0000-0000-000000000011', '49000000-0000-0000-0000-000000000008')$$,
+  '42501', 'permission denied: invoices.view',
+  'client denied portal_invoices cannot wallet-pay an invoice by UUID'
+);
+reset role;
+select is(
+  (select count(*) from public.invoice_payments where invoice_id = '49000000-0000-0000-0000-000000000008'),
+  0::bigint,
+  'denied wallet payment creates no invoice payment'
+);
+select is(
+  (select balance_cents from public.company_wallets where company_id = '39000000-0000-0000-0000-000000000001'),
+  68417::bigint,
+  'denied wallet payment leaves the company balance unchanged'
+);
 
 -- -----------------------------------------------------------------------------
 -- Successful atomic full payment and retry safety

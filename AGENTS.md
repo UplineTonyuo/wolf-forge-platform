@@ -117,3 +117,58 @@ If the task is read-only and nothing meaningful changed, no semantic memory
 update is required.
 
 <!-- END:WOLF-FORGE-SHARED-AI-MEMORY -->
+
+<!-- BEGIN:WOLF-FORGE-FINAL-REPORT-HANDOFF -->
+
+## Final Report Clipboard Handoff
+
+Rule:
+
+After finishing meaningful implementation, audit, debugging, or validation work:
+
+1. Produce the normal concise final report.
+
+2. Save that exact final report to:
+
+   `C:\Users\User\Desktop\wolf-forge-agent-output.md`
+
+3. Copy the complete file contents to the Windows clipboard using PowerShell:
+
+   ```
+   powershell.exe -NoProfile -Command "Get-Content -Raw -Encoding UTF8 'C:\Users\User\Desktop\wolf-forge-agent-output.md' | Set-Clipboard"
+   ```
+
+   `-Encoding UTF8` is required, not optional. Windows PowerShell 5.1 reads a
+   BOM-less UTF-8 file as the system ANSI codepage, so without it every em dash,
+   arrow and non-ASCII character reaches the clipboard as mojibake.
+
+   Verify with a decode-aware comparison, not a length check against the same
+   bad read — that agrees with itself and proves nothing:
+
+   ```
+   $t = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+   (Get-Clipboard -Raw).Trim() -eq $t.Trim()
+   ```
+
+4. After clipboard copy succeeds, tell the user:
+
+   Final report copied to clipboard.
+
+5. Do not copy:
+   - secrets
+   - credentials
+   - API keys
+   - `.env` values
+   - hidden reasoning / chain of thought
+   - giant raw terminal logs
+
+6. The clipboard copy is only for the final user-facing implementation report.
+
+7. If the clipboard command fails:
+   - do not modify project code to work around it
+   - keep the saved report file
+   - report the clipboard failure clearly
+
+This applies to both Claude Code and Codex when they follow AGENTS.md.
+
+<!-- END:WOLF-FORGE-FINAL-REPORT-HANDOFF -->

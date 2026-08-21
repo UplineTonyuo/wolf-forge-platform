@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FolderForm } from "../../../../../components/services/folder-form";
 import { FolderRecordActions } from "../../../../../components/services/record-actions";
 import { PageFrame } from "../../../../../components/ui/page-frame";
@@ -17,6 +17,7 @@ export default async function EditServiceFolderPage({
 }) {
   const [{ folderId }, query] = await Promise.all([params, searchParams]);
   const context = await getInternalContext();
+  if (!context.user.services.edit) redirect("/");
   try {
     const [folder, folders] = await Promise.all([
       context.services.catalog.getFolder(folderId),

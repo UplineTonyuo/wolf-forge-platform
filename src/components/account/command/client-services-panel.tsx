@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Compass, LibraryBig, Link2, MapPin, Monitor, Newspaper, Package, Search, ShoppingBag, Wrench, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, LibraryBig, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { StoreFolderIcon } from "../store/store-folder-icon";
 import {
   filterChooserServices,
   servicesInFolder,
@@ -26,20 +27,6 @@ import { useHeaderPanels } from "./header-panels";
  * loads. Choosing one hands off to the existing detail route.
  */
 
-function FolderIcon({ name }: { name: string }) {
-  const key = name.trim().toLowerCase();
-
-  if (key.includes("sprint")) return <Zap />;
-  if (key.includes("gbp") || key.includes("google business")) return <MapPin />;
-  if (key.includes("local")) return <Compass />;
-  if (key.includes("ecommerce") || key.includes("e-commerce")) return <ShoppingBag />;
-  if (key.includes("onpage") || key.includes("technical")) return <Wrench />;
-  if (key.includes("website") || key.includes("web design")) return <Monitor />;
-  if (key.includes("press")) return <Newspaper />;
-  if (key.includes("backlink") || key.includes("link building")) return <Link2 />;
-
-  return <Package />;
-}
 function ServiceRow({
   service,
   onChoose,
@@ -155,7 +142,7 @@ function ChooserBody({
                     onClick={() => setFolderId(folder.id)}
                   >
                     <span className="chooser-category-mark" aria-hidden="true">
-                      <FolderIcon name={folder.name} />
+                      <StoreFolderIcon name={folder.name} />
                     </span>
                     <span className="chooser-category-copy">
                       <strong>{folder.name}</strong>

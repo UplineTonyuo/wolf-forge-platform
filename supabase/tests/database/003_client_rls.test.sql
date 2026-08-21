@@ -142,8 +142,8 @@ select is(
 
 select is(
   (select count(*) from public.orders where id = '50000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'Client A can read Company A order'
+  0::bigint,
+  'Client A cannot bypass the safe Project RPC through the orders table'
 );
 
 select is(
@@ -154,8 +154,8 @@ select is(
 
 select is(
   (select count(*) from public.order_tasks where id = '60000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'Client A can read a task through its Company A order'
+  0::bigint,
+  'Client A cannot bypass the safe Project RPC through the order_tasks table'
 );
 
 select is(
@@ -312,7 +312,7 @@ select throws_ok(
     )
   $$,
   '42501',
-  'new row violates row-level security policy for table "activity_events"',
+  'permission denied for table activity_events',
   'Client A cannot forge an operational activity event'
 );
 
@@ -335,8 +335,8 @@ select is(
 
 select is(
   (select count(*) from public.orders where id = '50000000-0000-0000-0000-000000000002'),
-  1::bigint,
-  'Client B can read Company B order'
+  0::bigint,
+  'Client B cannot bypass the safe Project RPC through the orders table'
 );
 
 select is(
@@ -347,8 +347,8 @@ select is(
 
 select is(
   (select count(*) from public.order_tasks where id = '60000000-0000-0000-0000-000000000002'),
-  1::bigint,
-  'Client B can read Company B task'
+  0::bigint,
+  'Client B cannot bypass the safe Project RPC through the order_tasks table'
 );
 
 select is(

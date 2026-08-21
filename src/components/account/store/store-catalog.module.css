@@ -144,13 +144,18 @@
 
 /* --- Control bar ---------------------------------------------------------- */
 
+/*
+ * Sticky, and now two rows: the category state and its trigger sit on the
+ * first, search owns the second. Giving search a whole row is what stops it
+ * fighting the category controls for horizontal space.
+ */
 .controls {
   position: sticky;
   top: 0;
   z-index: 20;
   display: flex;
-  align-items: center;
-  gap: 18px;
+  flex-direction: column;
+  gap: 10px;
   /* Bleeds to the inner container edges so nothing scrolls through the gutter. */
   margin: 0 -40px;
   padding: 12px 40px;
@@ -160,116 +165,121 @@
   -webkit-backdrop-filter: blur(12px) saturate(140%);
 }
 
-/*
- * Eight categories never fit beside the filter field, so the rail scrolls. The
- * fade is the only cue that it does — without it the last pill just stops at a
- * hard edge and reads as the end of the list.
- */
-.pills {
+.controlRow {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
   min-width: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  padding: 4px 14px 4px 0;
-  scrollbar-width: none;
-  scroll-behavior: smooth;
-  mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
 }
 
-/* At the end of the rail there is nothing left to hint at, and a permanently
-   half-faded last pill (or focus ring) reads as a rendering fault. */
-.pills[data-at-end="true"] { mask-image: none; -webkit-mask-image: none; }
+/* The current selection: what is filtered, and how many really sit in it. */
+.activeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--wf-navy);
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+  font-size: 12.5px;
+  font-weight: 620;
+  white-space: nowrap;
+}
 
-.pills::-webkit-scrollbar { display: none; }
+.activeChipIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--store-gold-ink);
+}
 
-.pill {
+.activeChipIcon svg { width: 15px; height: 15px; }
+
+.activeChipName { overflow: hidden; text-overflow: ellipsis; }
+
+.activeChipCount {
+  flex: 0 0 auto;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The one control that opens and closes the deck. Reads "Explore all
+ * categories" at the whole Store, "Change category" inside one, and "Close
+ * categories" while the deck is open; the chevron flips to signal the deck's
+ * state alongside aria-expanded.
+ */
+.deckToggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
   flex: 0 0 auto;
-  height: 34px;
+  height: 36px;
   padding: 0 15px;
   border: 1px solid var(--wf-border);
   border-radius: 999px;
-  color: var(--wf-text-muted);
+  color: var(--wf-text);
   background: var(--wf-white);
   font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   transition:
-    color 160ms var(--wf-ease),
-    border-color 160ms var(--wf-ease),
-    background-color 160ms var(--wf-ease),
-    box-shadow 160ms var(--wf-ease),
-    transform 160ms var(--wf-ease);
+    color 180ms var(--wf-ease),
+    border-color 180ms var(--wf-ease),
+    background-color 180ms var(--wf-ease),
+    box-shadow 180ms var(--wf-ease),
+    transform 180ms var(--wf-ease);
 }
 
-.pill:hover {
+.deckToggle:hover {
   color: var(--wf-navy);
   border-color: rgba(0, 13, 81, .3);
   background: var(--wf-navy-wash);
-  transform: translateY(-1px);
 }
 
-.pill:active { transform: translateY(0) scale(.98); }
+.deckToggle:active { transform: translateY(0) scale(.98); }
 
-.pill[aria-pressed="true"] {
-  color: #fff;
-  border-color: var(--wf-navy);
-  background: var(--wf-navy);
-  box-shadow: 0 10px 20px -14px rgba(0, 13, 81, .9);
-}
-
-.pillCount {
+.deckToggle svg {
+  width: 14px;
+  height: 14px;
   color: var(--wf-text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  transition: color 160ms var(--wf-ease);
-}
-
-.pill[aria-pressed="true"] .pillCount { color: rgba(255, 255, 255, .58); }
-
-/* The one gold beat in the control bar: the active category's mark. */
-.pillDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--store-gold);
-  transform: scale(0);
   transition: transform 200ms var(--wf-ease);
 }
 
-.pill[aria-pressed="true"] .pillDot { transform: scale(1); }
+.deckToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .search {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
-  width: 232px;
-  height: 34px;
-  padding: 0 10px 0 32px;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 38px;
   border: 1px solid var(--wf-border);
   border-radius: 999px;
   background: var(--wf-white);
-  transition: border-color 160ms var(--wf-ease), box-shadow 160ms var(--wf-ease);
+  transition: border-color 180ms var(--wf-ease), box-shadow 180ms var(--wf-ease);
 }
 
 .search:focus-within {
   border-color: rgba(0, 13, 81, .38);
   box-shadow: 0 0 0 3px rgba(0, 13, 81, .07);
+  background: #fff;
 }
 
 .search > svg {
   position: absolute;
-  left: 11px;
-  width: 14px;
-  height: 14px;
+  left: 13px;
+  width: 15px;
+  height: 15px;
   color: var(--wf-text-muted);
   pointer-events: none;
 }
@@ -279,7 +289,7 @@
   border: 0;
   background: transparent;
   color: var(--wf-text);
-  font-size: 12.5px;
+  font-size: 13px;
   outline: none;
 }
 
@@ -304,6 +314,183 @@
 
 .searchClear:hover { color: var(--wf-navy); background: var(--wf-navy-wash); }
 .searchClear svg { width: 13px; height: 13px; }
+
+/* --- Category deck -------------------------------------------------------- */
+
+/*
+ * Expands in normal flow below the sticky bar, never inside it. The body is a
+ * one-row grid whose track animates 0fr -> 1fr, so the height is content-driven
+ * and the deck collapses the same way it opened; the body fades alongside. The
+ * clip lives on the inner wrapper so the track can reach zero while the tile
+ * grid stays intact for the reverse.
+ */
+.deck {
+  /* Sits between the control bar and the spotlight; the hairline returns when open. */
+  margin: -2px 0 0;
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms var(--wf-ease);
+}
+
+.deck[data-open="true"] { border-bottom-color: var(--wf-border); }
+
+.deckBody {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 260ms var(--wf-ease),
+    opacity 220ms var(--wf-ease);
+}
+
+.deck[data-open="true"] .deckBody {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.deckInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.deckGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * One tile per real category. Entrance is a short stagger (capped like the card
+ * grid so a long catalogue never crawls in); hover/focus is a restrained lift
+ * with a gold underline drawing across, never a bounce.
+ */
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: var(--store-radius);
+  color: var(--wf-text);
+  background: var(--wf-white);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: tileIn 240ms var(--wf-ease) both;
+  animation-delay: calc(var(--deck-i, 0) * 40ms);
+  transition:
+    border-color 220ms var(--wf-ease),
+    background-color 220ms var(--wf-ease),
+    box-shadow 220ms var(--wf-ease),
+    transform 220ms var(--wf-ease);
+}
+
+@keyframes tileIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: rgba(0, 13, 81, .26);
+  box-shadow: var(--store-lift);
+  transform: translateY(-2px);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.tile:active { transform: translateY(-1px) scale(.99); transition-duration: 90ms; }
+
+/* The gold underline draws itself across the tile's lower edge on hover/focus. */
+.tile::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--store-gold), rgba(168, 131, 46, 0));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 280ms var(--wf-ease);
+}
+
+.tile:hover::after,
+.tile:focus-visible::after { transform: scaleX(1); }
+
+.tile[aria-pressed="true"] {
+  border-color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+}
+
+.tileMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+  transition: color 220ms var(--wf-ease), background-color 220ms var(--wf-ease);
+}
+
+.tileMark svg { width: 17px; height: 17px; }
+
+.tile:hover .tileMark,
+.tile:focus-visible .tileMark {
+  color: #fff;
+  background: var(--wf-navy);
+}
+
+.tileCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tileCopy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.tileCount {
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The affordance arrow is present at rest, so a tile is never pointer-only. */
+.tileArrow {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--wf-text-muted);
+  transition: transform 220ms var(--wf-ease), color 220ms var(--wf-ease);
+}
+
+.tile:hover .tileArrow,
+.tile:focus-visible .tileArrow {
+  color: var(--wf-navy);
+  transform: translateX(3px);
+}
 
 /* --- Flagship spotlight --------------------------------------------------- */
 
@@ -813,6 +1000,7 @@
   .index { padding-left: 0; border-left: 0; gap: 30px; }
   .spotlight { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .spotlightAside { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  .deckGrid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 }
 
 /* Below this the portal rail becomes a drawer behind a 56px sticky top bar. */
@@ -826,8 +1014,11 @@
   .mastheadCopy h1 { font-size: 28px; }
   .mastheadCopy p { font-size: 13px; }
   .index dd { font-size: 22px; }
-  .controls { flex-direction: column; align-items: stretch; gap: 10px; }
-  .search { width: 100%; }
+  /* The chip and its trigger wrap beneath the label rather than overrunning. */
+  .controlRow { flex-wrap: wrap; gap: 8px; }
+  /* Two tiles across on a phone, one on the narrowest; never a scroll rail. */
+  .deckGrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
+  .tile { padding: 12px; }
   /* Under 16px, focusing the filter zooms the viewport on iOS. */
   .search input { font-size: 16px; }
   .grid { grid-template-columns: minmax(0, 1fr); }
@@ -848,8 +1039,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card { animation: none; }
-  .pills { scroll-behavior: auto; }
+  .card,
+  .tile { animation: none; }
 
   .cardLink,
   .cardRule,
@@ -857,23 +1048,33 @@
   .ctaLabel,
   .ctaDot,
   .ctaDot svg,
-  .pill,
-  .pillDot,
   .spotlight,
   .spotlightCta,
   .spotlightCta svg,
+  .deckBody,
+  .deck,
+  .deckToggle,
+  .deckToggle svg,
+  .tileMark,
+  .tileArrow,
+  .tile::after,
   .headSwap { transition: none; animation: none; }
 
   .cardLink:hover,
   .cardLink:active,
-  .pill:hover,
-  .pill:active,
   .spotlightCta:hover,
-  .spotlightCta:active { transform: none; }
+  .spotlightCta:active,
+  .deckToggle:active,
+  .tile:hover,
+  .tile:focus-visible,
+  .tile:active { transform: none; }
 
   .cardLink:hover .cardArt img,
   .cardLink:hover .ctaDot svg,
-  .spotlightCta:hover svg { transform: none; }
+  .spotlightCta:hover svg,
+  .tile:hover .tileMark,
+  .tile:hover .tileArrow,
+  .tile:focus-visible .tileArrow { transform: none; }
 
   .cardRule { transform: scaleX(1); }
 }

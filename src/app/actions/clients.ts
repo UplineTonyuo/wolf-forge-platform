@@ -61,6 +61,37 @@ export async function createClientAction(
 
   const context = await getInternalContext();
 
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+  } catch (error) {
+    return {
+      error: toClientSafeError(error).message,
+      fieldError: null,
+    };
+  }
+
+  if (!context.user.clients.create) {
+    return {
+      error: "You do not have permission to create Clients.",
+      fieldError: null,
+    };
+  }
+
+  const contactName = [firstName, lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const hasContactInformation = Boolean(
+    contactName || email || phone || jobTitle,
+  );
+
+  if (hasContactInformation && !context.user.clients.privateManage) {
+    return {
+      error: "You do not have permission to manage client-private contact data.",
+      fieldError: null,
+    };
+  }
+
   let createdId: string;
 
   try {
@@ -74,21 +105,6 @@ export async function createClientAction(
       );
 
     createdId = company.id;
-
-    const contactName = [
-      firstName,
-      lastName,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-
-    const hasContactInformation = Boolean(
-      contactName ||
-      email ||
-      phone ||
-      jobTitle,
-    );
 
     if (hasContactInformation) {
       await context.services.contacts.create(
@@ -143,6 +159,14 @@ export async function updateClientStatusAction(
   const context = await getInternalContext();
 
   try {
+    await context.services.permissions.requireModuleAccess("clients");
+    if (!context.user.clients.edit) {
+      return {
+        ok: false,
+        error: "You do not have permission to edit Clients.",
+      };
+    }
+
     const company =
       await context.services.companies.update(
         companyId,
@@ -258,6 +282,14 @@ export async function adjustClientBalanceAction(
     await getInternalContext();
 
   try {
+    await context.services.permissions.requireModuleAccess("clients");
+    if (!context.user.clients.privateManage) {
+      return {
+        ok: false,
+        error: "You do not have permission to manage client balances.",
+      };
+    }
+
     const transaction =
       await context.services.wallets.adjust(
         {

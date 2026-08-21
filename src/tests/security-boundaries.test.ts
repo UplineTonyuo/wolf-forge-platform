@@ -3,7 +3,7 @@ import { assertLocalSupabaseUrl, readPublicEnvironment } from "../lib/env/public
 import { createTrustedServerSupabaseClient, type TrustedServerClient } from "../lib/supabase/trusted-server-client";
 import { assertVerifiedActor, createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "../lib/supabase/user-client";
 import { CompanyRepository } from "../repositories/company-repository";
-import { SystemActivityRepository, UserActivityRepository } from "../repositories/activity-repository";
+import { SystemActivityRepository } from "../repositories/activity-repository";
 
 const environment = { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHABLE_KEY: "local-key" };
 
@@ -36,12 +36,9 @@ describe("verified actor and environment boundaries", () => {
 const userClient = null as unknown as UserScopedClient;
 const trustedClient = null as unknown as TrustedServerClient;
 new CompanyRepository(userClient);
-new UserActivityRepository(userClient);
 new SystemActivityRepository(trustedClient);
 // @ts-expect-error trusted clients cannot wire normal operational repositories
 new CompanyRepository(trustedClient);
-// @ts-expect-error trusted clients cannot satisfy the user activity writer
-new UserActivityRepository(trustedClient);
 // @ts-expect-error user clients cannot gain server-only system activity capability
 new SystemActivityRepository(userClient);
 // @ts-expect-error a request-supplied object is not a verified actor

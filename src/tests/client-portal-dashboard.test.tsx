@@ -6,13 +6,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ClientDashboard } from "../components/account/dashboard/client-dashboard";
 import { ClientOnboardingView } from "../components/account/onboarding/client-onboarding";
 import { ClientInvoicesView } from "../components/account/billing/client-invoices";
-import { ClientPaymentMethodView } from "../components/account/billing/client-payment-method";
 import { composeClientOnboarding } from "../domain/client-portal/onboarding";
-import {
-  resolvePaymentMethodState,
-  resolveWalletFunding,
-} from "../domain/client-portal/payment-method";
+import { resolveWalletFunding } from "../domain/client-portal/payment-method";
 import { composeClientPortalSummary } from "../domain/client-portal/summary";
+import { composeClientPaymentRails } from "../domain/payments/payment-rails";
 import type { FormAssignmentSummary } from "../domain/forms/schema";
 import type { ClientProjectView } from "../domain/orders/client-projections";
 import type { SubscriptionSummary } from "../domain/subscriptions/schema";
@@ -20,6 +17,23 @@ import type { ClientTicketSummary } from "../domain/tickets/schema";
 import type { ClientInvoiceSummary } from "../repositories/invoice-repository";
 
 afterEach(cleanup);
+
+/**
+ * The shipped rail configuration.
+ *
+ * Wolf Forge Balance is real and default; PayPal and bank transfer are the two
+ * external rails Wolf Forge has not connected. Composed through the domain so
+ * these assertions follow any change to how a rail is built.
+ */
+const portalRails = composeClientPaymentRails({
+  wallet: resolveWalletFunding({
+    membershipStatus: "active",
+    balanceCents: 50_000,
+    currency: "USD",
+  }),
+  availability: { paypal: "not_connected", bank_transfer: "not_configured" },
+});
+
 
 /* The wallet card reads prefers-reduced-motion, which jsdom does not implement. */
 beforeAll(() => {
@@ -294,7 +308,7 @@ describe("client dashboard rendering", () => {
         companyName="Acme"
         displayName="Jane Client"
         summary={summaryWithEverything()}
-        paymentMethod={resolvePaymentMethodState()}
+        paymentRails={portalRails}
         storeGranted
       />,
     );
@@ -304,7 +318,10 @@ describe("client dashboard rendering", () => {
     // The figure appears both in the balance card and in the attention row.
     expect(screen.getAllByText("$2,450.00").length).toBeGreaterThan(0);
 
-    expect(screen.getByText("No payment method on file")).toBeInTheDocument();
+    // The account's real default rail, named, with its real balance.
+    expect(screen.getByText("Wolf Forge Balance")).toBeInTheDocument();
+    expect(screen.getByText("$500.00 available")).toBeInTheDocument();
+    expect(screen.queryByText("No payment method on file")).not.toBeInTheDocument();
     expect(screen.queryByText(/4242/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Visa/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Mastercard/i)).not.toBeInTheDocument();
@@ -328,7 +345,7 @@ describe("client dashboard rendering", () => {
         companyName="Acme"
         displayName={null}
         summary={summary}
-        paymentMethod={resolvePaymentMethodState()}
+        paymentRails={portalRails}
         storeGranted={false}
       />,
     );
@@ -349,7 +366,7 @@ describe("client dashboard rendering", () => {
         companyName="Acme"
         displayName="Jane Client"
         summary={summary}
-        paymentMethod={resolvePaymentMethodState()}
+        paymentRails={portalRails}
         storeGranted
       />,
     );
@@ -376,7 +393,8 @@ describe("client dashboard rendering", () => {
         companyName="Acme"
         displayName="Jane Client"
         summary={summary}
-        paymentMethod={resolvePaymentMethodState()}
+        /* Invoices denied, so the rails read null exactly as the loader returns. */
+        paymentRails={null}
         storeGranted={false}
       />,
     );
@@ -405,7 +423,7 @@ describe("client dashboard rendering", () => {
         companyName="Acme"
         displayName="Jane Client"
         summary={summary}
-        paymentMethod={resolvePaymentMethodState()}
+        paymentRails={portalRails}
         storeGranted={false}
       />,
     );
@@ -510,86 +528,6 @@ describe("client onboarding", () => {
       "href",
       "/account/onboarding/abc",
     );
-  });
-});
-
-describe("client payment method page", () => {
-  it("states the truth when no provider is connected", () => {
-    render(
-      <ClientPaymentMethodView
-        state={resolvePaymentMethodState()}
-        wallet={resolveWalletFunding({
-          membershipStatus: "inactive",
-          balanceCents: 0,
-          currency: "USD",
-        })}
-        holderName="Jane Client"
-      />,
-    );
-
-    const online = screen.getByRole("heading", { name: "Card and online payments" })
-      .parentElement!.parentElement!;
-
-    expect(within(online).getByText("No payment method on file")).toBeInTheDocument();
-    expect(
-      within(online).getByText(/has not connected online card payments/),
-    ).toBeInTheDocument();
-
-    expect(screen.queryByText(/4242/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Expires/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Change payment method/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Add a payment method/i })).not.toBeInTheDocument();
-  });
-
-  it("shows the wallet as inactive until membership is active", () => {
-    render(
-      <ClientPaymentMethodView
-        state={resolvePaymentMethodState()}
-        wallet={resolveWalletFunding({
-          membershipStatus: "pending",
-          balanceCents: 12_500,
-          currency: "USD",
-        })}
-        holderName="Jane Client"
-      />,
-    );
-
-    expect(screen.getByText("Not active")).toBeInTheDocument();
-  });
-
-  it("addresses the account holder as themselves, never as \"Client\"", () => {
-    render(
-      <ClientPaymentMethodView
-        state={resolvePaymentMethodState()}
-        wallet={resolveWalletFunding({
-          membershipStatus: "active",
-          balanceCents: 12_500,
-          currency: "USD",
-        })}
-        holderName="Jane Client"
-      />,
-    );
-
-    expect(screen.getByText(/your wallet/i)).toBeInTheDocument();
-    // Admin surfaces keep "Client Wallet"; this is a client-POV override only.
-    expect(screen.queryByText(/client wallet/i)).not.toBeInTheDocument();
-  });
-
-  it("shows the real wallet balance once membership is active", () => {
-    render(
-      <ClientPaymentMethodView
-        state={resolvePaymentMethodState()}
-        wallet={resolveWalletFunding({
-          membershipStatus: "active",
-          balanceCents: 12_500,
-          currency: "USD",
-        })}
-        holderName="Jane Client"
-      />,
-    );
-
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getAllByText("$125.00").length).toBeGreaterThan(0);
   });
 });
 

@@ -2,6 +2,7 @@ export type NavigationItemId =
   | "dashboard"
   | "projects"
   | "tickets"
+  | "reporting"
   | "clients"
   | "todo"
   | "invoices"
@@ -37,6 +38,7 @@ export const navigationCategories: NavigationCategory[] = [
     items: [
       { id: "projects", label: "Projects", route: "/orders" },
       { id: "tickets", label: "Tickets", route: "/tickets" },
+      { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
       { id: "todo", label: "To Do", route: "/todo" },
     ],
@@ -95,6 +97,8 @@ export function routeIsCurrent(route: string, pathname: string): boolean {
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "To Do";
   if (pathname === "/clients/new") return "New client";
+  if (pathname === "/reporting/new") return "New report";
+  if (pathname.startsWith("/reporting/")) return "Report";
   if (pathname.startsWith("/clients/")) return "Client";
   const item = navigationCategories.flatMap((category) => category.items).find((entry) => routeIsCurrent(entry.route, pathname));
   return item?.label ?? "Wolf Forge";

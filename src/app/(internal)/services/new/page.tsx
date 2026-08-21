@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ServiceForm } from "../../../../components/services/service-form";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
@@ -12,6 +13,7 @@ export default async function NewServicePage({
 }) {
   const parameters = await searchParams;
   const context = await getInternalContext();
+  if (!context.user.services.create) redirect("/");
   const [folders, assignees] = await Promise.all([
     context.services.catalog.listFolders(),
     context.services.catalog.listAssignees(),

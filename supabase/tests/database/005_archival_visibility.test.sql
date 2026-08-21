@@ -56,8 +56,8 @@ set local "request.jwt.claim.sub" = '10000000-0000-0000-0000-000000000001';
 
 select is((select count(*) from public.profiles), 1::bigint, 'active client can read its profile');
 select is((select count(*) from public.companies), 1::bigint, 'active client can read its company');
-select is((select count(*) from public.orders), 1::bigint, 'active client can read its order');
-select is((select count(*) from public.order_tasks), 1::bigint, 'active client can read its task');
+select is((select count(*) from public.orders), 0::bigint, 'active client cannot bypass the safe Project RPC through orders');
+select is((select count(*) from public.order_tasks), 0::bigint, 'active client cannot bypass the safe Project RPC through order_tasks');
 select is(
   (select count(*) from public.services where id = '40000000-0000-0000-0000-000000000001'),
   1::bigint,
@@ -89,8 +89,8 @@ set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000001';
 
 select is(
   (select count(*) from public.companies where id = '30000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'internal staff can read the fixture archived company'
+  0::bigint,
+  'internal staff without Clients access cannot read the fixture archived company'
 );
 select is(
   (select count(*) from public.orders where id = '50000000-0000-0000-0000-000000000001'),
@@ -132,7 +132,7 @@ where id = '60000000-0000-0000-0000-000000000001';
 set local role authenticated;
 set local "request.jwt.claim.sub" = '10000000-0000-0000-0000-000000000001';
 
-select is((select count(*) from public.orders), 1::bigint, 'an active order remains visible');
+select is((select count(*) from public.orders), 0::bigint, 'an active order remains unavailable through the direct client table path');
 select is((select count(*) from public.order_tasks), 0::bigint, 'an archived task is hidden from its client');
 
 reset role;

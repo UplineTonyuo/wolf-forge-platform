@@ -23,6 +23,7 @@ import { OrderRepository } from "../../repositories/order-repository";
 import { InvoiceRepository } from "../../repositories/invoice-repository";
 import { WfCardRepository } from "../../repositories/wf-card-repository";
 import { ServiceRepository } from "../../repositories/service-repository";
+import { ReportingRepository } from "../../repositories/reporting-repository";
 import { StoreInterestRepository } from "../../repositories/store-interest-repository";
 import { SubscriptionRepository } from "../../repositories/subscription-repository";
 import { FormRepository } from "../../repositories/form-repository";
@@ -48,6 +49,7 @@ import { SubscriptionCalendarService } from "../../services/subscription-calenda
 import { FormService } from "../../services/form-service";
 import { TicketService } from "../../services/ticket-service";
 import { WfCardService } from "../../services/wf-card-service";
+import { ReportingService } from "../../services/reporting-service";
 import { StoreInterestService } from "../../services/store-interest-service";
 import { TaskService } from "../../services/task-service";
 
@@ -67,6 +69,29 @@ export type TeamCapabilities = {
 export type InvestmentIntentCapabilities = {
   view: boolean;
   manage: boolean;
+};
+
+/**
+ * Presentation only. The Reporting builder hides Send without it, and
+ * app_send_report_draft refuses the call regardless of what the browser saw.
+ */
+export type ReportingCapabilities = {
+  send: boolean;
+};
+
+export type ClientAdministrationCapabilities = {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  archive: boolean;
+  privateManage: boolean;
+};
+
+export type ServiceAdministrationCapabilities = {
+  view: boolean;
+  create: boolean;
+  edit: boolean;
+  archive: boolean;
 };
 
 export type InternalUser = {
@@ -92,7 +117,10 @@ export type InternalUser = {
   forms: FormCapabilities;
   tickets: TicketCapabilities;
   projects: ProjectCapabilities;
+  clients: ClientAdministrationCapabilities;
+  services: ServiceAdministrationCapabilities;
   investmentIntent: InvestmentIntentCapabilities;
+  reporting: ReportingCapabilities;
 };
 
 export type ClientUser = {
@@ -202,9 +230,25 @@ export async function resolveInternalUser(
       assign: granted.has("projects.assign"),
       archive: granted.has("projects.archive"),
     },
+    clients: {
+      view: granted.has("clients.view"),
+      create: granted.has("clients.create"),
+      edit: granted.has("clients.edit"),
+      archive: granted.has("clients.archive"),
+      privateManage: granted.has("client_private.manage"),
+    },
+    services: {
+      view: granted.has("services.view"),
+      create: granted.has("services.create"),
+      edit: granted.has("services.edit"),
+      archive: granted.has("services.archive"),
+    },
     investmentIntent: {
       view: granted.has("investment_intent.view"),
       manage: granted.has("investment_intent.manage"),
+    },
+    reporting: {
+      send: granted.has("reports.send"),
     },
   };
 }
@@ -276,6 +320,12 @@ export const getInternalContext = cache(async () => {
       investmentIntent: new StoreInterestService({
         repository: new StoreInterestRepository(client),
       }),
+      /**
+       * The Reporting builder and the transitional quick send. Every RPC behind
+       * it re-checks for an internal actor holding reports.send through the
+       * internal reporting module, so constructing this grants nothing.
+       */
+      reporting: new ReportingService({ repository: new ReportingRepository(client) }),
     },
   };
 });
@@ -372,9 +422,9 @@ export const getClientContext = cache(async () => {
       /**
        * Store and Projects run on the same session-scoped client as everything
        * else here. Both are read-only in the portal: catalog visibility comes
-       * from the services RLS policies, project visibility from
-       * orders_client_select_own_company. No service-role client is ever
-       * constructed on this path.
+       * from the services RLS policies, while caller-scoped Project RPCs expose
+       * only the safe portal DTO. No service-role client is ever constructed on
+       * this path.
        */
       catalog: new CatalogService({ repository: new ServiceRepository(client) }),
       projects: new OrderService({ repository: new OrderRepository(client) }),
@@ -387,7 +437,12 @@ export const getClientContext = cache(async () => {
       storeInterest: new StoreInterestService({
         repository: new StoreInterestRepository(client),
       }),
+      /**
+       * Read and mark-read only. Every reporting RPC a client can reach derives
+       * the company from auth.uid(), so this cannot see another company's
+       * reports whatever the caller passes.
+       */
+      reporting: new ReportingService({ repository: new ReportingRepository(client) }),
     },
   };
 });
-

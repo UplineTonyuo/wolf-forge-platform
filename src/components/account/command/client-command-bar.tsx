@@ -1,6 +1,5 @@
 "use client";
 
-import { SquarePen } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AccountAvatar } from "../../ui/account-avatar";
@@ -26,14 +25,16 @@ import { HeaderPanelsProvider, useHeaderPanels } from "./header-panels";
  *   calendar-days  opens the Subscription calendar; a modal, not a panel
  *   cart           opens the request cart
  *   bell           opens the notifications panel
- *   square-pen     starts a new message; a direct action, not a panel
- *   plus           opens the quick-action panel
+ *   plus           opens the quick-action panel, which also carries the
+ *                  new-message action ("Message Wolf Forge")
  *   avatar         links to the profile page
  *
  * Every panelled control shares one manager, so exactly one floating surface
- * can be open at a time and none can sit on top of another. The two direct
- * actions — calendar and compose — close whatever panel was open before they
- * put a dialog on screen.
+ * can be open at a time and none can sit on top of another. The calendar is
+ * the one direct action — it closes whatever panel was open before putting a
+ * dialog on screen. The + and the avatar sit together in a trailing group so
+ * they read as the account's creation and identity controls, apart from the
+ * utility icons.
  */
 function CommandBarActions({
   displayName,
@@ -64,38 +65,25 @@ function CommandBarActions({
         <ClientNotificationBell soundEnabled={notificationSoundEnabled} inCommandBar />
 
         {/*
-         * A direct action rather than a panel: it opens the composer, so there
-         * is nothing to float. It still dismisses whatever panel was open, so
-         * no surface is ever left hanging behind the dialog.
+         * The + and the avatar read as one distinct pair — the account's
+         * creation and identity controls — separated from the utility icons by
+         * a larger gap. The + already carries the new-message action ("Message
+         * Wolf Forge"), so there is no standalone compose icon in the header.
          */}
-        {canMessage ? (
-          <button
-            type="button"
-            className="portal-command-button"
-            aria-label="New message"
-            title="New message"
+        <div className="portal-command-trailing">
+          <ClientQuickAction canMessage={canMessage} onNavigateToMessages={onCompose} />
+
+          <Link
+            href="/account/profile"
+            className="portal-command-avatar"
+            aria-label="Your profile"
+            title="Your profile"
             onPointerEnter={() => panels?.hoverLeave()}
-            onClick={() => {
-              panels?.close();
-              onCompose();
-            }}
+            onClick={() => panels?.close()}
           >
-            <SquarePen aria-hidden={true} />
-          </button>
-        ) : null}
-
-        <ClientQuickAction canMessage={canMessage} onNavigateToMessages={onCompose} />
-
-        <Link
-          href="/account/profile"
-          className="portal-command-avatar"
-          aria-label="Your profile"
-          title="Your profile"
-          onPointerEnter={() => panels?.hoverLeave()}
-          onClick={() => panels?.close()}
-        >
-          <AccountAvatar name={displayName ?? companyName} avatarUrl={avatarUrl} size={38} />
-        </Link>
+            <AccountAvatar name={displayName ?? companyName} avatarUrl={avatarUrl} size={38} />
+          </Link>
+        </div>
       </div>
     </div>
   );

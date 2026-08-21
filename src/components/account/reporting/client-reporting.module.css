@@ -1,0 +1,254 @@
+/*
+ * The client report vault.
+ *
+ * Same system as the rest of the portal: navy structure, warm-neutral surface,
+ * one restrained accent per report type, motion on --wf-ease. The three types
+ * are separated by a single accent and an icon — not by three colour schemes,
+ * which would read as three products rather than one reporting stream.
+ */
+
+/* --- The vault ------------------------------------------------------------ */
+
+/*
+ * Separate cards with a gap rather than one bordered stack.
+ *
+ * A row inside a shared container cannot lift: it would tear away from the
+ * hairlines above and below it. Giving each report its own surface is what
+ * makes a real lift, shadow and border response possible, and it reads more
+ * like a vault entry than a table row.
+ */
+.vault {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  --wf-report-stagger: 55ms;
+}
+
+.item {
+  animation: wfReportEnter 300ms var(--wf-ease) both;
+  animation-delay: calc(var(--wf-report-index, 0) * var(--wf-report-stagger));
+}
+
+@keyframes wfReportEnter {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.report {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+
+  /* Larger target and more room around the title, without becoming a slab. */
+  padding: 22px 24px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+
+  color: var(--wf-text);
+  text-decoration: none;
+
+  transition:
+    background-color 220ms var(--wf-ease),
+    border-color 220ms var(--wf-ease),
+    box-shadow 220ms var(--wf-ease),
+    transform 220ms var(--wf-ease);
+}
+
+/* --- Type mark ------------------------------------------------------------ */
+
+/*
+ * One accent per lane, all drawn from tokens the portal already uses. SEO takes
+ * the gold beat and GMB the green "done" tone — enough to tell them apart at a
+ * glance, not enough to compete.
+ */
+.mark {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+
+  border: 1px solid var(--portal-tone-progress-line);
+  border-radius: 10px;
+
+  color: var(--portal-tone-progress);
+  background: var(--portal-tone-progress-wash);
+
+  transition:
+    transform 220ms var(--wf-ease),
+    border-color 220ms var(--wf-ease);
+}
+
+.mark svg { width: 20px; height: 20px; }
+
+.mark[data-type="seo_package"] {
+  color: var(--portal-tone-wait);
+  border-color: var(--portal-tone-wait-line);
+  background: var(--portal-tone-wait-wash);
+}
+
+.mark[data-type="gmb_management"] {
+  color: var(--portal-tone-done);
+  border-color: var(--portal-tone-done-line);
+  background: var(--portal-tone-done-wash);
+}
+
+/* --- Copy ----------------------------------------------------------------- */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.type {
+  color: var(--portal-tone-progress);
+  font-size: 10px;
+  font-weight: 680;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.type[data-type="seo_package"] { color: var(--portal-tone-wait); }
+.type[data-type="gmb_management"] { color: var(--portal-tone-done); }
+
+/* Emphasis only. The report stays in the list once opened. */
+.new {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.readState {
+  color: var(--wf-text-muted);
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.title {
+  min-width: 0;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 17px;
+  font-weight: 630;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+  overflow-wrap: anywhere;
+}
+
+.report[data-unread] .title { font-weight: 680; }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.cta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 640;
+
+  opacity: .62;
+  transition:
+    opacity 220ms var(--wf-ease),
+    transform 220ms var(--wf-ease);
+}
+
+.cta svg { width: 15px; height: 15px; }
+
+/* --- Interaction ---------------------------------------------------------- */
+
+/* focus-visible mirrors hover exactly, so nothing is pointer-only. */
+a.report:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+  transform: translateY(-2px);
+  border-color: #c9c4bb;
+  box-shadow: 0 10px 24px rgba(0, 13, 81, .08);
+}
+
+a.report:focus-visible .cta { opacity: 1; transform: translateX(3px); }
+a.report:focus-visible .mark { transform: translateY(-1px) scale(1.03); }
+
+@media (hover: hover) and (pointer: fine) {
+  a.report:hover {
+    transform: translateY(-2px);
+    border-color: #c9c4bb;
+    box-shadow: 0 10px 24px rgba(0, 13, 81, .08);
+  }
+
+  a.report:hover .cta { opacity: 1; transform: translateX(3px); }
+  a.report:hover .mark { transform: translateY(-1px) scale(1.03); }
+}
+
+a.report:active {
+  transform: translateY(-1px);
+  transition-duration: 90ms;
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 620px) {
+  .report {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 18px;
+  }
+
+  /*
+   * The CTA drops to its own row under the copy rather than being squeezed
+   * beside it, so the tap target stays full width and nothing overflows.
+   */
+  .cta {
+    grid-column: 2;
+    opacity: 1;
+  }
+
+}
+
+/* --- Reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .item { animation: none; }
+  .report, .cta, .mark { transition: none; }
+
+  a.report:hover,
+  a.report:focus-visible,
+  a.report:active { transform: none; }
+
+  a.report:hover .cta,
+  a.report:focus-visible .cta,
+  a.report:hover .mark,
+  a.report:focus-visible .mark { transform: none; }
+}

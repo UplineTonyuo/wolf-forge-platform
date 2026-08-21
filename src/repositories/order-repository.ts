@@ -13,13 +13,6 @@ import type { ListOrdersFilter, UserMutationClient } from "./types";
  */
 const projectRelationSelect = "*, companies(id, name), services(id, name), profiles(id, display_name)";
 
-/**
- * The client portal column list. Narrow by construction: adding a column to
- * public.orders cannot widen what the portal returns without editing this line.
- */
-const clientProjectSelect =
-  "id, order_number, title, status, created_at, due_at, started_at, completed_at, services(name)";
-
 export type ProjectLabelRow = Pick<OrderRow, "id" | "order_number" | "title">;
 
 export type ProjectRelationPage = {
@@ -87,37 +80,29 @@ export class OrderRepository {
   }
 
   /**
-   * Client portal reads. RLS (orders_client_select_own_company) decides which
-   * rows exist; this explicit column list decides which columns can ever leave
-   * the database for a client. `notes` and `assigned_to_profile_id` are omitted
-   * on purpose, and no task title is selected anywhere on this path.
+   * Client portal reads use SECURITY DEFINER DTO RPCs. The database derives the
+   * caller company, requires portal_projects, and never exposes orders or task
+   * rows through PostgREST.
    */
   async listForClientPortal(): Promise<ClientProjectSourceRow[]> {
     return unwrapMany(
-      await this.client
-        .from("orders")
-        .select(clientProjectSelect)
-        .is("archived_at", null)
-        .order("created_at", { ascending: false })
-        .limit(projectListRowLimit),
+      await this.client.rpc("app_list_my_client_projects", {
+        p_limit: projectListRowLimit,
+      }),
     ) as unknown as ClientProjectSourceRow[];
   }
 
   async getForClientPortal(id: string): Promise<ClientProjectSourceRow> {
-    return unwrapOne(
-      await this.client
-        .from("orders")
-        .select(clientProjectSelect)
-        .eq("id", id)
-        .is("archived_at", null)
-        .single(),
-      "Project",
-    ) as unknown as ClientProjectSourceRow;
-  }
+    const rows = unwrapMany(
+      await this.client.rpc("app_get_my_client_project", {
+        p_project_id: id,
+      }),
+    ) as unknown as ClientProjectSourceRow[];
 
-  /** Aggregate task facts only: status and due date, never a task title. */
-  async listClientTaskFacts(orderIds: string[]): Promise<ProjectTaskFact[]> {
-    return this.listTaskFacts(orderIds);
+    return unwrapOne(
+      { data: rows[0] ?? null, error: null },
+      "Project",
+    );
   }
 
   /** Task facts for the Info column and the shared attention predicate. */

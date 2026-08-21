@@ -11408,6 +11408,44 @@ td {
   background: var(--portal-tone-progress-wash);
 }
 
+/* --- Message delivered ---------------------------------------------------- */
+
+/*
+ * The client's send confirmation.
+ *
+ * Deliberately not the shared .success-banner, which is a pale-green generic
+ * alert used by twelve internal screens and is not worth restyling out from
+ * under them. This is Wolf Forge's own acknowledgement: navy carries it, the
+ * gold sits in the icon as a single accent, and the radius matches .portal-card
+ * so it reads as part of the page rather than an alert dropped on top of it.
+ * It shares the page's left edge with the conversation below.
+ */
+.portal-sent-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin: 0;
+  padding: 13px 16px;
+
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+
+  color: var(--wf-navy);
+  background: var(--wf-navy-wash);
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.portal-sent-banner > svg {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  color: var(--wf-gold);
+  stroke-width: 2;
+}
+
 /* --- Billing -------------------------------------------------------------- */
 
 .portal-billing-grid {
@@ -12349,6 +12387,12 @@ td {
 /*
  * Aligned to the same content column as the page beneath it, so the
  * notification control sits in a row rather than floating alone in the corner.
+ *
+ * Sticky on the desktop command bar (the client-portal layer notes above place
+ * the header shell at 60). It stays in normal flow, so its height is reserved
+ * and nothing jumps; the solid white background covers content passing beneath
+ * it. The navy .portal-topbar owns the sticky slot at <=900px, where the
+ * command bar reverts to static so the two never stack.
  */
 .portal-command-bar {
   width: min(100%, 1040px);
@@ -12358,6 +12402,10 @@ td {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: var(--portal-layer-header-panel, 60);
+  background: var(--wf-white);
 }
 
 .portal-command-search {
@@ -12398,6 +12446,19 @@ td {
 .portal-command-search input::-webkit-search-cancel-button { display: none; }
 
 .portal-command-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+/*
+ * The + and the avatar are a deliberate trailing pair — the account's creation
+ * and identity controls — carrying their own larger gap so the avatar does not
+ * read as attached to the +. The shared header block below tightens the utility
+ * row to a 4px gap; this pair deliberately sits above it.
+ */
+.portal-command-trailing {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
 
 .portal-command-button {
   width: 40px;
@@ -12720,7 +12781,12 @@ td {
 /* --- Responsive ----------------------------------------------------------- */
 
 @media (max-width: 900px) {
-  .portal-command-bar { padding: 14px 18px 0; }
+  .portal-command-bar {
+    padding: 14px 18px 0;
+    /* The navy .portal-topbar owns the sticky slot here; the command bar stays
+       in flow so the two never stack or overlap while scrolling. */
+    position: static;
+  }
 }
 
 @media (max-width: 720px) {

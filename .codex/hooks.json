@@ -19,21 +19,10 @@
                                    "hooks":  [
                                                  {
                                                      "type":  "command",
-                                                     "command":  "[ ! -f \".agents/skills/impeccable/scripts/hook.mjs\" ] || node \".agents/skills/impeccable/scripts/hook.mjs\"",
-                                                     "timeout":  30,
-                                                     "statusMessage":  "Design deep pass",
-                                                     "commandWindows":  "if exist \".agents/skills/impeccable/scripts/hook.mjs\" (node \".agents/skills/impeccable/scripts/hook.mjs\" \u0026 exit /b)"
-                                                 }
-                                             ]
-                               },
-                               {
-                                   "hooks":  [
-                                                 {
-                                                     "type":  "command",
-                                                     "command":  "node \".ai-tools/memory-stop.mjs\" codex",
-                                                     "timeout":  10,
+                                                     "command":  "node \".ai-tools/codex-memory-stop-wrapper.mjs\"",
+                                                     "timeout":  15,
                                                      "statusMessage":  "Saving shared project memory snapshot",
-                                                     "commandWindows":  "node \".ai-tools\\memory-stop.mjs\" codex"
+                                                     "commandWindows":  "node \".ai-tools\\codex-memory-stop-wrapper.mjs\""
                                                  }
                                              ]
                                }

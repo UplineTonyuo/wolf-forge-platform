@@ -33,6 +33,7 @@ import {
   markAllNotificationsReadAction,
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
+import { shouldRingForUnread } from "../../domain/notifications/ring";
 import {
   playNotificationChime,
   unlockNotificationAudio,
@@ -159,6 +160,13 @@ export function WorkspaceCommandBar({
   const notificationFeedInitializedRef =
     useRef(false);
 
+  /*
+   * The unread count the bell last evaluated. A ref so the milestone comparison
+   * runs once per feed update rather than on every render.
+   */
+  const lastUnreadNotificationsRef =
+    useRef(0);
+
   const notificationFeedbackTimersRef =
     useRef<number[]>([]);
 
@@ -176,11 +184,25 @@ export function WorkspaceCommandBar({
             ),
           );
 
+        const unread =
+          items.filter(
+            (item) =>
+              !item.readAt,
+          ).length;
+
+        /*
+         * The first feed of a session sets the baseline, so arriving at a
+         * workspace that already had unread notifications is not treated as new
+         * activity and the bell stays still.
+         */
         if (
           !notificationFeedInitializedRef.current
         ) {
           notificationSeenIdsRef.current =
             nextIds;
+
+          lastUnreadNotificationsRef.current =
+            unread;
 
           notificationFeedInitializedRef.current =
             true;
@@ -200,30 +222,46 @@ export function WorkspaceCommandBar({
         notificationSeenIdsRef.current =
           nextIds;
 
+        /*
+         * Motion is gated on the unread milestone; the chime below is not. The
+         * sound already had its own cadence before this change and altering it
+         * was out of scope, so the two are deliberately decoupled here.
+         */
+        const ring =
+          shouldRingForUnread(
+            lastUnreadNotificationsRef.current,
+            unread,
+          );
+
+        lastUnreadNotificationsRef.current =
+          unread;
+
+        if (ring) {
+          setNotificationRinging(
+            true,
+          );
+
+          const stopTimer =
+            window.setTimeout(
+              () => {
+                setNotificationRinging(
+                  false,
+                );
+              },
+              560,
+            );
+
+          notificationFeedbackTimersRef.current.push(
+            stopTimer,
+          );
+        }
+
         incoming.forEach(
           (_, index) => {
             const startTimer =
               window.setTimeout(
                 () => {
-                  setNotificationRinging(
-                    true,
-                  );
-
                   playNotificationChime();
-
-                  const stopTimer =
-                    window.setTimeout(
-                      () => {
-                        setNotificationRinging(
-                          false,
-                        );
-                      },
-                      560,
-                    );
-
-                  notificationFeedbackTimersRef.current.push(
-                    stopTimer,
-                  );
                 },
                 index * 680,
               );

@@ -1,6 +1,6 @@
 begin;
 
-select plan(66);
+select plan(76);
 
 -- -----------------------------------------------------------------------------
 -- Structure, capabilities, and protected boundaries
@@ -56,7 +56,8 @@ values
   ('2b000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'forms-owner@example.invalid', now(), now()),
   ('2b000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'forms-staff@example.invalid', now(), now()),
   ('1b000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'forms-client-a@example.invalid', now(), now()),
-  ('1b000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'forms-client-b@example.invalid', now(), now());
+  ('1b000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'forms-client-b@example.invalid', now(), now()),
+  ('1b000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'forms-client-a-sibling@example.invalid', now(), now());
 
 update public.profiles
 set role_id = (select id from public.roles where name = 'owner'), display_name = 'Forms Owner'
@@ -73,11 +74,13 @@ values
 update public.profiles
 set company_id = case id
   when '1b000000-0000-0000-0000-000000000001' then '3b000000-0000-0000-0000-000000000001'::uuid
+  when '1b000000-0000-0000-0000-000000000003' then '3b000000-0000-0000-0000-000000000001'::uuid
   else '3b000000-0000-0000-0000-000000000002'::uuid
 end
 where id in (
   '1b000000-0000-0000-0000-000000000001',
-  '1b000000-0000-0000-0000-000000000002'
+  '1b000000-0000-0000-0000-000000000002',
+  '1b000000-0000-0000-0000-000000000003'
 );
 
 create temporary table form_test_ids (label text primary key, id uuid not null);
@@ -626,7 +629,7 @@ select throws_ok(
     jsonb_build_array(jsonb_build_object('field_key', '54000000-0000-0000-0000-000000000001', 'value', 'Cross-company attempt')),
     '[]'
   )$$,
-  '42501', 'Form assignment company access is denied',
+  '42501', 'Form assignment access is denied',
   'Client B cannot submit Client A Intake assignment'
 );
 
@@ -701,6 +704,64 @@ select ok(
    from public.form_assignments where id = (select id from form_test_ids where label = 'onboarding-assignment-a')),
   'Onboarding assignment derives the authoritative client company'
 );
+select ok(
+  (select count(*) from public.notifications
+   where recipient_profile_id = '1b000000-0000-0000-0000-000000000001'
+     and event_key = 'client-form-assigned:' || (select id::text from form_test_ids where label = 'onboarding-assignment-a')) = 1
+  and (select count(*) from public.notifications
+       where recipient_profile_id = '1b000000-0000-0000-0000-000000000003'
+         and entity_id = (select id from form_test_ids where label = 'onboarding-assignment-a')) = 0,
+  'Form assignment notification targets only the authorized assignee profile'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" = '1b000000-0000-0000-0000-000000000003';
+select is(
+  (select count(*) from public.form_assignments),
+  0::bigint,
+  'same-company sibling cannot read another profile assignment through RLS'
+);
+select is(
+  (select count(*) from public.app_list_assigned_forms()),
+  0::bigint,
+  'same-company sibling assignment list excludes another profile Forms'
+);
+select throws_ok(
+  $$select public.app_get_assigned_form_schema((select id from form_test_ids where label = 'onboarding-assignment-a'))$$,
+  '42501', 'Form assignment access is denied',
+  'same-company sibling cannot read another profile assigned Form schema'
+);
+select throws_ok(
+  $$select public.app_get_published_form_schema('client-onboarding')$$,
+  '42501', 'Form assignment access is denied',
+  'same-company sibling cannot bypass assignee isolation through canonical schema lookup'
+);
+select throws_ok(
+  $$select public.app_submit_form(
+    '65000000-0000-0000-0000-000000000050',
+    (select id from form_test_ids where label = 'onboarding-v1'),
+    jsonb_build_object('assignment_id', (select id from form_test_ids where label = 'onboarding-assignment-a')),
+    jsonb_build_array(jsonb_build_object('field_key', '55000000-0000-0000-0000-000000000001', 'value', 'Sibling impersonation')),
+    '[]'
+  )$$,
+  '42501', 'Form assignment access is denied',
+  'same-company sibling cannot submit another profile assignment by direct RPC'
+);
+
+reset role;
+insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+values ('1b000000-0000-0000-0000-000000000003', 'forms.view', false);
+set local role authenticated;
+set local "request.jwt.claim.sub" = '1b000000-0000-0000-0000-000000000003';
+select throws_ok(
+  $$select * from public.app_list_assigned_forms()$$,
+  '42501', 'permission denied: forms.view',
+  'client denied portal_forms cannot invoke the Forms list RPC directly'
+);
+reset role;
+delete from public.profile_permission_overrides
+where profile_id = '1b000000-0000-0000-0000-000000000003'
+  and permission_key = 'forms.view';
 
 set local role authenticated;
 set local "request.jwt.claim.sub" = '1b000000-0000-0000-0000-000000000002';
@@ -753,6 +814,29 @@ select ok(
 reset role;
 
 set local role authenticated;
+set local "request.jwt.claim.sub" = '1b000000-0000-0000-0000-000000000003';
+select is(
+  (select count(*) from public.form_submissions),
+  0::bigint,
+  'same-company sibling cannot read another profile completed submission through RLS'
+);
+select throws_ok(
+  $$select public.app_get_form_submission((select id from form_test_ids where label = 'onboarding-submission-a'))$$,
+  '42501', 'Form submission access is denied',
+  'same-company sibling cannot read another profile completed submission'
+);
+select throws_ok(
+  $$select public.app_submit_form(
+    '65000000-0000-0000-0000-000000000051',
+    (select id from form_test_ids where label = 'onboarding-v1'),
+    jsonb_build_object('assignment_id', (select id from form_test_ids where label = 'onboarding-assignment-a')),
+    jsonb_build_array(jsonb_build_object('field_key', '55000000-0000-0000-0000-000000000001', 'value', 'Completed sibling impersonation')),
+    '[]'
+  )$$,
+  '42501', 'Form assignment access is denied',
+  'completed assignment cannot be impersonated by a same-company sibling profile'
+);
+
 set local "request.jwt.claim.sub" = '1b000000-0000-0000-0000-000000000002';
 select throws_ok(
   $$select public.app_get_assigned_form_schema((select id from form_test_ids where label = 'onboarding-assignment-a'))$$,

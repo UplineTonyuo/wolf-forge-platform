@@ -1,0 +1,605 @@
+/*
+ * Client report slideshow — distraction-free presentation mode.
+ *
+ * Navy/gold/white, restrained: one slide at a time, a thin progress bar only
+ * (no step counters), a dimmed blurred backdrop, and motion that stays quiet.
+ * The overlay is portalled to document.body by the component, so none of these
+ * fixed positions can be captured by a portal page's animated article box.
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 8, 48, 0.34);
+  backdrop-filter: blur(10px) saturate(0.92);
+  -webkit-backdrop-filter: blur(10px) saturate(0.92);
+  cursor: pointer;
+}
+
+.overlay[data-phase="open"] .backdrop {
+  animation: backdrop-in 200ms var(--wf-ease) both;
+}
+
+.overlay[data-phase="closing"] .backdrop {
+  animation: backdrop-out 180ms var(--wf-ease) both;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: min(86dvh, calc(100dvh - 48px));
+  overflow: hidden;
+  border: 1px solid var(--wf-border);
+  border-radius: 20px;
+  background: var(--wf-white);
+  box-shadow: 0 34px 100px rgba(0, 13, 81, 0.26);
+}
+
+.overlay[data-phase="open"] .panel {
+  animation: panel-in 260ms var(--wf-ease) both;
+}
+
+.overlay[data-phase="closing"] .panel {
+  animation: panel-out 190ms var(--wf-ease) both;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes panel-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+
+/* The thin progress bar, fixed at the top of the panel across every slide. */
+.progressTrack {
+  flex: 0 0 auto;
+  height: 3px;
+  background: color-mix(in srgb, var(--wf-navy) 7%, transparent);
+}
+
+.progressBar {
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(
+    90deg,
+    var(--wf-gold),
+    color-mix(in srgb, var(--wf-gold) 55%, var(--wf-navy))
+  );
+  transition: width 260ms var(--wf-ease);
+}
+
+.slideArea {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.slideShell {
+  flex: 1 1 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: slide-in 260ms var(--wf-ease);
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Cover --------------------------------------------------------------- */
+
+.coverSlide {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(36px, 6vw, 64px);
+  background: var(--wf-navy);
+  color: var(--wf-white);
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  color: color-mix(in srgb, var(--wf-gold) 85%, #fff);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.coverTitle {
+  max-width: 20ch;
+  margin: 0;
+  color: inherit;
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: clamp(30px, 5vw, 48px);
+  font-weight: 620;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.coverCompany {
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.coverMeta {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* --- Content slides ------------------------------------------------------ */
+
+.contentSlide,
+.closingSlide {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 4vw, 44px);
+}
+
+.slideTitle {
+  margin: 0 0 20px;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 620;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.completedMark {
+  align-self: flex-start;
+  margin: -8px 0 16px;
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--wf-gold) 45%, transparent);
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--wf-gold) 82%, #3a2d0a);
+  background: color-mix(in srgb, var(--wf-gold) 8%, transparent);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.entries {
+  margin: 0;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.72fr) minmax(0, 1.28fr);
+  gap: clamp(16px, 3vw, 32px);
+  align-items: start;
+  padding: 16px 0;
+  border-top: 1px solid color-mix(in srgb, var(--wf-border) 76%, transparent);
+}
+
+.entry:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.entry dt {
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.entry dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+  min-width: 0;
+  margin: 0;
+}
+
+.entry dd p {
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  color: var(--wf-text);
+  font-size: 14px;
+  line-height: 1.72;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.asset {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--wf-border);
+  border-radius: 9px;
+  color: var(--wf-navy);
+  background: var(--wf-warm-50);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: border-color 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.asset svg {
+  width: 14px;
+  height: 14px;
+}
+
+.noDetail,
+.empty {
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.empty {
+  margin: 0;
+}
+
+/* --- Before / after transformations --------------------------------------- */
+
+.transform {
+  padding: 18px 0;
+  border-top: 1px solid color-mix(in srgb, var(--wf-border) 76%, transparent);
+}
+
+.transform:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.transformLabel {
+  margin: 0 0 14px;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.transformRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.transformHalf {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  min-width: 0;
+}
+
+.transformHalf em {
+  font-style: normal;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.transformHalf strong {
+  color: var(--wf-text-muted);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: clamp(18px, 2.4vw, 24px);
+  font-weight: 620;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.transformHalf[data-role="after"] strong {
+  color: var(--wf-navy);
+}
+
+.transformArrow {
+  width: 18px;
+  height: 18px;
+  color: var(--wf-gold);
+}
+
+.transformAsset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.transformAsset svg {
+  width: 13px;
+  height: 13px;
+}
+
+.transformEmpty {
+  color: var(--wf-text-muted);
+  font-size: 13px;
+}
+
+/* --- Closing slide -------------------------------------------------------- */
+
+.closingSlide {
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+}
+
+.closingSlide .slideTitle {
+  margin-bottom: 14px;
+}
+
+.closingMessage {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.closingActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 11px;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.primaryAction {
+  border: 1px solid var(--wf-navy);
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  cursor: pointer;
+  transition: background 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.secondaryAction {
+  border: 1px solid var(--wf-border);
+  color: var(--wf-navy);
+  background: var(--wf-white);
+}
+
+.secondaryAction svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* --- Controls ------------------------------------------------------------- */
+
+.controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--wf-border);
+}
+
+.controlsSpacer {
+  flex: 1 1 auto;
+}
+
+.navButton,
+.nextButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 15px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.navButton {
+  border: 1px solid var(--wf-border);
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  cursor: pointer;
+  transition: border-color 160ms var(--wf-ease), color 160ms var(--wf-ease);
+}
+
+.navButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.nextButton {
+  border: 1px solid var(--wf-navy);
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  cursor: pointer;
+  transition: background 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+}
+
+.closeButton {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--wf-border);
+  border-radius: 50%;
+  color: var(--wf-navy);
+  background: var(--wf-white);
+  cursor: pointer;
+  transition: color 160ms var(--wf-ease), border-color 160ms var(--wf-ease),
+    transform 160ms var(--wf-ease);
+}
+
+.closeButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.navButton svg,
+.nextButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- Accessibility -------------------------------------------------------- */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  .overlay {
+    padding: 0;
+  }
+
+  .panel {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .controls {
+    padding: 12px 14px 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 15px 0;
+  }
+
+  .transformRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .transformArrow {
+    transform: rotate(90deg);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .asset:hover {
+    border-color: var(--wf-navy);
+    transform: translateY(-1px);
+  }
+
+  .navButton:hover:not(:disabled) {
+    border-color: var(--wf-navy);
+  }
+
+  .nextButton:hover {
+    background: var(--wf-navy-hover);
+    transform: translateY(-1px);
+  }
+
+  .primaryAction:hover {
+    background: var(--wf-navy-hover);
+    transform: translateY(-1px);
+  }
+
+  .closeButton:hover {
+    color: color-mix(in srgb, var(--wf-gold) 78%, #000);
+    border-color: color-mix(in srgb, var(--wf-gold) 40%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .panel,
+  .slideShell {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .progressBar,
+  .asset,
+  .navButton,
+  .nextButton,
+  .closeButton,
+  .primaryAction,
+  .secondaryAction {
+    transition: none;
+  }
+
+  .asset:hover,
+  .nextButton:hover,
+  .primaryAction:hover {
+    transform: none;
+  }
+}

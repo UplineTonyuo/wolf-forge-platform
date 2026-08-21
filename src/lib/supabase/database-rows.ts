@@ -21,6 +21,9 @@ export type CouponRedemptionRow = Tables<"coupon_redemptions">;
 export type ActivityEventRow = Omit<Tables<"activity_events">, "entity_type"> & {
   entity_type: "company" | "client_contact" | "service_folder" | "service" | "order" | "order_task" | "profile" | "coupon" | "invoice" | "subscription" | "form" | "form_assignment" | "form_submission" | "ticket" | "service_interest";
 };
+export type ClientReportDbRow = Omit<Tables<"client_reports">, "report_lane"> & {
+  report_lane: "seo_package" | "gmb_management";
+};
 export type ServiceInterestRow = Omit<Tables<"service_interests">, "status"> & {
   status: "new" | "reviewing" | "contacted" | "qualified" | "closed" | "not_interested";
 };

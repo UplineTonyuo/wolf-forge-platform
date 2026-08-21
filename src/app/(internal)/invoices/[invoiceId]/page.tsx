@@ -7,7 +7,16 @@ import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-stat
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatCurrencyCents, formatDate, formatDateTime } from "../../../../lib/format";
-import { serviceDescriptionToPlainText } from "../../../../lib/service-description-html";
+/*
+ * The dense operational table keeps its one-line treatment; it just stops
+ * printing the capture's emoji and check-mark runs. Same derivation the client
+ * invoice collapses to, so staff and client read the same description of an
+ * item.
+ */
+import {
+  composeServiceScope,
+  scopeSummaryLine,
+} from "../../../../domain/services/service-summary";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "Invoice Detail" };
@@ -55,7 +64,7 @@ export default async function InvoiceDetailPage({
           </section>
 
           <div className={styles.detailGrid}>
-            <section className={styles.detailSection}><h2>Line items</h2><div className={styles.lineItems}><div className={styles.lineHeader}><span>Description</span><span>Qty</span><span>Unit price</span><span>Discount</span><span>Total</span></div>{detail.items.map((item) => <div className={styles.lineRow} key={item.id}><div><strong>{item.service_id ? <Link href={`/services/${item.service_id}`}>{item.name}</Link> : item.name}</strong>{item.description ? <small>{serviceDescriptionToPlainText(item.description)}</small> : null}</div><span data-label="Qty">{item.quantity}</span><span data-label="Unit price">{formatCurrencyCents(item.unit_price_cents, detail.invoice.currency)}</span><span data-label="Discount">{formatCurrencyCents(item.unit_discount_cents, detail.invoice.currency)}</span><strong data-label="Total">{formatCurrencyCents(item.line_subtotal_cents ?? 0, detail.invoice.currency)}</strong></div>)}</div></section>
+            <section className={styles.detailSection}><h2>Line items</h2><div className={styles.lineItems}><div className={styles.lineHeader}><span>Description</span><span>Qty</span><span>Unit price</span><span>Discount</span><span>Total</span></div>{detail.items.map((item) => <div className={styles.lineRow} key={item.id}><div><strong>{item.service_id ? <Link href={`/services/${item.service_id}`}>{item.name}</Link> : item.name}</strong>{item.description ? <small>{scopeSummaryLine(composeServiceScope(item.description))}</small> : null}</div><span data-label="Qty">{item.quantity}</span><span data-label="Unit price">{formatCurrencyCents(item.unit_price_cents, detail.invoice.currency)}</span><span data-label="Discount">{formatCurrencyCents(item.unit_discount_cents, detail.invoice.currency)}</span><strong data-label="Total">{formatCurrencyCents(item.line_subtotal_cents ?? 0, detail.invoice.currency)}</strong></div>)}</div></section>
 
             <aside className={styles.financialSummary}><h2>Financial summary</h2><dl><div><dt>Subtotal</dt><dd>{formatCurrencyCents(detail.invoice.subtotal_cents, detail.invoice.currency)}</dd></div><div><dt>Discount</dt><dd>−{formatCurrencyCents(detail.invoice.discount_total_cents, detail.invoice.currency)}</dd></div><div><dt>Tax</dt><dd>{formatCurrencyCents(detail.invoice.tax_total_cents, detail.invoice.currency)}</dd></div><div className={styles.totalLine}><dt>Total</dt><dd>{formatCurrencyCents(detail.invoice.total_cents, detail.invoice.currency)}</dd></div><div><dt>Paid</dt><dd>{formatCurrencyCents(detail.financials.gross_paid_cents, detail.invoice.currency)}</dd></div><div><dt>Refunded</dt><dd>{formatCurrencyCents(detail.financials.successful_refunds_cents, detail.invoice.currency)}</dd></div><div className={styles.balanceLine}><dt>Balance</dt><dd>{formatCurrencyCents(detail.financials.balance_due_cents, detail.invoice.currency)}</dd></div></dl>{closedByRefund ? <p className={styles.closedNote}>Closed — refunds do not reopen this invoice for collection.</p> : detail.invoice.status === "paid" ? <p className={styles.closedNote}>Settled in full.</p> : null}{detail.financials.presentation_state === "partially_refunded" ? <p className={styles.refundableNote}>{formatCurrencyCents(refundable, detail.invoice.currency)} remains refundable.</p> : null}</aside>
           </div>

@@ -1,5 +1,5 @@
 import { sanitizeServiceDescription } from "../../lib/service-description-html";
-import { summarizeServiceDescription } from "./service-summary";
+import { storeCardSummary } from "./store-card-summaries";
 import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
 
 /**
@@ -46,10 +46,11 @@ export type StoreServiceView = {
   /** Sanitized through the existing shared service-description boundary. */
   descriptionHtml: string;
   /**
-   * Curated preview line for cards and the spotlight. Derived from the real
-   * description, never the raw first 190 characters, so an inclusion-only
-   * service reads as a sentence instead of a wall of check marks. The full
-   * original stays in `descriptionHtml` for the detail page.
+   * Short, polished card line for the Store card and the spotlight. A service
+   * with a curated summary uses that; anything else falls back to a line
+   * derived from the real description. Either way it is never the full
+   * description — the complete original stays in `descriptionHtml` for the
+   * detail page.
    */
   summary: string;
 };
@@ -165,7 +166,7 @@ export function toStoreServiceView(service: ServiceRow): StoreServiceView {
     recurringLabel: storeRecurringLabel(service),
     imageUrl: service.image_url,
     descriptionHtml: sanitizeServiceDescription(service.description),
-    summary: summarizeServiceDescription(service.description),
+    summary: storeCardSummary(service.name, service.description),
   };
 }
 

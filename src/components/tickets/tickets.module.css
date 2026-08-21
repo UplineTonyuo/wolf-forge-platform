@@ -2082,22 +2082,20 @@
   object-fit: cover;
 }
 
+/*
+ * Matches the shared AccountAvatar placeholder, so a message author with no
+ * photo looks the same here as in the header or the team list. The gold-tinted
+ * brand wash is gone with the mark it was lighting.
+ */
 .messageAvatarFallback {
-  color: var(--wf-navy);
-  background:
-    radial-gradient(
-      circle at 32% 24%,
-      rgba(168, 131, 46, .11),
-      transparent 58%
-    ),
-    #f4f6fb;
+  color: #8a8f9c;
+  background: #e8eaef;
 }
 
 .messageAvatarFallback svg {
-  width: 25px;
-  height: 25px;
-  max-width: 74%;
-  max-height: 74%;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .messageAvatarFallback img {

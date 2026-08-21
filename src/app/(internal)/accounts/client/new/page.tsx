@@ -3,12 +3,13 @@ import { CreateClientAccountForm } from "../../../../../components/accounts/crea
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
 export default async function AddClientAccountPage() {
-  const { user } =
-    await getInternalContext();
+  const context = await getInternalContext();
+  await context.services.permissions.requireModuleAccess("clients");
 
   if (
-    user.role !== "owner" &&
-    user.role !== "admin"
+    !context.user.clients.create ||
+    !context.user.clients.privateManage ||
+    !context.user.team.create
   ) {
     redirect("/");
   }

@@ -17,6 +17,43 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* --- Trigger icon --------------------------------------------------------- */
+
+/*
+ * The cart acknowledging an investment.
+ *
+ * Two names, one motion. The component alternates the token on each add so the
+ * animation-name changes, which is what makes the browser restart it — the same
+ * name re-applied to an element already carrying it would simply be ignored, and
+ * a quick second add would go unacknowledged.
+ *
+ * The attribute is absent at rest, so a page load with a restored cart sits
+ * still. A short dip and settle rather than a bounce: the cart is confirming
+ * receipt, not celebrating. No fill mode, so the icon is left exactly as it
+ * started.
+ */
+.triggerIcon[data-bump="a"] {
+  animation: cartBumpA 420ms var(--wf-ease);
+}
+
+.triggerIcon[data-bump="b"] {
+  animation: cartBumpB 420ms var(--wf-ease);
+}
+
+@keyframes cartBumpA {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-2px) scale(1.12); }
+  70% { transform: translateY(1px) scale(.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes cartBumpB {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-2px) scale(1.12); }
+  70% { transform: translateY(1px) scale(.97); }
+  100% { transform: translateY(0) scale(1); }
+}
+
 /* --- Empty state ---------------------------------------------------------- */
 
 .empty {
@@ -523,6 +560,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .badge { animation: none; }
+  .triggerIcon[data-bump] { animation: none; }
 
   .row[data-leaving] { animation-duration: 1ms; animation-delay: 0ms !important; }
   .foot[data-clearing] { transition: none; transform: none; }

@@ -85,6 +85,22 @@ values
    '72000000-0000-0000-0000-000000000001', 100, true, true, now());
 
 -- =============================================================================
+-- ISOLATION
+--
+-- These assertions count rows rather than name fixture ids, which was only ever
+-- correct while the table was empty. A local database accumulates real interest
+-- rows as the app is used, so the counts drift and the file starts failing for
+-- reasons that have nothing to do with the code under test.
+--
+-- Clearing inside the transaction makes the file deterministic wherever it
+-- runs. The enclosing rollback means no real row is ever actually removed.
+-- =============================================================================
+
+delete from public.activity_events where entity_type = 'service_interest';
+delete from public.notifications where entity_type = 'service_interest';
+delete from public.service_interests;
+
+-- =============================================================================
 -- STRUCTURE AND WIRING
 -- =============================================================================
 
@@ -457,11 +473,18 @@ select is(
 -- now() is transaction time, so nothing inside this test would otherwise appear
 -- to age. Backdating the fixture lets the re-add prove it genuinely advances the
 -- activity timestamp instead of merely rewriting the same value.
+--
+-- last_notified_at ages with the rest of the row. Batch B2 coalesces renewal
+-- signals behind a one-hour cooldown measured from it, so a row that genuinely
+-- aged two hours is one whose next re-add is a real change of mind and must be
+-- signalled. The suppressed case -- a rapid remove/re-add loop inside the
+-- cooldown -- is covered in 036_b2_abuse_resistance.
 update public.service_interests
 set first_added_at = now() - interval '2 hours',
     last_added_at = now() - interval '1 hour',
     removed_at = now() - interval '1 hour',
-    last_activity_at = now() - interval '1 hour';
+    last_activity_at = now() - interval '1 hour',
+    last_notified_at = now() - interval '2 hours';
 
 create temporary table intent_probe as
 select id, first_added_at, last_activity_at from public.service_interests;
@@ -765,13 +788,19 @@ select is(
   'a re-add raises the renewed-interest count without reopening a closed intent'
 );
 
-select ok(
+-- This remove/re-add happened immediately after the previous renewal, inside
+-- the Batch B2 cooldown. The intent state still advanced (add_count is 3
+-- above), but Wolf Forge is not told a second time: coalescing protects the
+-- work queue without falsifying the interest record.
+select is(
   (
-    select count(*) >= 4
+    select count(*)
     from public.notifications
     where entity_type = 'service_interest'
+      and company_id = '71000000-0000-0000-0000-00000000000a'
   ),
-  'the renewed signal still reaches the capability holders even while closed'
+  4::bigint,
+  'a re-add inside the cooldown advances the intent without manufacturing a second signal'
 );
 
 -- =============================================================================

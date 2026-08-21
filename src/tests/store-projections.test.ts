@@ -5,7 +5,6 @@ import {
   projectReference,
   type ClientProjectSourceRow,
 } from "../domain/orders/client-projections";
-import type { ProjectTaskFact } from "../domain/orders/projections";
 import {
   composeStoreCatalog,
   isClientVisibleService,
@@ -147,13 +146,14 @@ describe("store service view", () => {
     expect(view.descriptionHtml).toContain("MAPS SYSTEM");
     expect(view.descriptionHtml).not.toContain("script");
 
-    // The card preview does not: it gets the prose lead, never the heading or
-    // the inclusion list.
+    // The card preview does not: it gets the curated one-line summary, never
+    // the prose lead, the heading or the inclusion list.
     expect(view.summary).toBe(
-      "Your Google Business Profile might be costing you customers every week.",
+      "Fixes the foundation of your Google Business Profile — categories, services, local keywords, and photos — so you outrank competitors.",
     );
     expect(view.summary).not.toContain("MAPS SYSTEM");
     expect(view.summary).not.toContain("Category optimization");
+    expect(view.summary).not.toContain("costing you customers");
   });
 
   it("labels one-time and recurring pricing from the real catalog columns", () => {
@@ -271,7 +271,9 @@ describe("client project projection", () => {
       due_at: "2026-09-01T00:00:00.000Z",
       started_at: "2026-07-03T00:00:00.000Z",
       completed_at: null,
-      services: { name: "Starter SEO" },
+      service_name: "Starter SEO",
+      task_total: 4,
+      task_open: 2,
     },
     {
       id: "p2",
@@ -282,19 +284,14 @@ describe("client project projection", () => {
       due_at: null,
       started_at: null,
       completed_at: "2026-06-01T00:00:00.000Z",
-      services: null,
+      service_name: null,
+      task_total: 0,
+      task_open: 0,
     },
   ];
 
-  const facts: ProjectTaskFact[] = [
-    { order_id: "p1", status: "complete", due_at: null },
-    { order_id: "p1", status: "complete", due_at: null },
-    { order_id: "p1", status: "in_progress", due_at: null },
-    { order_id: "p1", status: "todo", due_at: null },
-  ];
-
   it("exposes only client-safe project fields", () => {
-    const [view] = composeClientProjectViews(rows, facts);
+    const [view] = composeClientProjectViews(rows);
 
     expect(Object.keys(view!).sort()).toEqual([
       "completedLabel",
@@ -312,7 +309,7 @@ describe("client project projection", () => {
   });
 
   it("never carries notes, assignee identity or a task title", () => {
-    const serialized = JSON.stringify(composeClientProjectViews(rows, facts));
+    const serialized = JSON.stringify(composeClientProjectViews(rows));
 
     for (const leaked of ["notes", "assigned_to_profile_id", "assignee", "profiles", "company_id"]) {
       expect(serialized).not.toContain(leaked);
@@ -320,19 +317,19 @@ describe("client project projection", () => {
   });
 
   it("reduces tasks to an aggregate progress figure only", () => {
-    const [view] = composeClientProjectViews(rows, facts);
+    const [view] = composeClientProjectViews(rows);
 
     expect(view!.progress).toEqual({ total: 4, completed: 2, percent: 50 });
   });
 
   it("reports no progress rather than a false zero when a project has no tasks", () => {
-    const [, view] = composeClientProjectViews(rows, facts);
+    const [, view] = composeClientProjectViews(rows);
 
     expect(view!.progress).toEqual({ total: 0, completed: 0, percent: null });
   });
 
   it("labels status and reference from the shared project domain", () => {
-    const [working, complete] = composeClientProjectViews(rows, facts);
+    const [working, complete] = composeClientProjectViews(rows);
 
     expect(working!.statusLabel).toBe("Working");
     expect(working!.reference).toBe("WF-P0042");
@@ -341,6 +338,6 @@ describe("client project projection", () => {
   });
 
   it("counts only projects still in flight as open", () => {
-    expect(countOpenClientProjects(composeClientProjectViews(rows, facts))).toBe(1);
+    expect(countOpenClientProjects(composeClientProjectViews(rows))).toBe(1);
   });
 });

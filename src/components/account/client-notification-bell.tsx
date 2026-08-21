@@ -24,6 +24,7 @@ import {
   markClientNotificationReadAction,
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
+import { shouldRingForUnread } from "../../domain/notifications/ring";
 import {
   playNotificationChime,
   unlockNotificationAudio,
@@ -124,6 +125,13 @@ export function ClientNotificationBell({
   const initializedRef =
     useRef(false);
 
+  /*
+   * The unread count the bell last evaluated. Held in a ref so the milestone
+   * comparison runs exactly once per feed update rather than on every render.
+   */
+  const lastUnreadRef =
+    useRef(0);
+
   const feedbackTimersRef =
     useRef<number[]>([]);
 
@@ -211,11 +219,25 @@ export function ClientNotificationBell({
             ),
           );
 
+        const unread =
+          items.filter(
+            (item) =>
+              !item.readAt,
+          ).length;
+
+        /*
+         * The first feed of a session establishes the baseline. Without this the
+         * bell would ring on every mount for a client who already had unread
+         * notifications waiting, which is not new activity.
+         */
         if (
           !initializedRef.current
         ) {
           seenIdsRef.current =
             nextIds;
+
+          lastUnreadRef.current =
+            unread;
 
           initializedRef.current =
             true;
@@ -235,34 +257,46 @@ export function ClientNotificationBell({
         seenIdsRef.current =
           nextIds;
 
+        /*
+         * Motion is gated on the unread milestone; the chime below is not. The
+         * sound already had its own cadence before this change and altering it
+         * was out of scope, so the two are deliberately decoupled here.
+         */
+        const ring =
+          shouldRingForUnread(
+            lastUnreadRef.current,
+            unread,
+          );
+
+        lastUnreadRef.current =
+          unread;
+
+        if (ring) {
+          setRinging(true);
+
+          const stopTimer =
+            window.setTimeout(
+              () => {
+                setRinging(false);
+              },
+              560,
+            );
+
+          feedbackTimersRef.current.push(
+            stopTimer,
+          );
+        }
+
         incoming.forEach(
           (_, index) => {
             const startTimer =
               window.setTimeout(
                 () => {
-                  setRinging(
-                    true,
-                  );
-
                   if (
                     soundEnabledRef.current
                   ) {
                     playNotificationChime();
                   }
-
-                  const stopTimer =
-                    window.setTimeout(
-                      () => {
-                        setRinging(
-                          false,
-                        );
-                      },
-                      560,
-                    );
-
-                  feedbackTimersRef.current.push(
-                    stopTimer,
-                  );
                 },
                 index * 680,
               );

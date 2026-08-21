@@ -71,6 +71,12 @@ export type ClientNavCounts = {
   messages: number | null;
   /** Projects still in flight, or null when not granted. */
   projects: number | null;
+  /**
+   * Reports this person has not opened, or null when Reporting is not granted.
+   * Resolved by its own RPC rather than composed here, because read state is
+   * per profile and the summary sources are per company.
+   */
+  reporting?: number | null;
 };
 
 export type ClientPortalSummary = {

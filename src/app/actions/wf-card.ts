@@ -27,6 +27,8 @@ export async function payInvoiceWithWfCardAction(
   const context = await getClientContext();
 
   try {
+    await context.services.permissions.requireModuleAccess("portal_invoices");
+
     const payment = await context.services.wfCard.payInvoice(
       { invoice_id: invoiceId, request_id: requestId },
       context.actor,

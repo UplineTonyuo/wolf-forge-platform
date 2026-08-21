@@ -1,6 +1,7 @@
 ﻿"use server";
 
 import { redirect } from "next/navigation";
+import { safeAccountNextPath, safeNextPath } from "../../domain/auth/safe-next-path";
 import {
   createNextServerSupabaseClient,
   readLocalFrontendEnvironment,
@@ -10,11 +11,6 @@ import {
 import { createUserSupabaseClient, verifyActor } from "../../lib/supabase/user-client";
 
 export type LoginState = { error: string | null };
-
-function safeNextPath(value: FormDataEntryValue | null): string {
-  const path = typeof value === "string" ? value : "/";
-  return path.startsWith("/") && !path.startsWith("//") ? path : "/";
-}
 
 export async function signInAction(_state: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -37,8 +33,7 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
     return { error: "This account is not active or has not been assigned yet." };
   }
 
-  const nextPath = safeNextPath(formData.get("next"));
-  redirect(nextPath.startsWith("/account") ? nextPath : "/account");
+  redirect(safeAccountNextPath(formData.get("next")));
 }
 
 export async function signOutAction() {

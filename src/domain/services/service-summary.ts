@@ -192,3 +192,137 @@ export function summarizeServiceDescription(description: string | null | undefin
   // fragment of a heading presented as a description.
   return "";
 }
+
+/**
+ * The same description, structured for an invoice line.
+ *
+ * `summarizeServiceDescription` above answers "what is this, in one line" for a
+ * Store card. An invoice asks a different question — "what am I being billed
+ * for" — and the honest answer is the itemised scope, not a sentence. Flattening
+ * the capture into plain text, which is what the invoice used to do, produced a
+ * paragraph of run-together check marks: "✅ 100 Citations ✅ 1 Blog per month
+ * ✅ Weekly reporting…". Legible on nobody's invoice.
+ *
+ * So the shape is read once and split into the three things a description
+ * actually contains, with every ornament removed:
+ *
+ *   summary       the prose lead, when a human wrote one
+ *   deliverables  the bulleted lines — what the client receives
+ *   requirements  lines addressed *to* the buyer ("You must supply artwork"),
+ *                 which are real content but are not deliverables and must not
+ *                 be listed as though the client is getting them
+ *
+ * Nothing is invented and nothing is summarised away: every bulleted line in the
+ * original appears in `deliverables` in its original order. This only removes
+ * emoji, bullet glyphs and duplicate lines.
+ */
+export type ServiceScope = {
+  /** Prose lead, or "" when the description is inclusion-only. */
+  summary: string;
+  /** What the client receives, ornament-free, in source order. */
+  deliverables: string[];
+  /** Lines asking something of the buyer. Never mixed into deliverables. */
+  requirements: string[];
+  /**
+   * Prose beyond the summary. Populated only for prose-only descriptions, so a
+   * description with no bullet list still has something to expand into rather
+   * than losing its body.
+   */
+  notes: string[];
+  /** True when there is more to show than the collapsed line already shows. */
+  hasDetail: boolean;
+};
+
+/** Trailing list punctuation left behind once the bullet glyph is gone. */
+const trailingListPunctuation = /[\s.;,·•]+$/u;
+
+/** A deliverable shorter than this is a fragment, not a line item. */
+const minDeliverableLength = 3;
+
+function cleanScopeLine(block: string): string {
+  return withoutOrnaments(stripBullet(block)).replace(trailingListPunctuation, "").trim();
+}
+
+export function composeServiceScope(description: string | null | undefined): ServiceScope {
+  const blocks = serviceDescriptionBlocks(description);
+
+  const deliverables: string[] = [];
+  const requirements: string[] = [];
+  const prose: string[] = [];
+
+  /*
+   * Deduplicated by cleaned text. The captures repeat a line when the same
+   * inclusion appeared under two headings, and an invoice listing the same
+   * deliverable twice looks like a billing error rather than a formatting one.
+   */
+  const seen = new Set<string>();
+
+  for (const block of blocks) {
+    if (isBulleted(block)) {
+      const line = cleanScopeLine(block);
+      if (line.length < minDeliverableLength) continue;
+
+      /*
+       * A heading wearing a bullet is still a heading. The captures open their
+       * inclusion lists with "✅ WHAT'S INCLUDED:", which passes isBulleted and
+       * would otherwise be billed as the first deliverable — and inflate the
+       * "Includes N deliverables" count by one on every such item.
+       *
+       * Checked after the glyph is stripped, because isHeading reads the words.
+       * Deliberately local to this function: summarizeServiceDescription has
+       * its own tested behaviour and is not changed here.
+       */
+      if (isHeading(line)) continue;
+
+      const key = line.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      if (requirementPattern.test(line)) requirements.push(line);
+      else deliverables.push(line);
+      continue;
+    }
+
+    const line = withoutOrnaments(block);
+    // A heading is a label for the lines beneath it, not content of its own.
+    if (line.length === 0 || isHeading(line)) continue;
+    prose.push(line);
+  }
+
+  const summary = balanceQuotes(joinProse(prose.filter((line) => isProse(line))));
+  const lead = summary.length >= minProseLength ? truncate(summary, maxSummaryLength) : "";
+
+  /*
+   * Notes exist only when there are no deliverables. With a bullet list present
+   * the list *is* the detail, and repeating the marketing prose under it turns
+   * an invoice back into a sales page.
+   */
+  const notes = deliverables.length === 0 && requirements.length === 0
+    ? prose.filter((line) => line !== lead)
+    : [];
+
+  return {
+    summary: lead,
+    deliverables,
+    requirements,
+    notes,
+    hasDetail: deliverables.length > 0 || requirements.length > 0 || notes.length > 0,
+  };
+}
+
+/**
+ * The single line a collapsed invoice item shows beneath its title.
+ *
+ * Prefers what a person wrote. Falls back to a count rather than to the first
+ * deliverable, because one line lifted out of a list of twelve misrepresents
+ * what is being billed. Returns "" when the description carries nothing, so the
+ * caller renders the title alone instead of an empty element.
+ */
+export function scopeSummaryLine(scope: ServiceScope): string {
+  if (scope.summary.length > 0) return scope.summary;
+
+  const count = scope.deliverables.length;
+  if (count > 0) return `Includes ${count} deliverable${count === 1 ? "" : "s"}`;
+
+  return scope.notes[0] ?? "";
+}

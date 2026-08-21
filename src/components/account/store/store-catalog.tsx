@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Search, X } from "lucide-react";
 import type { CartItem } from "../../../domain/client-portal/cart";
 import { AddToCartButton } from "../cart/add-to-cart-button";
+import { StoreFolderIcon } from "./store-folder-icon";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -24,6 +25,12 @@ import styles from "./store-catalog.module.css";
  * the native history API (supported by the App Router) so folder deep links
  * from the dashboard chips and from a service's back link keep working, and the
  * server still resolves `?folder=` on a cold load.
+ *
+ * Navigation is a compact control bar, not a rail: the current selection (with
+ * its real count) and a single Explore/Change trigger, with search on its own
+ * row underneath so the two no longer fight for horizontal space. The trigger
+ * opens a responsive category deck in normal flow — every real category is a
+ * tile there, so nothing is hidden behind a horizontal scroll.
  */
 
 /**
@@ -199,32 +206,38 @@ export function StoreCatalogView({
 }) {
   const [folderId, setFolderId] = useState<string | null>(activeFolderId);
   const [query, setQuery] = useState("");
-  const [railAtEnd, setRailAtEnd] = useState(false);
-  const pillsRef = useRef<HTMLDivElement | null>(null);
 
+  /** Whether the category deck is expanded. The toggle owns exactly this bit. */
+  const [deckOpen, setDeckOpen] = useState(false);
   /*
-   * A ref callback rather than an effect: it measures once on mount, so a rail
-   * that never overflows is not left permanently wearing the scroll fade.
+   * Increments on every open so the deck's tile list remounts and replays its
+   * staggered entrance. On close the list stays mounted (only the container
+   * animates away), so the reverse is smooth rather than a snap.
    */
-  const attachRail = useCallback((node: HTMLDivElement | null) => {
-    pillsRef.current = node;
-    if (node) setRailAtEnd(node.scrollWidth - node.clientWidth <= 1);
-  }, []);
+  const [deckGeneration, setDeckGeneration] = useState(0);
+  const deckToggleRef = useRef<HTMLButtonElement | null>(null);
 
-  const trackRail = useCallback((event: React.UIEvent<HTMLDivElement>) => {
-    const rail = event.currentTarget;
-    setRailAtEnd(rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 1);
-  }, []);
+  const toggleDeck = useCallback(() => {
+    if (deckOpen) {
+      setDeckOpen(false);
+    } else {
+      setDeckGeneration((generation) => generation + 1);
+      setDeckOpen(true);
+    }
+  }, [deckOpen]);
 
-  /*
-   * The rail scrolls, so a category deep-linked through ?folder= can land off
-   * screen. Pulling the pressed pill into view keeps the active state visible
-   * rather than merely rendered.
-   */
+  // Escape closes the deck and hands focus back to its trigger.
   useEffect(() => {
-    const pressed = pillsRef.current?.querySelector('[aria-pressed="true"]');
-    pressed?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [folderId]);
+    if (!deckOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDeckOpen(false);
+        deckToggleRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [deckOpen]);
 
   const categories = useMemo<Category[]>(() => {
     const entries: Category[] = [
@@ -330,6 +343,11 @@ export function StoreCatalogView({
     setFolderId(next);
     setQuery("");
 
+    // Selection collapses the deck. Focus returns to the trigger, which now
+    // reads "Change category" against the selection the client just made.
+    setDeckOpen(false);
+    deckToggleRef.current?.focus();
+
     // Keeps folder deep links shareable without re-rendering the route on the
     // server. Guarded because this also runs in jsdom and during hydration.
     if (typeof window === "undefined") return;
@@ -406,27 +424,35 @@ export function StoreCatalogView({
       </header>
 
       <div className={styles.controls}>
-        <div
-          className={styles.pills}
-          ref={attachRail}
-          onScroll={trackRail}
-          data-at-end={railAtEnd}
-          role="group"
-          aria-label="Service categories"
-        >
-          {categories.map((category) => (
-            <button
-              key={category.id ?? "all"}
-              type="button"
-              className={styles.pill}
-              aria-pressed={category.id === folderId}
-              onClick={() => selectCategory(category.id)}
-            >
-              <span className={styles.pillDot} aria-hidden={true} />
-              {category.name}
-              <span className={styles.pillCount}>{category.count}</span>
-            </button>
-          ))}
+        <div className={styles.controlRow}>
+          <span
+            className={styles.activeChip}
+            aria-label={`${active.name}, ${active.count} ${active.count === 1 ? "investment" : "investments"}`}
+          >
+            <span className={styles.activeChipIcon} aria-hidden={true}>
+              <StoreFolderIcon name={active.name} />
+            </span>
+            <span className={styles.activeChipName}>{active.name}</span>
+            <span className={styles.activeChipCount}>{active.count}</span>
+          </span>
+
+          <button
+            type="button"
+            ref={deckToggleRef}
+            className={styles.deckToggle}
+            aria-expanded={deckOpen}
+            aria-controls="store-category-deck"
+            onClick={toggleDeck}
+          >
+            <span>
+              {deckOpen
+                ? "Close categories"
+                : folderId === null
+                  ? "Explore all categories"
+                  : "Change category"}
+            </span>
+            <ChevronDown aria-hidden={true} />
+          </button>
         </div>
 
         <div className={styles.search}>
@@ -435,7 +461,7 @@ export function StoreCatalogView({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={`Filter ${active.name.toLowerCase()}`}
+            placeholder="Search investments..."
             aria-label="Filter investments by name"
           />
           {query ? (
@@ -448,6 +474,44 @@ export function StoreCatalogView({
               <X aria-hidden={true} />
             </button>
           ) : null}
+        </div>
+      </div>
+
+      {/*
+       * The category deck expands in normal flow below the sticky control bar.
+       * Every real category is a tile here, so nothing is hidden behind a
+       * horizontal scroll. The list is keyed by generation so its staggered
+       * entrance replays on each open; the closed deck is inert so its tiles
+       * leave both the tab order and the accessibility tree.
+       */}
+      <div id="store-category-deck" className={styles.deck} data-open={deckOpen}>
+        <div className={styles.deckBody}>
+          <div className={styles.deckInner} inert={!deckOpen}>
+            <ul className={styles.deckGrid} aria-label="Store categories" key={deckGeneration}>
+              {categories.map((category, index) => (
+                <li key={category.id ?? "all"}>
+                  <button
+                    type="button"
+                    className={styles.tile}
+                    aria-pressed={category.id === folderId}
+                    onClick={() => selectCategory(category.id)}
+                    style={{ "--deck-i": Math.min(index, maxStaggerIndex) } as React.CSSProperties}
+                  >
+                    <span className={styles.tileMark} aria-hidden={true}>
+                      <StoreFolderIcon name={category.name} />
+                    </span>
+                    <span className={styles.tileCopy}>
+                      <strong>{category.name}</strong>
+                      <span className={styles.tileCount}>
+                        {category.count} {category.count === 1 ? "investment" : "investments"}
+                      </span>
+                    </span>
+                    <ArrowRight className={styles.tileArrow} aria-hidden={true} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 

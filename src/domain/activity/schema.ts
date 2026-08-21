@@ -56,15 +56,16 @@ const activityBaseSchema = z.object({
   metadata: metadataSchema.optional(),
 });
 
-export const userActivitySchema = activityBaseSchema.extend({
-  actor_profile_id: uuidSchema,
-});
-
+/*
+ * There is no user-authored activity schema. Browser sessions hold no INSERT
+ * privilege on public.activity_events (M-02): an authenticated action reaches
+ * the audit stream only through a trusted SECURITY DEFINER RPC or trigger that
+ * derives the actor and timestamp server-side.
+ */
 export const systemActivitySchema = activityBaseSchema.extend({
   actor_profile_id: uuidSchema.nullable().optional(),
   created_at: timestampSchema.optional(),
 });
 
 export type ActivityEvent = ActivityEventRow;
-export type UserActivityInput = z.infer<typeof userActivitySchema>;
 export type SystemActivityInput = z.infer<typeof systemActivitySchema>;
