@@ -1545,24 +1545,34 @@
 
 .wizardHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-  gap: 24px;
-  align-items: end;
-  padding: 15px 18px;
+  /*
+   * The right column is bounded so the step title and its progress track keep
+   * a stable, intentional width; everything that remains belongs to the client
+   * and service stack on the left. A long package name therefore wraps inside
+   * its own column instead of crowding the step.
+   */
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 260px);
+  gap: 14px 28px;
+  align-items: start;
+  padding: 16px 18px;
   border: 1px solid color-mix(in srgb, var(--wf-navy) 18%, var(--wf-border));
   border-radius: 12px;
   background: var(--wf-navy-wash);
 }
 
 .wizardIdentity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 5px 9px;
+  display: grid;
+  gap: 10px;
   min-width: 0;
 }
 
-.wizardIdentity span {
+.wizardIdentityBlock {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.wizardIdentityBlock span {
   color: var(--wf-text-muted);
   font-size: 10px;
   font-weight: 650;
@@ -1570,37 +1580,53 @@
   text-transform: uppercase;
 }
 
-.wizardIdentity strong {
+.wizardIdentityBlock strong {
   overflow-wrap: anywhere;
   color: var(--wf-navy);
   font-family: var(--wf-font-display);
-  font-size: 13px;
   font-weight: 650;
+  line-height: 1.3;
 }
 
-.wizardIdentity i {
-  color: var(--wf-border);
-  font-style: normal;
+/* The client is the subject of the report; the service qualifies it. */
+.wizardIdentityBlock[data-role="client"] strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wizardIdentityBlock[data-role="service"] strong {
+  font-size: 13px;
 }
 
 .wizardIdentity small {
-  flex-basis: 100%;
   color: var(--wf-text-muted);
   font-size: 11.5px;
 }
 
+.wizardProgress {
+  justify-items: end;
+}
+
 .wizardProgress > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  min-width: 0;
 }
 
 .wizardProgress > div > strong {
+  overflow-wrap: anywhere;
   color: var(--wf-navy);
-  font-size: 12.5px;
-  font-weight: 650;
+  font-family: var(--wf-font-display);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
   text-align: right;
+}
+
+.wizardProgressTrack {
+  /* The track belongs to the step block above it, not to the whole header. */
+  width: 100%;
 }
 
 .wizardStage {
@@ -2043,6 +2069,44 @@
   gap: 9px;
 }
 
+/*
+ * The way out of a sent, read-only report. Sized to its own label so the focus
+ * ring hugs the control, and quiet enough not to compete with the client name
+ * in the card below it.
+ */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 7px;
+  margin-bottom: -2px;
+  color: #525b6d;
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    color 150ms var(--wf-ease),
+    transform 150ms var(--wf-ease);
+}
+
+.backLink svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
+
+.backLink:hover {
+  color: var(--wf-navy);
+  transform: translateX(-2px);
+}
+
+.backLink:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .advancedLink {
   color: var(--wf-text-muted);
   font-size: 12px;
@@ -2129,6 +2193,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /*
+   * Stacked, the step block is no longer a right-hand column, so it aligns
+   * with the client and service above it instead of hanging off the edge.
+   */
+  .wizardProgress,
+  .wizardProgress > div {
+    justify-items: start;
+  }
+
+  .wizardProgress > div > strong {
+    text-align: left;
+  }
+
   .wizardActionEnd {
     flex-wrap: wrap;
     justify-content: flex-start;
@@ -2152,6 +2229,15 @@
     min-height: 0;
     padding: 22px 17px;
   }
+
+  /*
+   * The label stays 12px, but a thumb needs more than 18px of height. The
+   * negative margin keeps the enlarged hit area from moving anything.
+   */
+  .backLink {
+    padding: 11px 8px;
+    margin: -11px -8px -13px;
+  }
 }
 
 /* ========================================================= reduced motion */
@@ -2172,8 +2258,13 @@
 
   .setupProgressTrack > span,
   .wizardProgressTrack > span,
-  .serviceChoice {
+  .serviceChoice,
+  .backLink {
     transition: none;
+  }
+
+  .backLink:hover {
+    transform: none;
   }
 
   .setupFocus,

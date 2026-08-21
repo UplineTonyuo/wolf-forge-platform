@@ -868,6 +868,56 @@ describe("the builder", () => {
   });
 });
 
+/* ================================================ sent report navigation */
+
+/**
+ * A sent report has no editor footer, so without this control the only way out
+ * of the detail is a detour through another sidebar page. The destination is
+ * the Reporting list rather than browser history, because that is the parent
+ * workspace for a report however the operator arrived.
+ */
+describe("leaving a sent report", () => {
+  const sent = () =>
+    documentFixture({ status: "sent", sent_at: "2026-08-18T10:00:00.000Z" });
+
+  it("exposes a Back control on a sent, read-only report", () => {
+    render(<ReportBuilder document={sent()} canSend />);
+
+    expect(screen.getByRole("link", { name: "Back" })).toBeInTheDocument();
+  });
+
+  it("points Back at the Reporting list", () => {
+    render(<ReportBuilder document={sent()} canSend />);
+
+    expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute("href", "/reporting");
+  });
+
+  it("navigates to the Reporting list when Back is activated", () => {
+    render(<ReportBuilder document={sent()} canSend />);
+
+    fireEvent.click(screen.getByRole("link", { name: "Back" }));
+
+    expect(routerPush).toHaveBeenCalledWith("/reporting");
+  });
+
+  it("leaves the report itself untouched — no save, no send, no discard", () => {
+    render(<ReportBuilder document={sent()} canSend />);
+
+    fireEvent.click(screen.getByRole("link", { name: "Back" }));
+
+    expect(saveReportDraftAction).not.toHaveBeenCalled();
+    expect(sendReportDraftAction).not.toHaveBeenCalled();
+    expect(discardReportDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("does not add a second way out to a draft, which still has its footer", () => {
+    render(<ReportBuilder document={documentFixture()} canSend />);
+
+    expect(screen.queryByRole("link", { name: "Back" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
+  });
+});
+
 /* ================================================ preview */
 
 describe("preview", () => {
@@ -1435,6 +1485,81 @@ describe("the service-aware report wizard", () => {
     expect(screen.getByLabelText("Report item")).toBeInTheDocument();
     expect(screen.getByLabelText("Value or status")).toBeInTheDocument();
     expect(screen.getByLabelText("Supporting URL (optional)")).toBeInTheDocument();
+  });
+
+  /* ---------------------------------------------- wizard context header */
+
+  /**
+   * The header carries two context zones: who the report is for and what it
+   * covers on the left, where the operator is in the run on the right. How the
+   * profile was resolved — an attached subscription or the service catalogue —
+   * is an implementation detail that never changes what William does here.
+   */
+  it("names the client in the wizard header", () => {
+    const { container } = render(<ReportWizard document={wizardDocument()} canSend />);
+
+    const header = container.querySelector("header")!;
+    expect(within(header).getByText("Client")).toBeInTheDocument();
+    expect(within(header).getByText("Northgate Dental")).toBeInTheDocument();
+  });
+
+  it("names the service beneath the client rather than beside it", () => {
+    const { container } = render(<ReportWizard document={wizardDocument()} canSend />);
+
+    expect(screen.getByText("Service")).toBeInTheDocument();
+    expect(
+      screen.getByText("Platinum SEO Success Blueprint (100 Targeted Keywords)"),
+    ).toBeInTheDocument();
+
+    // Service follows client in document order, so it reads as the weaker line.
+    const labels = Array.from(container.querySelectorAll("header span")).map(
+      (node) => node.textContent,
+    );
+    expect(labels.indexOf("Client")).toBeGreaterThanOrEqual(0);
+    expect(labels.indexOf("Service")).toBeGreaterThan(labels.indexOf("Client"));
+  });
+
+  it("never shows catalogue fallback plumbing to the operator", () => {
+    const { unmount } = render(<ReportWizard document={wizardDocument()} canSend />);
+    expect(screen.queryByText("Catalogue profile fallback")).not.toBeInTheDocument();
+    // The affirmative case is still worth stating.
+    expect(screen.getByText("Attached subscription")).toBeInTheDocument();
+    unmount();
+
+    // The fallback case itself: no attached subscription, still no plumbing.
+    render(<ReportWizard document={wizardDocument({ subscription_id: null })} canSend />);
+    expect(screen.queryByText("Catalogue profile fallback")).not.toBeInTheDocument();
+    expect(screen.queryByText("Attached subscription")).not.toBeInTheDocument();
+    // The service resolved regardless, which is the behaviour that matters.
+    expect(
+      screen.getByText("Platinum SEO Success Blueprint (100 Targeted Keywords)"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the active step and its progress together in the header", async () => {
+    const { container } = render(
+      <ReportWizard
+        document={internalReportDocumentSchema.parse(
+          freshServiceAwareRpcDocument(reportingServiceIds.platinumSeo100, "technical_seo"),
+        )}
+        canSend
+      />,
+    );
+
+    expect(screen.getByText("Step 1 of 10")).toBeInTheDocument();
+    // The active step is named in the header, not only as the step heading.
+    const header = container.querySelector("header")!;
+    expect(within(header).getByText("Technical SEO")).toBeInTheDocument();
+
+    const fill = () => header.querySelector<HTMLElement>("span[style]")!;
+    expect(fill().style.width).toBe("10%");
+
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await screen.findByRole("heading", { name: "Performance" });
+
+    expect(screen.getByText("Step 2 of 10")).toBeInTheDocument();
+    expect(within(header).getByText("Performance")).toBeInTheDocument();
+    expect(fill().style.width).toBe("20%");
   });
 
   it("keeps the Phase 2 advanced editor directly available", () => {

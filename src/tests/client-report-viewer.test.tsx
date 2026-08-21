@@ -238,6 +238,29 @@ describe("native client report viewer", () => {
     expect(screen.getByRole("navigation", { name: "Report sections" })).toBeInTheDocument();
   });
 
+  /**
+   * The internal read-only report grew a "Back to /reporting" control. The
+   * client viewer is a different component with its own way out, and a client
+   * profile has no access to the internal Reporting workspace at all — so the
+   * portal must never link there.
+   */
+  it("never links a client at the internal Reporting workspace", () => {
+    const { container } = render(<ClientReportViewer report={report()} />);
+
+    expect(screen.queryByRole("link", { name: "Back" })).not.toBeInTheDocument();
+    const internal = Array.from(container.querySelectorAll("a[href]")).filter((anchor) => {
+      const href = anchor.getAttribute("href") ?? "";
+      return href === "/reporting" || href.startsWith("/reporting/");
+    });
+    expect(internal).toHaveLength(0);
+
+    // Its own way out is unchanged.
+    expect(screen.getByRole("link", { name: "All reports" })).toHaveAttribute(
+      "href",
+      "/account/reporting",
+    );
+  });
+
   it("does not visually repeat a single-entry label that repeats its section title", () => {
     render(
       <ClientReportViewer

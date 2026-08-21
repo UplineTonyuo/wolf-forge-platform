@@ -359,18 +359,28 @@ export function ReportWizard({
 
   return (
     <div className={styles.wizard}>
+      {/*
+       * Two context zones, not one crowded row. Client and Service stack on
+       * the left so a long package name wraps into its own space instead of
+       * pushing the step title across the header; the step, its title and the
+       * progress track stay together on the right.
+       *
+       * Whether the profile came from a subscription or from the catalogue is
+       * an implementation detail of how the draft was built. It never changes
+       * what William does on this screen, so only the affirmative case is
+       * surfaced — the fallback resolution itself is untouched.
+       */}
       <header className={styles.wizardHeader}>
         <div className={styles.wizardIdentity}>
-          <span>Client</span>
-          <strong>{initial.company_name}</strong>
-          <i aria-hidden="true">/</i>
-          <span>Service</span>
-          <strong>{initial.service_name ?? profile.serviceName}</strong>
-          {initial.subscription_id ? (
-            <small>Attached subscription</small>
-          ) : (
-            <small>Catalogue profile fallback</small>
-          )}
+          <div className={styles.wizardIdentityBlock} data-role="client">
+            <span>Client</span>
+            <strong>{initial.company_name}</strong>
+          </div>
+          <div className={styles.wizardIdentityBlock} data-role="service">
+            <span>Service</span>
+            <strong>{initial.service_name ?? profile.serviceName}</strong>
+          </div>
+          {initial.subscription_id ? <small>Attached subscription</small> : null}
         </div>
 
         <div className={styles.wizardProgress}>

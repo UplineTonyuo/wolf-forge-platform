@@ -2,6 +2,7 @@
 
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Check,
   Eye,
@@ -251,6 +252,21 @@ export function ReportBuilder({
 
   return (
     <div className={styles.builder}>
+      {/*
+       * A sent report is read-only, so it has no editor footer and no other way
+       * out of the detail. It sits above the identity card rather than inside
+       * it, because it navigates away from the report rather than describing
+       * it. The destination is /reporting rather than browser history: the
+       * Reporting list is the parent workspace for a report however the
+       * operator arrived here.
+       */}
+      {readOnly ? (
+        <Link className={styles.backLink} href="/reporting">
+          <ArrowLeft aria-hidden="true" />
+          Back
+        </Link>
+      ) : null}
+
       <div className={styles.identity}>
         <span className={styles.identityName}>{initial.company_name}</span>
         <span className={styles.identityMeta}>
