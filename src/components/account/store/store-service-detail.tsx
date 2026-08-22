@@ -3,6 +3,8 @@ import Link from "next/link";
 import { storeContactLabel } from "../../../domain/services/store-projections";
 import type { StoreServiceView } from "../../../domain/services/store-projections";
 import { AddToCartButton } from "../cart/add-to-cart-button";
+import type { StorePurchaseOffer } from "../../../domain/store/purchase";
+import { PurchaseWithBalance } from "./purchase-with-balance";
 import styles from "./store-service-detail.module.css";
 
 /**
@@ -12,9 +14,15 @@ import styles from "./store-service-detail.module.css";
  * under the global .portal-service-description rules rather than re-stating
  * that typography here.
  *
- * Still browse-only: nothing here orders or charges. The primary action is the
- * existing support ticket flow, and the secondary one collects this investment
- * in the header cart so several can be raised in one conversation.
+ * No longer browse-only. When the account can truthfully buy this investment
+ * from its Wolf Forge Balance — priced, one-time, an active membership, enough
+ * balance — the primary action is a real purchase, and the conversation and cart
+ * actions step down beside it. When it cannot, the purchase block states why and
+ * the original request flow remains the primary action, unchanged.
+ *
+ * `offer` is resolved on the server from the wallet and the membership. It is a
+ * presentation input only: the database re-resolves every one of those facts
+ * inside the purchase transaction.
  *
  * The contact label is not fixed copy — Franchise in a Box is William's
  * engagement, so it names him. Every other investment stays with the team.
@@ -31,10 +39,13 @@ export function StoreServiceDetail({
   service,
   folderName,
   backHref,
+  purchaseOffer,
 }: {
   service: StoreServiceView;
   folderName: string | null;
   backHref: string;
+  /** Null when the portal could not resolve the account's funding at all. */
+  purchaseOffer?: StorePurchaseOffer | null;
 }) {
   const { amount, cadence } = splitPrice(service.recurringLabel ?? service.priceLabel);
   const contactLabel = storeContactLabel(service.name);
@@ -94,6 +105,16 @@ export function StoreServiceDetail({
                 </div>
               ) : null}
             </dl>
+
+            {purchaseOffer ? (
+              <div className={styles.purchaseBlock}>
+                <PurchaseWithBalance
+                  serviceId={service.id}
+                  serviceName={service.name}
+                  offer={purchaseOffer}
+                />
+              </div>
+            ) : null}
 
             <div className={styles.actions}>
               <Link className={styles.cta} href="/account/messages?compose=1">

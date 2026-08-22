@@ -2998,6 +2998,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null
@@ -3019,6 +3020,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           id?: string
+          order_id?: string | null
           priority?: string
           public_ref?: string | null
           requester_email?: string | null
@@ -3040,6 +3042,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           id?: string
+          order_id?: string | null
           priority?: string
           public_ref?: string | null
           requester_email?: string | null
@@ -3079,6 +3082,13 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
@@ -3414,6 +3424,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null
@@ -3544,6 +3555,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null
@@ -4011,6 +4023,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null
@@ -4674,6 +4687,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_purchase_service_with_balance: {
+        Args: { p_request_id: string; p_service_id: string }
+        Returns: {
+          amount_cents: number
+          currency: string
+          invoice_id: string
+          invoice_number: number
+          order_id: string
+          order_number: number
+          payment_id: string
+          replayed: boolean
+          service_name: string
+          ticket_id: string
+          ticket_public_ref: string
+          wallet_balance_cents: number
+        }[]
+      }
       app_reconcile_subscription_state: {
         Args: { p_subscription_id: string }
         Returns: {
@@ -5115,6 +5145,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_set_wf_card_membership: {
+        Args: { p_active: boolean; p_company_id: string; p_request_id: string }
+        Returns: {
+          activated_at: string | null
+          company_id: string
+          created_at: string
+          deactivated_at: string | null
+          purchase_currency: string
+          purchase_price_cents: number
+          purchase_reference: string | null
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "wf_card_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       app_submit_form: {
         Args: {
           p_context: Json
@@ -5435,6 +5485,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null
@@ -5465,6 +5516,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          order_id: string | null
           priority: string
           public_ref: string | null
           requester_email: string | null

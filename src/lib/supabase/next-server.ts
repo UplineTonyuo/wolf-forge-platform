@@ -299,6 +299,9 @@ export const getInternalContext = cache(async () => {
       companies: new CompanyService({ repository: new CompanyRepository(client) }),
       dashboard: new DashboardService({ repository: new DashboardRepository(client) }),
       wallets: new CompanyWalletService({ repository: new CompanyWalletRepository(client) }),
+      // Internal staff grant and withdraw the WF Card entitlement that unlocks
+      // the Wolf Forge Balance rail; the RPC behind it re-checks invoices.manage.
+      wfCard: new WfCardService({ repository: new WfCardRepository(client) }),
       contacts: new ContactService({ repository: new ContactRepository(client) }),
       coupons: new CouponService({ repository: new CouponRepository(client) }),
       invoices: new InvoiceService({ repository: new InvoiceRepository(client) }),

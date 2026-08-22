@@ -12,6 +12,7 @@ import {
   Phone,
   ReceiptText,
   UserRound,
+  CreditCard,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
@@ -19,6 +20,7 @@ import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientStatusControl } from "../../../../components/clients/client-status-control";
 import { ClientBalanceControl } from "../../../../components/clients/client-balance-control";
+import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { StatusBadge } from "../../../../components/ui/status-badge";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
@@ -114,11 +116,14 @@ export default async function ClientDetailPage({
   const context = await getInternalContext();
 
   try {
-    const [client, contacts, projects, wallet] = await Promise.all([
+    const [client, contacts, projects, wallet, wfCardMembership] = await Promise.all([
       context.services.companies.get(companyId),
       context.services.contacts.listForCompany(companyId),
       context.services.orders.listForCompany(companyId),
       context.services.wallets.getForCompany(companyId),
+      // Missing is a real answer here: most companies hold no membership row at
+      // all, and that is simply "not active" rather than an error.
+      context.services.wfCard.getMembership(companyId).catch(() => null),
     ]);
 
     const openProjects = projects.filter(
@@ -318,6 +323,20 @@ export default async function ClientDetailPage({
                       clientName={primaryContact?.name ?? client.name}
                       balanceCents={Number(wallet.balance_cents)}
                       currency={wallet.currency}
+                    />
+                  </dd>
+                </div>
+
+                <div className="client-balance-row">
+                  <dt>
+                    <CreditCard aria-hidden="true" />
+                    WF Card membership
+                  </dt>
+
+                  <dd>
+                    <WfCardMembershipControl
+                      companyId={client.id}
+                      status={wfCardMembership?.status ?? null}
                     />
                   </dd>
                 </div>

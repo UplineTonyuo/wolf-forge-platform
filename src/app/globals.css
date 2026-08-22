@@ -13173,3 +13173,56 @@ td {
 }
 
 /* WF HEADER UTILITY ICONS END */
+
+/*
+ * WF Card membership, on the client record beside the balance it unlocks.
+ * Stacked rather than inline because the explanatory line matters as much as
+ * the control: activating grants an entitlement, it does not take payment.
+ */
+.wf-card-membership {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.wf-card-membership-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--wf-text-muted);
+}
+
+.wf-card-membership-state svg { width: 15px; height: 15px; }
+.wf-card-membership-state[data-active="true"] { color: var(--wf-navy); }
+
+.wf-card-membership-toggle {
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  background: var(--wf-white);
+  color: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 160ms var(--wf-ease), border-color 160ms var(--wf-ease);
+}
+
+.wf-card-membership-toggle:hover:not(:disabled) { background: var(--wf-warm-50); }
+.wf-card-membership-toggle:disabled { opacity: .6; cursor: default; }
+
+.wf-card-membership-note {
+  flex-basis: 100%;
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.wf-card-membership-error {
+  flex-basis: 100%;
+  color: #8e2626;
+  font-size: 11.5px;
+}

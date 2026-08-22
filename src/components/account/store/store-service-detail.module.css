@@ -241,3 +241,14 @@
   .cta:hover, .cta:active { transform: none; }
   .cta:hover svg { transform: none; }
 }
+
+/*
+ * The purchase block sits above the request actions and is separated by a rule
+ * rather than a gap: buying and asking are different decisions, and the line
+ * says so without adding a second card.
+ */
+.purchaseBlock {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--wf-border);
+}

@@ -3,6 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { StoreServiceDetail } from "../../../../components/account/store/store-service-detail";
 import { storeFolderRoute } from "../../../../components/account/portal-nav-registry";
 import type { StoreServiceView } from "../../../../domain/services/store-projections";
+import {
+  resolveStorePurchaseOffer,
+  type StorePurchaseOffer,
+} from "../../../../domain/store/purchase";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 
@@ -14,10 +18,12 @@ export default async function ClientStoreServicePage({
   params: Promise<{ serviceId: string }>;
 }) {
   const { serviceId } = await params;
-  const { services } = await getClientContext();
+  const context = await getClientContext();
+  const { services } = context;
 
   let service: StoreServiceView | null = null;
   let folderName: string | null = null;
+  let purchaseOffer: StorePurchaseOffer | null = null;
   let denied = false;
   let missing = false;
 
@@ -28,6 +34,29 @@ export default async function ClientStoreServicePage({
     if (service.folderId) {
       const catalog = await services.catalog.listStoreCatalog();
       folderName = catalog.folders.find((folder) => folder.id === service?.folderId)?.name ?? null;
+    }
+
+    /*
+     * Funding is read separately and is allowed to fail on its own. An account
+     * whose wallet cannot be resolved — a denied billing module, a transient
+     * error — still gets the Store page and the existing request flow; it simply
+     * gets no purchase offer rather than an offer built on a guessed balance.
+     * The company id comes from the resolved client context, never from the URL.
+     */
+    try {
+      const [wallet, membership] = await Promise.all([
+        services.wallets.getForCompany(context.user.companyId),
+        services.wfCard.getMembership(context.user.companyId),
+      ]);
+
+      purchaseOffer = resolveStorePurchaseOffer({
+        service,
+        balanceCents: wallet.balance_cents,
+        walletCurrency: wallet.currency,
+        membershipStatus: membership?.status ?? null,
+      });
+    } catch {
+      purchaseOffer = null;
     }
   } catch (error) {
     const safe = toClientSafeError(error);
@@ -45,6 +74,7 @@ export default async function ClientStoreServicePage({
       service={service}
       folderName={folderName}
       backHref={service.folderId && folderName ? storeFolderRoute(service.folderId) : "/account/store"}
+      purchaseOffer={purchaseOffer}
     />
   );
 }

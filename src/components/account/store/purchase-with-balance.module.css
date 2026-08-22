@@ -1,0 +1,307 @@
+/*
+ * Buying an investment with the Wolf Forge Balance.
+ *
+ * The one gold action in the portal. Everything else in the Store aside is navy
+ * structure or a quiet outline, so gold here means "this one spends money" and
+ * nothing else has to shout to be distinguished from it.
+ */
+
+.purchase {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--wf-navy);
+  background: linear-gradient(180deg, #e8c766, var(--wf-gold));
+  box-shadow: 0 14px 26px -18px rgba(120, 92, 20, .95);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  cursor: pointer;
+  transition: transform 160ms var(--wf-ease), box-shadow 160ms var(--wf-ease),
+    filter 160ms var(--wf-ease);
+}
+
+.purchase:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 18px 30px -18px rgba(120, 92, 20, 1);
+}
+
+.purchase:active { transform: translateY(0) scale(.985); }
+.purchase svg { width: 15px; height: 15px; transition: transform 200ms var(--wf-ease); }
+.purchase:hover svg { transform: translateX(3px); }
+
+.balanceLine {
+  margin: 8px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-weight: 560;
+  text-align: center;
+  letter-spacing: .01em;
+}
+
+/* ---------------------------------------------------------------------------
+ * Not purchasable. A stated reason, never a dead disabled button.
+ * ------------------------------------------------------------------------ */
+
+.blocked {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-warm-50);
+}
+
+.blockedLine {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.shortfall {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+
+.shortfall div { display: flex; flex-direction: column; gap: 2px; }
+
+.shortfall dt {
+  color: var(--wf-text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.shortfall dd {
+  margin: 0;
+  color: var(--wf-navy);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+ * Confirmation
+ * ------------------------------------------------------------------------ */
+
+.summary { display: flex; flex-direction: column; gap: 0; margin: 0; }
+
+.summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.summary > div:last-child { border-bottom: 0; }
+
+.summary dt {
+  color: var(--wf-text-muted);
+  font-size: 11.5px;
+  font-weight: 640;
+}
+
+.summary dd {
+  margin: 0;
+  color: var(--wf-navy);
+  font-size: 13.5px;
+  font-weight: 650;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryAmount { font-size: 17px; font-weight: 750; }
+
+.dialogError {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(158, 42, 42, .28);
+  border-radius: 10px;
+  background: rgba(158, 42, 42, .06);
+  color: #8e2626;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.dialogActions { display: flex; gap: 10px; justify-content: flex-end; }
+
+.cancel,
+.confirm {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease),
+    opacity 160ms var(--wf-ease);
+}
+
+.cancel {
+  border: 1px solid var(--wf-border);
+  background: var(--wf-white);
+  color: var(--wf-text-muted);
+}
+
+.cancel:hover:not(:disabled) { background: var(--wf-warm-50); color: var(--wf-navy); }
+
+.confirm {
+  border: 0;
+  color: var(--wf-navy);
+  background: linear-gradient(180deg, #e8c766, var(--wf-gold));
+  font-weight: 700;
+}
+
+.confirm:hover:not(:disabled) { filter: brightness(1.03); transform: translateY(-1px); }
+
+.cancel:disabled,
+.confirm:disabled { opacity: .6; cursor: default; transform: none; }
+
+.confirm[data-pending] { opacity: .85; }
+
+.srOnly {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * Success outro
+ * ------------------------------------------------------------------------ */
+
+.outro {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(6, 12, 40, .55);
+  backdrop-filter: blur(6px);
+  animation: outroIn 220ms var(--wf-ease) both;
+}
+
+.outroCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(420px, 100%);
+  padding: 34px 30px 30px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--wf-white), var(--wf-warm-50));
+  box-shadow: 0 40px 80px -40px rgba(0, 13, 81, .8);
+  text-align: center;
+  animation: outroCardIn 380ms var(--wf-ease) both;
+}
+
+.outroMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--wf-navy);
+  color: var(--wf-gold);
+}
+
+.outroMark svg { width: 28px; height: 28px; }
+
+.outroCheck {
+  position: absolute;
+  width: 15px !important;
+  height: 15px !important;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--wf-gold);
+  color: var(--wf-navy);
+  animation: outroCheckIn 320ms var(--wf-ease) 240ms both;
+}
+
+.outroTitle {
+  color: var(--wf-navy);
+  font-family: var(--wf-font-display, inherit);
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.01em;
+}
+
+.outroBody { margin: 0; color: var(--wf-navy); font-size: 14px; line-height: 1.55; }
+.outroBody b { font-weight: 700; }
+
+.outroNote {
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.outroSweep {
+  width: 100%;
+  height: 2px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(168, 131, 46, 0), var(--wf-gold), rgba(168, 131, 46, 0));
+  animation: outroSweep 1500ms var(--wf-ease) 260ms both;
+}
+
+.outroReturn {
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 620;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@keyframes outroIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes outroCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes outroCheckIn {
+  from { opacity: 0; transform: scale(.4); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes outroSweep {
+  from { transform: scaleX(0); opacity: 0; }
+  40% { opacity: 1; }
+  to { transform: scaleX(1); opacity: .9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outro,
+  .outroCard,
+  .outroCheck,
+  .outroSweep { animation-duration: 1ms; }
+  .purchase, .confirm, .cancel { transition-duration: 1ms; }
+}
+
+@media (max-width: 560px) {
+  .dialogActions { flex-direction: column-reverse; }
+  .cancel, .confirm { width: 100%; }
+  .summary > div { gap: 12px; }
+}

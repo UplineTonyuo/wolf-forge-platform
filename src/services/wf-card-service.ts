@@ -1,4 +1,8 @@
-import { payInvoiceWithWfCardSchema } from "../domain/wf-card/schema";
+import {
+  payInvoiceWithWfCardSchema,
+  purchaseServiceWithBalanceSchema,
+  setWfCardMembershipSchema,
+} from "../domain/wf-card/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
 import { WfCardRepository } from "../repositories/wf-card-repository";
 import {
@@ -23,5 +27,24 @@ export class WfCardService {
   payInvoice(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.payInvoice(parseInput(payInvoiceWithWfCardSchema, input));
+  }
+
+  /**
+   * A Store purchase. The actor is verified here for the same reason every other
+   * mutation verifies it — so a cast or forged object cannot reach the database
+   * client — but the purchase decision itself belongs to the RPC.
+   */
+  purchaseServiceWithBalance(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.purchaseServiceWithBalance(
+      parseInput(purchaseServiceWithBalanceSchema, input),
+    );
+  }
+
+  setMembership(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.setMembership(
+      parseInput(setWfCardMembershipSchema, input),
+    );
   }
 }
