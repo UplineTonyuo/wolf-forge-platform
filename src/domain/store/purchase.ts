@@ -1,5 +1,4 @@
 import type { StoreServiceView } from "../services/store-projections";
-import type { WfCardMembershipStatus } from "../wf-card/schema";
 
 /**
  * Whether the Store may offer a real Purchase action, and what it must say when
@@ -7,10 +6,13 @@ import type { WfCardMembershipStatus } from "../wf-card/schema";
  *
  * This is a projection of the database's own refusals, not a second opinion.
  * public.app_purchase_service_with_balance rejects a recurring, unpriced,
- * inactive or private Service, a company without an active WF Card membership,
- * and a balance below the catalogue price — each with its own error. Every
- * branch below mirrors one of those, so the button is absent or disabled exactly
- * where the RPC would refuse.
+ * inactive or private Service and a balance below the catalogue price — each
+ * with its own error. Every branch below mirrors one of those, so the button is
+ * absent or disabled exactly where the RPC would refuse. There is deliberately
+ * NO membership branch: a Store purchase of a one-time Service needs an active
+ * WF Card membership no more than the RPC does — the client simply needs an
+ * eligible Service, sufficient Wolf Forge Balance, and authorization for their
+ * own company.
  *
  * It is deliberately NOT the authorization. The client cannot reach the money by
  * defeating this; a crafted request meets the same checks again in the database,
@@ -21,7 +23,6 @@ import type { WfCardMembershipStatus } from "../wf-card/schema";
 export type StorePurchaseBlockedReason =
   | "recurring"
   | "unpriced"
-  | "membership_inactive"
   | "insufficient_balance"
   | "balance_unknown";
 
@@ -53,7 +54,6 @@ export function resolveStorePurchaseOffer({
   service,
   balanceCents,
   walletCurrency,
-  membershipStatus,
 }: {
   service: Pick<StoreServiceView, "amount" | "currency" | "recurring">;
   /**
@@ -63,7 +63,6 @@ export function resolveStorePurchaseOffer({
    */
   balanceCents: number | null;
   walletCurrency: string | null;
-  membershipStatus: WfCardMembershipStatus | null;
 }): StorePurchaseOffer {
   const priceCents = toPriceCents(service.amount);
   const currency = service.currency;
@@ -85,17 +84,6 @@ export function resolveStorePurchaseOffer({
     return {
       purchasable: false,
       reason: "unpriced",
-      priceCents,
-      currency,
-      balanceCents,
-      shortfallCents: null,
-    };
-  }
-
-  if (membershipStatus !== "active") {
-    return {
-      purchasable: false,
-      reason: "membership_inactive",
       priceCents,
       currency,
       balanceCents,
@@ -143,8 +131,6 @@ export function storePurchaseBlockedLabel(reason: StorePurchaseBlockedReason): s
       return "Recurring investments are arranged with your Wolf Forge team.";
     case "unpriced":
       return "This investment is priced with your Wolf Forge team.";
-    case "membership_inactive":
-      return "Purchasing with your Wolf Forge Balance needs an active WF Card membership.";
     case "insufficient_balance":
       return "Your Wolf Forge Balance does not cover this yet.";
     case "balance_unknown":

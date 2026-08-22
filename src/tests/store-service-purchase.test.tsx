@@ -2,6 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resolveStorePurchaseOffer,
@@ -10,6 +11,7 @@ import {
   type StorePurchaseOffer,
 } from "../domain/store/purchase";
 import type { StoreServiceView } from "../domain/services/store-projections";
+import { resetCartForTests } from "../components/account/cart/cart-store";
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -20,8 +22,18 @@ const purchaseServiceWithBalanceAction = vi.fn<
   (input: ActionInput) => Promise<Record<string, unknown>>
 >();
 
+const recordStoreInterestAction = vi.fn();
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
+}));
+
+// The detail page's Talk to team and back links are plain anchors here; these
+// tests assert presence and behaviour, not routing.
+vi.mock("next/link", () => ({
+  default: (props: { href: string; children?: ReactNode; [key: string]: unknown }) => (
+    <a {...props} />
+  ),
 }));
 
 vi.mock("../app/actions/store-purchase", () => ({
@@ -29,8 +41,15 @@ vi.mock("../app/actions/store-purchase", () => ({
     purchaseServiceWithBalanceAction(input),
 }));
 
+vi.mock("../app/actions/store-interest", () => ({
+  recordStoreInterestAction: (input: unknown) => recordStoreInterestAction(input),
+}));
+
 const { PurchaseWithBalance } = await import(
   "../components/account/store/purchase-with-balance"
+);
+const { StoreServiceDetail } = await import(
+  "../components/account/store/store-service-detail"
 );
 
 afterEach(cleanup);
@@ -96,7 +115,6 @@ describe("resolveStorePurchaseOffer", () => {
   const base = {
     balanceCents: 210000,
     walletCurrency: "USD",
-    membershipStatus: "active" as const,
   };
 
   it("offers a purchase and computes what is left", () => {
@@ -105,6 +123,13 @@ describe("resolveStorePurchaseOffer", () => {
     if (!result.purchasable) return;
     expect(result.priceCents).toBe(149500);
     expect(result.balanceAfterCents).toBe(60500);
+  });
+
+  it("never consults WF Card membership — a funded client gets the offer", () => {
+    // The input has no membership field at all. Purchasability is decided by the
+    // service and the balance alone; there is no membership branch to require.
+    const result = resolveStorePurchaseOffer({ service: service(), ...base });
+    expect(result.purchasable).toBe(true);
   });
 
   it("refuses a recurring service rather than mis-selling a subscription", () => {
@@ -118,15 +143,6 @@ describe("resolveStorePurchaseOffer", () => {
   it("refuses an unpriced service", () => {
     const result = resolveStorePurchaseOffer({ service: service({ amount: 0 }), ...base });
     expect(result).toMatchObject({ purchasable: false, reason: "unpriced" });
-  });
-
-  it("mirrors the database membership gate", () => {
-    const result = resolveStorePurchaseOffer({
-      service: service(),
-      ...base,
-      membershipStatus: "inactive",
-    });
-    expect(result).toMatchObject({ purchasable: false, reason: "membership_inactive" });
   });
 
   it("reports the shortfall when the balance is short", () => {
@@ -171,7 +187,6 @@ describe("resolveStorePurchaseOffer", () => {
     for (const reason of [
       "recurring",
       "unpriced",
-      "membership_inactive",
       "insufficient_balance",
       "balance_unknown",
     ] as const) {
@@ -351,5 +366,64 @@ describe("PurchaseWithBalance", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /Confirm purchase/i })).not.toBeDisabled(),
     );
+  });
+});
+
+// =============================================================================
+// The detail page keeps all three paths, with no WF Card membership anywhere
+// =============================================================================
+
+describe("StoreServiceDetail", () => {
+  beforeEach(() => {
+    resetCartForTests();
+    recordStoreInterestAction.mockReset();
+    recordStoreInterestAction.mockResolvedValue({ ok: true });
+  });
+
+  function renderDetail(purchaseOffer: StorePurchaseOffer | null = null) {
+    return render(
+      <StoreServiceDetail
+        service={service()}
+        folderName="On-page SEO"
+        backHref="/account/store"
+        purchaseOffer={purchaseOffer ?? offer()}
+      />,
+    );
+  }
+
+  it("offers Purchase, Add to Cart and Talk to Team with no membership signal", () => {
+    renderDetail();
+
+    // The purchase CTA is present purely from service + balance. No membership
+    // row, status or prop is consulted anywhere in this tree.
+    expect(
+      screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add to cart/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Talk to your team/i })).toBeInTheDocument();
+  });
+
+  it("still adds the investment to the cart", () => {
+    renderDetail();
+
+    fireEvent.click(screen.getByRole("button", { name: /Add to cart/i }));
+    expect(screen.getByRole("button", { name: /In your cart/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i })).toBeInTheDocument();
+  });
+
+  it("keeps Talk to Team as the no-purchase route", () => {
+    render(
+      <StoreServiceDetail
+        service={service()}
+        folderName="On-page SEO"
+        backHref="/account/store"
+        purchaseOffer={null}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: /Talk to your team/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+    ).not.toBeInTheDocument();
   });
 });

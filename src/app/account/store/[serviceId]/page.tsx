@@ -42,18 +42,16 @@ export default async function ClientStoreServicePage({
      * error — still gets the Store page and the existing request flow; it simply
      * gets no purchase offer rather than an offer built on a guessed balance.
      * The company id comes from the resolved client context, never from the URL.
+     * Purchasability deliberately reads no WF Card membership: a Store purchase
+     * of an eligible one-time Service needs only a sufficient balance.
      */
     try {
-      const [wallet, membership] = await Promise.all([
-        services.wallets.getForCompany(context.user.companyId),
-        services.wfCard.getMembership(context.user.companyId),
-      ]);
+      const wallet = await services.wallets.getForCompany(context.user.companyId);
 
       purchaseOffer = resolveStorePurchaseOffer({
         service,
         balanceCents: wallet.balance_cents,
         walletCurrency: wallet.currency,
-        membershipStatus: membership?.status ?? null,
       });
     } catch {
       purchaseOffer = null;

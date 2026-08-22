@@ -15,14 +15,15 @@ import styles from "./store-service-detail.module.css";
  * that typography here.
  *
  * No longer browse-only. When the account can truthfully buy this investment
- * from its Wolf Forge Balance — priced, one-time, an active membership, enough
- * balance — the primary action is a real purchase, and the conversation and cart
- * actions step down beside it. When it cannot, the purchase block states why and
- * the original request flow remains the primary action, unchanged.
+ * from its Wolf Forge Balance — priced, one-time, enough balance — the primary
+ * action is a real purchase, and the conversation and cart actions step down
+ * beside it. When it cannot, the purchase block states why and the original
+ * request flow remains the primary action, unchanged. No WF Card membership is
+ * read or required: a Store purchase is open to every funded client.
  *
- * `offer` is resolved on the server from the wallet and the membership. It is a
- * presentation input only: the database re-resolves every one of those facts
- * inside the purchase transaction.
+ * `offer` is resolved on the server from the wallet. It is a presentation input
+ * only: the database re-resolves every one of those facts inside the purchase
+ * transaction.
  *
  * The contact label is not fixed copy — Franchise in a Box is William's
  * engagement, so it names him. Every other investment stays with the team.

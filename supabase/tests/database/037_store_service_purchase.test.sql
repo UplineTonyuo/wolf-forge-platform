@@ -1,6 +1,6 @@
 begin;
 
-select plan(59);
+select plan(60);
 
 -- =============================================================================
 -- Store service purchase → paid order → fulfillment Ticket → internal notice.
@@ -8,7 +8,9 @@ select plan(59);
 -- Fixtures:
 --   internal owner   — holds everything, so it is the notification recipient
 --   internal staff   — tickets.view REVOKED, so it must receive nothing
---   client A         — the purchaser, at company A, funded and a member
+--   client A         — the purchaser, at company A, funded, with NO WF Card
+--                      membership — the successful purchase proves the rail no
+--                      longer requires one
 --   client B         — an unrelated company, used for tenant separation
 --
 -- Services: one purchasable (active, public, one-time, priced), one inactive,
@@ -70,20 +72,15 @@ values (
   97.00, 1, 'M', 'create_order', 0
 );
 
--- Both companies are funded members, so a refusal is never merely "no money".
+-- Both companies are funded. Neither holds a WF Card membership row, so no
+-- purchase below can succeed on membership alone — the rail must work for a
+-- funded non-member or it does not work at all.
 update public.company_wallets
 set balance_cents = 500000
 where company_id in (
   'd3000000-0000-0000-0000-00000000000a',
   'd3000000-0000-0000-0000-00000000000b'
 );
-
-insert into public.wf_card_memberships (
-  company_id, status, activated_at, purchase_price_cents, purchase_currency
-)
-values
-  ('d3000000-0000-0000-0000-00000000000a', 'active', now(), 25900, 'USD'),
-  ('d3000000-0000-0000-0000-00000000000b', 'active', now(), 25900, 'USD');
 
 create temporary table purchase_result (
   order_id uuid, order_number bigint, ticket_id uuid, ticket_public_ref text,
@@ -274,35 +271,54 @@ select is(
   'THE GOLDEN RULE: a failed payment notified nobody'
 );
 
--- Membership is the same gate the invoice rail enforces.
+-- Restore the funded balance that the insufficient-balance check spent down.
 update public.company_wallets
 set balance_cents = 500000
 where company_id = 'd3000000-0000-0000-0000-00000000000a';
 
-update public.wf_card_memberships
-set status = 'cancelled', deactivated_at = now()
-where company_id = 'd3000000-0000-0000-0000-00000000000a';
+-- The purchaser holds NO active WF Card membership — no row at all. The
+-- successful purchase below therefore proves the Store rail works for a funded
+-- non-member.
+select ok(
+  not exists (
+    select 1
+    from public.wf_card_memberships as membership
+    where membership.company_id = 'd3000000-0000-0000-0000-00000000000a'
+      and membership.status = 'active'
+  ),
+  'the purchaser holds NO active WF Card membership when they buy'
+);
 
+-- Direct arbitrary Order creation is still refused. The browser role holds no
+-- INSERT grant on public.orders, and the purchase exception in
+-- private.enforce_order_permission cannot be reached by naming a payment id by
+-- hand — the trigger re-derives every fact from the settled payment itself.
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = 'd2000000-0000-0000-0000-000000000001';
 
 select throws_ok(
-  $$select public.app_purchase_service_with_balance(
-      'e0000000-0000-4000-8000-000000000006', 'd4000000-0000-0000-0000-000000000001')$$,
-  'WF_CARD_MEMBERSHIP_REQUIRED',
-  'the Wolf Forge Balance rail refuses a non-member exactly as invoice settlement does'
+  $$insert into public.orders (
+      company_id, service_id, title, status, priority
+    ) values (
+      'd3000000-0000-0000-0000-00000000000a',
+      'd4000000-0000-0000-0000-000000000001',
+      'Forged project', 'pending', 'normal')$$,
+  '42501',
+  'permission denied for table orders',
+  'a client session cannot create an arbitrary Order directly'
 );
 
 reset role;
 set local "request.jwt.claim.sub" = '';
 
-update public.wf_card_memberships
-set status = 'active', activated_at = now(), deactivated_at = null
-where company_id = 'd3000000-0000-0000-0000-00000000000a';
-
 -- =============================================================================
 -- The successful purchase
+--
+-- The purchaser is a NON-member (asserted above). Everything below — the exact
+-- debit, the paid invoice, the single Order, the single waiting_on_team Ticket,
+-- the internal notice — is the proof that a funded client without WF Card
+-- membership can buy an eligible one-time Service.
 -- =============================================================================
 
 set local role authenticated;

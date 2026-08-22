@@ -30,7 +30,6 @@ export type StorePurchaseActionResult =
   | {
       ok: false;
       code:
-        | "MEMBERSHIP_REQUIRED"
         | "INSUFFICIENT_BALANCE"
         | "SERVICE_UNAVAILABLE"
         | "RECURRING_UNSUPPORTED"
@@ -86,13 +85,6 @@ export async function purchaseServiceWithBalanceAction(input: {
         ? `${error.message} ${JSON.stringify(error.cause ?? "")}`
         : "";
 
-    if (raw.includes("WF_CARD_MEMBERSHIP_REQUIRED")) {
-      return {
-        ok: false,
-        code: "MEMBERSHIP_REQUIRED",
-        error: "An active WF Card membership is required to pay from your Wolf Forge Balance.",
-      };
-    }
     if (raw.includes("WF_CARD_INSUFFICIENT_BALANCE")) {
       return {
         ok: false,

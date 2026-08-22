@@ -71,11 +71,12 @@ alter table public.invoices
 -- =============================================================================
 -- 3. Internal WF Card membership activation
 --
--- The Wolf Forge Balance rail is gated on an active wf_card_memberships row, and
--- until now NO code path anywhere wrote that table (KI-013) — a membership could
--- only be created by direct database access, so no client could reach the rail
--- at all. Purchasing honours the same gate as invoice settlement, which would
--- have left this feature correct and unreachable.
+-- Ordinary invoice settlement is gated on an active wf_card_memberships row in
+-- app_pay_invoice_with_wallet, and for a long time NO code path anywhere wrote
+-- that table (KI-013) — a membership could only be created by direct database
+-- access. Store purchasing no longer requires a membership (it is now available
+-- to every funded client), but the invoice rail still does, so the entitlement
+-- still needs a legitimate writer.
 --
 -- This is the smallest thing that closes it: an audited internal RPC behind the
 -- existing money capability. It does NOT sell the membership to a client; that
@@ -562,9 +563,6 @@ begin
         join public.invoice_items as item_row
           on item_row.invoice_id = invoice_row.id
          and item_row.service_id = new.service_id
-        join public.wf_card_memberships as membership_row
-          on membership_row.company_id = invoice_row.company_id
-         and membership_row.status = 'active'
         join public.profiles as profile_row
           on profile_row.id = (select auth.uid())
          and profile_row.company_id = invoice_row.company_id
@@ -618,7 +616,128 @@ revoke all on function private.enforce_order_permission()
   from public, anon, authenticated, service_role;
 
 comment on function private.enforce_order_permission() is
-  'Project write authorization. Client-initiated projects remain refused; the single exception is an Order provisioned by a settled Store purchase, which the trigger verifies independently against the payment, the paid store_purchase invoice, its line item, the active membership and the caller''s own company.';
+  'Project write authorization. Client-initiated projects remain refused; the single exception is an Order provisioned by a settled Store purchase, which the trigger verifies independently against the payment, the paid store_purchase invoice, its line item and the caller''s own company. No WF Card membership is required for this exception — a Store purchase must not depend on one.';
+
+-- =============================================================================
+-- 6c. The wallet debit keeps its membership gate — except for a Store purchase
+--
+-- private.enforce_company_wallet_permission is the shared narrow allowance that
+-- lets a transaction debit a company wallet. It is keyed on
+-- app.wf_wallet_invoice_payment_id, which both app_pay_invoice_with_wallet and
+-- app_purchase_service_with_balance set before their UPDATE. Originally the
+-- UPDATE branch required an active WF Card membership, exactly as the invoice
+-- RPC does. That membership predicate is now waived when the payment belongs to
+-- an invoice whose billing_reason is 'store_purchase' — the discriminator is the
+-- invoice's own server-set reason, not a client-settable flag. Ordinary invoice
+-- settlement keeps the membership gate unchanged, so app_pay_invoice_with_wallet
+-- is byte-identical in behaviour.
+--
+-- Every other re-derived fact is untouched: the payment must be a real,
+-- succeeded, wolf_forge_wallet payment the caller created, for their own
+-- company, and the debit must equal that payment's amount exactly and never go
+-- negative. Naming a payment id by hand grants nothing, and there is no
+-- standing wolf_forge_wallet payment on a store_purchase invoice that the
+-- purchase RPC has not already settled in the same transaction.
+-- =============================================================================
+
+create or replace function private.enforce_company_wallet_permission()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  context_payment_id uuid;
+begin
+  if tg_table_name = 'company_wallets' then
+    if tg_op = 'INSERT' and new.balance_cents = 0 then
+      return new;
+    end if;
+  end if;
+
+  if (select auth.uid()) is null then
+    return new;
+  end if;
+
+  begin
+    context_payment_id := nullif(
+      current_setting('app.wf_wallet_invoice_payment_id', true), ''
+    )::uuid;
+  exception when invalid_text_representation then
+    context_payment_id := null;
+  end;
+
+  if context_payment_id is not null then
+    if tg_table_name = 'company_wallets' then
+      if tg_op = 'UPDATE' and exists (
+        select 1
+        from public.invoice_payments as payment_row
+        join public.invoices as invoice_row on invoice_row.id = payment_row.invoice_id
+        join public.profiles as profile_row
+          on profile_row.id = (select auth.uid())
+         and profile_row.company_id = invoice_row.company_id
+         and profile_row.archived_at is null
+        join public.roles as role_row on role_row.id = profile_row.role_id and role_row.name = 'client'
+        where payment_row.id = context_payment_id
+          and payment_row.created_by_profile_id = (select auth.uid())
+          and payment_row.status = 'succeeded'
+          and payment_row.payment_method = 'wolf_forge_wallet'
+          and old.company_id = invoice_row.company_id
+          and new.company_id = old.company_id
+          and new.currency = old.currency
+          and old.balance_cents - new.balance_cents = payment_row.amount_cents
+          and new.balance_cents >= 0
+          and (
+            -- A Store purchase settles an invoice whose billing_reason is set
+            -- to 'store_purchase' inside app_purchase_service_with_balance, so
+            -- that debit needs no membership. Any other invoice keeps the
+            -- membership gate, matching app_pay_invoice_with_wallet.
+            invoice_row.billing_reason = 'store_purchase'
+            or exists (
+              select 1
+              from public.wf_card_memberships as membership_row
+              where membership_row.company_id = invoice_row.company_id
+                and membership_row.status = 'active'
+            )
+          )
+      ) then
+        return new;
+      end if;
+    end if;
+
+    if tg_table_name = 'company_wallet_transactions' then
+      if tg_op = 'INSERT' and exists (
+        select 1
+        from public.invoice_payments as payment_row
+        join public.invoices as invoice_row on invoice_row.id = payment_row.invoice_id
+        where payment_row.id = context_payment_id
+          and payment_row.created_by_profile_id = (select auth.uid())
+          and payment_row.status = 'succeeded'
+          and payment_row.payment_method = 'wolf_forge_wallet'
+          and new.actor_profile_id = (select auth.uid())
+          and new.company_id = invoice_row.company_id
+          and new.invoice_id = invoice_row.id
+          and new.invoice_payment_id = payment_row.id
+          and new.request_id = payment_row.request_id
+          and new.amount_cents = -payment_row.amount_cents
+          and new.currency = payment_row.currency
+          and new.source = 'invoice_payment'
+      ) then
+        return new;
+      end if;
+    end if;
+  end if;
+
+  perform private.require_permission('client_private.manage');
+  return new;
+end;
+$$;
+
+revoke all on function private.enforce_company_wallet_permission()
+  from public, anon, authenticated, service_role;
+
+comment on function private.enforce_company_wallet_permission() is
+  'Wallet write authorization. A browser role may not touch a wallet; the one exception is a transaction that names a succeeded wolf_forge_wallet payment it created, for its own company, debiting exactly that payment''s amount. Active WF Card membership is still required unless the payment settles a store_purchase invoice, which is the purchase RPC''s own rail.';
 
 -- =============================================================================
 -- 7. The purchase boundary
@@ -796,19 +915,14 @@ begin
   -- ---------------------------------------------------------------------------
   -- The rail
   --
-  -- Identical gate to app_pay_invoice_with_wallet. The Wolf Forge Balance is
-  -- reachable only through an active WF Card membership, and a Store purchase
-  -- may not be the one path that quietly disagrees.
+  -- The Wolf Forge Balance is the funding source. An active WF Card membership
+  -- is NOT required here: a Store purchase of a one-time catalogue Service is
+  -- available to every client whose balance covers it. Membership remains the
+  -- ordinary invoice-settlement gate — app_pay_invoice_with_wallet is unchanged
+  -- — but a purchase may not be the path that quietly requires it. The wallet is
+  -- locked FOR UPDATE, so the balance and currency checks below run against a row
+  -- that cannot change underneath this transaction.
   -- ---------------------------------------------------------------------------
-  if not exists (
-    select 1
-    from public.wf_card_memberships as membership
-    where membership.company_id = actor_company_id
-      and membership.status = 'active'
-  ) then
-    raise exception 'WF_CARD_MEMBERSHIP_REQUIRED' using errcode = 'P0001';
-  end if;
-
   select wallet.* into wallet_row
   from public.company_wallets as wallet
   where wallet.company_id = actor_company_id
@@ -899,10 +1013,12 @@ begin
   -- The wallet is not writable by an authenticated session on request.
   -- private.enforce_company_wallet_permission opens exactly one narrow gate: a
   -- transaction that names a succeeded wolf_forge_wallet payment it created, for
-  -- its own company, holding an active membership, debiting the wallet by
-  -- precisely that payment's amount and no more. Naming the payment here is what
-  -- makes the debit legal, and the trigger re-verifies every one of those facts
-  -- independently — this RPC cannot widen its own permission.
+  -- its own company, debiting the wallet by precisely that payment's amount and
+  -- no more. The trigger waives active membership for a payment that settles a
+  -- store_purchase invoice — which is what this invoice is — so a funded
+  -- non-member can buy. Naming the payment here is what makes the debit legal,
+  -- and the trigger re-verifies every one of those facts independently — this
+  -- RPC cannot widen its own permission.
   perform set_config('app.wf_wallet_invoice_payment_id', payment_row.id::text, true);
 
   update public.company_wallets
