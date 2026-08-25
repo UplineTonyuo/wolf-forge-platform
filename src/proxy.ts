@@ -2,6 +2,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
+import { hardenAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
 
 export async function proxy(request: NextRequest) {
   const environment = readPublicEnvironment();
@@ -16,7 +17,13 @@ export async function proxy(request: NextRequest) {
         setAll: (cookiesToSet) => {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          // Every write here is an auth-session cookie: the proxy's refresh
+          // writes AND the maxAge:0 removals that logout emits. Both go
+          // through the policy (D-114) — removals included, because a
+          // deletion that differs in attributes is still a Set-Cookie.
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, hardenAuthCookieOptions(options)),
+          );
         },
       },
     },

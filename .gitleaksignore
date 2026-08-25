@@ -1,0 +1,24 @@
+# gitleaks allowlist (D-101).
+#
+# Secret scanning FAILS CLOSED. The only entries permitted here are pinned
+# fingerprints for findings a human has verified are not credentials, each with
+# a stated reason. Do NOT add a path glob, a rule-wide disable, or an entry
+# without a reason — those turn the scanner off rather than triaging it.
+#
+# Fingerprint format: <commit>:<file>:<rule-id>:<line>
+#
+# ---------------------------------------------------------------------------
+# Verified false positives
+# ---------------------------------------------------------------------------
+#
+# Both entries below are hand-written FAKE key SHAPES inside a unit test that
+# exists precisely to prove a Stripe key never escapes into an error message or
+# a log line. They are English words in Stripe's key format; neither has ever
+# been a live credential and neither was issued by Stripe. Verified 2026-08-24.
+#
+# `fakeStripe("sk_live_leaked_key_shape")` — the fixture for the assertion that
+# a leaked-looking key is not echoed back by the gateway's error path.
+c85fd73d80da5cd8356996aab0d415755d0be256:src/tests/stripe-customer-mapping.test.ts:stripe-access-token:258
+#
+# `"sk_test_abc123"` — the environment-parsing fixture for `readStripeEnvironment`.
+c85fd73d80da5cd8356996aab0d415755d0be256:src/tests/stripe-customer-mapping.test.ts:stripe-access-token:88

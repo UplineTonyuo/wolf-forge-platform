@@ -12,6 +12,7 @@ import type { FormCapabilities } from "../../domain/forms/schema";
 import type { TicketCapabilities } from "../../domain/tickets/schema";
 import { toModuleAccessMap, type ModuleAccess } from "../../domain/permissions/schema";
 import type { Database } from "./database.types";
+import { hardenAuthCookieOptions } from "./auth-cookie-options";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
 import { ActivityRepository } from "../../repositories/activity-repository";
 import { CompanyRepository } from "../../repositories/company-repository";
@@ -158,7 +159,12 @@ export async function createNextServerSupabaseClient() {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          // Server Action writes: login, logout and password change. Routed
+          // through the shared auth-cookie policy (D-114) so HttpOnly and
+          // production Secure hold on every session cookie this app sets.
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, hardenAuthCookieOptions(options)),
+          );
         } catch {
           // Server Components cannot write cookies. src/proxy.ts refreshes them first.
         }

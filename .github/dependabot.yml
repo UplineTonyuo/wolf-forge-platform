@@ -1,0 +1,60 @@
+# Dependency update automation (D-101).
+#
+# Weekly and grouped: one PR for all patch/minor npm updates instead of a
+# stream of individual ones, because a wall of PRs gets ignored and an ignored
+# security update is not an update.
+#
+# MAJOR versions are deliberately excluded from the groups and left to a human.
+# This repository runs a Next.js version whose APIs differ materially from
+# common expectations, plus Supabase SSR and React 19 — a bot-merged major here
+# would break auth or rendering silently.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Manila
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      production-minor-and-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development-minor-and-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Majors are a human decision; see the note above.
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Manila
+    labels:
+      - dependencies
+      - security
+    commit-message:
+      prefix: chore
+    groups:
+      actions:
+        patterns:
+          - "*"

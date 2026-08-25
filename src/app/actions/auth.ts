@@ -1,6 +1,12 @@
 ﻿"use server";
 
 import { redirect } from "next/navigation";
+import {
+  isCredentialStageFailure,
+  resolveSignInSurface,
+  signInFailure,
+  signInUnassigned,
+} from "../../domain/auth/login-flow";
 import { safeAccountNextPath, safeNextPath } from "../../domain/auth/safe-next-path";
 import {
   createNextServerSupabaseClient,
@@ -18,19 +24,23 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
   const supabase = await createNextServerSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error || !data.session) {
-    return { error: "That email and password don't match an account." };
+  // Every credential-stage failure collapses to one message in login-flow.ts.
+  // The provider error is passed for intent, never read into the response.
+  if (!data.session || isCredentialStageFailure({ error, session: data.session })) {
+    return signInFailure(error);
   }
 
   const client = createUserSupabaseClient(readLocalFrontendEnvironment(), data.session.access_token);
   const actor = await verifyActor(client).catch(() => null);
   const internalUser = actor ? await resolveInternalUser(client, actor) : null;
-  if (internalUser) redirect(safeNextPath(formData.get("next")));
+  if (resolveSignInSurface({ hasInternalUser: Boolean(internalUser), hasClientUser: false }) === "internal") {
+    redirect(safeNextPath(formData.get("next")));
+  }
 
   const clientUser = actor ? await resolveClientUser(client, actor) : null;
-  if (!clientUser) {
+  if (resolveSignInSurface({ hasInternalUser: false, hasClientUser: Boolean(clientUser) }) !== "client") {
     await supabase.auth.signOut();
-    return { error: "This account is not active or has not been assigned yet." };
+    return signInUnassigned();
   }
 
   redirect(safeAccountNextPath(formData.get("next")));

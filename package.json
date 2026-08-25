@@ -20,7 +20,10 @@
     "types:db": "supabase gen types typescript --local --schema public > src/lib/supabase/database.types.ts",
     "test:integration": "tsx scripts/phase2b-integration.ts",
     "lint:db": "supabase db lint --local --level error --fail-on error",
-    "smoke:backend": "tsx scripts/backend-smoke.ts"
+    "smoke:backend": "tsx scripts/backend-smoke.ts",
+    "security:secrets": "tsx scripts/security/scan-secrets.ts",
+    "audit:deps": "npm audit --omit=dev --audit-level=high",
+    "qa:auth-cookies": "tsx scripts/qa-c22-auth-cookies.ts"
   },
   "repository": {
     "type": "git",
