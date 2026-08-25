@@ -22,11 +22,51 @@ export type AvatarActionResult =
  */
 function refreshProfileSurfaces() {
   revalidatePath("/settings");
+  revalidatePath("/settings/general");
+  revalidatePath("/settings/notifications");
   revalidatePath("/team");
   // The client portal renders the same profile row in its rail and on its own
   // Profile page, so a save has to reach both workspaces.
   revalidatePath("/account/profile");
   revalidatePath("/", "layout");
+}
+
+/** Updates only the persisted personal notification-sound preference. */
+export async function updateMyNotificationSoundAction(
+  _state: ProfileActionState,
+  formData: FormData,
+): Promise<ProfileActionState> {
+  void _state;
+  const context = await getSelfServiceContext();
+
+  try {
+    const profile = await context.services.profile.getMine();
+    if (!profile?.displayName) {
+      return {
+        error: "Your profile could not be loaded.",
+        fieldErrors: {},
+        savedAt: null,
+      };
+    }
+
+    await context.services.profile.updateMine(
+      {
+        display_name: profile.displayName,
+        notification_sound_enabled: formData.get("notification_sound_enabled") === "on",
+      },
+      context.actor,
+    );
+  } catch (error) {
+    const safe = toClientSafeError(error);
+    return {
+      error: safe.code === "VALIDATION_ERROR" ? safe.message : "Unable to update notifications.",
+      fieldErrors: {},
+      savedAt: null,
+    };
+  }
+
+  refreshProfileSurfaces();
+  return { error: null, fieldErrors: {}, savedAt: new Date().toISOString() };
 }
 
 /**

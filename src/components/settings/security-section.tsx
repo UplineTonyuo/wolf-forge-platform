@@ -22,9 +22,11 @@ import styles from "./settings-workspace.module.css";
 export function SecuritySection({
   identities,
   onPasswordChanged,
+  showHeading = true,
 }: {
   identities: SignInIdentity[];
   onPasswordChanged: () => void;
+  showHeading?: boolean;
 }) {
   /* Only providers other than the password credential can ever be unlinked. */
   const canLinkMore = identities.some((identity) => !identity.isPrimary);
@@ -43,11 +45,11 @@ export function SecuritySection({
   }
 
   return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeading}>
+    <section className={styles.section} aria-label={showHeading ? undefined : "Account security"}>
+      {showHeading ? <div className={styles.sectionHeading}>
         <h2>Security</h2>
         <p>How you sign in to Wolf Forge.</p>
-      </div>
+      </div> : <div aria-hidden="true" />}
 
       <div className={styles.fields}>
         <div className={styles.toggleRow}>

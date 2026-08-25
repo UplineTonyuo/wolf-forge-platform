@@ -30,10 +30,12 @@ import { FormRepository } from "../../repositories/form-repository";
 import { TicketRepository } from "../../repositories/ticket-repository";
 import { PermissionRepository } from "../../repositories/permission-repository";
 import { ProfileRepository } from "../../repositories/profile-repository";
+import { IntegrationRepository } from "../../repositories/integration-repository";
 import { TaskRepository } from "../../repositories/task-repository";
 import { AccountProvisioningService } from "../../services/account-provisioning-service";
 import { PermissionService } from "../../services/permission-service";
 import { ProfileService } from "../../services/profile-service";
+import { IntegrationService } from "../../services/integration-service";
 import { AuthAdminAdapter } from "./auth-admin";
 import { ActivityService } from "../../services/activity-service";
 import { CatalogService } from "../../services/catalog-service";
@@ -94,6 +96,10 @@ export type ServiceAdministrationCapabilities = {
   archive: boolean;
 };
 
+export type IntegrationAdministrationCapabilities = {
+  manage: boolean;
+};
+
 export type InternalUser = {
   id: string;
   displayName: string | null;
@@ -121,6 +127,7 @@ export type InternalUser = {
   services: ServiceAdministrationCapabilities;
   investmentIntent: InvestmentIntentCapabilities;
   reporting: ReportingCapabilities;
+  integrations: IntegrationAdministrationCapabilities;
 };
 
 export type ClientUser = {
@@ -250,6 +257,9 @@ export async function resolveInternalUser(
     reporting: {
       send: granted.has("reports.send"),
     },
+    integrations: {
+      manage: granted.has("integrations.manage"),
+    },
   };
 }
 
@@ -315,6 +325,9 @@ export const getInternalContext = cache(async () => {
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
       profile: new ProfileService({ repository: new ProfileRepository(client) }),
+      integrations: new IntegrationService({
+        repository: new IntegrationRepository(client),
+      }),
       /**
        * The Investment Intent workspace. Reads and status changes both
        * re-authorize through the internal investment_intent module inside the

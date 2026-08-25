@@ -40,10 +40,14 @@ function formatJoined(value: string) {
 export function SettingsWorkspace({
   profile,
   identities,
+  showPreferences = true,
+  showSecurity = true,
 }: {
   profile: MyProfile;
   /** Real sign-in identities from Supabase Auth, resolved on the server. */
   identities: SignInIdentity[];
+  showPreferences?: boolean;
+  showSecurity?: boolean;
 }) {
   const [state, submit, pending] = useActionState(
     updateMyProfileAction,
@@ -343,7 +347,7 @@ export function SettingsWorkspace({
           </div>
         </section>
 
-        <section className={styles.section}>
+        {showPreferences ? <section className={styles.section}>
           <div className={styles.sectionHeading}>
             <h2>Preferences</h2>
             <p>Personal to this account. Nobody else is affected.</p>
@@ -371,7 +375,13 @@ export function SettingsWorkspace({
               </label>
             </div>
           </div>
-        </section>
+        </section> : (
+          <input
+            type="hidden"
+            name="notification_sound_enabled"
+            value={profile.notificationSoundEnabled ? "on" : ""}
+          />
+        )}
 
         {/* Empty first cell keeps the action on the same axis as the fields. */}
         <div className={styles.footer}>
@@ -396,10 +406,10 @@ export function SettingsWorkspace({
         </div>
         </form>
 
-        <SecuritySection
+        {showSecurity ? <SecuritySection
           identities={identities}
           onPasswordChanged={() => notify("Password updated")}
-        />
+        /> : null}
       </div>
     </>
   );
