@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint . --max-warnings=0",
+    "memory:sync": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-ai-memory-to-obsidian.ps1",
     "setup:frontend": "tsx scripts/setup-phase3a-local.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
