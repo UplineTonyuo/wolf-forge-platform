@@ -1350,6 +1350,59 @@ export type Database = {
           },
         ]
       }
+      integration_connections: {
+        Row: {
+          connected_account_display: string | null
+          connected_account_id: string | null
+          connected_at: string | null
+          connected_by_profile_id: string | null
+          expires_at: string | null
+          granted_scopes: string[]
+          id: string
+          last_synced_at: string | null
+          provider: string
+          provider_metadata: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          connected_account_display?: string | null
+          connected_account_id?: string | null
+          connected_at?: string | null
+          connected_by_profile_id?: string | null
+          expires_at?: string | null
+          granted_scopes?: string[]
+          id?: string
+          last_synced_at?: string | null
+          provider: string
+          provider_metadata?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          connected_account_display?: string | null
+          connected_account_id?: string | null
+          connected_at?: string | null
+          connected_by_profile_id?: string | null
+          expires_at?: string | null
+          granted_scopes?: string[]
+          id?: string
+          last_synced_at?: string | null
+          provider?: string
+          provider_metadata?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_connections_connected_by_profile_id_fkey"
+            columns: ["connected_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           created_at: string
@@ -4339,6 +4392,22 @@ export type Database = {
           reason: string
           subscription_id: string
           work_type: string
+        }[]
+      }
+      app_list_integration_connections: {
+        Args: never
+        Returns: {
+          connected_account_display: string | null
+          connected_account_id: string | null
+          connected_at: string | null
+          connected_by_profile_id: string | null
+          expires_at: string | null
+          granted_scopes: string[]
+          id: string
+          last_synced_at: string | null
+          provider: string
+          status: string
+          updated_at: string
         }[]
       }
       app_list_internal_members: {
