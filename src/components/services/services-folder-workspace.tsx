@@ -1,104 +1,14 @@
 "use client";
 
 import {
-  Anchor,
   ArrowRight,
-  Award,
-  BadgeCheck,
-  BarChart3,
-  Blocks,
-  BookOpen,
-  Bot,
-  Boxes,
-  Braces,
-  BrainCircuit,
-  Building2,
-  Castle,
-  ChartLine,
-  CircleCheckBig,
-  ClipboardList,
-  Cloud,
-  CloudCog,
-  Code2,
-  Compass,
-  Contact,
-  Crosshair,
-  FileCode2,
-  FileCog,
-  FileSignature,
-  FileText,
-  Filter,
-  Flame,
   FolderOpen,
-  Gauge,
-  Gem,
-  Gift,
-  GitBranch,
-  Globe,
-  GraduationCap,
-  Headphones,
-  Infinity as InfinityIcon,
-  Key,
-  Landmark,
-  Layers,
-  LayoutTemplate,
-  Link2,
-  Link as LinkIcon,
-  Magnet,
-  Map,
-  MapPin,
-  MapPinned,
-  Megaphone,
-  Mic,
-  MonitorSmartphone,
-  MousePointerClick,
-  Navigation,
-  Network,
-  Newspaper,
-  NotebookPen,
   Package,
-  Palette,
-  PanelsTopLeft,
-  PenLine,
   Pencil,
-  Percent,
-  PlayCircle,
   Plus,
-  Podcast,
-  Radar,
-  Radio,
-  RefreshCw,
-  Repeat,
-  Rocket,
-  Rss,
-  ScanSearch,
   Search,
-  Server,
-  Settings2,
-  Share2,
-  Shield,
-  ShieldCheck,
-  ShoppingBag,
-  ShoppingCart,
-  Signal,
-  Sliders,
   Sparkles,
-  Star,
-  Store,
-  Swords,
-  Target,
-  ThumbsUp,
-  TrendingUp,
-  UserPlus,
-  UserRound,
-  Users,
-  Video,
-  Waypoints,
-  Workflow,
-  Wrench,
   X,
-  Zap,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -120,6 +30,7 @@ import {
   wrapFolderDeskIndex,
 } from "./services-folder-workspace-model";
 import folderVisuals from "./services-folder-carousel.module.css";
+import { assignServiceIconsById } from "./service-icons";
 import styles from "./services-folder-workspace.module.css";
 import { serviceListSummaries } from "./service-list-summaries";
 
@@ -171,336 +82,6 @@ const CLICK_SUPPRESS_DISTANCE = 7;
 
 const SERVICE_SNIPPET_FALLBACK =
   "Service details available.";
-
-/*
- * Frontend-only, deterministic name -> icon mapping.
- * Nothing here touches the service data model or Supabase: the
- * icon is derived from the normalized service name at render time.
- *
- * Each rule carries a primary icon plus ordered alternates. The
- * first rule that matches wins, and the allocator below hands out
- * the first alternate not already used by an earlier row in the
- * same folder, so families like the five press-release tiers each
- * get their own glyph instead of repeating one icon.
- *
- * Order runs specific -> generic; earlier rules win outright.
- */
-const SERVICE_ICON_RULES: Array<{
-  keywords: string[];
-  icons: LucideIcon[];
-}> = [
-  // --- SEO Sprints ---------------------------------------
-  {
-    keywords: ["lead generation"],
-    icons: [Workflow, Network, Waypoints],
-  },
-  {
-    keywords: ["lead gen"],
-    icons: [Magnet, UserPlus, Filter],
-  },
-  {
-    keywords: ["maps sprint"],
-    icons: [MapPin, Map, Navigation],
-  },
-  {
-    keywords: ["seo sprint"],
-    icons: [TrendingUp, ChartLine, Rocket],
-  },
-  {
-    keywords: ["ai visibility", "aio"],
-    icons: [Sparkles, BrainCircuit, Bot],
-  },
-  {
-    keywords: ["website sprint"],
-    icons: [
-      PanelsTopLeft,
-      MonitorSmartphone,
-      LayoutTemplate,
-    ],
-  },
-  {
-    keywords: ["conversion"],
-    icons: [MousePointerClick, Target, Percent],
-  },
-  {
-    keywords: ["competitor"],
-    icons: [Swords, Crosshair, Radar],
-  },
-  {
-    keywords: ["franchise"],
-    icons: [Boxes, Building2, Store],
-  },
-
-  // --- Authority / link building -------------------------
-  {
-    keywords: ["social"],
-    icons: [UserRound, Users, Contact],
-  },
-  {
-    keywords: ["entity loop", "infinite"],
-    icons: [InfinityIcon, Repeat, RefreshCw],
-  },
-  {
-    keywords: ["fortress"],
-    icons: [ShieldCheck, Castle, Shield],
-  },
-  {
-    keywords: ["edu"],
-    icons: [GraduationCap, BookOpen, Award],
-  },
-  {
-    keywords: ["foundation", "authority"],
-    icons: [Landmark, Shield, Award],
-  },
-  {
-    keywords: ["press release"],
-    icons: [
-      Newspaper,
-      Megaphone,
-      Rss,
-      Radio,
-      Globe,
-      Signal,
-    ],
-  },
-  {
-    keywords: ["guest post"],
-    icons: [PenLine, NotebookPen, FileSignature],
-  },
-  {
-    keywords: ["pbn"],
-    icons: [Network, Share2, GitBranch],
-  },
-  {
-    keywords: ["citation"],
-    icons: [MapPinned, MapPin, Navigation],
-  },
-  {
-    keywords: ["cloud"],
-    icons: [Cloud, CloudCog, Server],
-  },
-  {
-    keywords: ["podcast"],
-    icons: [Podcast, Mic, Headphones],
-  },
-  {
-    keywords: ["youtube", "video"],
-    icons: [Video, PlayCircle, Mic],
-  },
-  {
-    keywords: ["syndication", "network"],
-    icons: [Share2, Network, Waypoints],
-  },
-  {
-    keywords: ["stack"],
-    icons: [Layers, Blocks, Boxes, Server],
-  },
-
-  // --- Google Business Profile / local -------------------
-  {
-    keywords: ["review"],
-    icons: [Star, ThumbsUp, Award],
-  },
-  {
-    keywords: ["verification", "verified"],
-    icons: [BadgeCheck, CircleCheckBig, ShieldCheck],
-  },
-  {
-    keywords: [
-      "gmb",
-      "gbp",
-      "google business",
-      "google my business",
-    ],
-    icons: [Store, MapPinned, Building2],
-  },
-  {
-    keywords: ["maps", "google map"],
-    icons: [Map, MapPin, Navigation],
-  },
-  {
-    keywords: ["local"],
-    icons: [MapPin, MapPinned, Compass],
-  },
-
-  // --- On-page / technical / web -------------------------
-  {
-    keywords: ["keyword"],
-    icons: [Search, ScanSearch, Key],
-  },
-  {
-    keywords: ["schema"],
-    icons: [Braces, Code2, FileCode2],
-  },
-  {
-    keywords: ["technical", "onpage", "on-page"],
-    icons: [Wrench, Settings2, FileCog],
-  },
-  {
-    keywords: ["speed", "website optimization"],
-    icons: [Gauge, Zap, Sliders, Rocket],
-  },
-  {
-    keywords: [
-      "woocommerce",
-      "ecommerce",
-      "e-commerce",
-    ],
-    icons: [ShoppingCart, ShoppingBag, Store],
-  },
-  {
-    keywords: [
-      "web build",
-      "web design",
-      "website design",
-      "web deal",
-      "page web",
-    ],
-    icons: [
-      LayoutTemplate,
-      PanelsTopLeft,
-      MonitorSmartphone,
-      Palette,
-      Globe,
-      Blocks,
-    ],
-  },
-  {
-    keywords: ["blueprint"],
-    icons: [
-      ClipboardList,
-      FileText,
-      Compass,
-      Award,
-      Gem,
-    ],
-  },
-
-  // --- Generic families ----------------------------------
-  {
-    keywords: ["backlink", "link building", "links"],
-    icons: [LinkIcon, Link2, Anchor, Waypoints],
-  },
-  {
-    keywords: ["package"],
-    icons: [Package, Boxes, Gift],
-  },
-  {
-    keywords: ["system"],
-    icons: [Workflow, Network, Boxes],
-  },
-  {
-    keywords: ["seo"],
-    icons: [TrendingUp, ChartLine, BarChart3, Search],
-  },
-  {
-    keywords: ["website", "web"],
-    icons: [Globe, PanelsTopLeft, MonitorSmartphone],
-  },
-];
-
-/*
- * Rotated per service name so unmatched services never collapse
- * onto a single shared fallback glyph.
- */
-const SERVICE_ICON_FALLBACKS: LucideIcon[] = [
-  Sparkles,
-  Gem,
-  Award,
-  Compass,
-  Flame,
-  Rocket,
-  Target,
-  Boxes,
-  Star,
-  Zap,
-  Package,
-  BadgeCheck,
-];
-
-function normalizeServiceName(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function serviceNameHash(value: string) {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash =
-      (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-
-  return hash;
-}
-
-function serviceIconCandidates(
-  name: string,
-): LucideIcon[] {
-  const needle = normalizeServiceName(name);
-  const candidates: LucideIcon[] = [];
-
-  const rule = SERVICE_ICON_RULES.find((entry) =>
-    entry.keywords.some((keyword) =>
-      needle.includes(keyword),
-    ),
-  );
-
-  if (rule) {
-    for (const icon of rule.icons) {
-      if (!candidates.includes(icon)) {
-        candidates.push(icon);
-      }
-    }
-  }
-
-  const offset =
-    serviceNameHash(needle) %
-    SERVICE_ICON_FALLBACKS.length;
-
-  for (
-    let step = 0;
-    step < SERVICE_ICON_FALLBACKS.length;
-    step += 1
-  ) {
-    const icon =
-      SERVICE_ICON_FALLBACKS[
-        (offset + step) %
-          SERVICE_ICON_FALLBACKS.length
-      ];
-
-    if (icon && !candidates.includes(icon)) {
-      candidates.push(icon);
-    }
-  }
-
-  return candidates;
-}
-
-function assignServiceIcons(
-  list: FolderDeskService[],
-): LucideIcon[] {
-  const used = new Set<LucideIcon>();
-
-  return list.map((service) => {
-    const candidates = serviceIconCandidates(
-      service.name,
-    );
-
-    const picked =
-      candidates.find(
-        (icon) => !used.has(icon),
-      ) ??
-      candidates[0] ??
-      Sparkles;
-
-    used.add(picked);
-
-    return picked;
-  });
-}
 
 function serviceSnippet(
   service: FolderDeskService,
@@ -928,8 +509,15 @@ export function ServicesFolderWorkspace({
    * same folder do not land on the same glyph.
    */
   const serviceIcons = useMemo(
-    () => assignServiceIcons(activeServices),
-    [activeServices],
+    () =>
+      assignServiceIconsById(
+        services.map((service) => ({
+          id: service.id,
+          name: service.name,
+          folderId: service.folderId,
+        })),
+      ),
+    [services],
   );
 
   useEffect(() => {
@@ -1573,7 +1161,7 @@ export function ServicesFolderWorkspace({
                   {activeServices.map(
                     (service, index) => {
                     const ServiceIcon =
-                      serviceIcons[index] ??
+                      serviceIcons.get(service.id) ??
                       Sparkles;
 
                     return (

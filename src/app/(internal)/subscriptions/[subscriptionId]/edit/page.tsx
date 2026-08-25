@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: "Edit Subscription Plan" };
 export default async function EditSubscriptionPlanPage({ params }: { params: Promise<{ subscriptionId: string }> }) {
   const [{ subscriptionId }, context] = await Promise.all([params, getInternalContext()]);
   try {
-    const [detail, services] = await Promise.all([context.services.subscriptions.get(subscriptionId), context.services.catalog.listActive()]);
+    const [detail, services, folders] = await Promise.all([context.services.subscriptions.get(subscriptionId), context.services.catalog.listCatalog(), context.services.catalog.listFolders()]);
     const today = new Date().toISOString().slice(0, 10);
-    return <PageFrame title="Edit Subscription Plan" description="Create a new commercial terms version without rewriting prior Invoices." narrow><SubscriptionPlanForm mode="edit" companies={[]} services={services} today={today} requestId={crypto.randomUUID()} subscriptionId={subscriptionId} detail={detail} /></PageFrame>;
+    return <PageFrame title="Edit Subscription Plan" description="Create a new commercial terms version without rewriting prior Invoices." narrow><SubscriptionPlanForm mode="edit" companies={[]} services={services} folders={folders} today={today} requestId={crypto.randomUUID()} subscriptionId={subscriptionId} detail={detail} /></PageFrame>;
   } catch (error) {
     if (toClientSafeError(error).code === "NOT_FOUND") notFound();
     throw error;

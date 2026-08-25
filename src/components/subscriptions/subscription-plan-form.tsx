@@ -5,17 +5,25 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createSubscriptionAction, updateSubscriptionTermsAction, type SubscriptionActionState } from "../../app/actions/subscriptions";
+import { rankNameStrict } from "../../domain/invoices/rank-name";
 import type { SubscriptionDetail } from "../../domain/subscriptions/schema";
-import type { CompanyRow, ServiceRow } from "../../lib/supabase/database-rows";
+import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
 import { centsToMoneyInput } from "../../lib/invoices/form-data";
 import { AnimatedSelect } from "../ui/animated-select";
 import { DatePicker } from "../ui/date-picker";
 import { SearchableSelect } from "../ui/searchable-select";
+import { SubscriptionServicePicker } from "./subscription-service-picker";
 import styles from "./subscriptions.module.css";
+
+export type SubscriptionCompanyOption = {
+  id: string;
+  name: string;
+  recordKind: "client" | "company";
+};
 
 export type SubscriptionServiceOption = Pick<
   ServiceRow,
-  "id" | "name" | "price" | "currency" | "recurring" | "recurring_price" | "recurring_interval_length" | "recurring_interval_unit" | "recurring_action"
+  "id" | "name" | "price" | "currency" | "recurring" | "recurring_price" | "recurring_interval_length" | "recurring_interval_unit" | "recurring_action" | "folder_id" | "sort_order" | "is_active"
 >;
 
 function intervalUnit(value: ServiceRow["recurring_interval_unit"]): "day" | "week" | "month" | "year" {
@@ -31,14 +39,16 @@ export function SubscriptionPlanForm({
   mode,
   companies,
   services,
+  folders,
   today,
   requestId,
   subscriptionId,
   detail,
 }: {
   mode: "create" | "edit";
-  companies: CompanyRow[];
+  companies: SubscriptionCompanyOption[];
   services: SubscriptionServiceOption[];
+  folders: ServiceFolderRow[];
   today: string;
   requestId: string;
   subscriptionId?: string;
@@ -47,7 +57,7 @@ export function SubscriptionPlanForm({
   const currentItem = detail?.plan_items[0];
   const currentPlan = detail?.current_plan;
   const fixedServiceId = currentItem?.service_id ?? detail?.subscription.service_id;
-  const initialService = services.find((service) => service.id === fixedServiceId) ?? services[0];
+  const initialService = services.find((service) => service.id === fixedServiceId);
   const [companyId, setCompanyId] = useState("");
   const [serviceId, setServiceId] = useState(initialService?.id ?? "");
   const [amount, setAmount] = useState(currentItem ? centsToMoneyInput(currentItem.unit_amount_cents) : String(initialService?.recurring_price ?? initialService?.price ?? 0));
@@ -79,8 +89,8 @@ export function SubscriptionPlanForm({
       <section className={styles.formSection}>
         <header><h2>{mode === "create" ? "Subscription setup" : `Plan version ${(currentPlan?.version ?? 0) + 1}`}</h2><p>{mode === "create" ? "Service details are copied into an immutable initial plan." : "Changes create a new version. Existing invoices and prior terms are never rewritten."}</p></header>
         <div className={styles.formGrid}>
-          {mode === "create" ? <label className={styles.wideField}><span>Client / company</span><SearchableSelect name="company_id" label="Client / company" options={companies.map((company) => ({ id: company.id, label: company.name }))} value={companyId} onChange={setCompanyId} placeholder="Search client or company..." menuLabel="Clients and companies" required />{state.fieldErrors.company_id ? <em>{state.fieldErrors.company_id}</em> : null}</label> : null}
-          <label className={styles.wideField}><span>Service</span><SearchableSelect name="service_id" label="Service" options={services.map((service) => ({ id: service.id, label: service.name }))} value={serviceId} onChange={chooseService} disabled={mode === "edit"} placeholder="Search services..." menuLabel="Services" required /><small>{mode === "edit" ? "The primary Service remains fixed for this Subscription; commercial terms below are versioned." : "Current Service values are used only as the initial snapshot."}</small></label>
+          {mode === "create" ? <label className={styles.wideField}><span>Client / company</span><SearchableSelect name="company_id" label="Client / company" options={companies.map((company) => ({ id: company.id, label: company.name, kind: company.recordKind }))} value={companyId} onChange={setCompanyId} placeholder="Search client or company..." menuLabel="Clients and companies" emptyMessage="No clients or companies found." menuRequiresQuery rank={rankNameStrict} required />{state.fieldErrors.company_id ? <em>{state.fieldErrors.company_id}</em> : null}</label> : null}
+          <div className={`${styles.pickerField} ${styles.wideField}`}><span>Service</span><SubscriptionServicePicker folders={folders} services={services} value={serviceId} onChange={chooseService} disabled={mode === "edit"} error={state.fieldErrors.service_id} /><small>{mode === "edit" ? "The primary Service remains fixed for this Subscription; commercial terms below are versioned." : "Current Service values are used only as the initial snapshot."}</small></div>
           {mode === "create" ? <label><span>Billing anchor</span><DatePicker name="billing_anchor" label="Billing anchor" value={billingAnchor} onChange={setBillingAnchor} today={today} menuLabel="Billing anchor date" required /></label> : <label><span>Effective from <small>optional</small></span><DatePicker name="effective_from" label="Effective from" value={effectiveFrom} onChange={setEffectiveFrom} placeholder="Optional" today={today} menuLabel="Effective from date" /><small>Leave blank to apply after the current open cycle. No proration or retroactive Invoice change.</small></label>}
           <label><span>Currency</span><div className={styles.currencyFixed}><Lock size={13} aria-hidden="true" /><strong>USD</strong><input type="hidden" name="currency" value="USD" /></div></label>
         </div>
@@ -94,7 +104,7 @@ export function SubscriptionPlanForm({
           <label><span>Month-end policy</span><AnimatedSelect name="end_of_month_policy" label="Month-end policy" value={endOfMonthPolicy} onChange={(value) => setEndOfMonthPolicy(value as "clamp" | "skip")} menuLabel="Month-end policy" options={[{ value: "clamp", label: "Use last valid day" }, { value: "skip", label: "Skip invalid month" }]} /></label>
           <label><span>Invoice lead days</span><input name="lead_days" type="number" min="0" max="90" required defaultValue={currentPlan?.lead_days ?? 5} /></label>
           <label><span>Past-due grace days</span><input name="grace_days" type="number" min="0" max="365" required defaultValue={currentPlan?.grace_days ?? 15} /></label>
-          <label><span>Recurring fulfillment</span><AnimatedSelect name="recurring_action" label="Recurring fulfillment" value={recurringAction} onChange={(value) => setRecurringAction(value as typeof recurringAction)} menuLabel="Recurring fulfillment" options={[{ value: "none", label: "Do nothing" }, { value: "reopen_order", label: "Reopen existing Project" }, { value: "create_order", label: "Create new Project / task" }, { value: "client_request", label: "Client-requested work" }]} /></label>
+          <label><span>Recurring fulfillment</span><AnimatedSelect name="recurring_action" label="Recurring fulfillment" value={recurringAction} onChange={(value) => setRecurringAction(value as typeof recurringAction)} menuLabel="Recurring fulfillment" options={[{ value: "none", label: "Do nothing" }, { value: "reopen_order", label: "Reopen existing Project" }, { value: "create_order", label: "Create new Project" }, { value: "client_request", label: "Client-requested work" }]} /></label>
           {recurringAction === "client_request" ? <><label><span>Total request limit</span><input name="request_limit_total" type="number" min="1" defaultValue={currentPlan?.request_limit_total ?? ""} /></label><label><span>Active request limit</span><input name="request_limit_active" type="number" min="1" defaultValue={currentPlan?.request_limit_active ?? ""} /></label></> : <><input type="hidden" name="request_limit_total" value="" /><input type="hidden" name="request_limit_active" value="" /></>}
         </div>
       </section>

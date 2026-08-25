@@ -1,0 +1,24 @@
+.changeFolder {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #000d51;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.changeFolder:hover {
+  color: #8c6812;
+}
+
+.changeFolder:focus-visible {
+  outline: 2px solid rgb(0 13 81 / 28%);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
