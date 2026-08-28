@@ -17,6 +17,7 @@ function document(): ClientReportDocument {
     status: "sent",
     sent_at: "2026-08-20T10:00:00.000Z",
     updated_at: "2026-08-20T10:00:00.000Z",
+    reporting_period_month: "2026-08-01",
     is_read: false,
     sections: [
       {
@@ -107,6 +108,7 @@ describe("internal report draft read boundary", () => {
         status: "draft",
         sent_at: null,
         updated_at: "2026-08-20T10:00:00.000Z",
+        reporting_period_month: "2026-08-01",
         sections: [
           {
             section_key: "technical_seo",

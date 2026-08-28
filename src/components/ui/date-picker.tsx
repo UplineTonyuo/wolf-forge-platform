@@ -49,6 +49,9 @@ export function DatePicker({
   required = false,
   today,
   menuLabel,
+  placement = "below",
+  shortcuts = false,
+  clearable = false,
 }: {
   name: string;
   label: string;
@@ -58,6 +61,9 @@ export function DatePicker({
   required?: boolean;
   today?: string;
   menuLabel: string;
+  placement?: "above" | "below";
+  shortcuts?: boolean;
+  clearable?: boolean;
 }) {
   const calendarId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -131,6 +137,22 @@ export function DatePicker({
     setViewMonth(next.getMonth());
   }
 
+  function shiftMonth(delta: number) {
+    const monthStart = new Date(viewYear, viewMonth + delta, 1);
+    const lastDay = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      0,
+    ).getDate();
+    moveCursor(
+      new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth(),
+        Math.min(cursor.getDate(), lastDay),
+      ),
+    );
+  }
+
   function pick(cell: DayCell) {
     onChange(formatISO(new Date(cell.year, cell.month, cell.day)));
     closeCalendar();
@@ -146,7 +168,19 @@ export function DatePicker({
     else if (event.key === "ArrowRight") step(1);
     else if (event.key === "ArrowUp") step(-7);
     else if (event.key === "ArrowDown") step(7);
-    else if (event.key === "Enter") {
+    else if (event.key === "Home") {
+      const mondayOffset = (cursor.getDay() + 6) % 7;
+      step(-mondayOffset);
+    } else if (event.key === "End") {
+      const mondayOffset = (cursor.getDay() + 6) % 7;
+      step(6 - mondayOffset);
+    } else if (event.key === "PageUp") {
+      event.preventDefault();
+      shiftMonth(-1);
+    } else if (event.key === "PageDown") {
+      event.preventDefault();
+      shiftMonth(1);
+    } else if (event.key === "Enter") {
       event.preventDefault();
       onChange(formatISO(cursor));
       closeCalendar();
@@ -154,6 +188,27 @@ export function DatePicker({
   }
 
   const monthLabel = monthFormatter.format(new Date(viewYear, viewMonth, 1));
+  const taskShortcuts = shortcuts
+    ? [
+        { label: "Today", date: todayDate },
+        {
+          label: "Tomorrow",
+          date: new Date(
+            todayDate.getFullYear(),
+            todayDate.getMonth(),
+            todayDate.getDate() + 1,
+          ),
+        },
+        {
+          label: "Next week",
+          date: new Date(
+            todayDate.getFullYear(),
+            todayDate.getMonth(),
+            todayDate.getDate() + 7,
+          ),
+        },
+      ]
+    : [];
 
   return (
     <div
@@ -189,8 +244,8 @@ export function DatePicker({
           aria-label={menuLabel}
           className={
             isOpen
-              ? `${styles.calendar} ${styles.calendarOpen}`
-              : `${styles.calendar} ${styles.calendarClosing}`
+              ? `${styles.calendar} ${placement === "above" ? styles.calendarAbove : ""} ${styles.calendarOpen}`
+              : `${styles.calendar} ${placement === "above" ? styles.calendarAbove : ""} ${styles.calendarClosing}`
           }
           onKeyDown={(event) => {
             if (event.key === "Escape") {
@@ -204,10 +259,7 @@ export function DatePicker({
               type="button"
               className={styles.navButton}
               aria-label="Previous month"
-              onClick={() => {
-                setViewMonth((month) => (month === 0 ? 11 : month - 1));
-                if (viewMonth === 0) setViewYear((year) => year - 1);
-              }}
+              onClick={() => shiftMonth(-1)}
             >
               <ChevronLeft aria-hidden="true" />
             </button>
@@ -220,14 +272,32 @@ export function DatePicker({
               type="button"
               className={styles.navButton}
               aria-label="Next month"
-              onClick={() => {
-                setViewMonth((month) => (month === 11 ? 0 : month + 1));
-                if (viewMonth === 11) setViewYear((year) => year + 1);
-              }}
+              onClick={() => shiftMonth(1)}
             >
               <ChevronRight aria-hidden="true" />
             </button>
           </div>
+
+          {taskShortcuts.length > 0 ? (
+            <div className={styles.shortcuts} aria-label="Quick dates">
+              {taskShortcuts.map((shortcut) => {
+                const shortcutValue = formatISO(shortcut.date);
+                return (
+                  <button
+                    type="button"
+                    key={shortcut.label}
+                    aria-pressed={value === shortcutValue}
+                    onClick={() => {
+                      onChange(shortcutValue);
+                      closeCalendar();
+                    }}
+                  >
+                    {shortcut.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
           <div className={styles.weekdays}>
             {WEEKDAYS.map((weekday) => (
@@ -272,6 +342,26 @@ export function DatePicker({
               );
             })}
           </div>
+
+          {clearable ? (
+            <div className={styles.calendarFooter}>
+              <span>
+                {value
+                  ? `Due ${displayFormatter.format(parseDate(value) as Date)}`
+                  : "No due date"}
+              </span>
+              <button
+                type="button"
+                disabled={!value}
+                onClick={() => {
+                  onChange("");
+                  closeCalendar();
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

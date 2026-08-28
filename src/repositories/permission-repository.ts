@@ -121,6 +121,27 @@ export class PermissionRepository {
     return result.data === true;
   }
 
+  /**
+   * Grants the reports.send_anytime override to a non-owner internal profile.
+   * Refuses self-grant and an Owner target inside the database.
+   */
+  async grantReportSendAnytime(profileId: string): Promise<void> {
+    unwrapOne(
+      await this.client.rpc("app_grant_report_send_anytime", { p_profile_id: profileId }),
+      "Send anytime override",
+    );
+  }
+
+  /** Returns false when there was no override to remove. */
+  async revokeReportSendAnytime(profileId: string): Promise<boolean> {
+    const result = await this.client.rpc("app_revoke_report_send_anytime", {
+      p_profile_id: profileId,
+    });
+
+    if (result.error) throw mapDatabaseError(result.error, "Send anytime override");
+    return result.data === true;
+  }
+
   async provisionInternalMemberProfile(
     profileId: string,
     presetKey: string,

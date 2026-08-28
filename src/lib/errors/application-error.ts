@@ -4,11 +4,14 @@ export type ApplicationErrorCode =
   | "PERMISSION_DENIED"
   | "CONFLICT"
   | "RATE_LIMITED"
+  | "SLOW_MODE_ACTIVE"
   | "DATABASE_ERROR";
 
 export interface ClientSafeError {
   code: ApplicationErrorCode;
   message: string;
+  /** Only ever set on SLOW_MODE_ACTIVE — the authoritative wait, never client-guessed. */
+  retryAfterSeconds?: number;
 }
 
 export class ApplicationError extends Error {
@@ -86,5 +89,37 @@ export class RateLimitedError extends ApplicationError {
       cause,
     });
     this.name = "RateLimitedError";
+  }
+}
+
+/**
+ * A Team conversation's Slow Mode cooldown refused this send/reply/forward
+ * (`private.enforce_team_slow_mode`, SQLSTATE WF430 — deliberately its own
+ * code, distinct from the anonymous anti-abuse WF429). Unlike rate limiting,
+ * Slow Mode is a visible, intentional product feature: the actual remaining
+ * wait is authoritative from the database (`DETAIL`, a plain integer) and is
+ * safe, useful information to show, not something to hide from an abuser.
+ */
+export class SlowModeActiveError extends ApplicationError {
+  readonly retryAfterSeconds: number | null;
+
+  constructor(retryAfterSeconds: number | null, cause?: unknown) {
+    super(
+      "SLOW_MODE_ACTIVE",
+      retryAfterSeconds
+        ? `Slow mode is on. You can send again in ${retryAfterSeconds} second${retryAfterSeconds === 1 ? "" : "s"}.`
+        : "Slow mode is on for this conversation. Please wait before sending again.",
+      { cause },
+    );
+    this.name = "SlowModeActiveError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+
+  override toJSON(): ClientSafeError {
+    return {
+      code: this.code,
+      message: this.message,
+      ...(this.retryAfterSeconds !== null ? { retryAfterSeconds: this.retryAfterSeconds } : {}),
+    };
   }
 }

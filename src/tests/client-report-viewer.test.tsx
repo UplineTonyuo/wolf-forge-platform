@@ -41,6 +41,7 @@ function report(overrides: Partial<ClientReportDocument> = {}): ClientReportDocu
     status: "sent",
     sent_at: "2026-08-20T10:00:00.000Z",
     updated_at: "2026-08-20T10:00:00.000Z",
+    reporting_period_month: "2026-08-01",
     is_read: true,
     sections: [
       {

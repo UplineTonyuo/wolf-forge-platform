@@ -154,9 +154,19 @@ describe("security response headers (C1)", () => {
 
 describe("single header authority (D-101)", () => {
   it("applies the headers from next.config.ts and nowhere else", async () => {
+    // The production login hardening pass wrapped the config in botid's
+    // `withBotId()`, which appends its OWN header rule scoped to its own
+    // internal detection path (`botid/next/config`) — additive, not a second
+    // authority over the app's own policy. D-101's actual invariant is that
+    // our security-header rule set is present, unmodified, and not
+    // OVERRIDDEN, so this asserts containment rather than exact equality.
     expect(typeof nextConfig.headers).toBe("function");
     const applied = await nextConfig.headers!();
-    expect(applied).toEqual(securityHeaderRules(readSecurityHeaderEnvironment()));
+    const ours = securityHeaderRules(readSecurityHeaderEnvironment());
+    expect(applied).toEqual(expect.arrayContaining(ours));
+    for (const rule of ours) {
+      expect(applied.filter((r) => r.source === rule.source)).toHaveLength(1);
+    }
   });
 
   it("has no vercel.json that could silently duplicate or override them", () => {

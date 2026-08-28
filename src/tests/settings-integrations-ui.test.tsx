@@ -69,10 +69,9 @@ describe("Integration provider cards", () => {
   });
 
   it("supports Disconnect only when a real backend action is supplied", () => {
-    const action = vi.fn();
     const connection = toIntegrationConnectionViews([{
-      id: "stripe-1",
-      provider: "stripe",
+      id: "gmail-1",
+      provider: "gmail",
       status: "connected",
       connected_account_id: "acct_server_only",
       connected_account_display: "Merchant 4242",
@@ -82,9 +81,14 @@ describe("Integration provider cards", () => {
       last_synced_at: null,
       expires_at: null,
       granted_scopes: [],
-    }]).find(({ provider }) => provider.id === "stripe")!;
+    }]).find(({ provider }) => provider.id === "gmail")!;
 
-    render(<IntegrationProviderCard connection={connection} canManage disconnectAction={action} />);
+    render(<IntegrationProviderCard connection={connection} canManage actions={{
+      configured: true,
+      connectPath: "/settings/integrations/gmail/connect",
+      verifyPath: "/settings/integrations/gmail/verify",
+      disconnectPath: "/settings/integrations/gmail/disconnect",
+    }} />);
     fireEvent.click(screen.getByRole("button", { name: /Manage/ }));
     expect(screen.getByRole("button", { name: "Disconnect" })).toBeInTheDocument();
   });

@@ -7,6 +7,7 @@ import {
   type InternalReportDocument,
   type InternalReportRow,
   type ReportingServiceOption,
+  type ReportSendStatus,
   type SaveReportDraftInput,
   type SendClientReportInput,
   type SendReportDraftInput,
@@ -115,6 +116,17 @@ export class ReportingRepository {
       }),
       "Report",
     ) as ClientReportDbRow;
+  }
+
+  /** Presentation-only: the send RPCs re-derive and re-enforce this independently. */
+  async getSendStatus(reportId: string): Promise<ReportSendStatus> {
+    const result = await this.client.rpc("app_get_report_send_status", {
+      p_report_id: reportId,
+    });
+
+    if (result.error) throw mapDatabaseError(result.error, "Reporting");
+    const rows = (result.data ?? []) as unknown as ReportSendStatus[];
+    return unwrapOne({ data: rows[0] ?? null, error: null }, "Reporting");
   }
 
   async discardDraft(reportId: string): Promise<void> {

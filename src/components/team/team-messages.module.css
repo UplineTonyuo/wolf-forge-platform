@@ -1,0 +1,4327 @@
+/*
+ * Team Messages — internal staff communication.
+ *
+ * Motion contract, identical in spirit to every other Wolf Forge temporary
+ * surface: an intro AND an outro, the outro shorter than the intro, and the
+ * element never unmounted before its exit has played (useAnimatedPopover owns
+ * that half). Nothing here animates layout-affecting properties: opacity and
+ * transform only, so a long conversation does not repaint on every frame.
+ *
+ * Every surface therefore carries three classes — a base with the IN
+ * transition, an `*Open` end state, and a `*Closing` state that re-declares a
+ * faster OUT transition. Dropping the closing class is what makes the intro use
+ * the base timing again.
+ *
+ * Surfaces in this file: backdrop, drawer, conversation pane, task composer
+ * (and its own backdrop), the priority/assignee/status menus, and the task
+ * cards.
+ */
+
+/* ==========================================================================
+   Header trigger
+   ========================================================================== */
+
+.triggerBadge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  border: 2px solid #ffffff;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  font-family: var(--wf-font-ui);
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+
+  transform: scale(0.6);
+  opacity: 0;
+  /* The house curve, same as every other transition here. An overshoot on a
+     count badge draws more attention to itself than to the count. */
+  transition:
+    opacity 160ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.triggerBadgeVisible {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* A live message is useful now, not permanent bell history. */
+.messagePeek {
+  position: fixed;
+  z-index: 12100;
+  top: 76px;
+  right: 18px;
+  width: min(356px, calc(100vw - 36px));
+  min-width: 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  border: 1px solid rgba(0, 13, 81, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 48px rgba(0, 13, 81, 0.18);
+  color: var(--wf-text, #1a1a18);
+  text-align: left;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateX(18px) scale(0.985);
+  transition:
+    opacity 180ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 140ms ease;
+}
+
+.messagePeek:hover {
+  border-color: rgba(0, 13, 81, 0.24);
+}
+
+.messagePeekOpen {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.messagePeekClosing {
+  opacity: 0;
+  transform: translateX(14px) scale(0.99);
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.messagePeekBody,
+.messagePeekTopline {
+  min-width: 0;
+}
+
+.messagePeekBody {
+  display: grid;
+  gap: 2px;
+}
+
+.messagePeekTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.messagePeekTopline strong {
+  overflow: hidden;
+  color: var(--wf-navy, #000d51);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messagePeekCount {
+  flex-shrink: 0;
+  color: #8a6a12;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.messagePeekConversation {
+  overflow: hidden;
+  color: #747c8c;
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.messagePeekPreview {
+  overflow: hidden;
+  color: #3e4657;
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Backdrop
+   ========================================================================== */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 11800;
+
+  background: rgba(0, 8, 48, 0.34);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.backdropOpen {
+  opacity: 1;
+}
+
+.backdropClosing {
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+/* ==========================================================================
+   Drawer
+   ========================================================================== */
+
+.drawer {
+  position: fixed;
+  z-index: 11900;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+
+  width: min(760px, calc(100vw - 24px));
+
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr);
+  /*
+   * The row track must be minmax(0, 1fr), not the implicit `auto`.
+   *
+   * An `auto` row takes its minimum from the item's min-content height, so a
+   * long transcript grew the row past the drawer's fixed height and pushed the
+   * composer out of reach entirely. Every pane below already scrolls
+   * internally; this is what lets them.
+   */
+  grid-template-rows: minmax(0, 1fr);
+
+  overflow: hidden;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow:
+    0 32px 80px rgba(0, 13, 81, 0.22),
+    0 8px 24px rgba(0, 13, 81, 0.08);
+
+  opacity: 0;
+  transform: translateX(26px) scale(0.985);
+  transform-origin: right center;
+  transition:
+    opacity 200ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drawerOpen {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.drawerClosing {
+  opacity: 0;
+  transform: translateX(18px) scale(0.99);
+  transition:
+    opacity 150ms ease,
+    transform 190ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* ==========================================================================
+   Left pane — conversation list
+   ========================================================================== */
+
+.listPane {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+
+  border-right: 1px solid #eceef2;
+  background: #fbfbfc;
+}
+
+.listHeader {
+  padding: 16px 16px 12px;
+  display: grid;
+  gap: 3px;
+}
+
+.listHeader h2 {
+  margin: 0;
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-display);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.listHeader p {
+  margin: 0;
+  color: #89909e;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.tabDock {
+  position: relative;
+}
+
+.tabs {
+  padding: 0 12px 10px;
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  flex: 1;
+  height: 30px;
+  padding: 0 8px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.tab:hover {
+  color: var(--wf-navy, #000d51);
+  background: rgba(0, 13, 81, 0.035);
+}
+
+.tabActive,
+.tabActive:hover {
+  border-color: #e2e5eb;
+  background: #ffffff;
+  color: var(--wf-navy, #000d51);
+  box-shadow: 0 1px 2px rgba(0, 13, 81, 0.05);
+}
+
+.tabCount {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  background: rgba(0, 13, 81, 0.08);
+  color: var(--wf-navy, #000d51);
+
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabCountAccent {
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+}
+
+.listScroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+}
+
+.conversationRow {
+  width: 100%;
+  padding: 10px;
+
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.conversationRow:hover {
+  background: rgba(0, 13, 81, 0.035);
+}
+
+.conversationRow:active {
+  transform: scale(0.99);
+}
+
+.conversationRowActive,
+.conversationRowActive:hover {
+  border-color: #dfe3ea;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 13, 81, 0.06);
+}
+
+.avatarShell {
+  position: relative;
+  width: 34px;
+  height: 34px;
+
+  display: grid;
+}
+
+.avatarShellSmall {
+  width: 26px;
+  height: 26px;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  place-items: center;
+
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dfe4f2, #eef0f7);
+  color: var(--wf-navy, #000d51);
+
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarSmall {
+  font-size: 9px;
+}
+
+.presenceDot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  transform: scale(1);
+  transition:
+    background-color 180ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.presenceDotOnline {
+  background: #2f8a5d;
+  animation: presenceArrive 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.presenceDotOffline {
+  background: #b3b8c2;
+}
+
+@keyframes presenceArrive {
+  from {
+    transform: scale(0.7);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.conversationBody {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.conversationTop {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.conversationName {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--wf-text, #1a1a18);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.conversationNameUnread {
+  color: var(--wf-navy, #000d51);
+  font-weight: 700;
+}
+
+.conversationTime {
+  flex-shrink: 0;
+  color: #a1a7b3;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.conversationPreview {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/*
+ * Scoped to the text cell rather than to every span in the row: the unread pip
+ * is a sibling here, and a descendant-selector rule outranks its own class,
+ * which used to strip the pip of its colour, size and flex-shrink.
+ *
+ * min-width:0 plus flex:1 is what actually contains the preview. Without the
+ * minimum a flex item refuses to shrink below its content, and a long
+ * unbroken preview pushes straight through the card border.
+ */
+.conversationPreviewText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #8a909c;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.conversationPreviewUnread .conversationPreviewText {
+  color: #5c6270;
+  font-weight: 500;
+}
+
+.conversationGroupCount {
+  color: #a1a7b3;
+  font-weight: 500;
+}
+
+.unreadPip {
+  flex-shrink: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Right pane — conversation
+   ========================================================================== */
+
+.conversationPane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #ffffff;
+}
+
+/*
+ * The conversation pane's wrapper.
+ *
+ * Carries the same minimum-zero pair as the panes themselves, so the
+ * transcript scrolls inside the drawer instead of stretching it.
+ *
+ * Declared BEFORE the mobile media query on purpose: `.conversationPaneHidden`
+ * carries the same specificity, so the later rule is the one that wins and the
+ * pane can still be hidden at mobile width. This used to be an inline style,
+ * which no class could ever override.
+ */
+.conversationPaneWrap {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+}
+
+.paneHeader {
+  min-height: 58px;
+  padding: 12px 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  border-bottom: 1px solid #eceef2;
+}
+
+.paneHeaderText {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.paneHeaderText strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-display);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.paneHeaderText span {
+  color: #9aa0ac;
+  font-size: 9.5px;
+}
+
+.headerPresence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.headerPresenceDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  transition: background-color 180ms ease;
+}
+
+.headerPresenceDotOnline {
+  background: #2f8a5d;
+}
+
+.headerPresenceDotOffline {
+  background: #b3b8c2;
+}
+
+.headerTaskCount {
+  color: #a6abb5;
+}
+
+.paneHeaderActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.iconButton {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.iconButton svg {
+  width: 15px;
+  height: 15px;
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: #e6e8ee;
+  background: rgba(0, 13, 81, 0.04);
+  color: var(--wf-navy, #000d51);
+}
+
+.iconButton:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.iconButtonActive {
+  border-color: rgba(0, 13, 81, 0.18);
+  background: rgba(0, 13, 81, 0.08);
+  color: var(--wf-navy, #000d51);
+}
+
+.iconButtonActive:hover:not(:disabled) {
+  background: rgba(0, 13, 81, 0.12);
+}
+
+/* --- Slow Mode quick-access popover -----------------------------------
+ * A compact conversation-governance control anchored to the header clock
+ * icon, deliberately separate from the large Conversation settings dialog:
+ * this is the primary place Slow Mode gets turned on/off/modified now.
+ */
+.slowModeAnchor {
+  position: relative;
+}
+
+.slowModeMenu {
+  position: absolute;
+  z-index: 12060;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 210px;
+  padding: 6px;
+
+  display: grid;
+  gap: 3px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(0, 13, 81, 0.16);
+
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity 170ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.slowModeMenuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.slowModeMenuClosing {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.985);
+  transition:
+    opacity 130ms ease,
+    transform 160ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.slowModeMenuLabel {
+  padding: 5px 7px 2px;
+  color: #9aa0ac;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slowModeMenuItem {
+  width: 100%;
+  padding: 7px 8px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-weight: 550;
+
+  cursor: pointer;
+  transition: background-color 130ms ease;
+}
+
+.slowModeMenuItem:hover:not(:disabled) {
+  background: rgba(0, 13, 81, 0.05);
+}
+
+.slowModeMenuItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.slowModeMenuItemDanger {
+  color: var(--wf-danger, #8c2f2f);
+}
+
+.slowModeMenuItemDanger:hover:not(:disabled) {
+  background: rgba(140, 47, 47, 0.06);
+}
+
+.slowModeCustomRow {
+  display: flex;
+  gap: 6px;
+  padding: 3px 2px 1px;
+}
+
+.slowModeBack {
+  justify-self: start;
+  padding: 4px 6px;
+  margin-bottom: 1px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  border: 0;
+  background: transparent;
+  color: #8a90a0;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10px;
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.slowModeBack:hover {
+  color: var(--wf-navy, #000d51);
+}
+
+.slowModeBack svg {
+  width: 11px;
+  height: 11px;
+}
+
+.backButton {
+  display: none;
+}
+
+/*
+ * The drawer's own close control, floating over the right pane's header. The
+ * header reserves room for it below, so it never lands on the refresh spinner
+ * or the task-scope switch.
+ */
+.closeButton {
+  position: absolute;
+  z-index: 3;
+  top: 13px;
+  right: 13px;
+  background: #ffffff;
+}
+
+.paneHeader {
+  padding-right: 52px;
+}
+
+/*
+ * The conversation body is keyed on the conversation id, so switching threads
+ * remounts it and replays this entrance. That is the "conversation transition":
+ * the outgoing thread is replaced rather than cross-faded, which is honest —
+ * the messages really are different messages, not the same ones moving.
+ */
+.messageScroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 16px 8px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  animation: paneEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes paneEnter {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dayHeading {
+  align-self: center;
+  padding: 3px 10px;
+
+  border-radius: 999px;
+  background: #f4f5f8;
+  color: #8a909c;
+
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.messageGroup {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.messageGroupMine {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: end;
+}
+
+.messageGroupBody {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+}
+
+.messageGroupMine .messageGroupBody {
+  justify-items: end;
+}
+
+.messageAuthor {
+  color: #7a8194;
+  font-size: 9.5px;
+  font-weight: 650;
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 8px 11px;
+
+  border: 1px solid #e8eaef;
+  border-radius: 12px 12px 12px 4px;
+  background: #f7f8fa;
+  color: var(--wf-text, #1a1a18);
+
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  animation: bubbleEnterOther 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.bubbleMine {
+  border-color: transparent;
+  border-radius: 12px 12px 4px 12px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+  animation-name: bubbleEnterMine;
+}
+
+.formattedMessage {
+  min-width: 0;
+}
+
+.formattedMessage ul,
+.formattedMessage ol {
+  margin: 3px 0;
+  padding-left: 20px;
+  white-space: normal;
+}
+
+.formattedMessage li + li {
+  margin-top: 2px;
+}
+
+.formattedMessage a {
+  color: #001c84;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.bubbleMine .formattedMessage a {
+  color: #ffffff;
+}
+
+.bubblePending {
+  opacity: 0.62;
+}
+
+.bubbleFailed {
+  border-color: rgba(140, 47, 47, 0.4);
+  background: rgba(140, 47, 47, 0.06);
+  color: var(--wf-danger, #8c2f2f);
+}
+
+@keyframes bubbleEnterOther {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bubbleEnterMine {
+  from {
+    opacity: 0;
+    transform: translateX(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.bubbleRow {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.messageGroupMine .bubbleRow {
+  flex-direction: row-reverse;
+}
+
+.bubbleTime {
+  flex-shrink: 0;
+  color: #b0b5c0;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.bubbleRow:hover .bubbleTime,
+.bubbleRow:focus-within .bubbleTime {
+  opacity: 1;
+}
+
+/*
+ * Unlike .bubbleTime, this is always visible — a pending send is active
+ * status, not metadata that should wait for a hover to reveal itself.
+ */
+.bubblePendingStatus {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  color: #9aa0ac;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bubblePendingStatus svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.6;
+}
+
+/* ==========================================================================
+   Task cards
+   ========================================================================== */
+
+.taskCard {
+  width: min(320px, 100%);
+  padding: 10px 11px;
+
+  display: grid;
+  gap: 7px;
+
+  /*
+   * No accent stripe. Priority is already stated by the labelled chip below,
+   * in the same accent colour — a coloured bar on the edge would be a second,
+   * wordless copy of information the card already spells out.
+   */
+  border: 1px solid #e4e7ee;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 13, 81, 0.05);
+
+  animation: taskEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.taskCard:hover {
+  box-shadow: 0 4px 14px rgba(0, 13, 81, 0.09);
+  transform: translateY(-1px);
+}
+
+@keyframes taskEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.taskCardDone {
+  background: #fafbfc;
+}
+
+.taskCardDone .taskTitle {
+  color: #9aa0ac;
+  text-decoration: line-through;
+}
+
+.taskPriorityLow {
+  --task-accent: #c3c8d4;
+}
+.taskPriorityNormal {
+  --task-accent: #6f7ea8;
+}
+.taskPriorityHigh {
+  --task-accent: #a8832e;
+}
+.taskPriorityUrgent {
+  --task-accent: #8c2f2f;
+}
+
+.taskTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.taskTitle {
+  min-width: 0;
+  color: var(--wf-text, #1a1a18);
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.taskDescription {
+  color: #7a8194;
+  font-size: 10.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.taskMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  padding: 2px 7px;
+
+  border: 1px solid #e6e8ee;
+  border-radius: 999px;
+  background: #fbfbfc;
+  color: #7a8194;
+
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.chip svg {
+  width: 10px;
+  height: 10px;
+}
+
+.chipPriority {
+  border-color: color-mix(in srgb, var(--task-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--task-accent) 9%, #ffffff);
+  color: var(--task-accent);
+}
+
+.chipOverdue {
+  border-color: rgba(140, 47, 47, 0.3);
+  background: rgba(140, 47, 47, 0.07);
+  color: var(--wf-danger, #8c2f2f);
+}
+
+.chipMine {
+  border-color: rgba(0, 13, 81, 0.2);
+  background: rgba(0, 13, 81, 0.05);
+  color: var(--wf-navy, #000d51);
+}
+
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.statusButton {
+  height: 24px;
+  padding: 0 9px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #5c6270;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10px;
+  font-weight: 620;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.statusButton svg {
+  width: 11px;
+  height: 11px;
+}
+
+.statusButton:hover:not(:disabled) {
+  border-color: rgba(0, 13, 81, 0.26);
+  background: rgba(0, 13, 81, 0.035);
+  color: var(--wf-navy, #000d51);
+}
+
+.statusButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.statusButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.statusButtonActive {
+  border-color: var(--wf-navy, #000d51);
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+}
+
+.statusButtonActive:hover:not(:disabled) {
+  background: var(--wf-navy-hover, #001a73);
+  color: #ffffff;
+}
+
+.sourceLink {
+  height: 24px;
+  padding: 0 8px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  border: 1px dashed #d7dbe4;
+  border-radius: 7px;
+  background: transparent;
+  color: #8a909c;
+
+  font-family: var(--wf-font-ui);
+  font-size: 9.5px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.sourceLink svg {
+  width: 11px;
+  height: 11px;
+}
+
+.sourceLink:hover {
+  border-color: rgba(0, 13, 81, 0.28);
+  color: var(--wf-navy, #000d51);
+}
+
+/* The flash a message plays when a task card navigates back to it. */
+.messageHighlighted .bubble {
+  animation: bubbleHighlight 1500ms ease both;
+}
+
+@keyframes bubbleHighlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 131, 46, 0);
+  }
+  18% {
+    box-shadow: 0 0 0 4px rgba(168, 131, 46, 0.32);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 131, 46, 0);
+  }
+}
+
+/* ==========================================================================
+   Composer
+   ========================================================================== */
+
+.composer {
+  padding: 10px 12px 12px;
+  border-top: 1px solid #eceef2;
+  background: #ffffff;
+}
+
+.composerBox {
+  display: grid;
+  gap: 8px;
+
+  padding: 8px 9px;
+
+  border: 1px solid #dfe3ea;
+  border-radius: 12px;
+  background: #ffffff;
+
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/*
+ * The caret now sits in a contenteditable nested inside this box rather than in
+ * the box's own control, so the ring is drawn from :focus-within instead of a
+ * focus flag the pane used to hold.
+ */
+.composerBox:focus-within {
+  border-color: rgba(0, 13, 81, 0.34);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.07);
+}
+
+.composerToolbar {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: -8px -9px 0;
+  padding: 5px 8px;
+  border-bottom: 1px solid #eceef2;
+  border-radius: 11px 11px 0 0;
+  background: #fafbfc;
+}
+
+.composerToolbar button {
+  width: 26px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #687082;
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease,
+    transform 130ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.composerToolbar button:hover:not(:disabled) {
+  background: rgba(0, 13, 81, 0.06);
+  color: var(--wf-navy, #000d51);
+}
+
+.composerToolbar button:active:not(:disabled) {
+  transform: scale(0.93);
+}
+
+.composerToolbar button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.composerToolbar button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.composerToolbarDivider {
+  width: 1px;
+  height: 14px;
+  margin: 0 3px;
+  background: #dfe3e9;
+}
+
+.composerFormatError {
+  margin-top: -3px;
+  color: var(--wf-danger, #8c2f2f);
+  font-size: 9px;
+}
+
+/* Holds the composer's height for the frame the editor is still loading in. */
+.composerLoading {
+  min-height: 66px;
+}
+
+/* The placeholder is a sibling overlay now, not an input attribute. */
+.composerEditorWrap {
+  position: relative;
+}
+
+.composerInput {
+  width: 100%;
+  min-height: 38px;
+  max-height: 132px;
+  overflow-y: auto;
+
+  border: 0;
+  background: transparent;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+
+  /* A pasted URL must not widen the drawer, or the 390px viewport. */
+  overflow-wrap: anywhere;
+}
+
+.composerInput:focus {
+  outline: none;
+}
+
+.composerPlaceholder {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0;
+
+  pointer-events: none;
+  user-select: none;
+
+  color: #b0b5c0;
+  font-family: var(--wf-font-ui);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/*
+ * What the writer sees IS the message.
+ *
+ * These deliberately mirror .formattedMessage above: a draft and the bubble it
+ * becomes must not look different, or the composer stops being WYSIWYG at the
+ * moment it matters most.
+ *
+ * Bold and italic are set as declarations rather than left to <strong> and <em>
+ * defaults because the editor renders one element per text node — bold+italic
+ * is a single <strong> carrying the italic class, not a nested <em> — so the
+ * class is the only thing that can make it read as italic.
+ */
+.composerParagraph {
+  margin: 0;
+}
+
+.composerBold {
+  font-weight: 650;
+}
+
+.composerItalic {
+  font-style: italic;
+}
+
+.composerLink {
+  color: var(--wf-accent, #000d51);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.composerBulletList,
+.composerNumberedList {
+  margin: 2px 0;
+  padding-inline-start: 20px;
+}
+
+.composerBulletList {
+  list-style: disc;
+}
+
+.composerNumberedList {
+  list-style: decimal;
+}
+
+.composerListItem {
+  margin: 1px 0;
+}
+
+/*
+ * Pressed formatting reads as filled rather than merely outlined, so "this
+ * selection is bold" is legible without comparing two icons.
+ */
+.composerToolbar button[data-active="true"] {
+  background: rgba(0, 13, 81, 0.08);
+  color: var(--wf-accent, #000d51);
+}
+
+.composerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.composerHint {
+  margin-right: auto;
+  color: #b0b5c0;
+  font-size: 9px;
+}
+
+.composerCount {
+  color: #b0b5c0;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.composerCountWarn {
+  color: var(--wf-danger, #8c2f2f);
+  font-weight: 650;
+}
+
+.ghostButton {
+  height: 28px;
+  padding: 0 10px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5c6270;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 620;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ghostButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ghostButton:hover:not(:disabled) {
+  border-color: rgba(0, 13, 81, 0.26);
+  background: rgba(0, 13, 81, 0.035);
+  color: var(--wf-navy, #000d51);
+}
+
+.ghostButton:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.ghostButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sendButton {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 9px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease;
+}
+
+.sendButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--wf-navy-hover, #001a73);
+  transform: scale(1.05);
+}
+
+.sendButton:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.sendButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ==========================================================================
+   Task composer dialog
+   ========================================================================== */
+
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12100;
+
+  display: grid;
+  place-items: center;
+  padding: 20px;
+
+  background: rgba(0, 8, 48, 0.4);
+
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.dialogBackdropOpen {
+  opacity: 1;
+}
+
+.dialogBackdropClosing {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.dialog {
+  width: min(430px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+
+  padding: 20px;
+
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 26px 64px rgba(0, 13, 81, 0.26);
+
+  opacity: 0;
+  transform: translateY(-6px) scale(0.975);
+  transition:
+    opacity 190ms ease,
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialogOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.dialogClosing {
+  opacity: 0;
+  transform: translateY(4px) scale(0.985);
+  transition:
+    opacity 140ms ease,
+    transform 170ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.dialogHeader {
+  margin-bottom: 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.dialogHeader h3 {
+  margin: 0;
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-display);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.dialogHeader p {
+  margin: 0;
+  color: #8a909c;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+/* The quoted message a task was raised from, so the context is never lost. */
+.sourceQuote {
+  margin-bottom: 14px;
+  padding: 8px 10px;
+
+  display: grid;
+  gap: 3px;
+
+  border-left: 2px solid #d7dbe4;
+  border-radius: 0 8px 8px 0;
+  background: #fafbfc;
+}
+
+.sourceQuote strong {
+  color: #7a8194;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sourceQuote span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.fields {
+  display: grid;
+  gap: 13px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label,
+.field > span:first-child {
+  color: #4c5361;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.fieldHint {
+  color: #969ca8;
+  font-size: 9.5px;
+  line-height: 1.4;
+}
+
+/* The one spinner in this feature: pending sends and in-flight submits. */
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.field input[type="text"],
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 9px 11px;
+
+  border: 1px solid #dcdad6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.field textarea {
+  min-height: 66px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  outline: none;
+  border-color: rgba(0, 13, 81, 0.4);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.08);
+}
+
+.priorityRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.priorityOption {
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6b7280;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 620;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.priorityOption:hover {
+  border-color: rgba(0, 13, 81, 0.24);
+  color: var(--wf-navy, #000d51);
+}
+
+.priorityOption:active {
+  transform: scale(0.96);
+}
+
+.priorityOptionSelected,
+.priorityOptionSelected:hover {
+  border-color: transparent;
+  background: var(--task-accent, #000d51);
+  color: #ffffff;
+}
+
+.dialogActions {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.primaryButton {
+  height: 34px;
+  padding: 0 16px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  border: 0;
+  border-radius: 9px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-weight: 650;
+
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 150ms ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--wf-navy-hover, #001a73);
+}
+
+.primaryButton:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.primaryButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  height: 34px;
+  padding: 0 14px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #5c6270;
+
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-weight: 620;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: rgba(0, 13, 81, 0.24);
+  background: rgba(0, 13, 81, 0.03);
+  color: var(--wf-navy, #000d51);
+}
+
+/* ==========================================================================
+   Member picker menu
+   ========================================================================== */
+
+.menu {
+  position: absolute;
+  z-index: 12050;
+  top: calc(100% + 6px);
+  left: 12px;
+  right: 12px;
+
+  max-height: min(420px, calc(100vh - 180px));
+  overflow: hidden;
+  padding: 6px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(0, 13, 81, 0.16);
+
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top center;
+  transition:
+    opacity 170ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menuOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.menuClosing {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.985);
+  transition:
+    opacity 130ms ease,
+    transform 160ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.menuSearch {
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+
+  border: 1px solid #e6e8ee;
+  border-radius: 8px;
+  background: #fbfbfc;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+}
+
+.menuSearch:focus {
+  outline: none;
+  border-color: rgba(0, 13, 81, 0.32);
+  background: #ffffff;
+}
+
+.menuItem {
+  width: 100%;
+  padding: 7px 8px;
+
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-weight: 550;
+
+  cursor: pointer;
+  transition: background-color 130ms ease;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: rgba(0, 13, 81, 0.045);
+}
+
+.menuItem span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Tasks panel
+   ========================================================================== */
+
+.tasksPane {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #ffffff;
+
+  animation: paneEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tasksScroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.taskColumn {
+  display: grid;
+  gap: 8px;
+}
+
+.taskColumnHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.taskColumnHead strong {
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-display);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.taskColumnRule {
+  flex: 1;
+  height: 1px;
+  background: #eceef2;
+}
+
+.taskGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.taskGrid .taskCard {
+  width: 100%;
+}
+
+.taskContext {
+  color: #a1a7b3;
+  font-size: 9.5px;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+
+  border: 1px solid #e6e8ee;
+  border-radius: 9px;
+  background: #fbfbfc;
+}
+
+.segment {
+  height: 24px;
+  padding: 0 11px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #6b7280;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 620;
+
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.segment:hover {
+  color: var(--wf-navy, #000d51);
+}
+
+.segmentActive,
+.segmentActive:hover {
+  background: #ffffff;
+  color: var(--wf-navy, #000d51);
+  box-shadow: 0 1px 2px rgba(0, 13, 81, 0.08);
+}
+
+/* ==========================================================================
+   Loading / empty / error
+   ========================================================================== */
+
+.stateBlock {
+  padding: 30px 22px;
+
+  display: grid;
+  gap: 7px;
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+
+  animation: stateEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes stateEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stateIcon {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 3px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  background: #f4f5f8;
+  color: #9aa0ac;
+}
+
+.stateIcon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.stateBlock strong {
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-display);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.stateBlock p {
+  margin: 0;
+  max-width: 260px;
+  color: #8a909c;
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.stateError strong {
+  color: var(--wf-danger, #8c2f2f);
+}
+
+/* Shimmering placeholders while the first payload is in flight. */
+.skeletonList {
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.skeletonRow {
+  height: 54px;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #f2f3f6 24%, #e9ebf0 38%, #f2f3f6 52%);
+  background-size: 220% 100%;
+  animation: skeletonSweep 1400ms ease-in-out infinite;
+}
+
+@keyframes skeletonSweep {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+.inlineError {
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid rgba(140, 47, 47, 0.28);
+  border-radius: 9px;
+  background: rgba(140, 47, 47, 0.05);
+  color: var(--wf-danger, #8c2f2f);
+
+  font-size: 10.5px;
+  line-height: 1.45;
+
+  animation: stateEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.inlineError svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
+.inlineErrorRetry {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--wf-danger, #8c2f2f);
+
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 650;
+  text-decoration: underline;
+
+  cursor: pointer;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Mobile — a full-screen communication experience, not a shrunken drawer
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  .messagePeek {
+    top: max(12px, env(safe-area-inset-top));
+    right: 10px;
+    left: 10px;
+    width: auto;
+    transform: translateY(-12px) scale(0.99);
+  }
+
+  .messagePeekOpen {
+    transform: translateY(0) scale(1);
+  }
+
+  .messagePeekClosing {
+    transform: translateY(-9px) scale(0.995);
+  }
+
+  .drawer {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    width: 100%;
+
+    grid-template-columns: minmax(0, 1fr);
+
+    border: 0;
+    border-radius: 0;
+
+    /* Rises from the bottom edge, which is where a thumb expects it. */
+    transform: translateY(24px) scale(1);
+    transform-origin: bottom center;
+  }
+
+  .drawerOpen {
+    transform: translateY(0);
+  }
+
+  .drawerClosing {
+    transform: translateY(20px);
+  }
+
+  /*
+   * One pane at a time: the list, or whatever replaced it. The Tasks pane
+   * needs no hidden variant — it only renders when it is the pane in view.
+   */
+  .listPaneHidden,
+  .conversationPaneHidden {
+    display: none;
+  }
+
+  .listPane {
+    border-right: 0;
+  }
+
+  .backButton {
+    display: grid;
+  }
+
+  .messageScroll {
+    padding: 14px 12px 8px;
+  }
+
+  .bubble {
+    max-width: 88%;
+    font-size: 13.5px;
+  }
+
+  .composer {
+    /* Clears the home indicator without hard-coding a device. */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .composerInput,
+  /* Kept in step with the editor, or the placeholder sits off the caret. */
+  .composerPlaceholder {
+    /* 16px is the threshold below which iOS Safari zooms the viewport. */
+    font-size: 16px;
+  }
+
+  .listHeader {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+
+  .taskCard {
+    width: 100%;
+  }
+}
+
+/* ==========================================================================
+   Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .messagePeek,
+  .messagePeekClosing {
+    transform: none;
+    transition-duration: 1ms;
+  }
+  /*
+   * Motion is removed; the surfaces are not. Every element still mounts and
+   * unmounts through the same phases, so a reduced-motion viewer sees the same
+   * states appear and disappear — just without travel. Opacity is kept because
+   * an instant swap of a full-screen surface is its own kind of disorientation.
+   */
+  .backdrop,
+  .backdropClosing,
+  .drawer,
+  .drawerClosing,
+  .dialogBackdrop,
+  .dialogBackdropClosing,
+  .dialog,
+  .dialogClosing,
+  .menu,
+  .menuClosing,
+  .slowModeMenu,
+  .slowModeMenuClosing,
+  .triggerBadge {
+    transition-property: opacity;
+    transition-duration: 120ms;
+  }
+
+  .drawer,
+  .drawerOpen,
+  .drawerClosing,
+  .dialog,
+  .dialogOpen,
+  .dialogClosing,
+  .menu,
+  .menuOpen,
+  .menuClosing,
+  .slowModeMenu,
+  .slowModeMenuOpen,
+  .slowModeMenuClosing,
+  .triggerBadge,
+  .triggerBadgeVisible {
+    transform: none;
+  }
+
+  .messageScroll,
+  .tasksPane,
+  .bubble,
+  .taskCard,
+  .stateBlock,
+  .inlineError {
+    animation: none;
+  }
+
+  .presenceDotOnline {
+    animation: none;
+  }
+
+  .skeletonRow {
+    animation: none;
+    background: #f2f3f6;
+  }
+
+  /*
+   * The spinner keeps turning, slowly. It is the only signal that work is still
+   * in flight, so removing it entirely would leave a pending send looking
+   * frozen — a worse outcome than a small amount of motion.
+   */
+  .spin {
+    animation-duration: 1.8s;
+  }
+
+  .messageHighlighted .bubble {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(168, 131, 46, 0.3);
+  }
+
+  .conversationRow,
+  .iconButton,
+  .statusButton,
+  .ghostButton,
+  .sendButton,
+  .primaryButton,
+  .priorityOption,
+  .taskCard,
+  .messageAction {
+    transition-property: color, background-color, border-color, opacity;
+  }
+
+  .conversationRow:active,
+  .iconButton:active,
+  .statusButton:active,
+  .ghostButton:active,
+  .sendButton:hover,
+  .sendButton:active,
+  .primaryButton:active,
+  .priorityOption:active,
+  .taskCard:hover {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Groups — avatar, activity events, typing
+   ========================================================================== */
+
+/*
+ * A group has no single face, so it gets a mark rather than a portrait. Same
+ * footprint as the direct-thread avatar, so a mixed list stays on one grid.
+ */
+.groupAvatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  background: linear-gradient(135deg, #d8def0, #eceff8);
+  color: var(--wf-navy, #000d51);
+}
+
+.groupAvatar svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+}
+
+.groupAvatarSmall {
+  width: 26px;
+  height: 26px;
+}
+
+.groupAvatarSmall svg {
+  width: 12px;
+  height: 12px;
+}
+
+/*
+ * A completion is a fact about the thread, not a remark inside it, so it is
+ * centred and unowned — no side, no avatar, no tail.
+ */
+.activityRow {
+  display: grid;
+  justify-items: center;
+  margin: 4px 0 10px;
+}
+
+.activityChip {
+  max-width: 92%;
+  padding: 5px 11px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  border: 1px solid #e3e8de;
+  border-radius: 999px;
+  background: #f5f8f3;
+  color: #4b6248;
+
+  font-size: 10.5px;
+  font-weight: 550;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+
+  animation: activityEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.activityChip svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  stroke-width: 2.2;
+}
+
+.activityTime {
+  flex-shrink: 0;
+  color: #9aa89a;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes activityEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Typing ---------------------------------------------------------------
+ * Three dots that lift on the house curve. Low amplitude and no scale, because
+ * this is a status line and not an event worth celebrating.
+ */
+.typingDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.typingDots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: typingPulse 1200ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.typingDots span:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.typingDots span:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+@keyframes typingPulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.28;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+}
+
+.headerTyping {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+
+  color: var(--wf-navy, #000d51);
+  font-size: 10px;
+  font-weight: 550;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  animation: typingRowEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.typingRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+  min-width: 0;
+
+  animation: typingRowEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.typingBubble {
+  min-width: 0;
+  padding: 8px 11px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid #e8eaef;
+  border-radius: 12px 12px 12px 4px;
+  background: #f7f8fa;
+  color: #8a909c;
+}
+
+.typingText {
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes typingRowEnter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Failed send ----------------------------------------------------------
+ * The bubble stays; only its footer changes. Restrained, and it is the retry
+ * control itself, so recovering is one click from where the eye already is.
+ */
+.bubbleRetry {
+  flex-shrink: 0;
+  padding: 2px 6px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  border: 1px solid rgba(150, 51, 51, 0.24);
+  border-radius: 999px;
+  background: transparent;
+  color: #963333;
+
+  font-family: var(--wf-font-ui);
+  font-size: 9px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.bubbleRetry svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.4;
+}
+
+.bubbleRetry:hover {
+  background: rgba(150, 51, 51, 0.07);
+  border-color: rgba(150, 51, 51, 0.4);
+}
+
+/* ==========================================================================
+   New conversation / new group
+   ========================================================================== */
+
+.creatorChoices {
+  display: grid;
+  gap: 4px;
+  padding: 2px;
+}
+
+.creatorChoice {
+  width: 100%;
+  padding: 9px 10px;
+
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+
+  animation: creatorEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.creatorChoice:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.creatorChoice:hover {
+  background: rgba(0, 13, 81, 0.035);
+  border-color: #e6e9f1;
+}
+
+.creatorChoice > span:first-child {
+  width: 30px;
+  height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+  background: linear-gradient(135deg, #dfe4f2, #eef0f7);
+  color: var(--wf-navy, #000d51);
+}
+
+.creatorChoice > span:first-child svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+.creatorChoice > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.creatorChoice strong {
+  color: var(--wf-text, #1a1a18);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.creatorChoice small {
+  color: #8a909c;
+  font-size: 10px;
+}
+
+.creatorPanel {
+  display: grid;
+  gap: 8px;
+  padding: 2px;
+  min-height: 0;
+
+  animation: creatorEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.creatorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.creatorHeader strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: var(--wf-text, #1a1a18);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.creatorBack {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid #e6e9f1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #5c6270;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.creatorBack svg {
+  width: 12px;
+  height: 12px;
+}
+
+.creatorBack:hover {
+  background: rgba(0, 13, 81, 0.04);
+  color: var(--wf-navy, #000d51);
+}
+
+.creatorField {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.creatorField > span {
+  color: #8a909c;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.creatorField input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.creatorField input:focus-visible,
+.creatorSearch:focus-within {
+  outline: none;
+  border-color: var(--wf-navy, #000d51);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.08);
+}
+
+.creatorSearch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+
+  border: 1px solid #e2e5eb;
+  border-radius: 9px;
+  background: #ffffff;
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.creatorSearch svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: #a1a7b3;
+}
+
+.creatorSearch input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+
+  border: 0;
+  background: transparent;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+}
+
+.creatorSearch input:focus-visible {
+  outline: none;
+}
+
+.creatorMembers {
+  min-height: 0;
+  max-height: 200px;
+  overflow-y: auto;
+
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+.creatorMember {
+  width: 100%;
+  padding: 6px 8px;
+
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 9px;
+
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  text-align: left;
+
+  color: var(--wf-text, #1a1a18);
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.creatorMemberIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.creatorMemberIdentity strong,
+.creatorMemberIdentity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creatorMemberIdentity strong {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.creatorMemberIdentity small {
+  color: #8a909c;
+  font-size: 9px;
+}
+
+.creatorMember:hover {
+  background: rgba(0, 13, 81, 0.035);
+}
+
+.creatorMemberActive {
+  border-color: rgba(0, 13, 81, 0.14);
+  background: rgba(0, 13, 81, 0.035);
+}
+
+.creatorMemberSelected {
+  background: rgba(0, 13, 81, 0.05);
+  border-color: #dfe4f2;
+}
+
+.creatorCheck {
+  width: 16px;
+  height: 16px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 999px;
+  color: var(--wf-navy, #000d51);
+}
+
+.creatorCheck svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.6;
+  animation: creatorCheckIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.creatorEmpty {
+  padding: 14px 8px;
+  color: #8a909c;
+  font-size: 11px;
+  text-align: center;
+}
+
+.creatorError {
+  margin: 0;
+  padding: 6px 9px;
+
+  border-radius: 8px;
+  background: rgba(150, 51, 51, 0.06);
+  color: #963333;
+
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+}
+
+.creatorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+
+  padding-top: 7px;
+  border-top: 1px solid #eef0f4;
+}
+
+.creatorFooter > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #8a909c;
+  font-size: 10px;
+}
+
+.creatorFooter .primaryButton {
+  flex-shrink: 0;
+  height: 30px;
+  font-size: 11px;
+}
+
+@keyframes creatorEnter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes creatorCheckIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/*
+ * Reduced motion: the states still change, they just stop travelling. The
+ * typing dots keep a low opacity pulse — it is the only thing that says the
+ * indicator is live rather than stuck.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .activityChip,
+  .typingRow,
+  .headerTyping,
+  .creatorChoice,
+  .creatorPanel,
+  .creatorCheck svg {
+    animation: none;
+  }
+
+  .typingDots span {
+    animation-duration: 2s;
+    transform: none;
+  }
+}
+
+/*
+ * The To Do page's team-task board. It borrows the drawer's column and card
+ * styling verbatim — the same task should not look like two different objects
+ * depending on which surface you meet it on.
+ */
+.todoTaskBoard {
+  display: grid;
+  gap: 16px;
+}
+
+/* Inline link entry, shown in place of a native window.prompt. */
+.composerLinkRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  animation: teamLinkRowIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.composerLinkInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid #dfe3e9;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--wf-text, #1a1a18);
+  font-size: 11px;
+}
+
+.composerLinkInput:focus-visible {
+  outline: none;
+  border-color: rgba(0, 13, 81, 0.34);
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.07);
+}
+
+.composerLinkApply {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--wf-navy, #000d51);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 130ms cubic-bezier(0.22, 1, 0.36, 1), opacity 130ms ease;
+}
+
+.composerLinkApply:active {
+  transform: scale(0.96);
+}
+
+.composerLinkCancel {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #687082;
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease;
+}
+
+.composerLinkCancel:hover {
+  background: rgba(0, 13, 81, 0.06);
+  color: var(--wf-navy, #000d51);
+}
+
+.composerLinkCancel svg {
+  width: 13px;
+  height: 13px;
+}
+
+@keyframes teamLinkRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composerLinkRow {
+    animation: none;
+  }
+
+  .composerLinkApply,
+  .composerLinkCancel {
+    transition: none;
+  }
+
+  .composerLinkApply:active {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   V2.3 — conversation history search
+   ========================================================================== */
+
+/*
+ * Subtle near the latest message by construction: it renders only once the
+ * employee has scrolled meaningfully away from the bottom (see
+ * SCROLL_AWAY_FROM_LATEST_PX). Positioned over the scroll area rather than
+ * the header, so it never competes with the header's own controls.
+ */
+.floatingControls {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: flex;
+  gap: 6px;
+
+  animation: floatingControlsIn 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes floatingControlsIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.floatingControlButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 6px 11px;
+
+  border: 1px solid #e4e7ee;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 13, 81, 0.1);
+  color: #4a5164;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 650;
+
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.floatingControlButton svg {
+  width: 12px;
+  height: 12px;
+}
+
+.floatingControlButton:hover {
+  border-color: rgba(0, 13, 81, 0.28);
+  color: var(--wf-navy, #000d51);
+  transform: translateY(-1px);
+}
+
+.loadOlderRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  padding: 4px 0 2px;
+
+  color: #9aa0ac;
+  font-size: 10px;
+}
+
+.searchPanel {
+  border-bottom: 1px solid #eceef2;
+  background: #fafbfc;
+  animation: searchPanelIn 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes searchPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.searchPanelBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+.searchPanelIcon {
+  flex-shrink: 0;
+  color: #9aa0ac;
+}
+
+.searchPanelInput {
+  min-width: 0;
+  flex: 1 1 auto;
+
+  border: 0;
+  background: transparent;
+  color: var(--wf-text, #1a1a18);
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+}
+
+.searchPanelInput:focus {
+  outline: none;
+}
+
+.searchPanelNav {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.searchNavButton {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #687082;
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease;
+}
+
+.searchNavButton:hover:not(:disabled) {
+  background: rgba(0, 13, 81, 0.06);
+  color: var(--wf-navy, #000d51);
+}
+
+.searchNavButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.searchNavCount {
+  min-width: 42px;
+  text-align: center;
+  color: #9aa0ac;
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.searchPanelClose {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #687082;
+  cursor: pointer;
+  transition: color 130ms ease, background-color 130ms ease;
+}
+
+.searchPanelClose:hover {
+  background: rgba(0, 13, 81, 0.06);
+  color: var(--wf-navy, #000d51);
+}
+
+.searchResults {
+  max-height: 260px;
+  overflow-y: auto;
+  border-top: 1px solid #eceef2;
+}
+
+.searchEmptyState {
+  padding: 14px 12px;
+  color: #9aa0ac;
+  font-size: 11px;
+}
+
+.searchResultRow {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+
+  padding: 8px 10px;
+
+  border: 0;
+  border-bottom: 1px solid #f0f1f4;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  transition: background-color 120ms ease;
+}
+
+.searchResultRow:last-child {
+  border-bottom: 0;
+}
+
+.searchResultRow:hover,
+.searchResultRowActive {
+  background: rgba(0, 13, 81, 0.05);
+}
+
+.searchResultBody {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.searchResultMeta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 9.5px;
+}
+
+.searchResultMeta strong {
+  color: var(--wf-navy, #000d51);
+  font-weight: 650;
+}
+
+.searchResultMeta span {
+  color: #9aa0ac;
+}
+
+.searchResultSnippet {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+
+  color: #4a5164;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.searchResultSnippet mark {
+  background: transparent;
+  color: #ae7e19;
+  font-weight: 650;
+}
+
+/* ==========================================================================
+   V2.3 — shared message reactions
+   ========================================================================== */
+
+/*
+ * Near-invisible until the bubble row is hovered, focused, OR tapped
+ * (mobileActive), which is what gives touch devices a trigger with no hover
+ * state at all.
+ */
+.reactionRail {
+  position: absolute;
+  z-index: 8;
+  top: 50%;
+  left: calc(100% + 7px);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  padding: 3px;
+  border: 1px solid #e4e7ee;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 5px 16px rgba(0, 13, 81, 0.12);
+
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.88);
+  transition:
+    opacity 150ms ease,
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.messageGroupMine .reactionRail {
+  right: calc(100% + 7px);
+  left: auto;
+}
+
+.bubbleRow:hover .reactionRail,
+.bubbleRow:focus-within .reactionRail,
+.reactionRailMobileActive {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+
+.reactionRailButton {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+
+  display: grid;
+  place-items: center;
+
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #72798b;
+
+  font-size: 12px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 130ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reactionRailButton svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.9;
+}
+
+.reactionRailButton:hover {
+  background: rgba(0, 13, 81, 0.06);
+  color: var(--wf-navy, #000d51);
+}
+
+.reactionRailButton:active {
+  transform: scale(0.9);
+}
+
+.reactionRailButtonActive {
+  border-color: rgba(174, 126, 25, 0.5);
+  background: rgba(174, 126, 25, 0.1);
+}
+
+.reactionPicker {
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 6px);
+  left: 0;
+
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+
+  padding: 6px;
+
+  border: 1px solid #e4e7ee;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(0, 13, 81, 0.14);
+
+  animation: reactionPickerIn 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.messageGroupMine .reactionPicker {
+  left: auto;
+  right: 0;
+}
+
+@keyframes reactionPickerIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.reactionPickerButton {
+  width: 28px;
+  height: 28px;
+
+  display: grid;
+  place-items: center;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+
+  font-size: 15px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: background-color 130ms ease, transform 130ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reactionPickerButton:hover {
+  background: rgba(0, 13, 81, 0.06);
+}
+
+.reactionPickerButton:active {
+  transform: scale(0.9);
+}
+
+.reactionPickerButtonActive {
+  background: rgba(174, 126, 25, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(174, 126, 25, 0.32);
+}
+
+/* ========================================================================== 
+   V2.4 — reply/forward/tombstone message language
+   ========================================================================== */
+
+.forwardedLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: #7a8194;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.bubbleMine .forwardedLabel {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.replyQuote {
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  display: grid;
+  gap: 2px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(0, 13, 81, 0.06);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bubbleMine .replyQuote {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.replyQuote strong {
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.replyQuote span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  opacity: 0.75;
+}
+
+.replyQuote:hover:not(:disabled) {
+  background: rgba(0, 13, 81, 0.1);
+}
+
+.bubbleMine .replyQuote:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.replyQuote:disabled {
+  cursor: default;
+}
+
+.bubbleDeleted {
+  border-color: #e3e5ea;
+  background: #f5f6f8;
+  color: #8a909c;
+  font-style: italic;
+}
+
+.deletedMessage {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+}
+
+.composerReplyStrip {
+  margin: -2px 0 7px;
+  padding: 7px 8px 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 8px;
+  background: rgba(0, 13, 81, 0.055);
+}
+
+.composerReplyStrip > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.composerReplyStrip strong {
+  color: var(--wf-navy, #000d51);
+  font-size: 10px;
+}
+
+.composerReplyStrip span span {
+  overflow: hidden;
+  color: #707789;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composerReplyStrip button {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #747b8b;
+  cursor: pointer;
+}
+
+.composerReplyStrip button:hover {
+  background: rgba(0, 13, 81, 0.08);
+  color: var(--wf-navy, #000d51);
+}
+
+.composerReplyStrip button svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Premium action surface. Blur serves the requested focus effect; the card is
+   intentionally compact and contains only message-scoped decisions. */
+.messageActionBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 8, 42, 0.28);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.messageActionBackdropOpen { opacity: 1; }
+.messageActionBackdropClosing { opacity: 0; }
+
+.messageActionCard {
+  width: min(340px, 100%);
+  max-height: min(580px, calc(100dvh - 40px));
+  overflow: hidden;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 24px 66px rgba(0, 13, 81, 0.28);
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  transition:
+    opacity 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.messageActionCardOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.messageActionCardClosing {
+  opacity: 0;
+  transform: translateY(5px) scale(0.985);
+}
+
+.messageActionCardHeader {
+  min-height: 44px;
+  padding: 8px 9px 5px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.messageActionCardHeader strong {
+  color: var(--wf-navy, #000d51);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.messageActionBack,
+.messageActionClose {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #737a8b;
+  cursor: pointer;
+}
+
+.messageActionBack:hover,
+.messageActionClose:hover {
+  background: #f2f3f6;
+  color: var(--wf-navy, #000d51);
+}
+
+.messageActionBack svg,
+.messageActionClose svg {
+  width: 14px;
+  height: 14px;
+}
+
+.messageActionList {
+  padding: 3px 8px 9px;
+  display: grid;
+  gap: 2px;
+}
+
+.messageActionOption,
+.messageActionOptionDanger {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #343a49;
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+  font-weight: 620;
+  text-align: left;
+  cursor: pointer;
+}
+
+.messageActionOption:hover { background: #f4f5f7; }
+.messageActionOptionDanger { color: var(--wf-danger, #8c2f2f); }
+.messageActionOptionDanger:hover { background: rgba(140, 47, 47, 0.07); }
+
+.messageActionOption span,
+.messageActionOptionDanger span {
+  width: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.messageActionOption svg,
+.messageActionOptionDanger svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+
+.messageActionDestructiveGroup {
+  margin-top: 5px;
+  padding-top: 6px;
+  border-top: 1px solid #eceef2;
+}
+
+.forwardPicker { padding: 0 10px 12px; }
+
+.forwardSearch {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: #f3f4f6;
+  color: #858b98;
+}
+
+.forwardSearch svg { width: 14px; height: 14px; }
+.forwardSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--wf-text, #1a1a18);
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+}
+
+.forwardDestinationList {
+  max-height: 330px;
+  margin-top: 7px;
+  display: grid;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.forwardDestinationList button {
+  padding: 8px 9px;
+  display: grid;
+  gap: 2px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #303645;
+  text-align: left;
+  cursor: pointer;
+}
+
+.forwardDestinationList button:hover { background: #f4f5f7; }
+.forwardDestinationList button:disabled { opacity: 0.5; cursor: wait; }
+.forwardDestinationList span { font-size: 11.5px; font-weight: 650; }
+.forwardDestinationList small { color: #8b919e; font-size: 9.5px; }
+.forwardEmpty { margin: 18px 8px; color: #8b919e; font-size: 10.5px; text-align: center; }
+
+.messageDeleteConfirm {
+  padding: 4px 18px 18px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.messageDeleteIcon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 9px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(140, 47, 47, 0.08);
+  color: var(--wf-danger, #8c2f2f);
+}
+
+.messageDeleteIcon svg { width: 15px; height: 15px; }
+.messageDeleteConfirm strong { color: #252a36; font-size: 13px; }
+.messageDeleteConfirm p { margin: 5px 0 15px; color: #7c8391; font-size: 10.5px; line-height: 1.45; }
+
+.messageDeleteActions { display: flex; gap: 7px; }
+.messageDeleteActions button {
+  min-width: 84px;
+  height: 33px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #e1e3e8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #565d6c;
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.messageDeleteActions button:last-child { border-color: transparent; background: var(--wf-navy, #000d51); color: #ffffff; }
+.messageDeleteActions .messageDeleteDanger { background: var(--wf-danger, #8c2f2f); }
+.messageDeleteActions svg { width: 13px; height: 13px; }
+.messageActionError { margin: 0 14px 12px; color: var(--wf-danger, #8c2f2f); font-size: 10px; text-align: center; }
+
+/*
+ * Conversation Controls reuses the messageAction backdrop/card/header/close
+ * primitives above for identical overlay mechanics, and adds only the
+ * governance-specific body below.
+ */
+.controlsCard { width: min(380px, 100%); }
+
+.controlsBody {
+  max-height: min(520px, calc(100dvh - 120px));
+  padding: 0 14px 14px;
+  overflow-y: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.controlsOwnerLine {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #565d6c;
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.controlsOwnerLine svg { color: var(--wf-gold-ink, #7d6120); }
+
+.controlsSection { display: grid; gap: 7px; }
+
+.controlsSectionTitle {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--wf-navy, #000d51);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.controlsSummary { margin: 0; color: #565d6c; font-size: 11.5px; }
+
+.controlsFieldRow { display: flex; gap: 6px; }
+
+.controlsTextInput,
+.controlsSelect {
+  min-width: 0;
+  flex: 1;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #e1e3e8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--wf-text, #1a1a18);
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+}
+
+.controlsTextInput:focus,
+.controlsSelect:focus { outline: 2px solid rgba(0, 13, 81, 0.18); outline-offset: 1px; }
+
+.controlsSmallButton {
+  height: 32px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.controlsSmallButton:disabled { opacity: 0.45; cursor: not-allowed; }
+.controlsSmallButton svg { width: 12px; height: 12px; }
+
+.controlsPresetRow { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.controlsPresetButton {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #e1e3e8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #454c5c;
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 620;
+  cursor: pointer;
+}
+
+.controlsPresetButton:hover { background: #f4f5f7; }
+.controlsPresetButton:disabled { opacity: 0.5; cursor: wait; }
+
+.controlsPresetButtonActive {
+  border-color: transparent;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+}
+
+.controlsMemberList { display: grid; gap: 2px; }
+
+.controlsMemberRow {
+  min-height: 34px;
+  padding: 4px 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.controlsMemberRow:last-child { border-bottom: 0; }
+
+.controlsMemberRow span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #303645;
+  font-size: 11.5px;
+  font-weight: 620;
+}
+
+.controlsRoleTag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0, 13, 81, 0.08);
+  color: var(--wf-navy, #000d51);
+  font-size: 9px;
+  font-weight: 700;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.controlsCapabilitySummary {
+  display: block;
+  color: #8b919e;
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+.controlsIconButton {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #8b919e;
+  cursor: pointer;
+}
+
+.controlsIconButton:hover { background: rgba(140, 47, 47, 0.08); color: var(--wf-danger, #8c2f2f); }
+.controlsIconButton:disabled { opacity: 0.5; cursor: wait; }
+
+.controlsGrantForm {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #eceef2;
+  display: grid;
+  gap: 8px;
+}
+
+.controlsCapabilityGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+}
+
+.controlsCapabilityCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #454c5c;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.controlsBusyRow { display: grid; place-items: center; padding: 0 0 10px; }
+
+/*
+ * Chips sit directly under the bubble they belong to, native to it rather
+ * than a second card — no border/background wrapper of their own beyond the
+ * chip pills.
+ */
+.reactionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.reactionChipWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.reactionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  padding: 2px 7px;
+
+  border: 1px solid #e4e7ee;
+  border-radius: 999px;
+  background: #f7f8fa;
+  color: #4a5164;
+
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    border-color 130ms ease,
+    background-color 130ms ease,
+    transform 130ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reactionChip:hover {
+  transform: translateY(-1px);
+}
+
+.reactionChipActive {
+  border-color: rgba(174, 126, 25, 0.45);
+  background: rgba(174, 126, 25, 0.1);
+  color: #8a6414;
+}
+
+.reactionTooltip {
+  position: absolute;
+  z-index: 4;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  max-width: 200px;
+  padding: 5px 8px;
+
+  border-radius: 7px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  font-size: 9.5px;
+  font-weight: 550;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+
+  pointer-events: none;
+  animation: reactionTooltipIn 120ms ease both;
+}
+
+@keyframes reactionTooltipIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 3px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 860px) {
+  .messageActionBackdrop {
+    place-items: end center;
+    padding: 12px;
+  }
+
+  .messageActionCard {
+    width: 100%;
+    max-height: min(72dvh, 620px);
+    border-radius: 16px;
+    transform: translateY(18px) scale(0.99);
+  }
+
+  .messageActionCardOpen {
+    transform: translateY(0) scale(1);
+  }
+
+  .messageActionCardClosing {
+    transform: translateY(14px) scale(0.995);
+  }
+
+  .reactionRail {
+    top: auto;
+    right: 0;
+    bottom: calc(100% + 6px);
+    left: auto;
+    transform: translateY(4px) scale(0.9);
+  }
+
+  .messageGroupMine .reactionRail {
+    right: auto;
+    left: 0;
+  }
+
+  .bubbleRow:hover .reactionRail,
+  .bubbleRow:focus-within .reactionRail,
+  .reactionRailMobileActive {
+    transform: translateY(0) scale(1);
+  }
+
+  .messageGroup:has(.reactionRailMobileActive) {
+    position: relative;
+    z-index: 12;
+  }
+
+  .floatingControls {
+    left: auto;
+    right: 10px;
+    transform: none;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .floatingControlButton:hover {
+    transform: none;
+  }
+
+  .searchResults {
+    max-height: 45vh;
+  }
+}
+
+/*
+ * Touch browsers can retain a synthetic :hover/:focus state after following a
+ * link. On coarse pointers the rail therefore follows only the explicit
+ * mobile-selected class set by the conversation, so tapping a link never
+ * reveals message actions as a side effect.
+ */
+@media (max-width: 860px) and (hover: none) and (pointer: coarse) {
+  .bubbleRow:hover .reactionRail,
+  .bubbleRow:focus-within .reactionRail {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px) scale(0.9);
+  }
+
+  .bubbleRow .reactionRail.reactionRailMobileActive {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floatingControls,
+  .searchPanel,
+  .reactionPicker,
+  .reactionTooltip {
+    animation: none;
+  }
+
+  .messageActionBackdrop,
+  .messageActionCard,
+  .messageActionCardOpen,
+  .messageActionCardClosing {
+    transition-duration: 1ms;
+    transform: none;
+  }
+
+  .floatingControlButton,
+  .reactionRail,
+  .reactionRailButton,
+  .reactionPickerButton,
+  .reactionChip {
+    transition: none;
+  }
+
+  .floatingControlButton:hover,
+  .reactionChip:hover {
+    transform: none;
+  }
+}

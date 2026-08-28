@@ -224,7 +224,11 @@ export default async function DashboardPage({
     <main className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <h1>Welcome back, William</h1>
+          <h1>
+            {context.user.greetingName
+              ? `Welcome back, ${context.user.greetingName}`
+              : "Welcome back"}
+          </h1>
           <p>
             Paid revenue, completed sales, client growth, and recurring
             business in one live view.

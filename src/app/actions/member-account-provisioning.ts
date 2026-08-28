@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { AuthAdminError } from "../../lib/supabase/auth-admin";
 import { getAccountProvisioningService, getInternalContext } from "../../lib/supabase/next-server";
 
@@ -136,6 +137,10 @@ export async function provisionInternalMemberAction(
   }
 
   try {
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "account.provision",
+    });
     await provisioning.provisionInternalMember(
       {
         email,
@@ -195,6 +200,36 @@ export async function setMemberPresetAction(input: {
       { profile_id: input.profileId, preset_key: input.presetKey },
       context.actor,
     );
+  } catch (error) {
+    return { ok: false, error: toClientSafeError(error).message };
+  }
+
+  revalidatePath("/team");
+  return { ok: true };
+}
+
+/**
+ * Grants or revokes "Send reports anytime" (reports.send_anytime) for one
+ * non-owner internal member.
+ *
+ * The database is the authority: app_grant_report_send_anytime /
+ * app_revoke_report_send_anytime independently require
+ * users.manage_permissions, refuse a caller acting on themself and refuse an
+ * Owner target — this action does not duplicate those checks, only surfaces
+ * whatever the database decided.
+ */
+export async function setReportSendAnytimeAction(input: {
+  profileId: string;
+  allowed: boolean;
+}): Promise<MemberAccessResult> {
+  const context = await getInternalContext();
+
+  try {
+    if (input.allowed) {
+      await context.services.permissions.grantReportSendAnytime(input.profileId, context.actor);
+    } else {
+      await context.services.permissions.revokeReportSendAnytime(input.profileId, context.actor);
+    }
   } catch (error) {
     return { ok: false, error: toClientSafeError(error).message };
   }

@@ -779,6 +779,16 @@
   color: var(--wf-navy);
 }
 
+.windowNote {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--wf-gold) 8%, var(--wf-white));
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+}
+
 .secondaryButton {
   display: inline-flex;
   align-items: center;

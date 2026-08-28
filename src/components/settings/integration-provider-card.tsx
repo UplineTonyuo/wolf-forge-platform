@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, LockKeyhole } from "lucide-react";
+import { ChevronDown, ChevronUp, LockKeyhole, LoaderCircle } from "lucide-react";
 import { useId, useState } from "react";
 import type { IntegrationConnectionView } from "../../domain/integrations/schema";
 import { ConnectionStatus } from "./connection-status";
@@ -14,16 +14,27 @@ function formatTimestamp(value: string | null): string | null {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-type DisconnectAction = (formData: FormData) => void | Promise<void>;
+export type IntegrationProviderActions = {
+  configured: boolean;
+  connectPath: string;
+  verifyPath: string;
+  disconnectPath: string;
+};
 
 export function IntegrationManagePanel({
   connection,
-  disconnectAction,
+  actions,
+  pendingAction,
+  onSubmit,
 }: {
   connection: IntegrationConnectionView;
-  disconnectAction?: DisconnectAction;
+  actions?: IntegrationProviderActions;
+  pendingAction: string | null;
+  onSubmit: (action: string) => void;
 }) {
   const connectedAt = formatTimestamp(connection.connectedAt);
+  const expiresAt = formatTimestamp(connection.expiresAt);
+  const isGmail = connection.provider.id === "gmail";
 
   return (
     <div className={styles.managePanel}>
@@ -36,11 +47,18 @@ export function IntegrationManagePanel({
               <p>{connection.provider.configurationSummary}</p>
             </div>
           </div>
-          <p className={styles.manageCopy}>
-            This step does not create a connection record or store credentials. A future
-            provider-specific setup will complete authorization on the server before the
-            status can change.
-          </p>
+          {isGmail && actions ? (
+            actions.configured ? (
+              <>
+                <p className={styles.manageCopy}>Google will ask for identity and Gmail send-only permission. Wolf Forge becomes Connected only after encrypted credentials and safe account metadata are saved successfully.</p>
+                <ActionForm action={actions.connectPath} label="Connect Gmail" pendingAction={pendingAction} onSubmit={onSubmit} />
+              </>
+            ) : (
+              <p className={styles.manageCopy}>Google Cloud OAuth and the trusted server credential are not configured in this environment. No connection can be created until the owner completes that server-only setup.</p>
+            )
+          ) : (
+            <p className={styles.manageCopy}>This step does not create a connection record or store credentials. A future provider-specific setup will complete authorization on the server before the status can change.</p>
+          )}
         </>
       ) : (
         <dl className={styles.connectionDetails}>
@@ -53,31 +71,56 @@ export function IntegrationManagePanel({
             <dd>{connectedAt ?? "Timestamp unavailable"}</dd>
           </div>
           <div>
-            <dt>Feature enablement</dt>
-            <dd>Managed separately when provider payment or communication flows are implemented.</dd>
+            <dt>Permissions</dt>
+            <dd>{connection.grantedScopes.length > 0 ? connection.grantedScopes.join(", ") : "No provider permissions recorded"}</dd>
+          </div>
+          <div>
+            <dt>Access token expiry</dt>
+            <dd>{expiresAt ?? "Not reported"}</dd>
           </div>
         </dl>
       )}
-      {connection.status === "connected" && disconnectAction ? (
-        <form action={disconnectAction} className={styles.disconnectForm}>
-          <input type="hidden" name="provider" value={connection.provider.id} />
-          <button type="submit" className={styles.dangerButton}>Disconnect</button>
-        </form>
+      {connection.status !== "disconnected" && isGmail && actions ? (
+        <div className={styles.connectionActions}>
+          {connection.status === "connected" ? <ActionForm action={actions.verifyPath} label="Verify connection" pendingAction={pendingAction} onSubmit={onSubmit} secondary /> : null}
+          {connection.status === "expired" || connection.status === "error" ? <ActionForm action={actions.connectPath} label="Reconnect Gmail" pendingAction={pendingAction} onSubmit={onSubmit} /> : null}
+          <ActionForm action={actions.disconnectPath} label="Disconnect" pendingAction={pendingAction} onSubmit={onSubmit} danger />
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function ActionForm({ action, label, pendingAction, onSubmit, secondary = false, danger = false }: {
+  action: string;
+  label: string;
+  pendingAction: string | null;
+  onSubmit: (action: string) => void;
+  secondary?: boolean;
+  danger?: boolean;
+}) {
+  const pending = pendingAction === action;
+  return (
+    <form method="post" action={action} onSubmit={() => onSubmit(action)}>
+      <button type="submit" disabled={pendingAction !== null} className={danger ? styles.dangerButton : secondary ? styles.secondaryButton : styles.primaryButton}>
+        {pending ? <LoaderCircle aria-hidden="true" /> : null}
+        {pending ? `${label}…` : label}
+      </button>
+    </form>
   );
 }
 
 export function IntegrationProviderCard({
   connection,
   canManage,
-  disconnectAction,
+  actions,
 }: {
   connection: IntegrationConnectionView;
   canManage: boolean;
-  disconnectAction?: DisconnectAction;
+  actions?: IntegrationProviderActions;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const panelId = useId();
   const actionLabel = connection.status === "connected"
     ? "Manage"
@@ -117,7 +160,7 @@ export function IntegrationProviderCard({
 
       {expanded ? (
         <div id={panelId} className={styles.providerPanel} role="region" aria-label={`${connection.provider.name} configuration`}>
-          <IntegrationManagePanel connection={connection} disconnectAction={disconnectAction} />
+          <IntegrationManagePanel connection={connection} actions={actions} pendingAction={pendingAction} onSubmit={setPendingAction} />
         </div>
       ) : null}
     </article>

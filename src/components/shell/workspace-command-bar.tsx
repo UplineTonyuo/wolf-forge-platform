@@ -4,8 +4,8 @@ import {
   Bell,
   FileText,
   Folder,
-Images,
   MessageSquare,
+  MessagesSquare,
   Minus,
   Plus,
   Receipt,
@@ -47,6 +47,9 @@ import {
 import {
   WorkspaceQuickAction,
 } from "./workspace-quick-action";
+import {
+  TeamMessagesTrigger,
+} from "../team/team-messages-trigger";
 
 function formatActivityTime(
   value: string,
@@ -87,7 +90,9 @@ function NotificationCategoryIcon({
                   ? WalletCards
                   : category === "store"
                     ? ShoppingCart
-                    : Bell;
+                    : category === "team"
+                      ? MessagesSquare
+                      : Bell;
 
   return (
     <Icon aria-hidden="true" />
@@ -787,16 +792,14 @@ export function WorkspaceCommandBar({
         <GlobalSearch />
         <div className="workspace-command-shortcuts">
         <DashboardDateTrigger />
-          <button
-            className="workspace-command-button"
-            type="button"
-            aria-label="Gallery"
-            title="Gallery"
-          >
-            <Images
-              aria-hidden="true"
-            />
-          </button>
+          {/*
+            Team Messages. This slot held a dead "Gallery" placeholder that
+            opened nothing; it is now internal staff-to-staff communication,
+            and it renders only for an account holding team_messages.use.
+          */}
+          <TeamMessagesTrigger
+            user={user}
+          />
 
           <button
             ref={triggerRef}

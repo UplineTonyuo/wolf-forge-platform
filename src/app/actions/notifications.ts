@@ -13,7 +13,10 @@ export type NotificationCategory =
   | "ticket"
   | "payment"
   | "wallet"
-  | "store";
+  | "store"
+  | "report"
+  /* Internal staff-to-staff messaging. Never deliverable to a client account. */
+  | "team";
 
 export type WalletNotificationItem = {
   id: string;

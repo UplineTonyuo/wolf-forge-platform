@@ -173,6 +173,8 @@ export type InternalMember = {
   created_at: string;
   /** Public avatar URL from public.profiles, or null when initials are shown. */
   avatar_url: string | null;
+  /** Resolved reports.send_anytime — true for Owner unconditionally, or an explicit override. */
+  report_send_anytime: boolean;
 };
 
 export type PermissionPresetOverview = {

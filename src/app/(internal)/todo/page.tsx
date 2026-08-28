@@ -6,6 +6,8 @@ import type { Order } from "../../../domain/orders/schema";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { formatDate, isOverdue } from "../../../lib/format";
 import { getInternalContext } from "../../../lib/supabase/next-server";
+import { TeamTodoSection } from "../../../components/team/team-todo-section";
+import type { TeamTaskListRow } from "../../../domain/team/schema";
 
 export const metadata: Metadata = { title: "To Do" };
 
@@ -37,10 +39,27 @@ function AttentionSection({ title, empty, orders, companyNames, serviceNames }: 
 export default async function ToDoPage() {
   const context = await getInternalContext();
   try {
-    const [orders, companies, services] = await Promise.all([
+    /*
+     * Team tasks join this page as the SAME rows the Messages drawer shows —
+     * one canonical `public.team_tasks` record read through the same RPC,
+     * never a mirrored copy. See `TeamTodoSection` for why an order_tasks
+     * mirror was rejected.
+     *
+     * Fetched only for an account that actually holds team_messages.use: the
+     * RPC refuses everyone else by design, and a refusal is not an error worth
+     * failing the whole To Do page over.
+     */
+    const canUseTeamMessages = context.user.teamMessaging.use;
+
+    const [orders, companies, services, teamTasks] = await Promise.all([
       context.services.orders.list(),
       context.services.companies.listActive(),
       context.services.catalog.listActive(),
+      canUseTeamMessages
+        ? context.services.team
+            .listMyTasks(false)
+            .catch((): TeamTaskListRow[] => [])
+        : Promise.resolve<TeamTaskListRow[]>([]),
     ]);
     const companyNames = new Map(companies.map((company) => [company.id, company.name]));
     const serviceNames = new Map(services.map((service) => [service.id, service.name]));
@@ -51,17 +70,30 @@ export default async function ToDoPage() {
 
     return (
       <PageFrame title="To Do" description="Work that needs attention now.">
-        {orders.length === 0 ? (
-          <EmptyState title="No projects yet" body="Projects are how work enters the platform." />
-        ) : (
-          <div className="attention-stack">
-            <div className="attention-title"><span />Needs attention</div>
-            {overdue.length === 0 && unassigned.length === 0 && waiting.length === 0 ? <p className="all-clear">Nothing needs attention right now.</p> : null}
-            <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} companyNames={companyNames} serviceNames={serviceNames} />
-            <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} companyNames={companyNames} serviceNames={serviceNames} />
-            <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} companyNames={companyNames} serviceNames={serviceNames} />
-          </div>
-        )}
+        <div className="attention-stack">
+          {canUseTeamMessages ? (
+            <>
+              <div className="attention-title"><span />Team tasks</div>
+              <TeamTodoSection
+                initialTasks={teamTasks}
+                actorProfileId={context.user.id}
+                canManageTasks={context.user.teamMessaging.manageTasks}
+              />
+            </>
+          ) : null}
+
+          {orders.length === 0 ? (
+            <EmptyState title="No projects yet" body="Projects are how work enters the platform." />
+          ) : (
+            <>
+              <div className="attention-title"><span />Needs attention</div>
+              {overdue.length === 0 && unassigned.length === 0 && waiting.length === 0 ? <p className="all-clear">Nothing needs attention right now.</p> : null}
+              <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} companyNames={companyNames} serviceNames={serviceNames} />
+              <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} companyNames={companyNames} serviceNames={serviceNames} />
+              <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} companyNames={companyNames} serviceNames={serviceNames} />
+            </>
+          )}
+        </div>
       </PageFrame>
     );
   } catch (error) {

@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { ProfileActionState } from "../../domain/profile/schema";
-import { toClientSafeError } from "../../lib/errors/application-error";
 import { AVATAR_MAX_BYTES } from "../../lib/images/avatar-file";
+import { observeActionFailure } from "../../lib/security/observed-failure";
 import { getSelfServiceContext } from "../../lib/supabase/next-server";
 
 /*
@@ -57,7 +57,13 @@ export async function updateMyNotificationSoundAction(
       context.actor,
     );
   } catch (error) {
-    const safe = toClientSafeError(error);
+    const safe = await observeActionFailure(error, {
+      action: "profile.update_notification_sound",
+      actorId: context.actor.id,
+      actorClass: "self_service",
+      resourceType: "profile",
+      resourceId: context.actor.id,
+    });
     return {
       error: safe.code === "VALIDATION_ERROR" ? safe.message : "Unable to update notifications.",
       fieldErrors: {},
@@ -105,7 +111,19 @@ export async function updateMyProfileAction(
       context.actor,
     );
   } catch (error) {
-    const safe = toClientSafeError(error);
+    /*
+     * `app_update_my_profile` carries the C2-3 shared self-service bucket
+     * (`profile.selfservice.actor.*`), so a WF429 lands here. It is filed as
+     * `abuse.rate_limited` naming only the action — never the bucket, scope,
+     * window or limit — while the user still sees the same generic wording.
+     */
+    const safe = await observeActionFailure(error, {
+      action: "profile.update",
+      actorId: context.actor.id,
+      actorClass: "self_service",
+      resourceType: "profile",
+      resourceId: context.actor.id,
+    });
     return {
       error: safe.code === "VALIDATION_ERROR" ? safe.message : "Unable to update profile.",
       fieldErrors: {},
@@ -151,8 +169,24 @@ export async function uploadMyAvatarAction(formData: FormData): Promise<AvatarAc
 
     refreshProfileSurfaces();
     return { ok: true, avatarUrl: result.avatarUrl };
-  } catch {
-    /* Storage and database detail never reaches the browser. */
+  } catch (error) {
+    /*
+     * Storage and database detail never reaches the browser. A throttle is the
+     * one failure worth distinguishing (Security C2-3): "Try again" is actively
+     * wrong advice for a caller who has to WAIT, and the throttle's own message
+     * is already generic — it names no bucket, no limit and no window, so
+     * surfacing it tells an abuser nothing they did not just learn by being
+     * stopped.
+     */
+    const safe = await observeActionFailure(error, {
+      action: "profile.avatar_upload",
+      actorId: context.actor.id,
+      actorClass: "self_service",
+      resourceType: "profile",
+      resourceId: context.actor.id,
+    });
+    if (safe.code === "RATE_LIMITED") return { ok: false, error: safe.message };
+
     return { ok: false, error: "Unable to update your photo. Try again." };
   }
 }
@@ -162,7 +196,14 @@ export async function removeMyAvatarAction(): Promise<AvatarActionResult> {
 
   try {
     await context.services.profile.removeMineAvatar(context.actor);
-  } catch {
+  } catch (error) {
+    await observeActionFailure(error, {
+      action: "profile.avatar_remove",
+      actorId: context.actor.id,
+      actorClass: "self_service",
+      resourceType: "profile",
+      resourceId: context.actor.id,
+    });
     return { ok: false, error: "Unable to remove your photo. Try again." };
   }
 

@@ -442,6 +442,45 @@
   height: 15px;
 }
 
+.sendAnytimeToggle {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dce1e9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4f5868;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.sendAnytimeToggle:hover:not(:disabled) {
+  color: #000d51;
+  border-color: #bfc5d2;
+  background: #f8f9fc;
+}
+
+.sendAnytimeToggle[aria-pressed="true"] {
+  color: #000d51;
+  border-color: #000d51;
+  background: color-mix(in srgb, #000d51 8%, #ffffff);
+}
+
+.sendAnytimeToggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sendAnytimeToggle svg {
+  width: 13px;
+  height: 13px;
+}
+
 .noResults {
   padding: 34px 20px;
   color: #7b8292;
@@ -1010,7 +1049,8 @@
     display: none;
   }
 
-  .roleChangeButton {
+  .roleChangeButton,
+  .sendAnytimeToggle {
     min-width: 34px;
     padding: 0 9px;
   }
@@ -1043,6 +1083,7 @@
   .roleRow,
   .roleRowActive,
   .roleChangeButton,
+  .sendAnytimeToggle,
   .roleDialogOption,
   .roleDialogOptionActive {
     transition: none;

@@ -84,4 +84,14 @@ export class PermissionService {
     requireVerifiedActor(actor);
     return this.dependencies.repository.clearOverride(parseInput(clearProfileOverrideSchema, input));
   }
+
+  async grantReportSendAnytime(profileId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.grantReportSendAnytime(parseInput(uuidSchema, profileId));
+  }
+
+  async revokeReportSendAnytime(profileId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.revokeReportSendAnytime(parseInput(uuidSchema, profileId));
+  }
 }

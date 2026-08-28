@@ -5,6 +5,7 @@
   NotFoundError,
   PermissionDeniedError,
   RateLimitedError,
+  SlowModeActiveError,
   ValidationError,
 } from "./application-error";
 
@@ -32,6 +33,17 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
     // have succeeded a moment earlier and will succeed again later.
     case "WF429":
       return new RateLimitedError(error);
+    // private.enforce_team_slow_mode raises this DISTINCT SQLSTATE (never
+    // WF429 — see the comment on SlowModeActiveError for why the two must
+    // not collapse into one generic message). DETAIL carries the
+    // authoritative remaining-seconds integer as plain text.
+    case "WF430": {
+      const parsedSeconds = Number(databaseError?.details);
+      return new SlowModeActiveError(
+        Number.isFinite(parsedSeconds) && parsedSeconds > 0 ? parsedSeconds : null,
+        error,
+      );
+    }
     case "23505":
       return new ConflictError("A record with these values already exists.", error);
     case "23503":

@@ -233,6 +233,7 @@ export type Database = {
           id: string
           package_label: string
           report_lane: string
+          reporting_period_month: string
           sent_at: string | null
           sent_by_profile_id: string
           service_id: string | null
@@ -249,6 +250,7 @@ export type Database = {
           id?: string
           package_label: string
           report_lane: string
+          reporting_period_month?: string
           sent_at?: string | null
           sent_by_profile_id: string
           service_id?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           id?: string
           package_label?: string
           report_lane?: string
+          reporting_period_month?: string
           sent_at?: string | null
           sent_by_profile_id?: string
           service_id?: string | null
@@ -2196,6 +2199,69 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_events: {
+        Row: {
+          action_slug: string | null
+          actor_class: string
+          actor_profile_id: string | null
+          correlation_id: string | null
+          event_code: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          outcome: string
+          provider: string | null
+          resource_id: string | null
+          resource_type: string | null
+          target_actor_id: string | null
+        }
+        Insert: {
+          action_slug?: string | null
+          actor_class: string
+          actor_profile_id?: string | null
+          correlation_id?: string | null
+          event_code: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome: string
+          provider?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          target_actor_id?: string | null
+        }
+        Update: {
+          action_slug?: string | null
+          actor_class?: string
+          actor_profile_id?: string | null
+          correlation_id?: string | null
+          event_code?: string
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          outcome?: string
+          provider?: string | null
+          resource_id?: string | null
+          resource_type?: string | null
+          target_actor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_audit_events_target_actor_id_fkey"
+            columns: ["target_actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_folders: {
         Row: {
           archived_at: string | null
@@ -2919,6 +2985,532 @@ export type Database = {
           },
         ]
       }
+      team_conversation_admins: {
+        Row: {
+          can_manage_admins: boolean
+          can_manage_members: boolean
+          can_manage_slow_mode: boolean
+          can_manage_task_policy: boolean
+          can_rename_conversation: boolean
+          conversation_id: string
+          granted_at: string
+          granted_by_profile_id: string
+          profile_id: string
+        }
+        Insert: {
+          can_manage_admins?: boolean
+          can_manage_members?: boolean
+          can_manage_slow_mode?: boolean
+          can_manage_task_policy?: boolean
+          can_rename_conversation?: boolean
+          conversation_id: string
+          granted_at?: string
+          granted_by_profile_id: string
+          profile_id: string
+        }
+        Update: {
+          can_manage_admins?: boolean
+          can_manage_members?: boolean
+          can_manage_slow_mode?: boolean
+          can_manage_task_policy?: boolean
+          can_rename_conversation?: boolean
+          conversation_id?: string
+          granted_at?: string
+          granted_by_profile_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_conversation_admins_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_conversation_admins_granted_by_profile_id_fkey"
+            columns: ["granted_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_conversation_admins_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_conversation_members: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          last_read_at: string | null
+          profile_id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          last_read_at?: string | null
+          profile_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          last_read_at?: string | null
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_conversation_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_conversations: {
+        Row: {
+          conversation_key: string
+          created_at: string
+          created_by_profile_id: string
+          id: string
+          kind: string
+          last_message_at: string | null
+          slow_mode_scope: string
+          slow_mode_seconds: number | null
+          task_creation_policy: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_key: string
+          created_at?: string
+          created_by_profile_id: string
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          slow_mode_scope?: string
+          slow_mode_seconds?: number | null
+          task_creation_policy?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_key?: string
+          created_at?: string
+          created_by_profile_id?: string
+          id?: string
+          kind?: string
+          last_message_at?: string | null
+          slow_mode_scope?: string
+          slow_mode_seconds?: number | null
+          task_creation_policy?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_conversations_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_message_deliveries: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          eligible_at: string
+          materialized_at: string | null
+          message_id: string
+          recipient_profile_id: string
+          resolved_at: string | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          eligible_at: string
+          materialized_at?: string | null
+          message_id: string
+          recipient_profile_id: string
+          resolved_at?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          eligible_at?: string
+          materialized_at?: string | null
+          message_id?: string
+          recipient_profile_id?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_deliveries_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_deliveries_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_deliveries_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_message_hidden_for_profiles: {
+        Row: {
+          hidden_at: string
+          message_id: string
+          profile_id: string
+        }
+        Insert: {
+          hidden_at?: string
+          message_id: string
+          profile_id: string
+        }
+        Update: {
+          hidden_at?: string
+          message_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_hidden_for_profiles_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_hidden_for_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_message_reactions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id?: string
+          reaction_code?: string
+          reactor_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_reactions_reactor_profile_id_fkey"
+            columns: ["reactor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_messages: {
+        Row: {
+          author_profile_id: string
+          body: string
+          conversation_id: string
+          created_at: string
+          deleted_for_everyone_at: string | null
+          deleted_for_everyone_by: string | null
+          forwarded_from_author_name: string | null
+          forwarded_from_message_id: string | null
+          id: string
+          message_type: string
+          reply_quote_text: string | null
+          reply_to_message_id: string | null
+          request_id: string
+          search_vector: unknown
+          task_action: string | null
+          task_id: string | null
+        }
+        Insert: {
+          author_profile_id: string
+          body: string
+          conversation_id: string
+          created_at?: string
+          deleted_for_everyone_at?: string | null
+          deleted_for_everyone_by?: string | null
+          forwarded_from_author_name?: string | null
+          forwarded_from_message_id?: string | null
+          id?: string
+          message_type?: string
+          reply_quote_text?: string | null
+          reply_to_message_id?: string | null
+          request_id: string
+          search_vector?: unknown
+          task_action?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          author_profile_id?: string
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          deleted_for_everyone_at?: string | null
+          deleted_for_everyone_by?: string | null
+          forwarded_from_author_name?: string | null
+          forwarded_from_message_id?: string | null
+          id?: string
+          message_type?: string
+          reply_quote_text?: string | null
+          reply_to_message_id?: string | null
+          request_id?: string
+          search_vector?: unknown
+          task_action?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_messages_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_deleted_for_everyone_by_fkey"
+            columns: ["deleted_for_everyone_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_forwarded_from_message_id_fkey"
+            columns: ["forwarded_from_message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "team_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_presence_connections: {
+        Row: {
+          connection_id: string
+          last_seen_at: string
+          profile_id: string
+        }
+        Insert: {
+          connection_id: string
+          last_seen_at?: string
+          profile_id: string
+        }
+        Update: {
+          connection_id?: string
+          last_seen_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_presence_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_tasks: {
+        Row: {
+          assigned_to_profile_id: string
+          completed_at: string | null
+          completed_by_profile_id: string | null
+          conversation_id: string
+          created_at: string
+          created_by_profile_id: string
+          description: string | null
+          due_at: string | null
+          id: string
+          priority: string
+          request_id: string
+          source_message_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_profile_id: string
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          conversation_id: string
+          created_at?: string
+          created_by_profile_id: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          priority?: string
+          request_id: string
+          source_message_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_profile_id?: string
+          completed_at?: string | null
+          completed_by_profile_id?: string | null
+          conversation_id?: string
+          created_at?: string
+          created_by_profile_id?: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          priority?: string
+          request_id?: string
+          source_message_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_tasks_assigned_to_profile_id_fkey"
+            columns: ["assigned_to_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tasks_completed_by_profile_id_fkey"
+            columns: ["completed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tasks_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tasks_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_tasks_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_typing_connections: {
+        Row: {
+          connection_id: string
+          conversation_id: string
+          last_typed_at: string
+          profile_id: string
+        }
+        Insert: {
+          connection_id: string
+          conversation_id: string
+          last_typed_at?: string
+          profile_id: string
+        }
+        Update: {
+          connection_id?: string
+          conversation_id?: string
+          last_typed_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_typing_connections_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_typing_connections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_attachments: {
         Row: {
           checksum_sha256: string
@@ -3247,6 +3839,10 @@ export type Database = {
       }
     }
     Functions: {
+      app_add_team_conversation_member: {
+        Args: { p_conversation_id: string; p_profile_id: string }
+        Returns: Json
+      }
       app_add_ticket_internal_note: {
         Args: { p_body: string; p_request_id: string; p_ticket_id: string }
         Returns: {
@@ -3711,6 +4307,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_claim_avatar_upload: { Args: never; Returns: undefined }
+      app_clear_login_pair_failures: {
+        Args: { p_identity_fingerprint: string; p_source_fingerprint: string }
+        Returns: undefined
+      }
       app_clear_my_avatar: {
         Args: never
         Returns: {
@@ -3720,6 +4321,18 @@ export type Database = {
       app_clear_profile_permission_override: {
         Args: { p_permission_key: string; p_profile_id: string }
         Returns: boolean
+      }
+      app_clear_team_typing: {
+        Args: { p_connection_id: string; p_conversation_id: string }
+        Returns: undefined
+      }
+      app_consume_server_cost_limit: {
+        Args: {
+          p_action: string
+          p_actor_id: string
+          p_organization_id?: string
+        }
+        Returns: undefined
       }
       app_correct_form_submission: {
         Args: { p_request_id: string; p_submission_id: string; p_values: Json }
@@ -3924,6 +4537,7 @@ export type Database = {
           id: string
           package_label: string
           report_lane: string
+          reporting_period_month: string
           sent_at: string | null
           sent_by_profile_id: string
           service_id: string | null
@@ -4065,6 +4679,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_create_team_group: {
+        Args: { p_member_profile_ids: string[]; p_title: string }
+        Returns: string
+      }
+      app_create_team_task: {
+        Args: {
+          p_assigned_to_profile_id: string
+          p_conversation_id: string
+          p_description?: string
+          p_due_at?: string
+          p_priority?: string
+          p_request_id: string
+          p_source_message_id?: string
+          p_title: string
+        }
+        Returns: Json
+      }
       app_create_ticket: {
         Args: { p_payload: Json; p_request_id: string }
         Returns: {
@@ -4123,9 +4754,17 @@ export type Database = {
         }
         Returns: Json
       }
+      app_delete_team_message_for_everyone: {
+        Args: { p_message_id: string }
+        Returns: undefined
+      }
       app_discard_report_draft: {
         Args: { p_report_id: string }
         Returns: boolean
+      }
+      app_disconnect_team_presence: {
+        Args: { p_connection_id: string }
+        Returns: undefined
       }
       app_duplicate_service: {
         Args: { p_request_id: string; p_service_id: string }
@@ -4160,6 +4799,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_forward_team_message: {
+        Args: {
+          p_destination_conversation_id: string
+          p_request_id: string
+          p_source_message_id: string
+        }
+        Returns: Json
       }
       app_generate_subscription_cycle_invoice: {
         Args: { p_cycle_id: string; p_request_id: string }
@@ -4295,8 +4942,31 @@ export type Database = {
         Args: { p_canonical_key: string }
         Returns: Json
       }
+      app_get_report_send_status: {
+        Args: { p_report_id: string }
+        Returns: {
+          can_send: boolean
+          reporting_period_month: string
+          send_anytime: boolean
+          window_end: string
+          window_start: string
+        }[]
+      }
       app_get_subscription_detail: {
         Args: { p_subscription_id: string }
+        Returns: Json
+      }
+      app_get_team_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      app_get_team_message_window: {
+        Args: {
+          p_after?: number
+          p_before?: number
+          p_conversation_id: string
+          p_message_id: string
+        }
         Returns: Json
       }
       app_get_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
@@ -4311,9 +4981,37 @@ export type Database = {
           membership_price_cents: number
         }[]
       }
+      app_grant_report_send_anytime: {
+        Args: { p_profile_id: string }
+        Returns: {
+          allowed: boolean
+          created_at: string
+          permission_key: string
+          profile_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profile_permission_overrides"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_grant_team_conversation_admin: {
+        Args: {
+          p_capabilities: Json
+          p_conversation_id: string
+          p_target_profile_id: string
+        }
+        Returns: Json
+      }
       app_has_permission: {
         Args: { p_permission_key: string }
         Returns: boolean
+      }
+      app_hide_team_message_for_me: {
+        Args: { p_message_id: string }
+        Returns: undefined
       }
       app_issue_invoice: {
         Args: { p_invoice_id: string }
@@ -4397,14 +5095,14 @@ export type Database = {
       app_list_integration_connections: {
         Args: never
         Returns: {
-          connected_account_display: string | null
-          connected_account_id: string | null
-          connected_at: string | null
-          connected_by_profile_id: string | null
-          expires_at: string | null
+          connected_account_display: string
+          connected_account_id: string
+          connected_at: string
+          connected_by_profile_id: string
+          expires_at: string
           granted_scopes: string[]
           id: string
-          last_synced_at: string | null
+          last_synced_at: string
           provider: string
           status: string
           updated_at: string
@@ -4422,6 +5120,7 @@ export type Database = {
           preset_key: string
           preset_name: string
           profile_id: string
+          report_send_anytime: boolean
           sort_order: number
         }[]
       }
@@ -4517,6 +5216,31 @@ export type Database = {
           variant: string
         }[]
       }
+      app_list_my_team_tasks: {
+        Args: { p_include_team?: boolean }
+        Returns: {
+          assigned_to_name: string
+          assigned_to_profile_id: string
+          completed_at: string
+          completed_by_profile_id: string
+          conversation_id: string
+          conversation_kind: string
+          conversation_name: string
+          created_at: string
+          created_by_name: string
+          created_by_profile_id: string
+          description: string
+          due_at: string
+          id: string
+          is_mine: boolean
+          other_member_name: string
+          priority: string
+          source_message_id: string
+          status: string
+          title: string
+          updated_at: string
+        }[]
+      }
       app_list_permission_preset_grants: {
         Args: never
         Returns: {
@@ -4607,6 +5331,55 @@ export type Database = {
           subscription_id: string
         }[]
       }
+      app_list_team_conversations: {
+        Args: never
+        Returns: {
+          conversation_id: string
+          conversation_kind: string
+          conversation_title: string
+          destination_search_text: string
+          last_message_at: string
+          last_message_author_avatar_url: string
+          last_message_author_name: string
+          last_message_author_profile_id: string
+          last_message_id: string
+          last_message_preview: string
+          last_message_type: string
+          member_count: number
+          my_last_read_at: string
+          other_member_avatar_url: string
+          other_member_name: string
+          other_member_profile_id: string
+          unread_count: number
+        }[]
+      }
+      app_list_team_members: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          email: string
+          profile_id: string
+        }[]
+      }
+      app_list_team_messages_before: {
+        Args: {
+          p_before_created_at: string
+          p_before_id: string
+          p_conversation_id: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      app_list_team_typing: {
+        Args: { p_conversation_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          last_typed_at: string
+          profile_id: string
+        }[]
+      }
       app_list_ticket_summaries: {
         Args: { p_include_archived?: boolean }
         Returns: {
@@ -4628,6 +5401,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      app_login_rate_limit_preflight: {
+        Args: { p_identity_fingerprint: string; p_source_fingerprint: string }
+        Returns: Json
+      }
       app_mark_all_notifications_read: { Args: never; Returns: number }
       app_mark_client_report_read: {
         Args: { p_report_id: string }
@@ -4637,6 +5414,11 @@ export type Database = {
         Args: { p_notification_id: string }
         Returns: boolean
       }
+      app_mark_team_conversation_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
+      app_materialize_team_message_digests: { Args: never; Returns: number }
       app_pause_subscription: {
         Args: { p_resumes_at?: string; p_subscription_id: string }
         Returns: {
@@ -4672,7 +5454,11 @@ export type Database = {
         }
       }
       app_pay_invoice_with_wallet: {
-        Args: { p_invoice_id: string; p_request_id: string }
+        Args: {
+          p_coupon_code?: string
+          p_invoice_id: string
+          p_request_id: string
+        }
         Returns: {
           invoice_balance_cents: number
           payment_id: string
@@ -4757,7 +5543,11 @@ export type Database = {
         }
       }
       app_purchase_service_with_balance: {
-        Args: { p_request_id: string; p_service_id: string }
+        Args: {
+          p_coupon_code?: string
+          p_request_id: string
+          p_service_id: string
+        }
         Returns: {
           amount_cents: number
           currency: string
@@ -4772,6 +5562,14 @@ export type Database = {
           ticket_public_ref: string
           wallet_balance_cents: number
         }[]
+      }
+      app_quote_invoice_coupon: {
+        Args: { p_coupon_code: string; p_invoice_id: string }
+        Returns: Json
+      }
+      app_quote_store_coupon: {
+        Args: { p_coupon_code: string; p_service_id: string }
+        Returns: Json
       }
       app_reconcile_subscription_state: {
         Args: { p_subscription_id: string }
@@ -4837,6 +5635,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_record_login_failure: {
+        Args: { p_identity_fingerprint: string; p_source_fingerprint: string }
+        Returns: undefined
       }
       app_record_store_interest: {
         Args: { p_in_cart: boolean; p_service_ids: string[] }
@@ -4908,6 +5710,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_remove_team_conversation_member: {
+        Args: { p_conversation_id: string; p_profile_id: string }
+        Returns: Json
+      }
+      app_rename_team_conversation: {
+        Args: { p_conversation_id: string; p_title: string }
+        Returns: Json
       }
       app_reorder_task: {
         Args: { p_sort_position: number; p_task_id: string }
@@ -5021,6 +5831,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_revoke_report_send_anytime: {
+        Args: { p_profile_id: string }
+        Returns: boolean
+      }
+      app_revoke_team_conversation_admin: {
+        Args: { p_conversation_id: string; p_target_profile_id: string }
+        Returns: Json
+      }
       app_save_report_draft: {
         Args: { p_payload: Json; p_report_id: string }
         Returns: {
@@ -5030,6 +5848,7 @@ export type Database = {
           id: string
           package_label: string
           report_lane: string
+          reporting_period_month: string
           sent_at: string | null
           sent_by_profile_id: string
           service_id: string | null
@@ -5090,6 +5909,16 @@ export type Database = {
           display_name: string
         }[]
       }
+      app_search_team_conversation_messages: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: string
+          p_conversation_id: string
+          p_limit?: number
+          p_query: string
+        }
+        Returns: Json
+      }
       app_send_client_report: {
         Args: { p_payload: Json; p_request_id: string }
         Returns: {
@@ -5099,6 +5928,7 @@ export type Database = {
           id: string
           package_label: string
           report_lane: string
+          reporting_period_month: string
           sent_at: string | null
           sent_by_profile_id: string
           service_id: string | null
@@ -5124,6 +5954,7 @@ export type Database = {
           id: string
           package_label: string
           report_lane: string
+          reporting_period_month: string
           sent_at: string | null
           sent_by_profile_id: string
           service_id: string | null
@@ -5139,6 +5970,65 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_send_team_message: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      app_send_team_reply: {
+        Args: {
+          p_body: string
+          p_conversation_id: string
+          p_reply_quote_text: string
+          p_reply_to_message_id: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      app_server_disconnect_gmail: {
+        Args: { p_actor_id: string }
+        Returns: undefined
+      }
+      app_server_read_gmail_credentials: {
+        Args: { p_actor_id: string }
+        Returns: {
+          credential_reference: string
+          credentials: Json
+        }[]
+      }
+      app_server_read_gmail_credentials_for_administration: {
+        Args: { p_actor_id: string }
+        Returns: {
+          credential_reference: string
+          credentials: Json
+        }[]
+      }
+      app_server_set_gmail_status: {
+        Args: { p_actor_id: string; p_status: string }
+        Returns: undefined
+      }
+      app_server_store_gmail_connection: {
+        Args: {
+          p_account_display: string
+          p_account_id: string
+          p_actor_id: string
+          p_credentials: Json
+          p_expires_at: string
+          p_granted_scopes: string[]
+        }
+        Returns: string
+      }
+      app_server_update_gmail_credentials: {
+        Args: { p_actor_id: string; p_credentials: Json; p_expires_at: string }
+        Returns: undefined
+      }
+      app_server_verify_gmail_connection: {
+        Args: { p_actor_id: string; p_expires_at: string }
+        Returns: undefined
       }
       app_set_investment_intent_status: {
         Args: { p_intent_id: string; p_status: string }
@@ -5214,6 +6104,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_set_team_conversation_slow_mode: {
+        Args: { p_conversation_id: string; p_scope?: string; p_seconds: number }
+        Returns: Json
+      }
+      app_set_team_task_creation_policy: {
+        Args: { p_conversation_id: string; p_policy: string }
+        Returns: Json
+      }
       app_set_wf_card_membership: {
         Args: { p_active: boolean; p_company_id: string; p_request_id: string }
         Returns: {
@@ -5233,6 +6131,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_start_team_conversation: {
+        Args: { p_other_profile_id: string }
+        Returns: string
       }
       app_submit_form: {
         Args: {
@@ -5266,6 +6168,23 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_team_live_sync: {
+        Args: { p_conversation_id?: string; p_since?: string }
+        Returns: Json
+      }
+      app_team_unread_count: { Args: never; Returns: number }
+      app_toggle_team_message_reaction: {
+        Args: { p_message_id: string; p_reaction_code: string }
+        Returns: Json
+      }
+      app_touch_team_presence: {
+        Args: { p_connection_id: string }
+        Returns: string[]
+      }
+      app_touch_team_typing: {
+        Args: { p_connection_id: string; p_conversation_id: string }
+        Returns: undefined
       }
       app_update_company: {
         Args: { p_company_id: string; p_patch: Json }
@@ -5542,6 +6461,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_update_team_task_details: {
+        Args: { p_patch: Json; p_task_id: string }
+        Returns: Json
+      }
+      app_update_team_task_status: {
+        Args: { p_status: string; p_task_id: string }
+        Returns: Json
       }
       app_update_ticket_priority: {
         Args: { p_priority: string; p_ticket_id: string }

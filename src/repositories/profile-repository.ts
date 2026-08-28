@@ -4,6 +4,7 @@ import {
   type MyProfileRow,
   type UpdateMyProfileInput,
 } from "../domain/profile/schema";
+import { mapDatabaseError } from "../lib/errors/map-database-error";
 import { unwrapMany } from "../lib/supabase/repository-helpers";
 import type { UserMutationClient } from "./types";
 
@@ -36,6 +37,27 @@ export class ProfileRepository {
     });
 
     if (error) throw error;
+  }
+
+  /**
+   * Claims one avatar upload before any bytes are written (Security C2-3).
+   *
+   * The 5 MB object lands in Storage under its own owner-scoped INSERT policy,
+   * which means a throttle on `app_set_my_avatar` alone would only ever fire
+   * after the write it was supposed to prevent. This RPC applies the same
+   * authorization gate and a per-actor frequency bound, so an over-limit or
+   * unauthorized caller is refused BEFORE the expensive side effect.
+   *
+   * It is not the ceiling — a caller talking to PostgREST directly can skip it
+   * — which is why `app_set_my_avatar` keeps an independent bucket of its own.
+   */
+  async claimAvatarUpload(): Promise<void> {
+    const { error } = await this.client.rpc("app_claim_avatar_upload");
+
+    /* Mapped rather than rethrown raw, so a WF429 reaches the action as a
+     * RATE_LIMITED ApplicationError and can be told apart from a real failure.
+     * The message it carries is the generic one; the bucket is never named. */
+    if (error) throw mapDatabaseError(error);
   }
 
   /**

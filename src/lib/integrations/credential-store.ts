@@ -3,7 +3,7 @@ import "server-only";
 import type { IntegrationProviderId } from "../../domain/integrations/registry";
 
 /**
- * Opaque provider credential material. Only provider adapters and a future
+ * Opaque provider credential material. Only provider adapters and a configured
  * server-side store implementation may interpret its payload. This module can
  * never be imported into a Client Component because of `server-only`.
  */
@@ -20,9 +20,8 @@ export interface IntegrationCredentialStore {
 }
 
 /**
- * Foundation default: fail closed until an encrypted provider-specific store
- * is deliberately configured. It never falls back to a public table or env
- * value merely to make a connection appear operational.
+ * Foundation default for providers without a configured encrypted store. Gmail
+ * now uses GmailVaultCredentialStore; Stripe and PayPal continue to fail closed.
  */
 export class UnconfiguredIntegrationCredentialStore implements IntegrationCredentialStore {
   async read(): Promise<never> {

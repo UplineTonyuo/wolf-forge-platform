@@ -5,6 +5,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { readPublicEnvironment } from "../env/public-env";
+import { readServerEnvironment } from "../env/server-env";
 import type { ProjectCapabilities } from "../../domain/orders/projections";
 import type { InvoiceCapabilities } from "../../domain/invoices/schema";
 import type { SubscriptionCapabilities } from "../../domain/subscriptions/schema";
@@ -13,6 +14,9 @@ import type { TicketCapabilities } from "../../domain/tickets/schema";
 import { toModuleAccessMap, type ModuleAccess } from "../../domain/permissions/schema";
 import type { Database } from "./database.types";
 import { hardenAuthCookieOptions } from "./auth-cookie-options";
+import { currentCorrelationId } from "../security/request-correlation";
+import { recordSecurityAuditEvent } from "../security/security-audit-log";
+import { recordSecurityEvent } from "../security/security-log";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
 import { ActivityRepository } from "../../repositories/activity-repository";
 import { CompanyRepository } from "../../repositories/company-repository";
@@ -33,6 +37,8 @@ import { PermissionRepository } from "../../repositories/permission-repository";
 import { ProfileRepository } from "../../repositories/profile-repository";
 import { IntegrationRepository } from "../../repositories/integration-repository";
 import { TaskRepository } from "../../repositories/task-repository";
+import { TeamRepository } from "../../repositories/team-repository";
+import { canonicalGreetingName } from "../../domain/profile/greeting";
 import { AccountProvisioningService } from "../../services/account-provisioning-service";
 import { PermissionService } from "../../services/permission-service";
 import { ProfileService } from "../../services/profile-service";
@@ -55,6 +61,7 @@ import { WfCardService } from "../../services/wf-card-service";
 import { ReportingService } from "../../services/reporting-service";
 import { StoreInterestService } from "../../services/store-interest-service";
 import { TaskService } from "../../services/task-service";
+import { TeamService } from "../../services/team-service";
 
 const internalRoleNames = new Set(["owner", "admin", "manager", "staff"]);
 
@@ -82,6 +89,21 @@ export type ReportingCapabilities = {
   send: boolean;
 };
 
+/**
+ * Internal staff-to-staff messaging.
+ *
+ * `use` decides whether the Messages icon appears at all; `manageTasks` decides
+ * whether the composer offers Create Task and whether Team Tasks is offered
+ * alongside My Tasks. Presentation only, as everywhere else here:
+ * private.require_team_actor() and private.require_team_task_manager() refuse
+ * the call regardless of what the browser chose to render, and a client account
+ * holds neither key.
+ */
+export type TeamMessagingCapabilities = {
+  use: boolean;
+  manageTasks: boolean;
+};
+
 export type ClientAdministrationCapabilities = {
   view: boolean;
   create: boolean;
@@ -104,6 +126,7 @@ export type IntegrationAdministrationCapabilities = {
 export type InternalUser = {
   id: string;
   displayName: string | null;
+  greetingName: string | null;
   /**
    * Public avatar URL, or null when the account still falls back to initials.
    * Read from public.profiles on the same query that resolves identity, so the
@@ -127,6 +150,7 @@ export type InternalUser = {
   clients: ClientAdministrationCapabilities;
   services: ServiceAdministrationCapabilities;
   investmentIntent: InvestmentIntentCapabilities;
+  teamMessaging: TeamMessagingCapabilities;
   reporting: ReportingCapabilities;
   integrations: IntegrationAdministrationCapabilities;
 };
@@ -173,6 +197,43 @@ export async function createNextServerSupabaseClient() {
   });
 }
 
+/**
+ * Auth-only SSR client for password sign-in.
+ *
+ * Supabase Auth accepts `Sb-Forwarded-For` only from a modern secret key. That
+ * is the supported way for a server-side framework to keep provider rate
+ * limiting keyed on the real visitor instead of Vercel's shared egress IP.
+ * The source value has already been validated from Vercel's overwritten
+ * `x-vercel-forwarded-for` header by login-protection.ts.
+ *
+ * This client is used for Auth only. Post-auth application reads still use a
+ * user-scoped client created from the returned access token, so the secret key
+ * never becomes an authorization shortcut.
+ */
+export async function createNextServerSignInSupabaseClient(forwardedIp: string | null) {
+  if (!forwardedIp) return createNextServerSupabaseClient();
+
+  const environment = readServerEnvironment();
+  const cookieStore = await cookies();
+  return createServerClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_SECRET_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { "sb-forwarded-for": forwardedIp } },
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (cookiesToSet) => {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, hardenAuthCookieOptions(options)),
+          );
+        } catch {
+          // Login runs as a Server Action, where writes are supported. Keep the
+          // same defensive shape as the general SSR client for reuse safety.
+        }
+      },
+    },
+  });
+}
+
 export async function resolveInternalUser(
   client: UserScopedClient,
   actor: VerifiedActor,
@@ -195,6 +256,7 @@ export async function resolveInternalUser(
   return {
     id: profileResult.data.id,
     displayName: profileResult.data.display_name,
+    greetingName: canonicalGreetingName(profileResult.data.display_name),
     avatarUrl: profileResult.data.avatar_url,
     role: role as InternalUser["role"],
     modules: toModuleAccessMap(
@@ -260,6 +322,10 @@ export async function resolveInternalUser(
       view: granted.has("investment_intent.view"),
       manage: granted.has("investment_intent.manage"),
     },
+    teamMessaging: {
+      use: granted.has("team_messages.use"),
+      manageTasks: granted.has("team_tasks.manage"),
+    },
     reporting: {
       send: granted.has("reports.send"),
     },
@@ -292,18 +358,99 @@ export async function resolveClientUser(
   };
 }
 
+/**
+ * Security C2-4. Records why a context resolver turned a caller away, then lets
+ * the caller be redirected exactly as before.
+ *
+ * The three refusals are deliberately NOT one event. "No session" is what an
+ * expired bookmark looks like and happens constantly. "Session present but the
+ * token did not verify" is an expired — or forged — JWT. "Verified actor, wrong
+ * surface" is a client account reaching into the staff application, which is
+ * the one genuinely interesting case and the only one that carries an actor id.
+ *
+ * Awaited before `redirect()`, which throws, so the event is written first.
+ */
+async function recordContextRefusal(input: {
+  event: "authorization.context.unauthenticated" | "authorization.context.denied" | "auth.session.unverified";
+  surface: "internal" | "client" | "self_service";
+  actorId?: string | null;
+  reason: string;
+}): Promise<void> {
+  const correlationId = await currentCorrelationId();
+
+  recordSecurityEvent({
+    event: input.event,
+    correlationId,
+    actorId: input.actorId,
+    actorClass: input.surface === "self_service" ? "self_service" : input.surface,
+    outcome: "denied",
+    metadata: { action: "context.resolve", surface: input.surface, reason: input.reason },
+  });
+
+  /*
+   * Security C2-5. ONLY the cross-surface refusal becomes durable. A verified
+   * account reaching for a surface that is not theirs is an access-probe
+   * against the platform boundary, it always carries a verified actor id, and
+   * it is rare enough to stay investigable. The other two refusals are
+   * constant background — expired bookmarks and expired sessions — and would
+   * turn the audit trail into noise if every one became a permanent row.
+   *
+   * Awaited because every caller redirects immediately afterwards, and
+   * `redirect()` throws: the row must exist before this function's control
+   * flow ends. The writer cannot throw.
+   */
+  if (input.event === "authorization.context.denied") {
+    await recordSecurityAuditEvent({
+      event: "authorization.context.denied",
+      correlationId,
+      actorId: input.actorId ?? null,
+      actorClass: input.surface === "self_service" ? "self_service" : input.surface,
+      actionSlug: "context.resolve",
+      outcome: "denied",
+      metadata: { surface: input.surface, reason: input.reason },
+    });
+  }
+}
+
 export const getInternalContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) redirect("/login");
+  if (error || !data.session) {
+    await recordContextRefusal({
+      event: "authorization.context.unauthenticated",
+      surface: "internal",
+      reason: "no_session",
+    });
+    redirect("/login");
+  }
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token);
   const actor = await verifyActor(client).catch(() => null);
-  if (!actor) redirect("/login");
+  if (!actor) {
+    await recordContextRefusal({
+      event: "auth.session.unverified",
+      surface: "internal",
+      reason: "actor_unverified",
+    });
+    redirect("/login");
+  }
 
   const user = await resolveInternalUser(client, actor);
-  if (!user) redirect("/login?reason=staff-only");
+  if (!user) {
+    /*
+     * A verified account with no internal role reaching the staff application.
+     * This is the cross-surface attempt, and it is the reason this resolver
+     * logs at all.
+     */
+    await recordContextRefusal({
+      event: "authorization.context.denied",
+      surface: "internal",
+      actorId: actor.id,
+      reason: "not_internal_actor",
+    });
+    redirect("/login?reason=staff-only");
+  }
 
   return {
     actor,
@@ -343,12 +490,58 @@ export const getInternalContext = cache(async () => {
         repository: new StoreInterestRepository(client),
       }),
       /**
+       * Internal staff-to-staff messaging and the team tasks that hang off it.
+       * A separate security domain from the client Ticket system: every RPC
+       * behind this service requires an internal actor holding
+       * team_messages.use, so constructing it grants nothing.
+       */
+      team: new TeamService({ repository: new TeamRepository(client) }),
+      /**
        * The Reporting builder and the transitional quick send. Every RPC behind
        * it re-checks for an internal actor holding reports.send through the
        * internal reporting module, so constructing this grants nothing.
        */
       reporting: new ReportingService({ repository: new ReportingRepository(client) }),
     },
+  };
+});
+
+/**
+ * The Team synchronization context — a verified actor and the Team service,
+ * and deliberately nothing else.
+ *
+ * getInternalContext() additionally resolves the caller's profile, role,
+ * permission keys and module map. Those four queries decide what the SHELL
+ * renders; they decide nothing here, because these two routes render no
+ * navigation, no capability and no page. Paying for them on every poll and
+ * every keystroke put a second wave of database round trips in front of the
+ * one read the viewer is actually waiting for, which is invisible on loopback
+ * and dominant from a serverless function to a hosted project.
+ *
+ * Dropping them removes no boundary. private.require_team_actor() inside every
+ * Team RPC re-derives the subject from auth.uid() and refuses any account that
+ * is not an active internal member holding team_messages.use — a client
+ * account included — regardless of what this function did or did not look up.
+ *
+ * Returns null instead of redirecting: a route handler answers a fetch, and a
+ * background poll that has lost its session should receive 401, not a redirect
+ * to a login page it cannot render.
+ */
+export const getTeamActorContext = cache(async () => {
+  const supabase = await createNextServerSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return null;
+
+  const client = createUserSupabaseClient(
+    readLocalFrontendEnvironment(),
+    data.session.access_token,
+  );
+  const actor = await verifyActor(client).catch(() => null);
+  if (!actor) return null;
+
+  return {
+    actor,
+    team: new TeamService({ repository: new TeamRepository(client) }),
   };
 });
 
@@ -390,12 +583,26 @@ export async function getAccountProvisioningService() {
 export const getSelfServiceContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) redirect("/login");
+  if (error || !data.session) {
+    await recordContextRefusal({
+      event: "authorization.context.unauthenticated",
+      surface: "self_service",
+      reason: "no_session",
+    });
+    redirect("/login");
+  }
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token);
   const actor = await verifyActor(client).catch(() => null);
-  if (!actor) redirect("/login");
+  if (!actor) {
+    await recordContextRefusal({
+      event: "auth.session.unverified",
+      surface: "self_service",
+      reason: "actor_unverified",
+    });
+    redirect("/login");
+  }
 
   return {
     actor,
@@ -409,15 +616,37 @@ export const getSelfServiceContext = cache(async () => {
 export const getClientContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
   const { data, error } = await supabase.auth.getSession();
-  if (error || !data.session) redirect("/login?next=/account");
+  if (error || !data.session) {
+    await recordContextRefusal({
+      event: "authorization.context.unauthenticated",
+      surface: "client",
+      reason: "no_session",
+    });
+    redirect("/login?next=/account");
+  }
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token);
   const actor = await verifyActor(client).catch(() => null);
-  if (!actor) redirect("/login?next=/account");
+  if (!actor) {
+    await recordContextRefusal({
+      event: "auth.session.unverified",
+      surface: "client",
+      reason: "actor_unverified",
+    });
+    redirect("/login?next=/account");
+  }
 
   const user = await resolveClientUser(client, actor);
-  if (!user) redirect("/login?reason=client-only");
+  if (!user) {
+    await recordContextRefusal({
+      event: "authorization.context.denied",
+      surface: "client",
+      actorId: actor.id,
+      reason: "no_client_assignment",
+    });
+    redirect("/login?reason=client-only");
+  }
 
   return {
     actor,

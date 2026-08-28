@@ -1,8 +1,8 @@
 "use client";
 
-import { KeyRound, LoaderCircle, ShieldCheck, UserRoundPlus } from "lucide-react";
+import { KeyRound, LoaderCircle, Shield, ShieldCheck, UserCog, UserRoundPlus, Users } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   provisionInternalMemberAction,
@@ -51,6 +51,12 @@ export function CreateMemberAccountForm() {
   };
 
   const [state, action] = useActionState(provisionInternalMemberAction, initialState);
+  const [preset, setPreset] = useState("staff");
+  const presets = [
+    { key: "admin", label: "Administrator", description: "Full operational administration, excluding Owner-only controls.", Icon: Shield },
+    { key: "manager", label: "Manager", description: "Manage day-to-day work, people, and team tasks.", Icon: UserCog },
+    { key: "staff", label: "Staff", description: "Standard access for everyday Wolf Forge work.", Icon: Users },
+  ] as const;
 
   return (
     <div className={styles.shell}>
@@ -137,19 +143,38 @@ export function CreateMemberAccountForm() {
         </div>
 
         <div className={styles.field}>
-          <label htmlFor="member-preset">Permission preset</label>
-
-          <select
-            id="member-preset"
-            name="preset_key"
-            defaultValue="staff"
-            required
+          <span className={styles.fieldLabel}>Permission preset</span>
+          <input type="hidden" name="preset_key" value={preset} />
+          <div
+            className={styles.roleSelector}
+            role="radiogroup"
+            aria-label="Permission preset"
             aria-invalid={Boolean(state.fieldErrors.preset)}
           >
-            <option value="admin">Administrator</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
-          </select>
+            {presets.map(({ key, label, description, Icon }, index) => (
+              <button
+                key={key}
+                type="button"
+                role="radio"
+                aria-checked={preset === key}
+                className={[styles.roleOption, preset === key ? styles.roleOptionSelected : ""].filter(Boolean).join(" ")}
+                onClick={() => setPreset(key)}
+                onKeyDown={(event) => {
+                  if (!["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(event.key)) return;
+                  event.preventDefault();
+                  const direction = event.key === "ArrowDown" || event.key === "ArrowRight" ? 1 : -1;
+                  const next = presets[(index + direction + presets.length) % presets.length]!;
+                  setPreset(next.key);
+                  document.getElementById(`member-preset-${next.key}`)?.focus();
+                }}
+                id={`member-preset-${key}`}
+              >
+                <span className={styles.roleIcon}><Icon aria-hidden="true" /></span>
+                <span className={styles.roleCopy}><strong>{label}</strong><small>{description}</small></span>
+                <span className={styles.roleRadio} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
 
           <p className={styles.fieldHint}>
             The preset can be changed later from Team &amp; Roles. Owner is not an

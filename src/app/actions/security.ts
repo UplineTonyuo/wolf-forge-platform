@@ -4,6 +4,11 @@ import {
   changePasswordSchema,
   type PasswordActionState,
 } from "../../domain/profile/security";
+import { safeProviderCode } from "../../domain/security/error-classification";
+import type { SecurityEventCode } from "../../domain/security/event-codes";
+import { currentCorrelationId } from "../../lib/security/request-correlation";
+import { recordSecurityAuditEvent } from "../../lib/security/security-audit-log";
+import { recordSecurityEvent } from "../../lib/security/security-log";
 import {
   createNextServerSupabaseClient,
   getSelfServiceContext,
@@ -109,14 +114,45 @@ export async function changeMyPasswordAction(
 
   if (error) {
     /*
+     * Security C2-4. The USER-VISIBLE wording is unchanged — a bad current
+     * password still gets the field-level message and everything else still
+     * gets the mapped generic one. The server additionally records which of
+     * three very different things happened, because a credential-verification
+     * refusal, a provider throttle and a provider outage need different
+     * responses and were previously indistinguishable from outside.
+     *
+     * No password, no new password, no provider prose. The event carries the
+     * verified actor id, which is safe: this action is self-service only and the
+     * caller has already been authenticated.
+     */
+    const rejected = error.code === "invalid_credentials" || error.code === "bad_password";
+    const throttled =
+      error.code === "over_request_rate_limit" || error.code === "over_email_send_rate_limit";
+
+    const event: SecurityEventCode = rejected
+      ? "auth.password.rejected"
+      : throttled
+        ? "auth.password.rate_limited"
+        : "auth.password.provider_error";
+
+    recordSecurityEvent({
+      event,
+      correlationId: await currentCorrelationId(),
+      actorId: context.actor.id,
+      actorClass: "self_service",
+      outcome: "denied",
+      metadata: {
+        action: "auth.change_password",
+        ...(rejected ? {} : { provider_code: safeProviderCode(error) }),
+      },
+    });
+
+    /*
      * Keep authentication details private. A bad current password gets a
      * field-level message; every other Auth error goes through the existing
      * client-safe mapper.
      */
-    if (
-      error.code === "invalid_credentials" ||
-      error.code === "bad_password"
-    ) {
+    if (rejected) {
       return fail("Check the highlighted fields.", {
         current_password: "That password is incorrect.",
       });
@@ -127,6 +163,38 @@ export async function changeMyPasswordAction(
 
   /* Anything signed in with the old password is now invalidated. */
   await supabase.auth.signOut({ scope: "others" }).catch(() => undefined);
+
+  /*
+   * A credential change is one of the few successes worth recording
+   * unconditionally: it is the single most useful anchor when reconstructing an
+   * account-takeover timeline, and it happens rarely enough to add no noise.
+   *
+   * Security C2-5. It is also THE canonical durable audit row: password
+   * changes happen entirely inside Supabase Auth — no application table or RPC
+   * participates — so there is no trigger that could record it and no ledger
+   * that already has it. The writer derives everything from the server-verified
+   * actor; a rejected attempt above deliberately persists nothing.
+   */
+  const correlationId = await currentCorrelationId();
+  recordSecurityEvent({
+    event: "auth.password.changed",
+    correlationId,
+    actorId: context.actor.id,
+    actorClass: "self_service",
+    outcome: "succeeded",
+    metadata: { action: "auth.change_password", other_sessions_revoked: true },
+  });
+  await recordSecurityAuditEvent({
+    event: "auth.password.changed",
+    correlationId,
+    actorId: context.actor.id,
+    actorClass: "self_service",
+    actionSlug: "auth.change_password",
+    outcome: "succeeded",
+    /* Not `other_sessions_revoked`: that key carries the "session" fragment
+     * and would be stripped from permanent rows by design. */
+    metadata: { action: "auth.change_password", other_logins_revoked: true },
+  });
 
   return { error: null, fieldErrors: {}, changedAt: new Date().toISOString() };
 }

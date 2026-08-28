@@ -51,7 +51,9 @@ import type {
   InternalReportDocument,
   ReportDraftEntryInput,
   ReportDraftSectionInput,
+  ReportSendStatus,
 } from "../../domain/reporting/schema";
+import { formatBusinessDate } from "../../lib/dashboard/date-range";
 import { ReportPreview } from "./report-preview";
 import { ReportSaveNotice, ReportSendOutro } from "./report-flow-status";
 import styles from "./reporting.module.css";
@@ -153,10 +155,19 @@ function requireReportingProfile(serviceId: string | null | undefined): ServiceR
 export function ReportWizard({
   document: initial,
   canSend,
+  sendStatus = null,
 }: {
   document: InternalReportDocument;
+  /** Presentation only — every RPC re-checks reports.send for itself. */
   canSend: boolean;
+  /** Presentation only — every send RPC re-derives and re-enforces this independently. */
+  sendStatus?: ReportSendStatus | null;
 }) {
+  const windowBlocked = sendStatus !== null && !sendStatus.can_send;
+  const windowNote =
+    sendStatus !== null && !sendStatus.send_anytime
+      ? `Reporting window: ${formatBusinessDate(sendStatus.window_start)} – ${formatBusinessDate(sendStatus.window_end)}`
+      : null;
   const profile = requireReportingProfile(initial.service_id);
 
   const initialSteps = wizardStepsForSections(initial.sections);
@@ -437,6 +448,13 @@ export function ReportWizard({
         </div>
       ) : null}
 
+      {!next && windowNote ? (
+        <p className={styles.windowNote} role="status">
+          {windowBlocked ? `Sending opens ${formatBusinessDate(sendStatus!.window_start)}. ` : null}
+          {windowNote}
+        </p>
+      ) : null}
+
       <footer className={styles.wizardActions}>
         <div>
           {previous ? (
@@ -511,8 +529,9 @@ export function ReportWizard({
               onClick={() => setConfirmingSend(true)}
               disabled={
                 save.kind === "saving" || sending || saveNotice || sent
-                || problems.length > 0 || !title.trim()
+                || problems.length > 0 || !title.trim() || windowBlocked
               }
+              title={windowBlocked ? (windowNote ?? undefined) : undefined}
             >
               <Send aria-hidden="true" />
               Send to client

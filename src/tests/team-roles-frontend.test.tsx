@@ -3,7 +3,10 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { setMemberPresetAction } from "../app/actions/member-account-provisioning";
+import {
+  setMemberPresetAction,
+  setReportSendAnytimeAction,
+} from "../app/actions/member-account-provisioning";
 import { TeamRolesPanel } from "../components/settings/team-roles-panel";
 import type {
   InternalMember,
@@ -15,6 +18,7 @@ const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("../app/actions/member-account-provisioning", () => ({
   setMemberPresetAction: vi.fn(),
+  setReportSendAnytimeAction: vi.fn(),
   provisionInternalMemberAction: vi.fn(),
 }));
 
@@ -30,6 +34,7 @@ beforeAll(() => {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(setMemberPresetAction).mockResolvedValue({ ok: true });
+  vi.mocked(setReportSendAnytimeAction).mockResolvedValue({ ok: true });
 });
 
 afterEach(cleanup);
@@ -46,6 +51,7 @@ const members: InternalMember[] = [
     is_self: false,
     created_at: "2026-08-01T00:00:00Z",
     avatar_url: "http://127.0.0.1:54321/storage/v1/object/public/profile-avatars/50000000-0000-4000-8000-000000000001/photo.webp",
+    report_send_anytime: true,
   },
   {
     profile_id: "50000000-0000-4000-8000-000000000002",
@@ -58,6 +64,7 @@ const members: InternalMember[] = [
     is_self: true,
     created_at: "2026-08-02T00:00:00Z",
     avatar_url: null,
+    report_send_anytime: false,
   },
   {
     profile_id: "50000000-0000-4000-8000-000000000003",
@@ -70,6 +77,7 @@ const members: InternalMember[] = [
     is_self: false,
     created_at: "2026-08-03T00:00:00Z",
     avatar_url: null,
+    report_send_anytime: false,
   },
 ];
 

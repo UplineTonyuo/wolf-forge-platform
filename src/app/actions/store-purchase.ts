@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { toClientSafeError } from "../../lib/errors/application-error";
+import { observeActionFailure } from "../../lib/security/observed-failure";
+import { currentCorrelationId } from "../../lib/security/request-correlation";
+import { recordSecurityEvent } from "../../lib/security/security-log";
 import { getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 
 /**
@@ -85,35 +87,58 @@ export async function purchaseServiceWithBalanceAction(input: {
         ? `${error.message} ${JSON.stringify(error.cause ?? "")}`
         : "";
 
-    if (raw.includes("WF_CARD_INSUFFICIENT_BALANCE")) {
-      return {
-        ok: false,
-        code: "INSUFFICIENT_BALANCE",
-        error: "Your Wolf Forge Balance no longer covers this investment.",
-      };
+    /*
+     * Security C2-4. The domain refusals below are EXPECTED — a balance that no
+     * longer covers a purchase is the system working — so they get one
+     * `economic.purchase.denied` at info severity with the domain reason, not
+     * an error. What they must never do is look like a system failure: a store
+     * that quietly refuses every purchase for a real reason and a store that is
+     * broken need to be distinguishable in the log, and before this they were
+     * not.
+     *
+     * Nothing browser-supplied is recorded as economic truth. The service id is
+     * a server-validated UUID; no amount, balance or price is logged here,
+     * because the only authoritative copy of those lives inside the database
+     * transaction that just rolled back.
+     */
+    const denial = raw.includes("WF_CARD_INSUFFICIENT_BALANCE")
+      ? ({ code: "INSUFFICIENT_BALANCE", reason: "insufficient_balance", error: "Your Wolf Forge Balance no longer covers this investment." } as const)
+      : raw.includes("WF_PURCHASE_RECURRING_UNSUPPORTED")
+        ? ({ code: "RECURRING_UNSUPPORTED", reason: "recurring_unsupported", error: "Recurring investments are arranged with your Wolf Forge team." } as const)
+        : raw.includes("WF_PURCHASE_SERVICE_NOT_PRICED")
+          ? ({ code: "NOT_PRICED", reason: "service_not_priced", error: "This investment is priced with your Wolf Forge team." } as const)
+          : raw.includes("WF_PURCHASE_SERVICE_UNAVAILABLE")
+            ? ({ code: "SERVICE_UNAVAILABLE", reason: "service_unavailable", error: "This investment is not available to purchase right now." } as const)
+            : null;
+
+    if (denial) {
+      recordSecurityEvent({
+        event: "economic.purchase.denied",
+        correlationId: await currentCorrelationId(),
+        actorId: context.actor.id,
+        actorClass: "client",
+        resourceType: "service",
+        resourceId: input.serviceId,
+        outcome: "denied",
+        failureClass: "expected",
+        metadata: { action: "store.purchase", reason: denial.reason },
+      });
+      return { ok: false, code: denial.code, error: denial.error };
     }
-    if (raw.includes("WF_PURCHASE_RECURRING_UNSUPPORTED")) {
-      return {
-        ok: false,
-        code: "RECURRING_UNSUPPORTED",
-        error: "Recurring investments are arranged with your Wolf Forge team.",
-      };
-    }
-    if (raw.includes("WF_PURCHASE_SERVICE_NOT_PRICED")) {
-      return {
-        ok: false,
-        code: "NOT_PRICED",
-        error: "This investment is priced with your Wolf Forge team.",
-      };
-    }
-    if (raw.includes("WF_PURCHASE_SERVICE_UNAVAILABLE")) {
-      return {
-        ok: false,
-        code: "SERVICE_UNAVAILABLE",
-        error: "This investment is not available to purchase right now.",
-      };
-    }
+
     if (raw.includes("rate limit") || raw.includes("RATE_LIMIT")) {
+      recordSecurityEvent({
+        event: "abuse.rate_limited",
+        correlationId: await currentCorrelationId(),
+        actorId: context.actor.id,
+        actorClass: "client",
+        resourceType: "service",
+        resourceId: input.serviceId,
+        outcome: "denied",
+        failureClass: "security_signal",
+        /* The action, never the bucket, scope, window or limit (§G). */
+        metadata: { action: "store.purchase" },
+      });
       return {
         ok: false,
         code: "RATE_LIMITED",
@@ -121,11 +146,17 @@ export async function purchaseServiceWithBalanceAction(input: {
       };
     }
 
-    return {
-      ok: false,
-      code: "PURCHASE_FAILED",
-      error: toClientSafeError(error).message,
-    };
+    const safe = await observeActionFailure(error, {
+      action: "store.purchase",
+      actorId: context.actor.id,
+      actorClass: "client",
+      resourceType: "service",
+      resourceId: input.serviceId,
+      systemEvent: "economic.purchase.failed",
+      rateLimitEvent: "abuse.rate_limited",
+    });
+
+    return { ok: false, code: "PURCHASE_FAILED", error: safe.message };
   }
 }
 
@@ -158,6 +189,21 @@ export async function setWfCardMembershipAction(input: {
     revalidatePath(`/clients/${input.companyId}`);
     return { ok: true, status: membership.status };
   } catch (error) {
-    return { ok: false, error: toClientSafeError(error).message };
+    /*
+     * The entitlement that unlocks the Wolf Forge Balance rail. It moves no
+     * money, but granting it is what makes spending possible, so a failure or a
+     * capability refusal here is worth the same visibility as a payment.
+     *
+     * The actor is not available on every path — `getInternalContext()` itself
+     * can redirect — so it is read defensively rather than assumed.
+     */
+    const safe = await observeActionFailure(error, {
+      action: "wf_card.set_membership",
+      actorClass: "internal",
+      resourceType: "company",
+      resourceId: input.companyId,
+      systemEvent: "economic.payment.failed",
+    });
+    return { ok: false, error: safe.message };
   }
 }

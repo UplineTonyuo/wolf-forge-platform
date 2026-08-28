@@ -19,16 +19,14 @@
  * reaching it requires having already proven the password, so it reveals
  * nothing to someone who does not hold the credential.
  *
- * ## Brute-force posture (KI-022)
+ * ## Brute-force posture
  *
- * Password-attempt rate limiting is PROVIDER-SIDE: Supabase Auth's per-IP
- * `sign_in_sign_ups` bucket. No application-level limiter exists, and that is a
- * decision, not an oversight — an anon-callable limiter RPC would contradict
- * the Batch B2 rule that anon can EXECUTE nothing in `private`, and throttling
- * server actions from the proxy is fragile. The consequence is recorded
- * honestly in KI-022: IP rotation bypasses the bucket, and the hosted dashboard
- * values still need human verification. Nothing in this module should ever grow
- * a per-account counter without revisiting that decision.
+ * The action layers invisible BotID Basic, a durable service-role-only source
+ * limiter, source+identity failure cooldowns and Supabase Auth's provider
+ * limit. Identity-wide pressure is observed but never used as a hard account
+ * lock, so knowledge of an email is not a victim-lockout capability. This pure
+ * module still owns only the uniform browser response; the trusted enforcement
+ * boundary lives in `lib/security/login-protection.ts`.
  */
 
 /**

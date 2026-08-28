@@ -76,6 +76,13 @@ from public.roles as role
 where role.name = 'admin'
   and profile.id = 'a1000000-0000-0000-0000-000000000001';
 
+-- This suite sends reports on whatever real calendar day the suite happens to
+-- run, so the fixture admin needs reports.send_anytime rather than the send
+-- assertions below depending on the reporting-window date engine (covered on
+-- its own in 053_reporting_send_window.test.sql).
+insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+values ('a1000000-0000-0000-0000-000000000001', 'reports.send_anytime', true);
+
 update public.profiles
 set company_id = 'a2000000-0000-0000-0000-000000000001'
 where id = 'a1000000-0000-0000-0000-000000000002';

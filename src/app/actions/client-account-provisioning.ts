@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { AuthAdminError } from "../../lib/supabase/auth-admin";
 import { getAccountProvisioningService } from "../../lib/supabase/next-server";
 
@@ -265,6 +266,10 @@ export async function provisionClientAccountAction(
     string | null = null;
 
   try {
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "account.provision",
+    });
     const account =
       await provisioning.provisionClientAccount(
         {

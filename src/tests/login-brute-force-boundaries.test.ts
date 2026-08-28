@@ -131,26 +131,43 @@ describe("the sign-in action holds no second failure branch", () => {
   });
 });
 
-describe("rate-limit posture stays provider-side (KI-022)", () => {
-  const loginFlow = read("domain/auth/login-flow.ts");
+describe("rate-limit posture is durable, multi-signal and lockout-safe", () => {
   const action = read("app/actions/auth.ts");
+  const protection = read("lib/security/login-protection.ts");
+  const migration = read(
+    "../supabase/migrations/20260827094453_production_login_cost_abuse_hardening.sql",
+  );
 
-  it("has no application-level attempt counter or lockout", () => {
-    // An anon-callable limiter RPC would contradict Batch B2 (anon can EXECUTE
-    // nothing in `private`). If this changes, that decision must be reopened.
-    for (const source of [loginFlow, action]) {
-      expect(source).not.toContain("consume_rate_limit");
-      expect(source).not.toContain("failed_attempts");
-      expect(source).not.toContain("lockout");
-      expect(source).not.toContain("attemptCount");
-    }
+  it("checks invisible bot protection and the durable limiter before Auth", () => {
+    expect(action.indexOf("beginProtectedLogin(email)")).toBeLessThan(
+      action.indexOf("signInWithPassword"),
+    );
+    expect(protection).toContain("checkBotId()");
+    expect(protection).toContain('rpc("app_login_rate_limit_preflight"');
+    expect(protection).not.toContain("new Map(");
   });
 
-  it("records the provider-side posture and its known gap in the source", () => {
-    // The gap is real: IP rotation bypasses a per-IP bucket. It is documented
-    // rather than silently accepted.
-    expect(loginFlow).toContain("KI-022");
-    expect(loginFlow).toContain("sign_in_sign_ups");
+  it("uses source, source+identity and failure-history signals", () => {
+    expect(migration).toContain("auth.login.source.attempt.minute");
+    expect(migration).toContain("auth.login.pair.failure.ten_minutes");
+    expect(migration).toContain("auth.login.identity.failure.hour");
+    expect(migration).toContain("app_record_login_failure");
+  });
+
+  it("never hard-blocks solely on the targeted identity", () => {
+    const identityRisk = migration.slice(
+      migration.indexOf("identity_targeted :="),
+      migration.indexOf("return jsonb_build_object"),
+    );
+    expect(identityRisk).not.toContain("raise exception");
+    expect(migration).toContain("is NEVER a hard denial");
+  });
+
+  it("keeps limiter RPCs off browser roles and fingerprints raw signals", () => {
+    expect(migration).toContain("to service_role");
+    expect(migration).toContain("from public, anon, authenticated");
+    expect(protection).toContain('createHmac("sha256"');
+    expect(protection).not.toContain("console.");
   });
 
   it("keeps sign-out global so a compromised session cannot outlive it", () => {

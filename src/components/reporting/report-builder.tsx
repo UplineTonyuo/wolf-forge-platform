@@ -44,7 +44,14 @@ import {
   type InternalReportDocument,
   type ReportDraftSectionInput,
   type ReportLane,
+  type ReportSendStatus,
 } from "../../domain/reporting/schema";
+import {
+  calendarDateToMonthInputValue,
+  monthInputValueToPeriodDate,
+  parseCalendarDate,
+} from "../../domain/reporting/send-window";
+import { formatBusinessDate } from "../../lib/dashboard/date-range";
 import { formatDate } from "../../lib/format";
 import { ReportPreview } from "./report-preview";
 import { ReportSaveNotice, ReportSendOutro } from "./report-flow-status";
@@ -73,12 +80,14 @@ function snapshot(
   title: string,
   packageLabel: string,
   lane: ReportLane,
+  periodMonth: string,
   sections: readonly ReportDraftSectionInput[],
 ): string {
   return JSON.stringify({
     title: title.trim(),
     packageLabel: packageLabel.trim(),
     lane,
+    periodMonth,
     sections: normalizeDraftSections(sections),
   });
 }
@@ -92,10 +101,13 @@ type SaveState =
 export function ReportBuilder({
   document: initial,
   canSend,
+  sendStatus = null,
 }: {
   document: InternalReportDocument;
   /** Presentation only — every RPC re-checks reports.send for itself. */
   canSend: boolean;
+  /** Presentation only — every send RPC re-derives and re-enforces this independently. */
+  sendStatus?: ReportSendStatus | null;
 }) {
   const router = useRouter();
   const fieldId = useId();
@@ -105,6 +117,9 @@ export function ReportBuilder({
   const [title, setTitle] = useState(initial.title);
   const [packageLabel, setPackageLabel] = useState(initial.package_label);
   const [lane, setLane] = useState<ReportLane>(initial.report_lane);
+  const [periodMonth, setPeriodMonth] = useState(
+    calendarDateToMonthInputValue(parseCalendarDate(initial.reporting_period_month)),
+  );
   const [sections, setSections] = useState<ReportDraftSectionInput[]>(initial.sections);
 
   const [showPreview, setShowPreview] = useState(false);
@@ -132,10 +147,16 @@ export function ReportBuilder({
    * will re-render for.
    */
   const [persisted, setPersisted] = useState(() =>
-    snapshot(initial.title, initial.package_label, initial.report_lane, initial.sections),
+    snapshot(
+      initial.title,
+      initial.package_label,
+      initial.report_lane,
+      periodMonth,
+      initial.sections,
+    ),
   );
 
-  const current = snapshot(title, packageLabel, lane, sections);
+  const current = snapshot(title, packageLabel, lane, periodMonth, sections);
   const dirty = current !== persisted;
   const problems = findDraftProblems(sections);
   const headerIncomplete = title.trim() === "" || packageLabel.trim() === "";
@@ -172,6 +193,7 @@ export function ReportBuilder({
       reportLane: lane,
       packageLabel: packageLabel.trim(),
       title: title.trim(),
+      reportingPeriodMonth: monthInputValueToPeriodDate(periodMonth),
       sections: normalized,
     });
 
@@ -180,7 +202,7 @@ export function ReportBuilder({
       return false;
     }
 
-    setPersisted(snapshot(title, packageLabel, lane, normalized));
+    setPersisted(snapshot(title, packageLabel, lane, periodMonth, normalized));
 
     // Abandoned rows are dropped on save, so the editor shows what was stored.
     setSections(normalized);
@@ -249,6 +271,18 @@ export function ReportBuilder({
   }
 
   const sendBlocked = problems.length > 0 || headerIncomplete || sections.length === 0;
+  /*
+   * Presentation only: the send RPC re-derives and re-enforces this
+   * independently. sendStatus reflects the period as of page load — saving a
+   * changed period updates the stored value immediately, but this note (and
+   * the button it disables) catches up on the next load rather than live,
+   * matching how every other field here already treats "saved" vs "on screen".
+   */
+  const windowBlocked = sendStatus !== null && !sendStatus.can_send;
+  const windowNote =
+    sendStatus !== null && !sendStatus.send_anytime
+      ? `Reporting window: ${formatBusinessDate(sendStatus.window_start)} – ${formatBusinessDate(sendStatus.window_end)}`
+      : null;
 
   return (
     <div className={styles.builder}>
@@ -316,6 +350,21 @@ export function ReportBuilder({
                 maxLength={200}
                 required
               />
+            </label>
+
+            <label className={styles.field} htmlFor={`${fieldId}-period`}>
+              <span>Reporting period</span>
+              <input
+                id={`${fieldId}-period`}
+                type="month"
+                value={periodMonth}
+                onChange={(event) => setPeriodMonth(event.currentTarget.value)}
+                required
+              />
+              <em className={styles.fieldHint}>
+                Which month this report covers. Defaults to the current month; correct it for a
+                report written for an earlier or later period.
+              </em>
             </label>
 
             <label className={styles.field} htmlFor={`${fieldId}-package`}>
@@ -484,6 +533,13 @@ export function ReportBuilder({
         </>
       )}
 
+      {!readOnly && windowNote ? (
+        <p className={styles.windowNote} role="status">
+          {windowBlocked ? `Sending opens ${formatBusinessDate(sendStatus!.window_start)}. ` : null}
+          {windowNote}
+        </p>
+      ) : null}
+
       <div className={styles.actions}>
         <span
           className={styles.actionsState}
@@ -554,9 +610,16 @@ export function ReportBuilder({
                 className={styles.primaryButton}
                 onClick={() => setConfirmingSend(true)}
                 disabled={
-                  saveNotice || sent || sendBlocked || sending || save.kind === "saving"
+                  saveNotice || sent || sendBlocked || windowBlocked || sending
+                  || save.kind === "saving"
                 }
-                title={sendBlocked ? "Fix the outstanding items first." : undefined}
+                title={
+                  sendBlocked
+                    ? "Fix the outstanding items first."
+                    : windowBlocked
+                      ? windowNote ?? undefined
+                      : undefined
+                }
               >
                 <Send aria-hidden="true" />
                 Send to client

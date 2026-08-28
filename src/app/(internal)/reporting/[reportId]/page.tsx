@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ReportCompletionHost } from "../../../../components/reporting/report-completion-host";
 import { DataError } from "../../../../components/ui/list-states";
 import { PageFrame } from "../../../../components/ui/page-frame";
-import type { InternalReportDocument } from "../../../../domain/reporting/schema";
+import type { InternalReportDocument, ReportSendStatus } from "../../../../domain/reporting/schema";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
@@ -35,6 +35,7 @@ export default async function ReportPage({
   ]);
 
   let report: InternalReportDocument | null = null;
+  let sendStatus: ReportSendStatus | null = null;
   let denied = false;
   let missing = false;
   let loadError: string | null = null;
@@ -42,6 +43,11 @@ export default async function ReportPage({
   try {
     await services.permissions.requireModuleAccess("reporting");
     report = await services.reporting.getInternal(reportId);
+    // Presentation only: a draft's Send state, not a security decision.
+    // Failure here should not block the editor from opening.
+    if (report.status === "draft") {
+      sendStatus = await services.reporting.getSendStatus(reportId).catch(() => null);
+    }
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "PERMISSION_DENIED") denied = true;
@@ -69,6 +75,7 @@ export default async function ReportPage({
         <ReportCompletionHost
           document={report}
           canSend={user.reporting.send}
+          sendStatus={sendStatus}
           advanced={query.mode === "advanced"}
         />
       )}

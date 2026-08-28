@@ -9,6 +9,7 @@ import {
   wizardStepsForSections,
 } from "../../domain/reporting/service-profiles";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 
 /**
@@ -43,6 +44,12 @@ export async function sendClientReportAction(input: {
 }): Promise<SendClientReportResult> {
   try {
     const context = await getInternalContext();
+
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "report.send",
+      organizationId: input.companyId,
+    });
 
     await context.services.reporting.send(
       {
@@ -269,6 +276,8 @@ export async function saveReportDraftAction(input: {
   packageLabel: string;
   title: string;
   wizardStepKey?: string | null;
+  /** First-of-month "YYYY-MM-01". Omitted or null leaves the stored period untouched. */
+  reportingPeriodMonth?: string | null;
   sections: ReportDraftSectionInput[];
 }): Promise<SaveReportDraftResult> {
   try {
@@ -281,6 +290,7 @@ export async function saveReportDraftAction(input: {
         package_label: input.packageLabel,
         title: input.title,
         wizard_step_key: input.wizardStepKey,
+        reporting_period_month: input.reportingPeriodMonth,
         sections: input.sections,
       },
       context.actor,
@@ -306,6 +316,11 @@ export async function sendReportDraftAction(input: {
 }): Promise<SaveReportDraftResult> {
   try {
     const context = await getInternalContext();
+
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "report.send",
+    });
 
     await context.services.reporting.sendDraft(
       { request_id: input.requestId, report_id: input.reportId },

@@ -47,6 +47,16 @@ export const reportUrlSchema = z
     }
   }, "Enter a report link starting with http:// or https://");
 
+/**
+ * A reporting period, stored and transmitted as the first day of the month it
+ * names (`YYYY-MM-01`) — matching the Postgres `date` column exactly so
+ * neither side has to reinterpret the other's convention.
+ */
+export const reportingPeriodMonthSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-01$/, "Use a first-of-month date (YYYY-MM-01)");
+
 export const reportTitleSchema = z.string().trim().min(1).max(200);
 export const reportEntryLabelSchema = z.string().trim().min(1).max(200);
 export const reportEntryValueSchema = z.string().trim().min(1).max(4000);
@@ -244,6 +254,8 @@ export const createReportDraftSchema = z.object({
   package_label: reportPackageLabelSchema,
   title: reportTitleSchema,
   wizard_step_key: reportWizardStepKeySchema.nullable().optional(),
+  /** Defaults to the current Wolf Forge business month in the database when omitted. */
+  reporting_period_month: reportingPeriodMonthSchema.nullable().optional(),
   sections: reportDraftSectionsSchema,
 }).refine(
   (input) => input.subscription_id == null || input.service_id != null,
@@ -258,6 +270,8 @@ export const saveReportDraftSchema = z.object({
   package_label: reportPackageLabelSchema,
   title: reportTitleSchema,
   wizard_step_key: reportWizardStepKeySchema.nullable().optional(),
+  /** Omitted or null leaves the stored reporting period untouched. */
+  reporting_period_month: reportingPeriodMonthSchema.nullable().optional(),
   sections: reportDraftSectionsSchema,
 });
 
@@ -305,6 +319,8 @@ export type InternalReportDocument = {
   status: ReportStatus;
   sent_at: string | null;
   updated_at: string;
+  /** First day of the calendar month this report covers. Drives the send window. */
+  reporting_period_month: string;
   sections: ReportDraftSectionInput[];
 };
 
@@ -330,6 +346,7 @@ export const internalReportDocumentSchema = z.object({
   status: reportStatusSchema,
   sent_at: z.string().nullable(),
   updated_at: z.string(),
+  reporting_period_month: reportingPeriodMonthSchema,
   sections: z.array(reportDraftSectionSchema),
 });
 
@@ -345,6 +362,20 @@ export const clientReportDocumentSchema = internalReportDocumentSchema.extend({
 });
 
 export type ClientReportDocument = z.infer<typeof clientReportDocumentSchema>;
+
+/**
+ * Presentation-only read of the same rule the send RPCs enforce, as
+ * app_get_report_send_status returns it. Never authoritative on its own — the
+ * send RPC re-checks independently — but lets the editor show the window and
+ * disable Send before the operator ever attempts it.
+ */
+export type ReportSendStatus = {
+  can_send: boolean;
+  send_anytime: boolean;
+  reporting_period_month: string;
+  window_start: string;
+  window_end: string;
+};
 
 /** One Reporting-scoped service row returned after a client is selected. */
 export type ReportingServiceOption = {

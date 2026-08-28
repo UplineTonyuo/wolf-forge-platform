@@ -10,13 +10,13 @@ const environment = { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHAB
 describe("verified actor and environment boundaries", () => {
   it("rejects actor derivation when Auth cannot verify a user", async () => {
     const client = createUserSupabaseClient(environment, "invalid-token");
-    vi.spyOn(client.auth, "getUser").mockResolvedValue({ data: { user: null }, error: new Error("invalid") } as never);
+    vi.spyOn(client.auth, "getClaims").mockResolvedValue({ data: null, error: new Error("invalid") } as never);
     await expect(verifyActor(client)).rejects.toThrow("verification failed");
   });
 
   it("derives and freezes actor identity only from verified Auth output", async () => {
     const client = createUserSupabaseClient(environment, "signed-token");
-    vi.spyOn(client.auth, "getUser").mockResolvedValue({ data: { user: { id: "20000000-0000-4000-8000-000000000001" } }, error: null } as never);
+    vi.spyOn(client.auth, "getClaims").mockResolvedValue({ data: { claims: { sub: "20000000-0000-4000-8000-000000000001" } }, error: null } as never);
     const actor = await verifyActor(client);
     expect(actor.id).toBe("20000000-0000-4000-8000-000000000001");
     expect(Object.isFrozen(actor)).toBe(true);

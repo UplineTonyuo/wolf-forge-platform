@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withBotId } from "botid/next/config";
 import {
   readSecurityHeaderEnvironment,
   securityHeaderRules,
@@ -25,6 +26,9 @@ const nextConfig: NextConfig = {
 
   experimental: {
     authInterrupts: true,
+    // Pin Next's existing default so a framework upgrade cannot silently make
+    // every Server Action accept an unbounded or unexpectedly larger body.
+    serverActions: { bodySizeLimit: "1mb" },
   },
 
   /**
@@ -36,4 +40,4 @@ const nextConfig: NextConfig = {
   headers: async () => securityHeaderRules(readSecurityHeaderEnvironment()),
 };
 
-export default nextConfig;
+export default withBotId(nextConfig);

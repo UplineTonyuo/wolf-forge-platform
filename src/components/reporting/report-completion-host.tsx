@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { InternalReportDocument } from "../../domain/reporting/schema";
+import type { InternalReportDocument, ReportSendStatus } from "../../domain/reporting/schema";
 import { reportingProfileForService } from "../../domain/reporting/service-profiles";
 import { ReportBuilder } from "./report-builder";
 import { ReportWizard } from "./report-wizard";
@@ -25,10 +25,13 @@ import { ReportWizard } from "./report-wizard";
 export function ReportCompletionHost({
   document,
   canSend,
+  sendStatus,
   advanced,
 }: {
   document: InternalReportDocument;
   canSend: boolean;
+  /** Presentation only. Null when the report is already sent (no window applies) or the read failed. */
+  sendStatus: ReportSendStatus | null;
   advanced: boolean;
 }) {
   const [heldDocument] = useState(document);
@@ -37,9 +40,9 @@ export function ReportCompletionHost({
     heldDocument.status === "draft"
       && !advanced
       && reportingProfileForService(heldDocument.service_id) ? (
-      <ReportWizard document={heldDocument} canSend={canSend} />
+      <ReportWizard document={heldDocument} canSend={canSend} sendStatus={sendStatus} />
     ) : (
-      <ReportBuilder document={heldDocument} canSend={canSend} />
+      <ReportBuilder document={heldDocument} canSend={canSend} sendStatus={sendStatus} />
     );
 
   return editor;

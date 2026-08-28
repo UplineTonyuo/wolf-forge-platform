@@ -1,21 +1,17 @@
 import "server-only";
 
-import type { IntegrationConnectionView } from "../../domain/integrations/schema";
 import {
   INTEGRATION_PROVIDER_IDS,
   type IntegrationProviderId,
 } from "../../domain/integrations/registry";
-import type { IntegrationCredentialStore } from "./credential-store";
 
 export type IntegrationProviderAdapter = {
   provider: IntegrationProviderId;
-  implementationStatus: "foundation" | "configured";
+  implementationStatus: "foundation" | "live";
   supportsConnect: boolean;
   supportsDisconnect: boolean;
-  disconnect(
-    connection: IntegrationConnectionView,
-    credentials: IntegrationCredentialStore,
-  ): Promise<void>;
+  supportsVerification: boolean;
+  supportsSend: boolean;
 };
 
 function foundationAdapter(provider: IntegrationProviderId): IntegrationProviderAdapter {
@@ -24,13 +20,20 @@ function foundationAdapter(provider: IntegrationProviderId): IntegrationProvider
     implementationStatus: "foundation",
     supportsConnect: false,
     supportsDisconnect: false,
-    async disconnect() {
-      throw new Error(`${provider} disconnect handling is not configured.`);
-    },
+    supportsVerification: false,
+    supportsSend: false,
   };
 }
 
-/** Server-only adapter registry. No provider SDK or live API is invoked yet. */
-export const INTEGRATION_PROVIDER_ADAPTERS = Object.fromEntries(
-  INTEGRATION_PROVIDER_IDS.map((providerId) => [providerId, foundationAdapter(providerId)]),
-) as Record<IntegrationProviderId, IntegrationProviderAdapter>;
+/** Server-only capability registry; live behavior is implemented by each provider adapter/service. */
+export const INTEGRATION_PROVIDER_ADAPTERS: Record<IntegrationProviderId, IntegrationProviderAdapter> = {
+  ...Object.fromEntries(INTEGRATION_PROVIDER_IDS.map((providerId) => [providerId, foundationAdapter(providerId)])) as Record<IntegrationProviderId, IntegrationProviderAdapter>,
+  gmail: {
+    provider: "gmail",
+    implementationStatus: "live",
+    supportsConnect: true,
+    supportsDisconnect: true,
+    supportsVerification: true,
+    supportsSend: true,
+  },
+};

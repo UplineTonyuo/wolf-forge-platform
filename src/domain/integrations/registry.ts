@@ -23,7 +23,7 @@ export const INTEGRATION_PROVIDER_REGISTRY = {
     iconKey: "gmail",
     description: "Prepare client and account communication through a connected Google mailbox.",
     capabilities: ["Mailbox identity", "Email delivery", "Consent scopes"],
-    configurationSummary: "Google OAuth and Gmail API authorization are not configured yet.",
+    configurationSummary: "Google OAuth runs on the server with send-only Gmail permission and encrypted credential storage.",
   },
   stripe: {
     id: "stripe",

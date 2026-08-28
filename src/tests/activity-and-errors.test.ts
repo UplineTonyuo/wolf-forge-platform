@@ -75,3 +75,53 @@ describe("repository error mapping", () => {
     expect(JSON.stringify(error)).not.toContain("internal only");
   });
 });
+
+/**
+ * WF430 (Slow Mode) vs WF429 (anti-abuse rate limiting) — a Codex red-team
+ * review (M1) found the two had collapsed into one generic "Too many
+ * requests" message, discarding the authoritative remaining-seconds value
+ * `private.enforce_team_slow_mode` had already computed. The two codes must
+ * map to distinct error types with distinct, purpose-appropriate messages.
+ */
+describe("Slow Mode vs anti-abuse error mapping (WF430 vs WF429)", () => {
+  it("still maps WF429 to the deliberately generic anti-abuse message", () => {
+    const error = mapDatabaseError({ code: "WF429", message: "rate limit exceeded" });
+    expect(error.code).toBe("RATE_LIMITED");
+    expect(error.message).toBe("Too many requests. Please wait a moment and try again.");
+  });
+
+  it("maps WF430 to a distinct code with the authoritative remaining seconds in the message", () => {
+    const error = mapDatabaseError({
+      code: "WF430",
+      message: "slow mode is active for this conversation",
+      details: "5",
+      hint: "Slow mode is on. Wait 5 more seconds.",
+    });
+    expect(error.code).toBe("SLOW_MODE_ACTIVE");
+    expect(error.message).toBe("Slow mode is on. You can send again in 5 seconds.");
+  });
+
+  it("singularizes the message for exactly one second remaining", () => {
+    const error = mapDatabaseError({ code: "WF430", details: "1" });
+    expect(error.message).toBe("Slow mode is on. You can send again in 1 second.");
+  });
+
+  it("serializes retryAfterSeconds for the client, unlike the anonymous WF429 path", () => {
+    const error = mapDatabaseError({ code: "WF430", details: "12", hint: "Slow mode is on. Wait 12 more seconds." });
+    expect(JSON.parse(JSON.stringify(error))).toEqual({
+      code: "SLOW_MODE_ACTIVE",
+      message: "Slow mode is on. You can send again in 12 seconds.",
+      retryAfterSeconds: 12,
+    });
+  });
+
+  it("degrades to a message with no specific number when the detail cannot be parsed, without throwing", () => {
+    const error = mapDatabaseError({ code: "WF430", details: undefined });
+    expect(error.code).toBe("SLOW_MODE_ACTIVE");
+    expect(error.message).toBe("Slow mode is on for this conversation. Please wait before sending again.");
+    expect(JSON.parse(JSON.stringify(error))).toEqual({
+      code: "SLOW_MODE_ACTIVE",
+      message: "Slow mode is on for this conversation. Please wait before sending again.",
+    });
+  });
+});

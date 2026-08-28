@@ -5,6 +5,7 @@ import {
   ChevronRight,
   LoaderCircle,
   Search,
+  Send,
   ShieldCheck,
   SlidersHorizontal,
   UserCog,
@@ -14,7 +15,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { setMemberPresetAction } from "../../app/actions/member-account-provisioning";
+import {
+  setMemberPresetAction,
+  setReportSendAnytimeAction,
+} from "../../app/actions/member-account-provisioning";
 import type {
   InternalMember,
   PermissionPresetGrant,
@@ -112,6 +116,26 @@ function blockedReason(
   return null;
 }
 
+/** Why "Send reports anytime" cannot be changed for this member here, or null when it can. */
+function blockedSendAnytimeReason(
+  member: InternalMember,
+  canManagePermissions: boolean,
+): string | null {
+  if (!canManagePermissions) {
+    return "You do not have permission to change this.";
+  }
+
+  if (member.is_self) {
+    return "You cannot change this for your own account.";
+  }
+
+  if (member.preset_key === "owner") {
+    return "Owner already sends reports anytime.";
+  }
+
+  return null;
+}
+
 type RoleRowAffordance = "view" | "select";
 
 /**
@@ -198,6 +222,38 @@ export function TeamRolesPanel({
   const [pendingPreset, setPendingPreset] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+
+  const [togglingSendAnytimeId, setTogglingSendAnytimeId] = useState<string | null>(null);
+  const [, startSendAnytimeToggle] = useTransition();
+
+  function toggleSendAnytime(member: InternalMember) {
+    if (togglingSendAnytimeId) return;
+    const nextAllowed = !member.report_send_anytime;
+
+    setTogglingSendAnytimeId(member.profile_id);
+    setNotice(null);
+
+    startSendAnytimeToggle(async () => {
+      const result = await setReportSendAnytimeAction({
+        profileId: member.profile_id,
+        allowed: nextAllowed,
+      });
+
+      setTogglingSendAnytimeId(null);
+
+      if (!result.ok) {
+        setNotice(result.error);
+        return;
+      }
+
+      setNotice(
+        nextAllowed
+          ? `${memberName(member)} can now send reports anytime.`
+          : `${memberName(member)} now follows the normal reporting window.`,
+      );
+      router.refresh();
+    });
+  }
 
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -419,6 +475,8 @@ export function TeamRolesPanel({
             <div className={styles.teamList}>
               {filteredTeam.map((member) => {
                 const blocked = blockedReason(member, canManagePermissions);
+                const sendAnytimeBlocked = blockedSendAnytimeReason(member, canManagePermissions);
+                const togglingThis = togglingSendAnytimeId === member.profile_id;
                 const name = memberName(member);
 
                 return (
@@ -441,6 +499,28 @@ export function TeamRolesPanel({
                       onClick={() => openRole(member.preset_key)}
                     >
                       {member.preset_name}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.sendAnytimeToggle}
+                      aria-pressed={member.report_send_anytime}
+                      aria-label={`Send reports anytime for ${name}: ${member.report_send_anytime ? "on" : "off"}`}
+                      title={
+                        sendAnytimeBlocked
+                          ?? "Allows this user to send monthly reports outside the normal reporting window."
+                      }
+                      disabled={sendAnytimeBlocked !== null || togglingThis}
+                      onClick={() => toggleSendAnytime(member)}
+                    >
+                      {togglingThis ? (
+                        <LoaderCircle size={13} aria-hidden="true" />
+                      ) : (
+                        <Send size={13} aria-hidden="true" />
+                      )}
+                      <span className={styles.roleChangeLabel}>
+                        Send anytime: {member.report_send_anytime ? "On" : "Off"}
+                      </span>
                     </button>
 
                     <button

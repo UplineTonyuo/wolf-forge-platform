@@ -47,6 +47,8 @@
 .navigationLink:focus-visible,
 .providerAction:focus-visible,
 .primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible,
 .textLink:focus-visible,
 .preferenceRow input:focus-visible {
   outline: 2px solid #000d51;
@@ -173,6 +175,18 @@
   color: #000d51;
 }
 
+.successNotice,
+.errorNotice {
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.successNotice { color: #195c39; background: #eaf5ee; }
+.errorNotice { color: #7b3828; background: #fbede7; }
+
 .providerList {
   display: grid;
   gap: 12px;
@@ -267,6 +281,7 @@
 
 .providerAction,
 .primaryButton,
+.secondaryButton,
 .textLink {
   min-height: 38px;
   display: inline-flex;
@@ -289,8 +304,10 @@
 .providerAction:hover, .primaryButton:hover { background: #091967; }
 .providerAction[aria-expanded="true"] { color: #000d51; background: #fff; }
 .primaryButton { padding: 0 16px; }
-.primaryButton svg { width: 14px; height: 14px; animation: spin 900ms linear infinite; }
-.primaryButton:disabled { opacity: .58; cursor: wait; }
+.primaryButton svg, .secondaryButton svg, .dangerButton svg { width: 14px; height: 14px; animation: spin 900ms linear infinite; }
+.primaryButton:disabled, .secondaryButton:disabled, .dangerButton:disabled { opacity: .58; cursor: wait; }
+.secondaryButton { padding: 0 14px; color: #000d51; background: #fff; }
+.secondaryButton:hover { background: #f6f4ee; }
 
 .permissionNote {
   padding-top: 6px;
@@ -326,6 +343,14 @@
   margin-top: 16px;
 }
 
+.connectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .dangerButton {
   min-height: 36px;
   padding: 0 13px;
@@ -340,7 +365,6 @@
 }
 
 .dangerButton:hover { background: #fff5f1; }
-.dangerButton:focus-visible { outline: 2px solid #000d51; outline-offset: 2px; }
 
 .preferenceRow {
   display: flex;
@@ -435,9 +459,10 @@
   .teamSummary { grid-template-columns: 1fr; }
   .formFooter { align-items: stretch; flex-direction: column; }
   .primaryButton { width: 100%; }
+  .connectionActions, .connectionActions form, .connectionActions button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .navigationLink { transition: none; }
-  .primaryButton svg { animation: none; }
+  .primaryButton svg, .secondaryButton svg, .dangerButton svg { animation: none; }
 }

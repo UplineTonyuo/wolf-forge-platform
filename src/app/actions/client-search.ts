@@ -10,6 +10,7 @@ import {
   type ClientSearchResponse,
 } from "../../domain/client-portal/search";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { getClientContext } from "../../lib/supabase/next-server";
 
 /**
@@ -58,6 +59,11 @@ export async function clientSearchAction(rawQuery: string): Promise<ClientSearch
 
   try {
     const context = await getClientContext();
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "search.client",
+      organizationId: context.user.companyId,
+    });
     const { modules } = context.user;
 
     const [projects, tickets, catalog] = await Promise.all([

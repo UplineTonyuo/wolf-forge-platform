@@ -2,6 +2,7 @@
 
 import { createStripeCustomerGateway } from "../../lib/stripe/stripe-customer-gateway";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { getInternalContext } from "../../lib/supabase/next-server";
 import { BillingRepository } from "../../repositories/billing-repository";
 import { BillingService } from "../../services/billing-service";
@@ -27,6 +28,12 @@ export async function ensureCompanyStripeCustomerAction(input: {
 }): Promise<EnsureStripeCustomerResult> {
   try {
     const context = await getInternalContext();
+
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "billing.stripe_customer",
+      organizationId: input.companyId,
+    });
 
     const billing = new BillingService({
       /*

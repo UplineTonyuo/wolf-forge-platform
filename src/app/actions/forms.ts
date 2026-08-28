@@ -12,6 +12,7 @@ import type {
 import { submitFormSchema } from "../../domain/forms/schema";
 import { parseInput } from "../../domain/shared";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { observeActionFailure } from "../../lib/security/observed-failure";
 import { createNextServerSupabaseClient, getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 import { FormRepository } from "../../repositories/form-repository";
 
@@ -105,6 +106,19 @@ export async function submitAssignedFormAction(input: SubmitFormInput): Promise<
   }
 }
 
+/**
+ * The one anonymous mutation surface in the product.
+ *
+ * `app_submit_form` is the only RPC holding an `anon` EXECUTE grant, and it is
+ * bounded by the Batch B2 identity → per-Form → global ceilings. Security C2-4
+ * makes those ceilings OBSERVABLE: a public Form being hammered previously
+ * produced a generic client message and no server record at all.
+ *
+ * The submitted answers are never logged. `form_version_id` is a validated UUID
+ * and is what makes "which Form is being hit" answerable; the values array —
+ * which is arbitrary respondent-authored text — is not passed to the logger on
+ * any branch.
+ */
 export async function submitPublicFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
   try {
     const parsed = parseInput(submitFormSchema, input);
@@ -112,7 +126,18 @@ export async function submitPublicFormAction(input: SubmitFormInput): Promise<Fo
     const submission = await repository.submit(parsed);
     return { ok: true, data: { id: submission.id } };
   } catch (error) {
-    return failure(error);
+    const safe = await observeActionFailure(error, {
+      action: "form.submit_public",
+      actorClass: "anonymous",
+      resourceType: "form_version",
+      /*
+       * Read defensively: a schema rejection throws before `parsed` exists, and
+       * an unvalidated value must never reach the record. The builder drops
+       * anything that is not a UUID regardless.
+       */
+      resourceId: typeof input?.form_version_id === "string" ? input.form_version_id : null,
+    });
+    return { ok: false, error: safe.message };
   }
 }
 

@@ -233,6 +233,7 @@ function documentFixture(
     status: "draft",
     sent_at: null,
     updated_at: "2026-08-20T10:00:00.000Z",
+    reporting_period_month: "2026-08-01",
     sections: [
       section("geo_ranking", "GEO Ranking", [
         { label: "junk removal", value: "RANK 2.12", url: null },

@@ -3,6 +3,7 @@
 import {
   getInternalContext,
 } from "../../lib/supabase/next-server";
+import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 
 
 export type GlobalSearchKind =
@@ -361,6 +362,11 @@ export async function globalSearchAction(
 
     const context =
       await getInternalContext();
+
+    await enforceServerCostLimit({
+      actorId: context.actor.id,
+      action: "search.global",
+    });
 
 
     const projectSelect =

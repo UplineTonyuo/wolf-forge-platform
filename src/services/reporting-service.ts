@@ -69,6 +69,11 @@ export class ReportingService {
     return this.dependencies.repository.sendDraft(parseInput(sendReportDraftSchema, input));
   }
 
+  /** Presentation-only; re-checks reports.send inside the database. */
+  getSendStatus(reportId: unknown) {
+    return this.dependencies.repository.getSendStatus(parseInput(uuidSchema, reportId));
+  }
+
   discardDraft(reportId: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.discardDraft(parseInput(uuidSchema, reportId));

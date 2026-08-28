@@ -46,6 +46,16 @@ export class ProfileService {
    * remove the object it replaced. At no point is the old avatar deleted before
    * the replacement is durable, so an interrupted save leaves the account with
    * its previous photo rather than none.
+   *
+   * Security C2-3 adds one step in front of all of it. `claimAvatarUpload()`
+   * carries the same authorization gate as the persist RPC plus a per-actor
+   * frequency bound, and it runs BEFORE `uploadAvatarObject`, because the
+   * storage write is the cost being defended: Storage accepts the object under
+   * its own owner-scoped policy without consulting any RPC, so a throttle
+   * placed after it would bound the bookkeeping and not the bytes.
+   *
+   * A throttled or unauthorized caller therefore leaves nothing behind at all
+   * — no object, no orphan, no cleanup to depend on.
    */
   async saveMineAvatar(
     input: { bytes: Uint8Array; declaredSize?: number },
@@ -59,6 +69,10 @@ export class ProfileService {
     );
 
     if (!validation.ok) return { ok: false, error: validation.error };
+
+    /* Refused here means no bytes are ever written. Throws, so the throttle
+     * reaches the caller as a RATE_LIMITED failure rather than a silent skip. */
+    await this.dependencies.repository.claimAvatarUpload();
 
     /*
      * The folder segment is the verified actor id, so the caller cannot aim the

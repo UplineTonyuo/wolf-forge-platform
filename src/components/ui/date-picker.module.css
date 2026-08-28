@@ -83,6 +83,21 @@
   transition: opacity 140ms ease, transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.calendarAbove {
+  top: auto;
+  bottom: calc(100% + 6px);
+  transform-origin: right bottom;
+  transform: translateY(3px) scale(0.985);
+}
+
+.calendarAbove.calendarOpen {
+  transform: translateY(0) scale(1);
+}
+
+.calendarAbove.calendarClosing {
+  transform: translateY(-2px) scale(0.985);
+}
+
 .calendarHeader {
   display: flex;
   align-items: center;
@@ -95,6 +110,48 @@
   color: #17203b;
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: -0.012em;
+}
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.shortcuts button {
+  min-height: 30px;
+  padding: 0 7px;
+  border: 1px solid #e2e5eb;
+  border-radius: 8px;
+  background: #fbfbfc;
+  color: #697185;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.shortcuts button:hover,
+.shortcuts button[aria-pressed="true"] {
+  border-color: rgb(0 13 81 / 24%);
+  background: rgb(0 13 81 / 5%);
+  color: var(--wf-navy);
+}
+
+.shortcuts button:active {
+  transform: scale(0.96);
+}
+
+.shortcuts button:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
 }
 
 .navButton {
@@ -163,12 +220,17 @@
   transition:
     background-color 120ms ease,
     color 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    transform 140ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .day:hover {
   background: #eef0f6;
   color: var(--wf-navy);
+}
+
+.day:active {
+  transform: scale(0.9);
 }
 
 .day:focus-visible {
@@ -208,10 +270,58 @@
   outline-offset: -1px;
 }
 
+.calendarFooter {
+  min-height: 34px;
+  margin-top: 10px;
+  padding-top: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #eceef2;
+}
+
+.calendarFooter span {
+  color: #747c8e;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.calendarFooter button {
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  color: var(--wf-navy);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendarFooter button:disabled {
+  color: #b7bcc6;
+  cursor: default;
+}
+
+.calendarFooter button:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .calendar,
   .calendarOpen,
   .calendarClosing {
     transition: none;
+  }
+
+  .shortcuts button,
+  .day {
+    transition-property: color, background-color, border-color;
+  }
+
+  .shortcuts button:active,
+  .day:active {
+    transform: none;
   }
 }

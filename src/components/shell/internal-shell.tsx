@@ -28,6 +28,7 @@ import type { InternalUser } from "../../lib/supabase/next-server";
 import { navigationForModules, routeIsCurrent } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
+import { TeamPresenceProvider } from "../team/team-presence-provider";
 
 const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
@@ -375,7 +376,8 @@ export function InternalShell({
 
 
   return (
-    <div className="internal-app">
+    <TeamPresenceProvider enabled={user.teamMessaging.use}>
+      <div className="internal-app">
       <a
         className="skip-link"
         href="#main-content"
@@ -456,6 +458,7 @@ export function InternalShell({
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </TeamPresenceProvider>
   );
 }
