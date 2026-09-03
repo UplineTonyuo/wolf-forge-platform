@@ -228,16 +228,37 @@ describe("security automation is configured (C1)", () => {
     expect(dependabot).toContain("version-update:semver-major");
   });
 
-  it("runs the audit, the secret scan over full history, and the control suites in CI", () => {
+  it("runs independent compile, lint, test, database, dependency, and secret gates", () => {
     const workflow = read(".github/workflows/security.yml");
+    const vitestConfig = read("vitest.config.ts");
+    const packageJson = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
 
-    expect(workflow).toContain("npm audit --omit=dev --audit-level=high");
-    expect(workflow).toContain("gitleaks");
+    for (const job of ["typecheck:", "lint:", "tests:", "database:", "dependencies:", "secrets:"]) {
+      expect(workflow).toContain(job);
+    }
+    expect(workflow).not.toContain("continue-on-error");
+
+    expect(workflow).toContain("npx next typegen && npm run typecheck");
+    expect(workflow).toContain("npm run lint");
+    // The full Vitest discovery pattern is the security-test inventory. CI
+    // must not return to a hand-maintained list of a few named test files.
+    expect(workflow).toContain("run: npm test");
+    expect(workflow).not.toContain("src/tests/");
+    expect(vitestConfig).toContain('src/tests/**/*.test.ts');
+    expect(vitestConfig).toContain('src/tests/**/*.test.tsx');
+
+    expect(workflow).toContain("npx supabase start --yes");
+    expect(workflow).toContain("npm run test:db");
+    expect(packageJson.scripts["test:db"]).toContain("--local");
+    expect(packageJson.scripts["test:db"]).not.toContain("--linked");
+
+    expect(workflow).toContain("npm run audit:deps");
+    expect(workflow).toContain("ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb");
+    expect(workflow).toContain("git --redact --no-banner --no-color --verbose /repo");
     // A secret deleted in a later commit is still published; depth 0 is required.
     expect(workflow).toContain("fetch-depth: 0");
+    expect(workflow).not.toContain("--log-opts");
     expect(workflow).toContain("npm run security:secrets");
-    expect(workflow).toContain("src/tests/security-controls.test.ts");
-    expect(workflow).toContain("src/tests/auth-cookie-policy.test.ts");
   });
 
   it("allows only pinned, reasoned gitleaks suppressions", () => {
