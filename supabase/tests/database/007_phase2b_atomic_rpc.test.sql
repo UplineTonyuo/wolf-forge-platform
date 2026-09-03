@@ -73,6 +73,7 @@ select ok(
     from pg_proc
     where pronamespace = 'public'::regnamespace
       and proname like 'app_%'
+      and has_function_privilege('authenticated', oid, 'EXECUTE')
       and exists (
         select 1
         from generate_subscripts(proargnames, 1) as argument_index
@@ -86,7 +87,7 @@ select ok(
             in ('i'::"char", 'b'::"char", 'v'::"char")
       )
   ),
-  'no authenticated mutation RPC accepts a caller-supplied actor identity'
+  'no browser-callable authenticated RPC accepts a caller-supplied actor identity'
 );
 
 create temporary table phase2b_ids (

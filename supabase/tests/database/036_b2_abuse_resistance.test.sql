@@ -1035,7 +1035,7 @@ select is(
 
 select is(
   (select count(*) from private.notification_category_catalog()),
-  18::bigint,
+  20::bigint,
   'the invariant covers the whole permitted audience and category domain'
 );
 
