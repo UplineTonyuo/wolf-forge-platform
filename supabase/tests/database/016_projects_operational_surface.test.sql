@@ -1,6 +1,6 @@
 begin;
 
-select plan(39);
+select plan(40);
 
 -- -----------------------------------------------------------------------------
 -- Fixtures
@@ -426,6 +426,13 @@ select throws_ok(
   '42501',
   'project access is denied',
   'a staff member cannot archive a project outside their assignment scope'
+);
+
+select throws_ok(
+  $$select public.app_archive_order((select order_c from projects_fixture))$$,
+  '42501',
+  'project access is denied',
+  'a staff member cannot read an already archived project outside their assignment scope'
 );
 
 select throws_ok(

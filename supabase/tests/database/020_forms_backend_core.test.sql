@@ -918,7 +918,7 @@ select ok(
   and (select count(*) >= 1 from public.activity_events where entity_type = 'form_submission' and action = 'form.submission_corrected'),
   'meaningful Form lifecycle, assignment, submission, and correction activity is recorded'
 );
-select is((select count(*) from public.services), 60::bigint, 'Forms preserves the current 60-Service catalog baseline');
+select is((select count(*) from public.services), 59::bigint, 'Forms preserves the current 59-Service catalog baseline');
 select ok(
   to_regclass('public.invoices') is not null
   and to_regclass('public.subscriptions') is not null

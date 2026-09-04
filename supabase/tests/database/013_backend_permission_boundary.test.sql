@@ -1,6 +1,6 @@
 begin;
 
-select plan(49);
+select plan(56);
 
 -- -----------------------------------------------------------------------------
 -- Structure and least-privilege function surface
@@ -220,6 +220,12 @@ values
     true
   );
 
+-- Give the first company a known balance so the two unauthorized debit probes
+-- below straddle the threshold that used to leak through the RPC.
+update public.company_wallets
+set balance_cents = 500
+where company_id = '36000000-0000-0000-0000-000000000001';
+
 insert into public.orders (
   id,
   company_id,
@@ -296,6 +302,29 @@ select is(
   (public.app_get_company_wallet('36000000-0000-0000-0000-000000000002')).company_id,
   '36000000-0000-0000-0000-000000000002'::uuid,
   'authorized admin can read client-private wallet data'
+);
+
+select ok(
+  (public.app_archive_contact('46000000-0000-0000-0000-000000000002')).archived_at is not null,
+  'an authorized admin can archive a private contact'
+);
+
+select is(
+  (public.app_archive_contact('46000000-0000-0000-0000-000000000002')).id,
+  '46000000-0000-0000-0000-000000000002'::uuid,
+  'an authorized admin receives the same contact on an idempotent archive replay'
+);
+
+select is(
+  (
+    select count(*)
+    from public.activity_events
+    where entity_type = 'client_contact'
+      and entity_id = '46000000-0000-0000-0000-000000000002'
+      and action = 'contact.archived'
+  ),
+  1::bigint,
+  'an authorized contact archive replay writes no duplicate activity event'
 );
 
 reset role;
@@ -388,6 +417,13 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$select public.app_archive_contact('46000000-0000-0000-0000-000000000002')$$,
+  '42501',
+  'permission denied: client_private.manage',
+  'a member without client-private access cannot read an already archived contact'
+);
+
+select throws_ok(
   $$
     select public.app_adjust_company_balance(
       '86000000-0000-0000-0000-000000000002',
@@ -399,6 +435,48 @@ select throws_ok(
   '42501',
   'permission denied: client_private.manage',
   'normal member cannot use the wallet SECURITY DEFINER RPC to escalate'
+);
+
+select throws_ok(
+  $$
+    select public.app_adjust_company_balance(
+      '86000000-0000-0000-0000-000000000003',
+      '36000000-0000-0000-0000-000000000001',
+      -100,
+      'forged affordable debit'
+    )
+  $$,
+  '42501',
+  'permission denied: client_private.manage',
+  'an unauthorized debit below the wallet balance stops at authorization'
+);
+
+select throws_ok(
+  $$
+    select public.app_adjust_company_balance(
+      '86000000-0000-0000-0000-000000000004',
+      '36000000-0000-0000-0000-000000000001',
+      -1000,
+      'forged excessive debit'
+    )
+  $$,
+  '42501',
+  'permission denied: client_private.manage',
+  'an unauthorized debit above the wallet balance returns the same authorization result'
+);
+
+select throws_ok(
+  $$
+    select public.app_adjust_company_balance(
+      '86000000-0000-0000-0000-000000000005',
+      '36000000-0000-0000-0000-000000000099',
+      -100,
+      'forged missing-company debit'
+    )
+  $$,
+  '42501',
+  'permission denied: client_private.manage',
+  'an unauthorized missing-company probe returns the same authorization result'
 );
 
 select throws_ok(

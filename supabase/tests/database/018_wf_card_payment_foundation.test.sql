@@ -8,13 +8,13 @@ select plan(51);
 
 select ok(to_regclass('public.wf_card_memberships') is not null, 'WF Card membership table exists');
 select ok(to_regclass('public.wf_card_settings') is not null, 'WF Card authoritative settings table exists');
-select ok(to_regprocedure('public.app_pay_invoice_with_wallet(uuid,uuid)') is not null, 'client wallet payment RPC exists');
+select ok(to_regprocedure('public.app_pay_invoice_with_wallet(uuid,uuid,text)') is not null, 'client wallet payment RPC exists');
 select ok(to_regprocedure('private.settle_invoice_payment(uuid,uuid,uuid,bigint,text,text,text,text)') is not null, 'shared private invoice settlement routine exists');
 select is((select membership_price_cents from public.wf_card_settings where singleton), 25900::bigint, '$259 membership price is centralized as 25900 cents');
 select is((select membership_currency from public.wf_card_settings where singleton), 'USD', 'membership price currency is centralized');
 select ok(
-  not has_function_privilege('anon', 'public.app_pay_invoice_with_wallet(uuid,uuid)', 'EXECUTE')
-  and has_function_privilege('authenticated', 'public.app_pay_invoice_with_wallet(uuid,uuid)', 'EXECUTE'),
+  not has_function_privilege('anon', 'public.app_pay_invoice_with_wallet(uuid,uuid,text)', 'EXECUTE')
+  and has_function_privilege('authenticated', 'public.app_pay_invoice_with_wallet(uuid,uuid,text)', 'EXECUTE'),
   'only authenticated callers may execute the wallet payment RPC'
 );
 select ok(
@@ -28,8 +28,8 @@ select ok(
   'browser callers cannot directly activate membership or write ledgers'
 );
 select ok(
-  pg_get_function_arguments('public.app_pay_invoice_with_wallet(uuid,uuid)'::regprocedure) not ilike '%actor%'
-  and pg_get_function_arguments('public.app_pay_invoice_with_wallet(uuid,uuid)'::regprocedure) not ilike '%company%',
+  pg_get_function_arguments('public.app_pay_invoice_with_wallet(uuid,uuid,text)'::regprocedure) not ilike '%actor%'
+  and pg_get_function_arguments('public.app_pay_invoice_with_wallet(uuid,uuid,text)'::regprocedure) not ilike '%company%',
   'wallet payment accepts no caller-supplied actor or company identity'
 );
 
@@ -240,7 +240,7 @@ select ok(
   'invoice and wallet audit events carry correct client attribution'
 );
 select ok(
-  pg_get_functiondef('public.app_pay_invoice_with_wallet(uuid,uuid)'::regprocedure) ilike '%find_create_request%'
+  pg_get_functiondef('public.app_pay_invoice_with_wallet(uuid,uuid,text)'::regprocedure) ilike '%find_create_request%'
   and pg_get_functiondef('private.find_create_request(uuid,text,uuid,jsonb)'::regprocedure) ilike '%pg_advisory_xact_lock%'
   and exists (
     select 1 from pg_catalog.pg_constraint
@@ -251,16 +251,15 @@ select ok(
 );
 
 -- -----------------------------------------------------------------------------
--- Deterministic failures roll back every ledger
+-- Membership-free settlement and deterministic failures
 -- -----------------------------------------------------------------------------
 
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '19000000-0000-0000-0000-000000000002';
-select throws_ok(
+select lives_ok(
   $$select * from public.app_pay_invoice_with_wallet('89000000-0000-0000-0000-000000000002', '49000000-0000-0000-0000-000000000002')$$,
-  'P0001', 'WF_CARD_MEMBERSHIP_REQUIRED',
-  'non-member cannot spoof or use WF Card payment'
+  'a client can settle its own invoice from Wolf Forge Balance without WF Card membership'
 );
 select throws_ok(
   $$select * from public.app_pay_invoice_with_wallet('89000000-0000-0000-0000-000000000003', '49000000-0000-0000-0000-000000000001')$$,
@@ -268,8 +267,8 @@ select throws_ok(
   'Client B cannot pay Company A invoice'
 );
 reset role;
-select is((select balance_cents from public.company_wallets where company_id = '39000000-0000-0000-0000-000000000002'), 80000::bigint, 'failed non-member and cross-company calls do not debit Company B wallet');
-select is((select count(*) from public.invoice_payments where invoice_id = '49000000-0000-0000-0000-000000000002'), 0::bigint, 'failed non-member payment creates no invoice payment');
+select is((select balance_cents from public.company_wallets where company_id = '39000000-0000-0000-0000-000000000002'), 58000::bigint, 'membership-free settlement debits Company B only for its own invoice');
+select is((select count(*) from public.invoice_payments where invoice_id = '49000000-0000-0000-0000-000000000002'), 1::bigint, 'membership-free settlement records exactly one invoice payment');
 
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';

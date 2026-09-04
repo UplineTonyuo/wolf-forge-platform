@@ -140,17 +140,17 @@ select is(
 );
 
 select ok(
-  not has_function_privilege('anon', 'public.app_purchase_service_with_balance(uuid, uuid)', 'EXECUTE'),
+  not has_function_privilege('anon', 'public.app_purchase_service_with_balance(uuid, uuid, text)', 'EXECUTE'),
   'anon cannot purchase'
 );
 
 select ok(
-  not has_function_privilege('service_role', 'public.app_purchase_service_with_balance(uuid, uuid)', 'EXECUTE'),
+  not has_function_privilege('service_role', 'public.app_purchase_service_with_balance(uuid, uuid, text)', 'EXECUTE'),
   'service_role cannot purchase'
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.app_purchase_service_with_balance(uuid, uuid)', 'EXECUTE'),
+  has_function_privilege('authenticated', 'public.app_purchase_service_with_balance(uuid, uuid, text)', 'EXECUTE'),
   'an authenticated session may call the purchase boundary'
 );
 

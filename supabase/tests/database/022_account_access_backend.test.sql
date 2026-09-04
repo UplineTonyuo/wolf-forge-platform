@@ -271,12 +271,21 @@ select is(
 
 select is(
   (
-    select count(*)
+    select array_agg(module_key order by module_key)
     from public.permission_modules
     where account_class = 'client'
   ),
-  6::bigint,
-  'the client portal exposes exactly the existing portal modules'
+  array[
+    'portal_dashboard',
+    'portal_forms',
+    'portal_invoices',
+    'portal_projects',
+    'portal_reporting',
+    'portal_store',
+    'portal_subscriptions',
+    'portal_tickets'
+  ]::text[],
+  'the client portal exposes exactly the registered portal modules'
 );
 
 -- =============================================================================
