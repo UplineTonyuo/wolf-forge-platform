@@ -1,6 +1,6 @@
 begin;
 
-select plan(21);
+select plan(25);
 
 -- =============================================================================
 -- STRUCTURE
@@ -22,6 +22,18 @@ select has_function(
   'public',
   'app_list_permission_preset_grants',
   'the preset grant read boundary exists'
+);
+
+select has_function(
+  'public',
+  'app_list_operational_assignees',
+  'the narrow operational assignee read model exists'
+);
+
+select is(
+  pg_get_function_result('public.app_list_operational_assignees()'::regprocedure),
+  'TABLE(profile_id uuid, display_name text)',
+  'the operational assignee read model exposes no role, company, archive, or avatar-storage fields'
 );
 
 -- =============================================================================
@@ -111,6 +123,23 @@ set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '40000000-0000-0000-0000-000000000003';
 
+select is(
+  (
+    select count(*)
+    from public.app_list_operational_assignees()
+    where profile_id in (
+      '40000000-0000-0000-0000-000000000001',
+      '40000000-0000-0000-0000-000000000002',
+      '40000000-0000-0000-0000-000000000003',
+      '40000000-0000-0000-0000-000000000004',
+      '40000000-0000-0000-0000-000000000005',
+      '40000000-0000-0000-0000-000000000006'
+    )
+  ),
+  4::bigint,
+  'operational pickers retain active internal names while excluding clients and archived profiles'
+);
+
 select throws_ok(
   $$ select * from public.app_list_internal_members() $$,
   '42501',
@@ -133,6 +162,13 @@ select throws_ok(
 );
 
 set local "request.jwt.claim.sub" = '40000000-0000-0000-0000-000000000005';
+
+select throws_ok(
+  $$select * from public.app_list_operational_assignees()$$,
+  '42501',
+  'verified internal authentication is required',
+  'a client account cannot invoke the internal operational assignee projection'
+);
 
 select throws_ok(
   $$ select * from public.app_list_internal_members() $$,
