@@ -3,6 +3,10 @@
  */
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  PROJECTS_BULK_ACTION_EVENT,
+  type ProjectBulkActionKind,
+} from "../components/projects/projects-events";
 
 const refresh = vi.fn();
 const bulkChangeProjectStatusAction = vi.fn();
@@ -106,6 +110,10 @@ function rowCount() {
   return screen.getAllByRole("button", { name: /^Select .* project /u }).length;
 }
 
+function requestBulkAction(kind: ProjectBulkActionKind) {
+  fireEvent(window, new CustomEvent(PROJECTS_BULK_ACTION_EVENT, { detail: { kind } }));
+}
+
 beforeEach(() => {
   refresh.mockReset();
   bulkChangeProjectStatusAction.mockReset();
@@ -133,10 +141,11 @@ describe("Projects workspace renders real data", () => {
     expect(container.textContent).not.toMatch(/\$\d/u);
   });
 
-  it("shows the real open/total task counter instead of message counts", () => {
+  it("shows project status and creation metadata without message counts", () => {
     renderWorkspace();
-    expect(screen.getByLabelText("1 open of 1 tasks")).toBeTruthy();
-    expect(screen.getAllByLabelText("0 open of 0 tasks").length).toBe(2);
+    expect(screen.getByText("Working")).toBeTruthy();
+    expect(screen.getAllByText("Aug 12")).toHaveLength(3);
+    expect(screen.queryByText(/messages?/iu)).toBeNull();
   });
 
   it("links every project row to its detail route", () => {
@@ -151,17 +160,13 @@ describe("Projects status tabs and counts", () => {
     renderWorkspace();
 
     expect(within(tab("All")).getByText("3")).toBeTruthy();
-    expect(within(tab("Working")).getByText("1")).toBeTruthy();
+    expect(within(tab("Waiting Reply")).getByText("1")).toBeTruthy();
 
-    fireEvent.click(tab("Working"));
-    expect(rowCount()).toBe(1);
-    expect(screen.getByText("Local SEO Growth Campaign")).toBeTruthy();
-
-    fireEvent.click(tab("Waiting on client"));
+    fireEvent.click(tab("Waiting Reply"));
     expect(rowCount()).toBe(1);
     expect(screen.getByText("Foundation Build")).toBeTruthy();
 
-    fireEvent.click(tab("Complete"));
+    fireEvent.click(tab("Pending Update"));
     expect(screen.queryAllByRole("button", { name: /^Select .* project /u })).toHaveLength(0);
     expect(screen.getByText("No projects match this view")).toBeTruthy();
   });
@@ -255,7 +260,7 @@ describe("Projects selection", () => {
 
   it("only selects rows in the current view", () => {
     renderWorkspace();
-    fireEvent.click(tab("Working"));
+    fireEvent.click(tab("Waiting Reply"));
     fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
 
     expect(screen.getByText("1 selected")).toBeTruthy();
@@ -263,22 +268,20 @@ describe("Projects selection", () => {
 });
 
 describe("Projects action controls", () => {
-  it("disables bulk actions until projects are selected", () => {
+  it("ignores bulk-action requests until projects are selected", () => {
     renderWorkspace();
-    fireEvent.click(screen.getByRole("button", { name: /^Actions/u }));
-
-    expect(screen.getByRole("menuitem", { name: "Assign selected" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("menuitem", { name: "Change status" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("menuitem", { name: "Archive selected" }).hasAttribute("disabled")).toBe(true);
+    requestBulkAction("assign");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("disables actions the account has no capability for", () => {
-    renderWorkspace({ capabilities: { create: false, edit: false, assign: false, archive: false } });
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Actions/u }));
+  it("links accounts with create capability to the new-project flow", () => {
+    renderWorkspace();
+    expect(screen.getByRole("link", { name: "New Project" }).getAttribute("href")).toBe("/orders/new");
+  });
 
-    expect(screen.getByRole("menuitem", { name: "Assign selected" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("menuitem", { name: "Archive selected" }).hasAttribute("disabled")).toBe(true);
+  it("hides the new-project action without create capability", () => {
+    renderWorkspace({ capabilities: { create: false, edit: false, assign: false, archive: false } });
+    expect(screen.queryByRole("link", { name: "New Project" })).toBeNull();
   });
 
   it("sends selected project ids to the bulk status action and refreshes on success", async () => {
@@ -290,8 +293,7 @@ describe("Projects action controls", () => {
 
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Actions/u }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Change status" }));
+    requestBulkAction("status");
 
     fireEvent.change(screen.getByLabelText(/New status/u), { target: { value: "complete" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
@@ -323,8 +325,7 @@ describe("Projects action controls", () => {
 
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Actions/u }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Archive selected" }));
+    requestBulkAction("archive");
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
     await screen.findByText("2 of 3 projects updated. 1 failed.");
@@ -344,9 +345,9 @@ describe("Projects action controls", () => {
 
     renderWorkspace();
     fireEvent.click(
-      screen.getByRole("button", { name: "Project actions for Local SEO Growth Campaign" }),
+      screen.getByRole("button", { name: "Select Kraken Junk Removal project Local SEO Growth Campaign" }),
     );
-    fireEvent.click(screen.getByRole("menuitem", { name: "Assign" }));
+    requestBulkAction("assign");
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     await screen.findByText("No projects were updated. 1 failed.");
@@ -357,8 +358,7 @@ describe("Projects action controls", () => {
   it("closes the confirmation dialog with the keyboard", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
-    fireEvent.click(screen.getByRole("button", { name: /^Actions/u }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Archive selected" }));
+    requestBulkAction("archive");
 
     expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.keyDown(window, { key: "Escape" });

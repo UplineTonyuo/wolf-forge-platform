@@ -116,7 +116,12 @@ export function buildSecurityHeaders(
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     {
       key: "Permissions-Policy",
-      value: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+      // microphone=(self): the first-party Team voice recorder calls
+      // getUserMedia({ audio: true }) from this app's own top-level page.
+      // An empty `()` allowlist denies a feature to the page itself, not just
+      // cross-origin frames — `(self)` keeps that same third-party denial
+      // while unblocking the one feature this app actually uses.
+      value: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
     },
     { key: "X-DNS-Prefetch-Control", value: "off" },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },

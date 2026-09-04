@@ -96,13 +96,13 @@ describe("Forms admin list and creation", () => {
     expect(vi.mocked(actions.createFormAction).mock.calls[0]![0]).toMatchObject({ form_type: "onboarding", canonical_key: "client-onboarding", definition: { visibility: "assigned" } });
   });
 
-  it("requires a real Service before creating an Intake draft", () => {
+  it("requires a real Service before creating an Intake draft", async () => {
     render(<CreateForm services={[service]} />);
     fireEvent.click(screen.getByRole("button", { name: /Intake Forms/ }));
     fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Project Intake" } });
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Intake Service"), { target: { value: "SEO" } });
-    fireEvent.click(screen.getByRole("option", { name: "SEO Strategy" }));
+    fireEvent.click(await screen.findByRole("option", { name: "SEO Strategy" }));
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeEnabled();
   });
 });

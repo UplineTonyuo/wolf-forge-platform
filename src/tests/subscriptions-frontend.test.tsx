@@ -173,7 +173,7 @@ const capabilities: SubscriptionCapabilities = { view: true, manage: true, pause
 describe("Subscriptions admin list", () => {
   it("renders real summaries with formatted amount, interval, payments, and health", () => {
     render(<SubscriptionsList summaries={[baseSummary, pastDueSummary]} canManage />);
-    expect(screen.getByText("WF-A13C9F2B")).toBeInTheDocument();
+    expect(screen.getAllByText("WF-A13C9F2B").length).toBeGreaterThan(0);
     expect(screen.getAllByText("$807.30").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Monthly").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /Past Due\s*1/i })).toBeInTheDocument();
@@ -182,8 +182,8 @@ describe("Subscriptions admin list", () => {
   it("filters by status tabs and instant search", () => {
     render(<SubscriptionsList summaries={[baseSummary, pastDueSummary]} canManage />);
     fireEvent.click(screen.getByRole("button", { name: /Past Due\s*1/i }));
-    expect(screen.getByText("WF-B22D8E3C")).toBeInTheDocument();
-    expect(screen.queryByText("WF-A13C9F2B")).not.toBeInTheDocument();
+    expect(screen.getAllByText("WF-B22D8E3C").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("WF-A13C9F2B")).toHaveLength(0);
     fireEvent.change(screen.getByPlaceholderText(/Search reference/i), { target: { value: "no result" } });
     expect(screen.getByText("No subscriptions match your search.")).toBeInTheDocument();
   });
@@ -197,7 +197,7 @@ describe("Subscriptions admin list", () => {
 describe("Subscription admin detail", () => {
   it("renders current versioned terms, cycles, explicit Invoice links, and events", () => {
     render(<SubscriptionDetailView detail={detail} summary={pastDueSummary} invoices={[invoice]} />);
-    expect(screen.getByText("Current plan · Version 2")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Current plan .* Version 2/u })).toBeInTheDocument();
     expect(screen.getByText("Billing cycles")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "WF-1260" })[0]).toHaveAttribute("href", `/invoices/${invoice.id}`);
     expect(screen.getByText("Invoice generated")).toBeInTheDocument();

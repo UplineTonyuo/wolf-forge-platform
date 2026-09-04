@@ -113,8 +113,8 @@ async function serverVerifiedActor(): Promise<VerifiedActor> {
     "test-access-token",
   );
 
-  vi.spyOn(client.auth, "getUser").mockResolvedValue({
-    data: { user: { id: profileId } },
+  vi.spyOn(client.auth, "getClaims").mockResolvedValue({
+    data: { claims: { sub: profileId } },
     error: null,
   } as never);
 
