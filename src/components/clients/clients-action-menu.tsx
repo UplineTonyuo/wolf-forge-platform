@@ -11,6 +11,7 @@ import Link from "next/link";
 import {
   useEffect,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   createPortal,
@@ -38,18 +39,18 @@ export function ClientsActionMenu({
 }: {
   displayName?: string | null;
 }) {
-  const [mounted, setMounted] =
-    useState(false);
+  const mounted =
+    useSyncExternalStore(
+      () => () => {},
+      () => true,
+      () => false,
+    );
 
   const [open, setOpen] =
     useState(false);
 
   const firstName =
     getFirstName(displayName);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!open) {

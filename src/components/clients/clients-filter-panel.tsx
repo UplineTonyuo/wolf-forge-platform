@@ -16,6 +16,7 @@ import {
 import {
   FormEvent,
   ReactNode,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -299,16 +300,32 @@ export function ClientsFilterPanel({
       search: currentQuery,
     });
 
-  useEffect(() => {
+  const [
+    lastCurrentQuery,
+    setLastCurrentQuery,
+  ] = useState(currentQuery);
+
+  if (
+    lastCurrentQuery !==
+    currentQuery
+  ) {
+    setLastCurrentQuery(
+      currentQuery,
+    );
     setDraft((current) => ({
       ...current,
       search: currentQuery,
     }));
-  }, [currentQuery]);
+  }
+
+  const closePanel =
+    useCallback(() => {
+      setOpenSelect(null);
+      setOpen(false);
+    }, []);
 
   useEffect(() => {
     if (!open) {
-      setOpenSelect(null);
       return;
     }
 
@@ -321,7 +338,7 @@ export function ClientsFilterPanel({
           event.target as Node,
         )
       ) {
-        setOpen(false);
+        closePanel();
       }
     }
 
@@ -332,7 +349,7 @@ export function ClientsFilterPanel({
         if (openSelect) {
           setOpenSelect(null);
         } else {
-          setOpen(false);
+          closePanel();
         }
       }
     }
@@ -358,7 +375,11 @@ export function ClientsFilterPanel({
         escape,
       );
     };
-  }, [open, openSelect]);
+  }, [
+    closePanel,
+    open,
+    openSelect,
+  ]);
 
   const activeCount =
     useMemo(() => {
@@ -449,8 +470,7 @@ export function ClientsFilterPanel({
      * connected.
      */
 
-    setOpenSelect(null);
-    setOpen(false);
+    closePanel();
 
     const query =
       next.toString();
@@ -485,12 +505,13 @@ export function ClientsFilterPanel({
         }
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() =>
-          setOpen(
-            (current) =>
-              !current,
-          )
-        }
+        onClick={() => {
+          if (open) {
+            closePanel();
+          } else {
+            setOpen(true);
+          }
+        }}
       >
         <SlidersHorizontal
           size={16}
@@ -547,9 +568,7 @@ export function ClientsFilterPanel({
             type="button"
             className={styles.close}
             aria-label="Close filter"
-            onClick={() =>
-              setOpen(false)
-            }
+            onClick={closePanel}
           >
             <X size={17} />
           </button>
