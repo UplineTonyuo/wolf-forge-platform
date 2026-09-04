@@ -153,7 +153,10 @@ describe("both write paths are wired through it", () => {
 
     expect(nextServer).toContain('from "./auth-cookie-options"');
     expect(nextServer).toContain("hardenAuthCookieOptions(options)");
-    expect(nextServer.match(/setAll:/g)).toHaveLength(1);
+    const cookieWriteAdapters = nextServer.match(/setAll:/g) ?? [];
+    const hardenedCookieWrites = nextServer.match(/hardenAuthCookieOptions\(options\)/g) ?? [];
+    expect(cookieWriteAdapters.length).toBeGreaterThan(0);
+    expect(hardenedCookieWrites).toHaveLength(cookieWriteAdapters.length);
     expect(nextServer).not.toMatch(/cookieStore\.set\(name,\s*value,\s*options\)/);
   });
 
