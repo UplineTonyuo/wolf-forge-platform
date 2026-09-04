@@ -61,9 +61,18 @@ describe("security response headers (C1)", () => {
     const permissions = headerValue(buildSecurityHeaders(productionEnvironment), "Permissions-Policy");
 
     // An empty allowlist `()` denies the feature to the page and every frame.
-    for (const feature of ["camera", "microphone", "geolocation", "payment", "usb"]) {
+    for (const feature of ["camera", "geolocation", "payment", "usb"]) {
       expect(permissions).toContain(`${feature}=()`);
     }
+  });
+
+  it("allows microphone for this app's own page only, for the first-party Team voice recorder", () => {
+    const permissions = headerValue(buildSecurityHeaders(productionEnvironment), "Permissions-Policy");
+
+    // `(self)` still denies every cross-origin/third-party use; it only
+    // unblocks the same-origin getUserMedia() call the voice recorder makes.
+    expect(permissions).toContain("microphone=(self)");
+    expect(permissions).not.toContain("microphone=()");
   });
 
   it("applies the whole set to every path through one rule", () => {
