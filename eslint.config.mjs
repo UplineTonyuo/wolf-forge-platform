@@ -14,6 +14,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".agents/**",
+    ".claude/**",
     ".codex/**",
     "dist/**",
     "coverage/**",
