@@ -108,13 +108,17 @@ describe("Ticket detail and actions", () => {
     const { rerender } = render(<TicketAdminControls ticketId={ticket.ticket_id} status="open" priority="high" assigneeId={null} assignees={[{ id: "staff-a", displayName: "William" }]} capabilities={capabilities} />);
     fireEvent.click(screen.getByRole("button", { name: "Resolve" }));
     await waitFor(() => expect(actions.updateTicketStatusAction).toHaveBeenCalledWith(ticket.ticket_id, "resolved"));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
     fireEvent.change(screen.getByRole("combobox", { name: "Priority" }), { target: { value: "urgent" } });
     await waitFor(() => expect(actions.updateTicketPriorityAction).toHaveBeenCalledWith(ticket.ticket_id, "urgent"));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
     fireEvent.change(screen.getByRole("combobox", { name: "Assigned Wolf Forge member" }), { target: { value: "staff-a" } });
     await waitFor(() => expect(actions.assignTicketAction).toHaveBeenCalledWith(ticket.ticket_id, "staff-a"));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(3));
     rerender(<TicketAdminControls ticketId={ticket.ticket_id} status="closed" priority="high" assigneeId={null} assignees={[]} capabilities={capabilities} />);
-    fireEvent.click(screen.getByRole("button", { name: "Reopen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reopen" }));
     await waitFor(() => expect(actions.updateTicketStatusAction).toHaveBeenCalledWith(ticket.ticket_id, "open"));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(4));
   });
 });
 
