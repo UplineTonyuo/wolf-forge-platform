@@ -89,27 +89,19 @@ export function WolfForgeWalletCard({
         "(prefers-reduced-motion: reduce)",
       ).matches;
 
-    if (
-      reducedMotion ||
-      from === to
-    ) {
-      setDisplayedBalance(to);
-      setRolling(false);
-      return;
-    }
-
+    let active = true;
     let animationFrame = 0;
 
     const duration = 1650;
-    const startedAt =
-      performance.now();
-
-    setDisplayedBalance(from);
-    setRolling(true);
 
     const animate = (
       now: number,
+      startedAt: number,
     ) => {
+      if (!active) {
+        return;
+      }
+
       const progress = Math.min(
         (now - startedAt) /
           duration,
@@ -133,7 +125,11 @@ export function WolfForgeWalletCard({
       if (progress < 1) {
         animationFrame =
           requestAnimationFrame(
-            animate,
+            (nextNow) =>
+              animate(
+                nextNow,
+                startedAt,
+              ),
           );
 
         return;
@@ -143,12 +139,44 @@ export function WolfForgeWalletCard({
       setRolling(false);
     };
 
-    animationFrame =
-      requestAnimationFrame(
-        animate,
-      );
+    void Promise.resolve().then(
+      () => {
+        if (!active) {
+          return;
+        }
+
+        if (
+          reducedMotion ||
+          from === to
+        ) {
+          setDisplayedBalance(
+            to,
+          );
+          setRolling(false);
+          return;
+        }
+
+        const startedAt =
+          performance.now();
+
+        setDisplayedBalance(
+          from,
+        );
+        setRolling(true);
+
+        animationFrame =
+          requestAnimationFrame(
+            (nextNow) =>
+              animate(
+                nextNow,
+                startedAt,
+              ),
+          );
+      },
+    );
 
     return () => {
+      active = false;
       cancelAnimationFrame(
         animationFrame,
       );

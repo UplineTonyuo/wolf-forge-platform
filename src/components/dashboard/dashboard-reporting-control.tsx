@@ -3,7 +3,7 @@
 import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { DashboardPreset } from "../../domain/dashboard/schema";
 import {
@@ -78,7 +78,10 @@ export function DashboardReportingControl({
     originY: "top" | "bottom";
   }>({ top: 0, right: 0, sheet: false, originX: 0, originY: "top" });
 
-  const activeRange = preset === "custom_range" && from && to ? { from, to } : null;
+  const activeRange = useMemo(
+    () => (preset === "custom_range" && from && to ? { from, to } : null),
+    [preset, from, to],
+  );
   const label = reportingButtonLabel({ preset, from, to, date });
 
   const currentYear = Number(businessToday.slice(0, 4));
@@ -124,7 +127,7 @@ export function DashboardReportingControl({
       originX: Math.max(0, popoverRight - triggerCentreX),
       originY: top >= rect.bottom ? "top" : "bottom",
     });
-  }, []);
+  }, [setPlacement]);
 
   /*
    * Closing hands the popover to CSS and keeps it mounted for the length of the
@@ -141,7 +144,7 @@ export function DashboardReportingControl({
       exitTimerRef.current = null;
       setPhase((current) => (current === "closing" ? "closed" : current));
     }, POPOVER_EXIT_MS);
-  }, []);
+  }, [setDragging, setPhase]);
 
   /* Reopening a live custom range starts the drag UI on its own months. */
   const openMenu = useCallback(() => {
@@ -155,7 +158,7 @@ export function DashboardReportingControl({
     setAnchorMonth(activeRange ? monthKeyOf(activeRange.from) : null);
     setFocusMonth(activeRange ? monthKeyOf(activeRange.to) : null);
     setPhase("open");
-  }, [activeRange, measure]);
+  }, [activeRange, measure, setAnchorMonth, setFocusMonth, setPhase, setView]);
 
   useEffect(() => () => {
     if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current);

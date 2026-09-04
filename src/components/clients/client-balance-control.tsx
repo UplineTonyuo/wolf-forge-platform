@@ -114,6 +114,23 @@ export function ClientBalanceControl({
   ] =
     useState(balanceCents);
 
+  const [
+    lastBalanceCents,
+    setLastBalanceCents,
+  ] = useState(balanceCents);
+
+  if (
+    lastBalanceCents !==
+    balanceCents
+  ) {
+    setLastBalanceCents(
+      balanceCents,
+    );
+    setCurrentBalance(
+      balanceCents,
+    );
+  }
+
   const [open, setOpen] =
     useState(false);
 
@@ -149,12 +166,6 @@ export function ClientBalanceControl({
     startTransition,
   ] =
     useTransition();
-
-  useEffect(() => {
-    setCurrentBalance(
-      balanceCents,
-    );
-  }, [balanceCents]);
 
   useEffect(() => {
     const handleKeyDown = (

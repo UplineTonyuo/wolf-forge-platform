@@ -314,13 +314,28 @@ export function ClientNotificationBell({
     useCallback(
       async (
         silent = false,
+        isActive?: () => boolean,
       ) => {
+        if (
+          isActive &&
+          !isActive()
+        ) {
+          return;
+        }
+
         if (!silent) {
           setLoading(true);
         }
 
         const result =
           await getClientNotificationsAction();
+
+        if (
+          isActive &&
+          !isActive()
+        ) {
+          return;
+        }
 
         if (result.ok) {
           noteIncoming(
@@ -347,7 +362,19 @@ export function ClientNotificationBell({
 
   useEffect(
     () => {
-      void load();
+      let active = true;
+
+      void Promise.resolve().then(
+        () =>
+          load(
+            false,
+            () => active,
+          ),
+      );
+
+      return () => {
+        active = false;
+      };
     },
     [load],
   );
