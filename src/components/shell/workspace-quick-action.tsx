@@ -12,6 +12,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   createPortal,
@@ -62,8 +63,12 @@ export function WorkspaceQuickAction({
   const [direction, setDirection] =
     useState<"forward" | "back">("forward");
 
-  const [mounted, setMounted] =
-    useState(false);
+  const mounted =
+    useSyncExternalStore(
+      () => () => {},
+      () => true,
+      () => false,
+    );
 
   const [open, setOpen] =
     useState(false);
@@ -88,10 +93,6 @@ export function WorkspaceQuickAction({
 
   const firstName =
     getFirstName(user.displayName);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!open) {

@@ -23,6 +23,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   createPortal,
@@ -114,10 +115,12 @@ export function WorkspaceCommandBar({
   const panelRef =
     useRef<HTMLElement>(null);
 
-  const [
-    mounted,
-    setMounted,
-  ] = useState(false);
+  const mounted =
+    useSyncExternalStore(
+      () => () => {},
+      () => true,
+      () => false,
+    );
 
   const [
     notifications,
@@ -284,7 +287,15 @@ export function WorkspaceCommandBar({
     useCallback(
       async (
         silent = false,
+        isActive?: () => boolean,
       ) => {
+        if (
+          isActive &&
+          !isActive()
+        ) {
+          return;
+        }
+
         if (!silent) {
           setNotificationsLoading(
             true,
@@ -293,6 +304,13 @@ export function WorkspaceCommandBar({
 
         const result =
           await getWalletNotificationsAction();
+
+        if (
+          isActive &&
+          !isActive()
+        ) {
+          return;
+        }
 
         if (result.ok) {
           noteIncomingNotifications(
@@ -349,9 +367,19 @@ export function WorkspaceCommandBar({
     }, []);
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
 
-    void loadNotifications();
+    void Promise.resolve().then(
+      () =>
+        loadNotifications(
+          false,
+          () => active,
+        ),
+    );
+
+    return () => {
+      active = false;
+    };
   }, [loadNotifications]);
 
   useEffect(() => {

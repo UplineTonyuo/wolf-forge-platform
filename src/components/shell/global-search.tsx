@@ -219,6 +219,26 @@ export function GlobalSearch() {
     setLeaving,
   ] = useState(false);
 
+  const [
+    lastQuery,
+    setLastQuery,
+  ] = useState(query);
+
+  if (lastQuery !== query) {
+    setLastQuery(query);
+
+    if (query.trim()) {
+      setOpen(true);
+      setLoading(true);
+      setError(null);
+    } else {
+      setResults([]);
+      setLoading(false);
+      setError(null);
+      setActiveIndex(0);
+    }
+  }
+
 
   useEffect(() => {
 
@@ -246,18 +266,8 @@ export function GlobalSearch() {
 
       requestRef.current += 1;
 
-      setResults([]);
-      setLoading(false);
-      setError(null);
-      setActiveIndex(0);
-
       return;
     }
-
-
-    setOpen(true);
-    setLoading(true);
-    setError(null);
 
 
     const requestId =

@@ -74,6 +74,16 @@ export function ClientStatusControl({
       normalizeStatus(status),
     );
 
+  const [lastStatus, setLastStatus] =
+    useState(status);
+
+  if (lastStatus !== status) {
+    setLastStatus(status);
+    setCurrentStatus(
+      normalizeStatus(status),
+    );
+  }
+
   const [open, setOpen] =
     useState(false);
 
@@ -82,12 +92,6 @@ export function ClientStatusControl({
 
   const [pending, startTransition] =
     useTransition();
-
-  useEffect(() => {
-    setCurrentStatus(
-      normalizeStatus(status),
-    );
-  }, [status]);
 
   useEffect(() => {
     const handlePointerDown = (
