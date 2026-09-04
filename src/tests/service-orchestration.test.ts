@@ -16,7 +16,7 @@ async function verifiedActor() {
     { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHABLE_KEY: "local-key" },
     "test-token",
   );
-  vi.spyOn(client.auth, "getUser").mockResolvedValue({ data: { user: { id: actorId } }, error: null } as never);
+  vi.spyOn(client.auth, "getClaims").mockResolvedValue({ data: { claims: { sub: actorId } }, error: null } as never);
   return verifyActor(client);
 }
 
