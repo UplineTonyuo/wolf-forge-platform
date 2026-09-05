@@ -56,7 +56,7 @@ const categoryHeadings: Record<string, string> = {
   projects: "Projects",
   tickets: "Tickets",
   clients: "Clients",
-  todo: "To Do",
+  todo: "Operations",
   billing: "Billing",
   marketing: "Marketing",
   services: "Services",

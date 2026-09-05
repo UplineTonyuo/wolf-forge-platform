@@ -1,11 +1,13 @@
 "use client";
 
 import { Check, ChevronDown } from "lucide-react";
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./animated-select.module.css";
 
 export type AnimatedSelectOption = { value: string; label: string };
+
+const VIEWPORT_MARGIN = 12;
 
 /**
  * Custom animated listbox select — a trigger button plus a popover option list,
@@ -36,10 +38,29 @@ export function AnimatedSelect({
   const rootRef = useRef<HTMLDivElement>(null);
   const { render, phase, show, hide } = useAnimatedPopover();
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [menuAlign, setMenuAlign] = useState<"left" | "right">("left");
+  const [menuMaxWidth, setMenuMaxWidth] = useState<number | null>(null);
 
   const isOpen = render && phase === "open";
   const selected = options.find((option) => option.value === value);
   const selectedIndex = options.findIndex((option) => option.value === value);
+
+  // Keep the popover inside the viewport: a toolbar filter near the right
+  // edge flips to right-aligned instead of running off-screen, and the width
+  // is capped to whichever edge is closer so a long option label truncates
+  // instead of overflowing.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const root = rootRef.current;
+    if (!root) return;
+    const rect = root.getBoundingClientRect();
+    const spaceRight = window.innerWidth - rect.left - VIEWPORT_MARGIN;
+    const spaceLeft = rect.right - VIEWPORT_MARGIN;
+    const align = spaceRight >= spaceLeft ? "left" : "right";
+    const available = align === "left" ? spaceRight : spaceLeft;
+    setMenuAlign(align);
+    setMenuMaxWidth(Math.max(rect.width, Math.min(available, 520)));
+  }, [isOpen]);
 
   function openMenu() {
     if (disabled) return;
@@ -130,6 +151,8 @@ export function AnimatedSelect({
           className={
             isOpen ? `${styles.menu} ${styles.menuOpen}` : `${styles.menu} ${styles.menuClosing}`
           }
+          data-align={menuAlign}
+          style={menuMaxWidth ? { maxWidth: menuMaxWidth } : undefined}
           role="listbox"
           id={listboxId}
           aria-label={menuLabel}
@@ -151,8 +174,9 @@ export function AnimatedSelect({
               key={option.value}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseOption(option)}
+              title={option.label}
             >
-              <span>{option.label}</span>
+              <span className={styles.optionLabel}>{option.label}</span>
 
               {option.value === value ? (
                 <Check className={styles.optionCheck} aria-hidden="true" />

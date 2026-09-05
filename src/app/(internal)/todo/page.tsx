@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { DataError, EmptyState } from "../../../components/ui/list-states";
-import { PageFrame } from "../../../components/ui/page-frame";
 import { StatusBadge } from "../../../components/ui/status-badge";
 import type { Order } from "../../../domain/orders/schema";
 import { toClientSafeError } from "../../../lib/errors/application-error";
@@ -9,7 +8,7 @@ import { getInternalContext } from "../../../lib/supabase/next-server";
 import { TeamTodoSection } from "../../../components/team/team-todo-section";
 import type { TeamTaskListRow } from "../../../domain/team/schema";
 
-export const metadata: Metadata = { title: "To Do" };
+export const metadata: Metadata = { title: "Operations — Tasks" };
 
 function AttentionSection({ title, empty, orders, companyNames, serviceNames }: {
   title: string;
@@ -69,34 +68,32 @@ export default async function ToDoPage() {
     const waiting = open.filter((order) => order.status === "waiting_reply" || order.status === "pending_update");
 
     return (
-      <PageFrame title="To Do" description="Work that needs attention now.">
-        <div className="attention-stack">
-          {canUseTeamMessages ? (
-            <>
-              <div className="attention-title"><span />Team tasks</div>
-              <TeamTodoSection
-                initialTasks={teamTasks}
-                actorProfileId={context.user.id}
-                canManageTasks={context.user.teamMessaging.manageTasks}
-              />
-            </>
-          ) : null}
+      <div className="attention-stack">
+        {canUseTeamMessages ? (
+          <>
+            <div className="attention-title"><span />Team tasks</div>
+            <TeamTodoSection
+              initialTasks={teamTasks}
+              actorProfileId={context.user.id}
+              canManageTasks={context.user.teamMessaging.manageTasks}
+            />
+          </>
+        ) : null}
 
-          {orders.length === 0 ? (
-            <EmptyState title="No projects yet" body="Projects are how work enters the platform." />
-          ) : (
-            <>
-              <div className="attention-title"><span />Needs attention</div>
-              {overdue.length === 0 && unassigned.length === 0 && waiting.length === 0 ? <p className="all-clear">Nothing needs attention right now.</p> : null}
-              <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} companyNames={companyNames} serviceNames={serviceNames} />
-              <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} companyNames={companyNames} serviceNames={serviceNames} />
-              <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} companyNames={companyNames} serviceNames={serviceNames} />
-            </>
-          )}
-        </div>
-      </PageFrame>
+        {orders.length === 0 ? (
+          <EmptyState title="No projects yet" body="Projects are how work enters the platform." />
+        ) : (
+          <>
+            <div className="attention-title"><span />Needs attention</div>
+            {overdue.length === 0 && unassigned.length === 0 && waiting.length === 0 ? <p className="all-clear">Nothing needs attention right now.</p> : null}
+            <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} companyNames={companyNames} serviceNames={serviceNames} />
+            <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} companyNames={companyNames} serviceNames={serviceNames} />
+            <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} companyNames={companyNames} serviceNames={serviceNames} />
+          </>
+        )}
+      </div>
     );
   } catch (error) {
-    return <PageFrame title="To Do"><DataError message={toClientSafeError(error).message} /></PageFrame>;
+    return <DataError message={toClientSafeError(error).message} />;
   }
 }
