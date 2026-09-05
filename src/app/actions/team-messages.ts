@@ -14,6 +14,7 @@ import type {
   TeamMessagesBeforeRow,
   TeamMessageWindowRow,
   TeamMessageWriteRow,
+  TeamMessagePinRow,
   TeamReactionToggleRow,
   TeamSearchResponseRow,
   TeamTaskListRow,
@@ -327,6 +328,30 @@ export async function toggleTeamMessageReactionAction(input: {
       ok: true,
       data: await context.services.team.toggleReaction(input, context.actor),
     };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function pinTeamMessageAction(input: {
+  conversationId: string;
+  messageId: string;
+}): Promise<TeamActionResult<TeamMessagePinRow>> {
+  try {
+    const context = await getInternalContext();
+    return { ok: true, data: await context.services.team.pinMessage(input, context.actor) };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function unpinTeamMessageAction(input: {
+  conversationId: string;
+  pinId: string;
+}): Promise<TeamActionResult<TeamMessagePinRow>> {
+  try {
+    const context = await getInternalContext();
+    return { ok: true, data: await context.services.team.unpinMessage(input, context.actor) };
   } catch (error) {
     return failed(error);
   }

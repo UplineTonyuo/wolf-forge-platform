@@ -39,6 +39,54 @@ async function post<T>(
   }
 }
 
+export type TeamVoiceUploadSlot = {
+  uploadId: string;
+  uploadUrl: string;
+  mimeType: string;
+  expiresAt: string;
+};
+
+export function prepareTeamVoiceUpload(input: {
+  conversationId: string;
+  mimeType: string;
+}): Promise<TeamActionResult<TeamVoiceUploadSlot>> {
+  return post("/api/team-voice/upload-slot", input, "Voice recording could not be prepared.");
+}
+
+export async function uploadTeamVoiceBlob(
+  uploadUrl: string,
+  blob: Blob,
+): Promise<TeamActionResult<null>> {
+  try {
+    const form = new FormData();
+    form.append("cacheControl", "3600");
+    form.append("", blob, "audio-file");
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "x-upsert": "false" },
+      body: form,
+    });
+    if (!response.ok) return { ok: false, error: "Voice recording could not be uploaded." };
+    return { ok: true, data: null };
+  } catch {
+    return { ok: false, error: "Voice recording could not be uploaded." };
+  }
+}
+
+export function finalizeTeamVoiceUpload(input: {
+  uploadId: string;
+  recordedDurationMs: number;
+}): Promise<TeamActionResult<unknown>> {
+  return post("/api/team-voice/finalize", input, "Voice recording could not be sent.");
+}
+
+export function fetchTeamVoicePlayback(input: {
+  conversationId: string;
+  messageId: string;
+}): Promise<TeamActionResult<{ url: string; expiresAt: string }>> {
+  return post("/api/team-voice/playback", input, "Voice recording could not be loaded.");
+}
+
 /**
  * The fast lane: the open thread with its typing state, plus whichever
  * conversations moved since `since`. One request, one database call.

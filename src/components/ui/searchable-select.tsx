@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, Check, ChevronDown, Search, UserRound } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./searchable-select.module.css";
 
@@ -37,6 +37,9 @@ export function SearchableSelect({
   emptyMessage = "No matching options.",
   menuRequiresQuery = false,
   rank,
+  className,
+  menuClassName,
+  renderOption,
 }: {
   name?: string;
   label: string;
@@ -50,6 +53,9 @@ export function SearchableSelect({
   emptyMessage?: string;
   menuRequiresQuery?: boolean;
   rank?: (label: string, query: string) => number;
+  className?: string;
+  menuClassName?: string;
+  renderOption?: (option: SearchableOption) => ReactNode;
 }) {
   const listboxId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +148,7 @@ export function SearchableSelect({
     } else if (event.key === "Escape") {
       if (render) {
         event.preventDefault();
+        event.stopPropagation();
         hide();
         setActiveIndex(-1);
         setEditing(false);
@@ -151,7 +158,7 @@ export function SearchableSelect({
 
   return (
     <div
-      className={styles.root}
+      className={[styles.root, className].filter(Boolean).join(" ")}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node)) {
           hide();
@@ -224,11 +231,11 @@ export function SearchableSelect({
       {render && menuAllowed && !disabled ? (
         <div
           ref={menuRef}
-          className={
-            isOpen
-              ? `${styles.menu} ${styles.menuOpen}`
-              : `${styles.menu} ${styles.menuClosing}`
-          }
+          className={[
+            styles.menu,
+            isOpen ? styles.menuOpen : styles.menuClosing,
+            menuClassName,
+          ].filter(Boolean).join(" ")}
           role="listbox"
           id={listboxId}
           aria-label={menuLabel}
@@ -251,25 +258,29 @@ export function SearchableSelect({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectOption(option)}
               >
-                <span className={styles.optionIdentity}>
-                  {option.kind ? (
-                    <span
-                      className={styles.optionKindIcon}
-                      data-record-kind={option.kind}
-                    >
-                      {option.kind === "company" ? (
-                        <Building2 size={15} aria-hidden="true" />
-                      ) : (
-                        <UserRound size={15} aria-hidden="true" />
-                      )}
+                {renderOption ? renderOption(option) : (
+                  <>
+                    <span className={styles.optionIdentity}>
+                      {option.kind ? (
+                        <span
+                          className={styles.optionKindIcon}
+                          data-record-kind={option.kind}
+                        >
+                          {option.kind === "company" ? (
+                            <Building2 size={15} aria-hidden="true" />
+                          ) : (
+                            <UserRound size={15} aria-hidden="true" />
+                          )}
+                        </span>
+                      ) : null}
+                      <span className={styles.optionLabel}>{option.label}</span>
                     </span>
-                  ) : null}
-                  <span className={styles.optionLabel}>{option.label}</span>
-                </span>
 
-                {option.sublabel ? (
-                  <span className={styles.optionSub}>{option.sublabel}</span>
-                ) : null}
+                    {option.sublabel ? (
+                      <span className={styles.optionSub}>{option.sublabel}</span>
+                    ) : null}
+                  </>
+                )}
               </button>
             ))
           ) : (

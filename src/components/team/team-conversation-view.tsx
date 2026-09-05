@@ -11,8 +11,7 @@ import {
   RotateCcw,
   Search,
   Send,
-  Settings2,
-  UsersRound,
+  Settings,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -39,13 +38,17 @@ import {
 } from "../../domain/team/schema";
 import dynamic from "next/dynamic";
 import { TeamAvatar } from "./team-avatar";
+import { TeamConversationAvatar } from "./team-conversation-avatar";
 import { formatSlowModeSeconds, TeamConversationControls } from "./team-conversation-controls";
 import { TeamFormattedMessage } from "./team-formatted-message";
 import { TeamMessageActions } from "./team-message-actions";
+import { TeamPinsPanel } from "./team-pins-panel";
 import { TeamReactionChips, TeamReactionRail } from "./team-message-reactions";
 import { TeamSearchPanel } from "./team-search-panel";
-import { TeamSlowModeControl } from "./team-slow-mode-control";
 import { TeamTaskCard } from "./team-task-card";
+import { TeamVoiceMessage } from "./team-voice-message";
+import { TeamVoiceRecorder } from "./team-voice-recorder";
+import { pinTeamMessageAction, unpinTeamMessageAction } from "../../app/actions/team-messages";
 import type { TeamPresenceStatus } from "./team-presence-provider";
 import styles from "./team-messages.module.css";
 
@@ -102,6 +105,7 @@ export function TeamConversationPane({
   onRetryMessage,
   onDraftChange,
   onBack,
+  onCloseDrawer,
   onSend,
   onCreateTaskFromComposer,
   onCreateTaskFromMessage,
@@ -130,6 +134,7 @@ export function TeamConversationPane({
   onRevokeAdmin,
   onAddMember,
   onRemoveMember,
+  onConversationChanged = () => undefined,
 }: {
   detail: TeamConversationDetailView | null;
   actorProfileId: string;
@@ -145,6 +150,7 @@ export function TeamConversationPane({
   /** Every keystroke, so the drawer can keep this tab marked as composing. */
   onDraftChange: (draft: string) => void;
   onBack: () => void;
+  onCloseDrawer: () => void;
   onSend: (body: string, reply: TeamReplyDraft | null) => void;
   onCreateTaskFromComposer: () => void;
   onCreateTaskFromMessage: (message: TeamMessageView) => void;
@@ -177,6 +183,7 @@ export function TeamConversationPane({
   onRevokeAdmin: (targetProfileId: string) => Promise<string | null>;
   onAddMember: (profileId: string) => Promise<string | null>;
   onRemoveMember: (profileId: string) => Promise<string | null>;
+  onConversationChanged?: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -203,6 +210,7 @@ export function TeamConversationPane({
    */
   const [sendNonce, setSendNonce] = useState(0);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
 
   const conversationId = detail?.conversationId ?? null;
 
@@ -253,6 +261,7 @@ export function TeamConversationPane({
     setSelectedReactionMessageId(null);
     setReactionPickerMessageId(null);
     setMoreMessage(null);
+    setControlsOpen(false);
     setReplyDraft(null);
     setControlsOpen(false);
   }
@@ -365,6 +374,22 @@ export function TeamConversationPane({
   /** Conversation task_creation_policy is authoritative — never canManageTasks (org-wide, unrelated). */
   const canCreateTask = detail?.capabilities.canCreateTask ?? false;
 
+  const pinMessage = useCallback(async (message: TeamMessageView) => {
+    if (!detail) return "No conversation is open.";
+    const result = await pinTeamMessageAction({ conversationId: detail.conversationId, messageId: message.id });
+    if (!result.ok) return result.error;
+    onConversationChanged();
+    return null;
+  }, [detail, onConversationChanged]);
+
+  const unpinMessage = useCallback(async (pin: NonNullable<TeamConversationDetailView["currentPins"]>[number]) => {
+    if (!detail) return "No conversation is open.";
+    const result = await unpinTeamMessageAction({ conversationId: detail.conversationId, pinId: pin.id });
+    if (!result.ok) return result.error;
+    onConversationChanged();
+    return null;
+  }, [detail, onConversationChanged]);
+
   const handleDraftChange = useCallback(
     (markdown: string) => {
       setDraft(markdown);
@@ -407,12 +432,35 @@ export function TeamConversationPane({
       : normalizeReplyQuote(stripTeamFormatting(message.body));
     setReactionPickerMessageId(null);
     setMoreMessage(null);
+    setSelectedReactionMessageId(null);
     setReplyDraft({
       sourceMessageId: message.id,
       authorName: message.authorName,
       quoteText,
     });
   }, []);
+
+  /*
+   * The pinned (tap-to-reveal) toolbar is a deliberate, explicit selection —
+   * separate from CSS `:hover`/`:focus-within`, which keeps working
+   * regardless of this state. It clears itself here on any pointerdown
+   * outside the currently-pinned message's own row, so a click on another
+   * message, the composer, the header, or Settings closes it the same way a
+   * second tap on the same message already does. Reply/react/More each clear
+   * it explicitly at their own completion point, since those interactions
+   * can start and end without the pointer ever leaving the pinned message
+   * (e.g. the reaction picker or the portalled More dialog).
+   */
+  useEffect(() => {
+    if (!selectedReactionMessageId) return;
+    function onPointerDownOutside(event: PointerEvent) {
+      const pinnedNode = messageRefs.current.get(selectedReactionMessageId!);
+      if (pinnedNode?.contains(event.target as Node)) return;
+      setSelectedReactionMessageId(null);
+    }
+    document.addEventListener("pointerdown", onPointerDownOutside);
+    return () => document.removeEventListener("pointerdown", onPointerDownOutside);
+  }, [selectedReactionMessageId]);
 
   /*
    * The composer empties on this frame, before the round trip starts. The
@@ -491,7 +539,14 @@ export function TeamConversationPane({
   const taskCount = detail.tasks.length;
 
   return (
-    <section className={styles.conversationPane} aria-label="Conversation">
+    <section
+      className={[
+        styles.conversationPane,
+        controlsOpen ? styles.conversationPaneSettingsOpen : "",
+      ].filter(Boolean).join(" ")}
+      aria-label="Conversation"
+    >
+      <div className={styles.conversationThread} data-team-region="message-thread">
       {/*
         One grid cell for the header plus everything that can conditionally
         grow above the transcript (search, the inline error banner). Without
@@ -512,9 +567,7 @@ export function TeamConversationPane({
         </button>
 
         {isGroup ? (
-          <span className={`${styles.groupAvatar} ${styles.groupAvatarSmall}`} aria-hidden="true">
-            <UsersRound />
-          </span>
+          <TeamConversationAvatar imageUrl={detail.imageUrl} small />
         ) : other ? (
           <TeamAvatar
             name={other.name}
@@ -581,34 +634,31 @@ export function TeamConversationPane({
           {loading ? (
             <Loader2 aria-label="Refreshing" className={styles.spin} />
           ) : null}
-          {detail.capabilities.canManageSlowMode ? (
-            <TeamSlowModeControl
-              active={detail.slowModeSeconds !== null}
-              seconds={detail.slowModeSeconds}
-              scope={detail.slowModeScope}
-              onSetSlowMode={onSetSlowMode}
-            />
-          ) : null}
+          <button
+            ref={settingsTriggerRef}
+            type="button"
+            className={[
+              styles.iconButton,
+              controlsOpen ? styles.iconButtonActive : "",
+            ].filter(Boolean).join(" ")}
+            onClick={() => setControlsOpen(true)}
+            aria-label="Conversation settings"
+            aria-expanded={controlsOpen}
+            title="Conversation settings"
+          >
+            <Settings aria-hidden="true" />
+          </button>
           <button
             type="button"
             className={styles.iconButton}
-            onClick={() => setControlsOpen(true)}
-            aria-label="Conversation settings"
-            title="Conversation settings"
+            onClick={onCloseDrawer}
+            aria-label="Close conversation"
+            title="Close conversation"
           >
-            <Settings2 aria-hidden="true" />
+            <X aria-hidden="true" />
           </button>
         </div>
       </header>
-
-      {searchOpen ? (
-        <TeamSearchPanel
-          open={searchOpen}
-          conversationId={detail.conversationId}
-          onClose={onCloseSearch}
-          onJumpToResult={onJumpToSearchResult}
-        />
-      ) : null}
 
       {error ? (
         <div className={styles.inlineError} role="alert">
@@ -625,38 +675,52 @@ export function TeamConversationPane({
       ) : null}
       </div>
 
-      {/*
-        Subtle near the latest message; appears only once the employee has
-        scrolled meaningfully away from it. Search stays reachable at any
-        scroll position through Ctrl/Cmd+F regardless of this control's
-        visibility.
-      */}
-      {!searchOpen && scrolledAway ? (
-        <div className={styles.floatingControls}>
-          <button
-            type="button"
-            className={styles.floatingControlButton}
-            onClick={onOpenSearch}
-          >
-            <Search aria-hidden="true" size={13} />
-            Search conversation
-          </button>
-          <button
-            type="button"
-            className={styles.floatingControlButton}
-            onClick={scrollToLatest}
-          >
-            <ArrowDown aria-hidden="true" size={13} />
-            Return to latest
-          </button>
-        </div>
-      ) : null}
+      <div className={styles.threadContextLayer} data-team-region="history-toolbar">
+        {searchOpen ? (
+          <TeamSearchPanel
+            open={searchOpen}
+            conversationId={detail.conversationId}
+            onClose={onCloseSearch}
+            onJumpToResult={onJumpToSearchResult}
+          />
+        ) : (
+          <div className={styles.historyToolbar} aria-label="Conversation history controls">
+            <TeamPinsPanel
+              current={detail.currentPins ?? []}
+              previous={detail.previousPins ?? []}
+              canManage={detail.capabilities.canManagePins === true}
+              onJump={onJumpToMessage}
+              onUnpin={unpinMessage}
+            />
+            <button
+              type="button"
+              className={styles.historyToolbarButton}
+              onClick={onOpenSearch}
+            >
+              <Search aria-hidden="true" />
+              Search
+            </button>
+            {scrolledAway ? (
+              <button
+                type="button"
+                className={`${styles.historyToolbarButton} ${styles.historyToolbarLatest}`}
+                onClick={scrollToLatest}
+                aria-label="Return to latest"
+              >
+                <ArrowDown aria-hidden="true" />
+                Latest
+              </button>
+            ) : null}
+          </div>
+        )}
+      </div>
 
       <div
         className={styles.messageScroll}
         ref={scrollRef}
         onScroll={handleScroll}
         key={detail.conversationId}
+        data-team-region="message-scroll"
       >
         {loadingOlder ? (
           <div className={styles.loadOlderRow} aria-live="polite">
@@ -682,13 +746,7 @@ export function TeamConversationPane({
         {detail.groups.map((group) => (
           <div key={group.key}>
             {group.startsDay ? (
-              <div
-                style={{
-                  display: "grid",
-                  justifyItems: "center",
-                  marginBottom: 12,
-                }}
-              >
+              <div className={styles.dayDivider}>
                 <span className={styles.dayHeading}>
                   {formatTeamDayHeading(group.day)}
                 </span>
@@ -706,7 +764,7 @@ export function TeamConversationPane({
             {group.messages[0]!.messageType === "governance_activity" ? (
               <div className={styles.activityRow}>
                 <span className={styles.activityChip}>
-                  <Settings2 aria-hidden="true" />
+                  <Settings aria-hidden="true" />
                   {group.messages[0]!.body}
                   <time
                     className={styles.activityTime}
@@ -850,6 +908,13 @@ export function TeamConversationPane({
                           ) : null}
                           {message.deletedForEveryone ? (
                             <span className={styles.deletedMessage}>Message deleted</span>
+                          ) : message.messageType === "voice" && message.voice ? (
+                            <TeamVoiceMessage
+                              conversationId={detail.conversationId}
+                              messageId={message.id}
+                              durationMs={message.voice.durationMs}
+                              expired={Boolean(message.voice.expiredAt || !message.voice.storagePath)}
+                            />
                           ) : (
                             <TeamFormattedMessage body={message.body} />
                           )}
@@ -878,7 +943,7 @@ export function TeamConversationPane({
                           </time>
                         )}
 
-                        {!message.pending && !message.failed && !message.deletedForEveryone ? (
+                        {message.messageType === "text" && !message.pending && !message.failed && !message.deletedForEveryone ? (
                           <TeamReactionRail
                             reactions={message.reactions}
                             onReact={(code) => onReact(message, code)}
@@ -891,9 +956,14 @@ export function TeamConversationPane({
                                 current === message.id ? null : message.id,
                               );
                             }}
-                            onClosePicker={() => setReactionPickerMessageId((current) =>
-                              current === message.id ? null : current
-                            )}
+                            onClosePicker={() => {
+                              setReactionPickerMessageId((current) =>
+                                current === message.id ? null : current
+                              );
+                              setSelectedReactionMessageId((current) =>
+                                current === message.id ? null : current
+                              );
+                            }}
                             onReply={() => beginReply(message)}
                             onMore={() => {
                               setReactionPickerMessageId(null);
@@ -903,7 +973,7 @@ export function TeamConversationPane({
                         ) : null}
                       </div>
 
-                      {!message.pending && !message.failed && message.reactions.length > 0 ? (
+                      {message.messageType === "text" && !message.pending && !message.failed && message.reactions.length > 0 ? (
                         <TeamReactionChips
                           reactions={message.reactions}
                           onToggle={(code) => onReact(message, code)}
@@ -1010,6 +1080,14 @@ export function TeamConversationPane({
               </button>
             ) : null}
 
+            {detail.capabilities.canSendVoice ? (
+              <TeamVoiceRecorder
+                conversationId={detail.conversationId}
+                disabled={slowModeSecondsLeft > 0}
+                onSent={onConversationChanged}
+              />
+            ) : null}
+
             <button
               type="button"
               className={styles.sendButton}
@@ -1027,18 +1105,35 @@ export function TeamConversationPane({
         message={moreMessage}
         destinations={forwardDestinations}
         canCreateTask={canCreateTask}
-        onClose={() => setMoreMessage(null)}
+        onClose={() => {
+          setMoreMessage(null);
+          if (moreMessage) {
+            setSelectedReactionMessageId((current) =>
+              current === moreMessage.id ? null : current
+            );
+          }
+        }}
         onCreateTask={onCreateTaskFromMessage}
         onForward={onForward}
         onDeleteForMe={onDeleteForMe}
         onDeleteForEveryone={onDeleteForEveryone}
+        canManagePins={detail.capabilities.canManagePins}
+        currentPin={moreMessage
+          ? detail.currentPins?.find((pin) => pin.messageId === moreMessage.id) ?? null
+          : null}
+        onPin={pinMessage}
+        onUnpin={unpinMessage}
       />
+      </div>
 
       <TeamConversationControls
         open={controlsOpen}
         detail={detail}
         roster={roster}
-        onClose={() => setControlsOpen(false)}
+        onClose={() => {
+          setControlsOpen(false);
+          window.setTimeout(() => settingsTriggerRef.current?.focus(), 0);
+        }}
         onRename={onRenameConversation}
         onSetSlowMode={onSetSlowMode}
         onSetTaskCreationPolicy={onSetTaskCreationPolicy}

@@ -119,6 +119,20 @@ describe("5. Remote-change detection", () => {
     expect(before).not.toBe(after);
   });
 
+  it("fingerprint changes when a pin is added or unpinned", () => {
+    const before = teamDetailFingerprint({ messages: [{ id: "m1" }], pins: [] });
+    const pinned = teamDetailFingerprint({ messages: [{ id: "m1" }], pins: [{ id: "p1", message_id: "m1", unpinned_at: null }] });
+    const unpinned = teamDetailFingerprint({ messages: [{ id: "m1" }], pins: [{ id: "p1", message_id: "m1", unpinned_at: "2026-09-01T00:00:00.000Z" }] });
+    expect(before).not.toBe(pinned);
+    expect(pinned).not.toBe(unpinned);
+  });
+
+  it("fingerprint changes when a voice recording expires", () => {
+    const before = teamDetailFingerprint({ messages: [{ id: "m1", voice_expired_at: null }] });
+    const after = teamDetailFingerprint({ messages: [{ id: "m1", voice_expired_at: "2026-09-01T00:00:00.000Z" }] });
+    expect(before).not.toBe(after);
+  });
+
   it("null detail (drawer closed / no conversation) fingerprints to a stable empty value", () => {
     expect(teamDetailFingerprint(null)).toBe("");
   });

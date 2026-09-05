@@ -6,7 +6,6 @@ import {
   ListChecks,
   MessageSquare,
   PenLine,
-  UsersRound,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -68,6 +67,7 @@ import {
   updateTeamTaskStatusAction,
 } from "../../app/actions/team-messages";
 import { TeamAvatar } from "./team-avatar";
+import { TeamConversationAvatar } from "./team-conversation-avatar";
 import { TeamConversationCreator } from "./team-conversation-creator";
 import { TeamConversationPane, type TeamReplyDraft } from "./team-conversation-view";
 import { TeamTaskComposer, type TeamTaskDraft } from "./team-task-composer";
@@ -1683,6 +1683,7 @@ export function TeamMessagesDrawer({
               }
               onDraftChange={noteTyping}
               onCreateTaskFromComposer={() => openComposer(null)}
+              onCloseDrawer={onClose}
               onCreateTaskFromMessage={openComposer}
               onTaskStatusChange={(taskId, status) =>
                 void changeTaskStatus(taskId, status)
@@ -1750,18 +1751,24 @@ export function TeamMessagesDrawer({
                   ? removeConversationMember(detail.conversationId, profileId)
                   : Promise.resolve("No conversation is open.")
               }
+              onConversationChanged={() => {
+                const conversationId = activeIdRef.current;
+                if (conversationId) void loadDetail(conversationId);
+              }}
             />
           </div>
         )}
 
-        <button
-          type="button"
-          className={`${styles.iconButton} ${styles.closeButton}`}
-          onClick={onClose}
-          aria-label="Close Team Messages"
-        >
-          <X aria-hidden="true" />
-        </button>
+        {pane !== "messages" || !detail ? (
+          <button
+            type="button"
+            className={`${styles.iconButton} ${styles.closeButton}`}
+            onClick={onClose}
+            aria-label="Close Team Messages"
+          >
+            <X aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       {/*
@@ -1824,9 +1831,7 @@ function ConversationRow({
       onClick={onSelect}
     >
       {isGroup ? (
-        <span className={styles.groupAvatar} aria-hidden="true">
-          <UsersRound />
-        </span>
+        <TeamConversationAvatar imageUrl={conversation.imageUrl} />
       ) : (
         <TeamAvatar
           name={conversation.otherMember?.name ?? conversation.name}

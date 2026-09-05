@@ -7,6 +7,8 @@ import {
   Forward,
   ListPlus,
   Loader2,
+  Pin,
+  PinOff,
   Search,
   Trash2,
   X,
@@ -17,6 +19,7 @@ import { stripTeamFormatting } from "../../domain/team/formatting";
 import type {
   TeamConversationView,
   TeamMessageView,
+  TeamMessagePinView,
 } from "../../domain/team/projections";
 import { useClientMounted, useExitTransition } from "./use-exit-transition";
 import styles from "./team-messages.module.css";
@@ -32,6 +35,10 @@ export function TeamMessageActions({
   onForward,
   onDeleteForMe,
   onDeleteForEveryone,
+  canManagePins = false,
+  currentPin = null,
+  onPin = async () => "Pinning is unavailable.",
+  onUnpin = async () => "Unpinning is unavailable.",
 }: {
   message: TeamMessageView | null;
   destinations: TeamConversationView[];
@@ -41,6 +48,10 @@ export function TeamMessageActions({
   onForward: (message: TeamMessageView, destinationConversationId: string) => Promise<string | null>;
   onDeleteForMe: (message: TeamMessageView) => Promise<string | null>;
   onDeleteForEveryone: (message: TeamMessageView) => Promise<string | null>;
+  canManagePins?: boolean;
+  currentPin?: TeamMessagePinView | null;
+  onPin?: (message: TeamMessageView) => Promise<string | null>;
+  onUnpin?: (pin: TeamMessagePinView) => Promise<string | null>;
 }) {
   const mounted = useClientMounted();
   const transition = useExitTransition(message !== null, 180);
@@ -175,6 +186,13 @@ export function TeamMessageActions({
           <div className={styles.messageActionList}>
             <ActionButton icon={<Forward />} label="Forward" onClick={() => setMode("forward")} />
             <ActionButton icon={<Copy />} label="Copy" onClick={() => void copyVisibleText()} />
+            {canManagePins && activeMessage.messageType === "text" ? (
+              currentPin ? (
+                <ActionButton icon={<PinOff />} label="Unpin" onClick={() => void runMutation(() => onUnpin(currentPin))} />
+              ) : (
+                <ActionButton icon={<Pin />} label="Pin" onClick={() => void runMutation(() => onPin(activeMessage))} />
+              )
+            ) : null}
             {canCreateTask ? (
               <ActionButton
                 icon={<ListPlus />}

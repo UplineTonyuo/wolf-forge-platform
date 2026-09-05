@@ -178,10 +178,14 @@ describe("single header authority (D-101)", () => {
     }
   });
 
-  it("has no vercel.json that could silently duplicate or override them", () => {
-    // Two header sources means the deployed policy is whichever one wins, and
-    // nobody can tell by reading the repository which that is.
-    expect(existsSync(resolve(repositoryRoot, "vercel.json"))).toBe(false);
+  it("allows vercel.json only when it cannot duplicate or override headers", () => {
+    const vercelConfigPath = resolve(repositoryRoot, "vercel.json");
+    if (!existsSync(vercelConfigPath)) return;
+
+    // Vercel configuration is also the legitimate home for platform features
+    // such as Cron Jobs. D-101 forbids a second HEADER authority, not the file.
+    const vercelConfig = JSON.parse(read("vercel.json")) as { headers?: unknown };
+    expect(vercelConfig.headers).toBeUndefined();
   });
 
   it("does not write security headers from the proxy", () => {

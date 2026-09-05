@@ -163,6 +163,8 @@ describe("conversation detail: governance state", () => {
       canManageSlowMode: false,
       canRenameConversation: true,
       canManageTaskPolicy: false,
+      canSendVoice: false,
+      canManagePins: false,
     });
     expect(detail.admins).toEqual([
       {

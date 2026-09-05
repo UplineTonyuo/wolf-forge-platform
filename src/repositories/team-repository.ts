@@ -30,6 +30,13 @@ import type {
   TeamMessageWindowRow,
   TeamMessageWriteRow,
   TeamMessageIdInput,
+  TeamMessagePinRow,
+  TeamConversationMessageInput,
+  TeamConversationPinInput,
+  PrepareTeamVoiceUploadInput,
+  TeamVoiceUploadClaimRow,
+  TeamVoiceUploadContextRow,
+  TeamVoicePlaybackRow,
   TeamPresenceConnectionInput,
   TeamReactionToggleRow,
   TeamSearchResponseRow,
@@ -184,6 +191,22 @@ export class TeamRepository {
     return result.data as unknown as TeamSearchResponseRow;
   }
 
+  async getVoiceUploadContext(uploadId: string): Promise<TeamVoiceUploadContextRow> {
+    const result = await this.client.rpc("app_get_team_voice_upload_context" as never, {
+      p_upload_id: uploadId,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Voice upload");
+    return result.data as unknown as TeamVoiceUploadContextRow;
+  }
+
+  async getVoicePlayback(messageId: string): Promise<TeamVoicePlaybackRow> {
+    const result = await this.client.rpc("app_get_team_voice_playback" as never, {
+      p_message_id: messageId,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Voice recording");
+    return result.data as unknown as TeamVoicePlaybackRow;
+  }
+
   /**
    * Refresh one tab/device connection and receive only active profile ids.
    * The database derives which profile owns the connection from auth.uid().
@@ -230,6 +253,49 @@ export class TeamRepository {
 
     if (result.error) throw mapDatabaseError(result.error, "Message");
     return result.data as unknown as TeamMessageWriteRow;
+  }
+
+  async prepareVoiceUpload(input: PrepareTeamVoiceUploadInput): Promise<TeamVoiceUploadClaimRow> {
+    const result = await this.client.rpc("app_prepare_team_voice_upload" as never, {
+      p_conversation_id: input.conversationId,
+      p_mime_type: input.mimeType,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Voice upload");
+    return result.data as unknown as TeamVoiceUploadClaimRow;
+  }
+
+  async finalizeVoiceUpload(input: {
+    uploadId: string;
+    durationMs: number;
+    sizeBytes: number;
+    mimeType: string;
+    retentionDays: number;
+  }): Promise<TeamMessageWriteRow> {
+    const result = await this.client.rpc("app_finalize_team_voice_upload" as never, {
+      p_upload_id: input.uploadId,
+      p_duration_ms: input.durationMs,
+      p_size_bytes: input.sizeBytes,
+      p_mime_type: input.mimeType,
+      p_retention_days: input.retentionDays,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Voice message");
+    return result.data as unknown as TeamMessageWriteRow;
+  }
+
+  async pinMessage(input: TeamConversationMessageInput): Promise<TeamMessagePinRow> {
+    const result = await this.client.rpc("app_pin_team_message" as never, {
+      p_message_id: input.messageId,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Pinned message");
+    return result.data as unknown as TeamMessagePinRow;
+  }
+
+  async unpinMessage(input: TeamConversationPinInput): Promise<TeamMessagePinRow> {
+    const result = await this.client.rpc("app_unpin_team_message" as never, {
+      p_pin_id: input.pinId,
+    } as never);
+    if (result.error) throw mapDatabaseError(result.error, "Pinned message");
+    return result.data as unknown as TeamMessagePinRow;
   }
 
   async sendReply(input: SendTeamReplyInput): Promise<TeamMessageWriteRow> {
