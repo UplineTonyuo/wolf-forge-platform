@@ -4,6 +4,7 @@ import { ArrowRight, ChevronDown, Search, X } from "lucide-react";
 import type { CartItem } from "../../../domain/client-portal/cart";
 import { AddToCartButton } from "../cart/add-to-cart-button";
 import { StoreFolderIcon } from "./store-folder-icon";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -118,9 +119,18 @@ function ServiceCard({
         />
 
         {service.imageUrl ? (
-          // Captured catalog artwork; decorative next to the service name.
+          // Captured catalog artwork can use any validated HTTP(S) host, so it
+          // stays direct-source while the existing CSS owns both dimensions.
           <span className={styles.cardArt}>
-            <img src={service.imageUrl} alt="" loading="lazy" />
+            <Image
+              src={service.imageUrl}
+              alt=""
+              width={0}
+              height={0}
+              loading="lazy"
+              decoding="auto"
+              unoptimized
+            />
           </span>
         ) : null}
 

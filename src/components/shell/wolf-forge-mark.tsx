@@ -1,11 +1,15 @@
+import Image from "next/image";
+
 export function WolfForgeMark() {
   return (
-    <img
+    <Image
       src="/branding/wolf-head-mark.png"
       alt=""
       aria-hidden="true"
       width={96}
       height={72}
+      loading="eager"
+      decoding="auto"
       style={{
         width: 96,
         height: 72,
