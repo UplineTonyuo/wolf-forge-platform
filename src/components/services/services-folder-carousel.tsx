@@ -417,7 +417,7 @@ export function ServicesFolderCarousel({
       return;
     }
 
-    const now = performance.now();
+    const now = event.timeStamp;
 
     dragRef.current = {
       pointerId: event.pointerId,
@@ -441,7 +441,7 @@ export function ServicesFolderCarousel({
       return;
     }
 
-    const now = performance.now();
+    const now = event.timeStamp;
     const elapsed = Math.max(1, now - state.lastAt);
     const frameDistance = event.clientX - state.lastX;
     const totalDistance = event.clientX - state.startX;
@@ -530,7 +530,7 @@ export function ServicesFolderCarousel({
 
     event.preventDefault();
 
-    const now = performance.now();
+    const now = event.timeStamp;
 
     if (now < wheelLockedUntilRef.current) {
       return;
