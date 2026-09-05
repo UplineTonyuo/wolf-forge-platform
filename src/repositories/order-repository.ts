@@ -27,6 +27,40 @@ export const projectListRowLimit = 2000;
 export class OrderRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  /**
+   * RLS embeds the assignee when the caller may read that profile directly.
+   * A task-scoped operator may still need the assignee label without receiving
+   * the rest of that teammate's profile row, so fill only missing labels from
+   * the narrow operational projection.
+   */
+  private async hydrateMissingAssignees(rows: ProjectRelationRow[]): Promise<ProjectRelationRow[]> {
+    const missingIds = new Set(
+      rows
+        .filter((row) => row.assigned_to_profile_id && !row.profiles)
+        .map((row) => row.assigned_to_profile_id as string),
+    );
+    if (missingIds.size === 0) return rows;
+
+    const assignees = unwrapMany(await this.client.rpc("app_list_operational_assignees"));
+    const namesById = new Map(
+      assignees
+        .filter((assignee) => missingIds.has(assignee.profile_id))
+        .map((assignee) => [assignee.profile_id, assignee.display_name] as const),
+    );
+
+    return rows.map((row) => {
+      if (row.profiles || !row.assigned_to_profile_id) return row;
+      if (!namesById.has(row.assigned_to_profile_id)) return row;
+      return {
+        ...row,
+        profiles: {
+          id: row.assigned_to_profile_id,
+          display_name: namesById.get(row.assigned_to_profile_id) ?? null,
+        },
+      };
+    });
+  }
+
   async create(input: CreateOrderInput): Promise<OrderRow> {
     return unwrapOne(await this.client.rpc("app_create_order", {
       p_request_id: input.request_id ?? randomUUID(),
@@ -58,10 +92,12 @@ export class OrderRepository {
   }
 
   async getWithRelations(id: string): Promise<ProjectRelationRow> {
-    return unwrapOne(
+    const row = unwrapOne(
       await this.client.from("orders").select(projectRelationSelect).eq("id", id).single(),
       "Project",
     ) as unknown as ProjectRelationRow;
+    const [hydrated] = await this.hydrateMissingAssignees([row]);
+    return hydrated ?? row;
   }
 
   async listWithRelations(filter: ListOrdersFilter = {}): Promise<ProjectRelationPage> {
@@ -73,8 +109,9 @@ export class OrderRepository {
     if (!filter.includeArchived) query = query.is("archived_at", null);
 
     const result = await query.order("created_at", { ascending: false }).limit(projectListRowLimit);
+    const rows = unwrapMany(result) as unknown as ProjectRelationRow[];
     return {
-      rows: unwrapMany(result) as unknown as ProjectRelationRow[],
+      rows: await this.hydrateMissingAssignees(rows),
       totalCount: result.count,
     };
   }
