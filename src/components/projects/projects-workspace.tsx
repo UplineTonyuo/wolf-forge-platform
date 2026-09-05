@@ -236,13 +236,6 @@ export function ProjectsWorkspace({
     });
   }
 
-  function openDialog(kind: DialogKind, ids: string[]) {
-    if (ids.length === 0) return;
-    setOpenRowMenu(null);
-    setResult(null);
-    setDialog({ kind, ids });
-  }
-
   async function runDialogAction() {
     if (!dialog) return;
     const choice = dialogChoiceRef.current?.value ?? "";
