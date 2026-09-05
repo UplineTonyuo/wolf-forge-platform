@@ -818,10 +818,13 @@ export async function globalSearchAction(
         )
         .slice(0, 10)
         .map(
-          ({
-            score: _score,
-            ...item
-          }) => item,
+          (candidate): GlobalSearchItem => ({
+            kind: candidate.kind,
+            id: candidate.id,
+            title: candidate.title,
+            subtitle: candidate.subtitle,
+            href: candidate.href,
+          }),
         );
 
 

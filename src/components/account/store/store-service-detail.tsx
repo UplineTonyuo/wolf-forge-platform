@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { storeContactLabel } from "../../../domain/services/store-projections";
 import type { StoreServiceView } from "../../../domain/services/store-projections";
@@ -70,7 +71,18 @@ export function StoreServiceDetail({
 
       {service.imageUrl ? (
         <div className={styles.hero}>
-          <img src={service.imageUrl} alt="" />
+          {/* The database stores no intrinsic dimensions or fixed remote host.
+              Direct delivery plus zero hints preserves native intrinsic sizing. */}
+          <Image
+            src={service.imageUrl}
+            alt=""
+            width={0}
+            height={0}
+            loading="eager"
+            decoding="auto"
+            unoptimized
+            style={{ width: "100%", height: "auto" }}
+          />
         </div>
       ) : null}
 
