@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   useEffect,
   useState,
@@ -216,11 +217,16 @@ export function WolfForgeWalletCard({
         </svg>
       </div>
 
-      <img
+      <Image
         src="/branding/wolf-head-mark.png"
         alt=""
         aria-hidden="true"
         className="wolf-wallet-final__logo"
+        width={1920}
+        height={1080}
+        sizes="(max-width: 520px) 39vw, 164px"
+        loading="eager"
+        decoding="auto"
       />
 
       <div className="wolf-wallet-final__content">
