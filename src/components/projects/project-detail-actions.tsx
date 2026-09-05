@@ -145,18 +145,6 @@ export function ProjectDetailActions({
       typeof setTimeout
     > | null>(null);
 
-  const busyRef = useRef(busy);
-  const closingRef = useRef(closing);
-
-  useEffect(() => {
-    busyRef.current = busy;
-  }, [busy]);
-
-  useEffect(() => {
-    closingRef.current = closing;
-  }, [closing]);
-
-
   const canOpen =
     capabilities.edit ||
     capabilities.assign ||
@@ -179,8 +167,8 @@ export function ProjectDetailActions({
   const requestClose =
     useCallback(() => {
       if (
-        busyRef.current ||
-        closingRef.current
+        busy ||
+        closing
       ) {
         return;
       }
@@ -197,7 +185,7 @@ export function ProjectDetailActions({
           closeTimerRef.current =
             null;
         }, closeDurationMs);
-    }, []);
+    }, [busy, closing]);
 
 
   useEffect(() => {
