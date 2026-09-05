@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -144,7 +145,6 @@ export function ProjectDetailActions({
       typeof setTimeout
     > | null>(null);
 
-
   const canOpen =
     capabilities.edit ||
     capabilities.assign ||
@@ -162,6 +162,30 @@ export function ProjectDetailActions({
       }
     };
   }, []);
+
+
+  const requestClose =
+    useCallback(() => {
+      if (
+        busy ||
+        closing
+      ) {
+        return;
+      }
+
+      setClosing(true);
+
+      closeTimerRef.current =
+        setTimeout(() => {
+          setMounted(false);
+          setClosing(false);
+          setView("menu");
+          setError(null);
+
+          closeTimerRef.current =
+            null;
+        }, closeDurationMs);
+    }, [busy, closing]);
 
 
   useEffect(() => {
@@ -207,7 +231,7 @@ export function ProjectDetailActions({
       document.body.style.overflow =
         previousOverflow;
     };
-  }, [mounted, view]);
+  }, [mounted, view, requestClose]);
 
 
   function openLauncher() {
@@ -228,26 +252,6 @@ export function ProjectDetailActions({
     setView("menu");
     setClosing(false);
     setMounted(true);
-  }
-
-
-  function requestClose() {
-    if (busy || closing) {
-      return;
-    }
-
-    setClosing(true);
-
-    closeTimerRef.current =
-      setTimeout(() => {
-        setMounted(false);
-        setClosing(false);
-        setView("menu");
-        setError(null);
-
-        closeTimerRef.current =
-          null;
-      }, closeDurationMs);
   }
 
 

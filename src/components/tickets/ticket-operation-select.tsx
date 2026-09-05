@@ -149,10 +149,13 @@ export function TicketOperationSelect({
   defaultValue,
   disabled,
   onChange,
-  className: _className,
   "aria-label": ariaLabel,
   ...rest
 }: TicketOperationSelectProps) {
+  // The native <select> below owns its own className; strip any
+  // caller-supplied className so it can never leak onto that element.
+  delete rest.className;
+
   const rootRef =
     useRef<HTMLDivElement>(
       null,
