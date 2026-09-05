@@ -546,6 +546,39 @@ export const getTeamActorContext = cache(async () => {
 });
 
 /**
+ * The internal-actor context for a Route Handler that answers a background
+ * fetch rather than rendering a page — the same session, actor-verification
+ * AND internal-role checks as getInternalContext(), but returns null instead
+ * of redirecting on failure, for the same reason getTeamActorContext() does
+ * above: a poll that has lost its session should receive 401, not a redirect
+ * to a login page it cannot render.
+ *
+ * Unlike getTeamActorContext(), this DOES resolve internal-role membership
+ * (resolveInternalUser). Team's own routes can skip that because every Team
+ * RPC re-derives and re-checks the actor inside Postgres
+ * (private.require_team_actor()) regardless of what this function decided.
+ * The Podcast SEO sync polling/refetch routes have no equivalent per-actor
+ * database recheck — Google Sheets access is a single service-account read
+ * with no RLS — so this function IS the only authorization boundary those
+ * routes have, and it has to match getInternalContext()'s full check.
+ */
+export const getInternalActorContext = cache(async () => {
+  const supabase = await createNextServerSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return null;
+
+  const environment = readLocalFrontendEnvironment();
+  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const actor = await verifyActor(client).catch(() => null);
+  if (!actor) return null;
+
+  const user = await resolveInternalUser(client, actor);
+  if (!user) return null;
+
+  return { actor, user, client };
+});
+
+/**
  * Account provisioning needs the server-only Supabase Auth Admin boundary in
  * addition to the session-scoped client, so it is constructed on demand rather
  * than being attached to every internal request.
