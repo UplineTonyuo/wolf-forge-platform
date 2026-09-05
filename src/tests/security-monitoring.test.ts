@@ -219,16 +219,16 @@ describe("redaction refuses credentials by key name", () => {
 
 describe("redaction refuses credentials by value shape", () => {
   const secrets: ReadonlyArray<readonly [string, string]> = [
-    ["supabase session JWT", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27u"],
-    ["google access token", "ya29.a0AfH6SMBx1234567890abcdefghij"],
-    ["google refresh token", "1//0eXaMpLe-refresh-token-value"],
-    ["google api key", "AIzaSyA1234567890abcdefghijklmnopqrstu"],
-    ["stripe secret key", "sk_live_51H1234567890abcdef"],
-    ["stripe webhook secret", "whsec_abcdefghij1234567890"],
-    ["github token", "ghp_abcdefghijklmnopqrstuvwxyz0123456789"],
-    ["aws access key id", "AKIAIOSFODNN7EXAMPLE"],
-    ["supabase secret key", "sb_secret_abcdefghij1234567890"],
-    ["authorization header", "Bearer abcdefghijklmnopqrstuvwxyz"],
+    ["supabase session JWT", "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27u"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["google access token", "ya29.a0AfH6SMBx1234567890abcdefghij"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["google refresh token", "1//0eXaMpLe-refresh-token-value"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["google api key", "AIzaSyA1234567890abcdefghijklmnopqrstu"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["stripe secret key", "sk_live_51H1234567890abcdef"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["stripe webhook secret", "whsec_abcdefghij1234567890"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["github token", "ghp_abcdefghijklmnopqrstuvwxyz0123456789"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["aws access key id", "AKIAIOSFODNN7EXAMPLE"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["supabase secret key", "sb_secret_abcdefghij1234567890"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
+    ["authorization header", "Bearer abcdefghijklmnopqrstuvwxyz"], // secret-scan:allow(non-issued security redaction test fixture); gitleaks:allow
   ];
 
   for (const [label, secret] of secrets) {

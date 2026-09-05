@@ -13,7 +13,7 @@ import type { GmailCredentialEnvelope } from "../lib/integrations/gmail-credenti
 
 const environment = readGoogleOAuthEnvironment({
   GOOGLE_CLIENT_ID: "google-client-id",
-  GOOGLE_CLIENT_SECRET: "google-client-secret",
+  GOOGLE_CLIENT_SECRET: "google-client-secret", // secret-scan:allow(non-issued OAuth test fixture); gitleaks:allow
   GOOGLE_OAUTH_REDIRECT_URI: `http://127.0.0.1:3000${GMAIL_OAUTH_CALLBACK_PATH}`,
 });
 

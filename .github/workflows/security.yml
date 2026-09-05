@@ -1,24 +1,14 @@
-# Security CI (D-101). Every job fails the build on a finding — fails closed.
-#
-# Three independent checks, deliberately separate jobs so one failure does not
-# hide the others:
-#
-#   dependencies   `npm audit` over PRODUCTION dependencies at high+.
-#                  Dev-only advisories do not ship to a user and would train
-#                  everyone to ignore a red build.
-#   secrets        gitleaks over FULL history (fetch-depth: 0) plus the
-#                  repo-local scanner over tracked files. History matters:
-#                  a credential deleted in a later commit is still published.
-#   controls       the security test suites, so a header, CSP or cookie policy
-#                  regression is caught the same way any other regression is.
+# Wolf Forge CI security gates. Every job fails closed and is independent so
+# the Actions summary identifies the failed boundary without hiding later jobs.
 name: security
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
   schedule:
-    # Weekly, so a newly published advisory against unchanged code is still found.
+    # Recheck unchanged dependencies and repository history every week.
     - cron: "0 22 * * 0"
 
 permissions:
@@ -29,53 +19,100 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  dependencies:
-    name: dependency audit
+  typecheck:
+    name: TypeScript compile boundary
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Next 16 generates the global PageProps/LayoutProps helpers on demand.
+      # A fresh CI checkout has no .next/types until typegen runs.
+      - run: npx next typegen && npm run typecheck
+
+  lint:
+    name: static lint boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+
+  tests:
+    name: JavaScript and TypeScript tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Use Vitest's repository-wide include patterns. A hand-maintained list
+      # previously omitted most auth, RBAC, Team, IDOR, webhook and privacy tests.
+      - name: full Vitest discovery
+        run: npm test
+
+  database:
+    name: local Supabase pgTAP and RLS tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: start isolated local Supabase database
+        run: npx supabase start --yes
+      # `test:db` is pinned to `supabase test db --local`; no linked project or
+      # hosted connection string is available to this job.
+      - name: full pgTAP and RLS suite
+        run: npm run test:db
+
+  dependencies:
+    name: production dependency vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
       - name: npm audit (production, high and above)
-        run: npm audit --omit=dev --audit-level=high
+        run: npm run audit:deps
 
   secrets:
-    name: secret scan
+    name: repository and history secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           # Full history. A secret removed in a later commit is still leaked.
           fetch-depth: 0
-      - name: gitleaks (full history)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - name: repository secret scanner
-        run: npm run security:secrets
-
-  controls:
-    name: security controls
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - name: security control suites
+      # The convenience action narrows PR/push scans to first-parent ranges.
+      # Run the official image directly with no log range so Gitleaks uses its
+      # full-history/all-refs default. Verbose findings remain 100% redacted.
+      - name: gitleaks (all refs and full history, redacted output)
         run: >-
-          npx vitest run
-          src/tests/security-controls.test.ts
-          src/tests/login-brute-force-boundaries.test.ts
-          src/tests/auth-cookie-policy.test.ts
-          src/tests/safe-next-path.test.ts
+          docker run --rm
+          --user "$(id -u):$(id -g)"
+          --volume "$GITHUB_WORKSPACE:/repo:ro"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+          git --redact --no-banner --no-color --verbose /repo
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: tracked-file secret scanner (redacted by construction)
+        run: npm run security:secrets
