@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, data }, { headers: { "cache-control": "private, no-store" } });
   } catch (error) {
     const safe = toClientSafeError(error);
-    return Response.json({ ok: false, error: safe.message }, { status: safe.code === "PERMISSION_DENIED" ? 403 : 400 });
+    return Response.json(
+      { ok: false, error: safe.message },
+      { status: safe.code === "PERMISSION_DENIED" ? 403 : safe.code === "RATE_LIMITED" ? 429 : 400 },
+    );
   }
 }

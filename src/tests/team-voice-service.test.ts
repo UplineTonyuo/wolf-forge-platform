@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createUserSupabaseClient, verifyActor } from "../lib/supabase/user-client";
-import { PermissionDeniedError } from "../lib/errors/application-error";
+import { PermissionDeniedError, RateLimitedError } from "../lib/errors/application-error";
 import { TeamVoiceCleanupService, TeamVoiceService } from "../services/team-voice-service";
 
 const ACTOR = "10000000-0000-4000-8000-000000000001";
@@ -90,6 +90,26 @@ describe("TeamVoiceService authorization", () => {
     });
     await expect(service.playback({ conversationId: CONVERSATION, messageId: MESSAGE }, await actor()))
       .rejects.toThrow("Voice recording was not found");
+  });
+
+  /**
+   * KI-057B: app_get_team_voice_playback now throttles at the database layer
+   * (KI-057A, hosted). The repository already turns the RPC's WF429 into a
+   * RateLimitedError via mapDatabaseError — that translation has its own
+   * dedicated coverage elsewhere and is not re-tested here. What this proves
+   * is narrower and specific to this service method: playback() has no
+   * try/catch around the repository call that could swallow, downgrade, or
+   * re-wrap that error, so a throttled request reaches the caller (and from
+   * there the route's RATE_LIMITED -> 429 mapping) as the exact same
+   * RateLimitedError the repository raised.
+   */
+  it("propagates a durable RateLimitedError from the repository without catching or rewrapping it", async () => {
+    const { service, team, storage } = dependencies(true);
+    team.getVoicePlayback.mockRejectedValue(new RateLimitedError());
+    const rejection = service.playback({ conversationId: CONVERSATION, messageId: MESSAGE }, await actor());
+    await expect(rejection).rejects.toBeInstanceOf(RateLimitedError);
+    await expect(rejection).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect(storage.createSignedPlaybackUrl).not.toHaveBeenCalled();
   });
 });
 

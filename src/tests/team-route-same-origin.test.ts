@@ -28,6 +28,19 @@ describe("Team route payload and throttle responses", () => {
     ["app/api/team-presence/disconnect/route.ts", "2 * 1024"],
   ];
 
+  // Team Voice routes resolve getInternalActorContext(), not the lighter
+  // getTeamActorContext() the routes above use (see the comment on
+  // getInternalActorContext in lib/supabase/next-server.ts: every Team Voice
+  // RPC call has no per-actor database recheck the way team-live/team-sync/
+  // team-typing's RPCs do, so this IS the only authorization boundary those
+  // routes have). They need their own list rather than joining `routes`
+  // above, whose ordering assertion is hardcoded to the other context call.
+  const voiceRoutes: Array<[string, string]> = [
+    ["app/api/team-voice/playback/route.ts", "4 * 1024"],
+    ["app/api/team-voice/finalize/route.ts", "4 * 1024"],
+    ["app/api/team-voice/upload-slot/route.ts", "4 * 1024"],
+  ];
+
   it("stream-bounds every JSON body before session or Team database work", () => {
     for (const [path, bound] of routes) {
       const source = readFileSync(resolve(root, path), "utf8");
@@ -38,10 +51,39 @@ describe("Team route payload and throttle responses", () => {
     }
   });
 
+  it("stream-bounds every Team Voice route's JSON body before the internal-actor session check", () => {
+    for (const [path, bound] of voiceRoutes) {
+      const source = readFileSync(resolve(root, path), "utf8");
+      const bounded = source.indexOf(`readBoundedJson(request, ${bound})`);
+      expect(bounded, path).toBeGreaterThan(-1);
+      expect(source, path).not.toContain("request.json()");
+      expect(bounded, path).toBeLessThan(source.indexOf("getInternalActorContext()"));
+    }
+  });
+
   it("uses HTTP 429 when a Team RPC reports its durable rate limit", () => {
     for (const path of routes.slice(0, 3).map(([value]) => value)) {
       const source = readFileSync(resolve(root, path), "utf8");
       expect(source, path).toContain('safe.code === "RATE_LIMITED" ? 429 : 400');
+    }
+  });
+
+  /**
+   * Team Voice routes cannot reuse the two-way ternary asserted above: they
+   * also still refuse PERMISSION_DENIED as 403 (KI-057's compounding
+   * finding was specifically that they were missing the 429 branch, not
+   * that they should lose the 403 one). Asserting the whole three-way
+   * expression verbatim, rather than checking for "429" as a loose
+   * substring, is what proves both branches survive together — a route that
+   * only got the new 429 case right while silently dropping 403 would still
+   * pass a weaker check.
+   */
+  it("uses HTTP 429 for a durable rate limit on every Team Voice route, without dropping the existing PERMISSION_DENIED -> 403 mapping (KI-057B)", () => {
+    for (const [path] of voiceRoutes) {
+      const source = readFileSync(resolve(root, path), "utf8");
+      expect(source, path).toContain(
+        'safe.code === "PERMISSION_DENIED" ? 403 : safe.code === "RATE_LIMITED" ? 429 : 400',
+      );
     }
   });
 });
