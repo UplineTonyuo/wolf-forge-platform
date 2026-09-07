@@ -167,23 +167,9 @@ export class ServiceRepository {
   }
 
   async listAssignees(): Promise<ServiceAssigneeOption[]> {
-    const [profiles, roles] = await Promise.all([
-      this.client
-        .from("profiles")
-        .select("id, display_name, role_id")
-        .is("archived_at", null),
-      this.client.from("roles").select("id, name"),
-    ]);
-    const internalRoleIds = new Set(
-      unwrapMany(roles)
-        .filter((role) => ["owner", "admin", "manager", "staff"].includes(role.name))
-        .map((role) => role.id),
-    );
-
-    return unwrapMany(profiles)
-      .filter((profile) => internalRoleIds.has(profile.role_id))
+    return unwrapMany(await this.client.rpc("app_list_operational_assignees"))
       .map((profile) => ({
-        id: profile.id,
+        id: profile.profile_id,
         displayName: profile.display_name ?? "Unnamed teammate",
       }))
       .sort((left, right) => left.displayName.localeCompare(right.displayName));
