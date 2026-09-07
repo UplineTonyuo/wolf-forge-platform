@@ -216,8 +216,13 @@
   transform: translateX(26px) scale(0.985);
   transform-origin: right center;
   transition:
+    width 280ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 200ms ease,
     transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.drawer:has(.conversationPaneSettingsOpen) {
+  width: min(1160px, calc(100vw - 24px));
 }
 
 .drawerOpen {
@@ -559,8 +564,26 @@
   min-width: 0;
   min-height: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 0;
+  grid-template-rows: minmax(0, 1fr);
+  background: #ffffff;
+  overflow: hidden;
+  transition: grid-template-columns 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.conversationPaneSettingsOpen {
+  grid-template-columns: minmax(0, 1fr) 390px;
+}
+
+.conversationThread {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   background: #ffffff;
+  overflow: hidden;
 }
 
 /*
@@ -581,6 +604,8 @@
 }
 
 .paneHeader {
+  position: relative;
+  z-index: 3;
   min-height: 58px;
   padding: 12px 14px;
 
@@ -589,6 +614,7 @@
   gap: 10px;
 
   border-bottom: 1px solid #eceef2;
+  background: #ffffff;
 }
 
 .paneHeaderText {
@@ -696,135 +722,6 @@
   background: rgba(0, 13, 81, 0.12);
 }
 
-/* --- Slow Mode quick-access popover -----------------------------------
- * A compact conversation-governance control anchored to the header clock
- * icon, deliberately separate from the large Conversation settings dialog:
- * this is the primary place Slow Mode gets turned on/off/modified now.
- */
-.slowModeAnchor {
-  position: relative;
-}
-
-.slowModeMenu {
-  position: absolute;
-  z-index: 12060;
-  top: calc(100% + 6px);
-  right: 0;
-  width: 210px;
-  padding: 6px;
-
-  display: grid;
-  gap: 3px;
-
-  border: 1px solid #e2e5eb;
-  border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 18px 44px rgba(0, 13, 81, 0.16);
-
-  opacity: 0;
-  transform: translateY(-6px) scale(0.98);
-  transform-origin: top right;
-  transition:
-    opacity 170ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.slowModeMenuOpen {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.slowModeMenuClosing {
-  opacity: 0;
-  transform: translateY(-4px) scale(0.985);
-  transition:
-    opacity 130ms ease,
-    transform 160ms cubic-bezier(0.4, 0, 1, 1);
-}
-
-.slowModeMenuLabel {
-  padding: 5px 7px 2px;
-  color: #9aa0ac;
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.slowModeMenuItem {
-  width: 100%;
-  padding: 7px 8px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  text-align: left;
-  color: var(--wf-text, #1a1a18);
-
-  font-family: var(--wf-font-ui);
-  font-size: 11.5px;
-  font-weight: 550;
-
-  cursor: pointer;
-  transition: background-color 130ms ease;
-}
-
-.slowModeMenuItem:hover:not(:disabled) {
-  background: rgba(0, 13, 81, 0.05);
-}
-
-.slowModeMenuItem:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.slowModeMenuItemDanger {
-  color: var(--wf-danger, #8c2f2f);
-}
-
-.slowModeMenuItemDanger:hover:not(:disabled) {
-  background: rgba(140, 47, 47, 0.06);
-}
-
-.slowModeCustomRow {
-  display: flex;
-  gap: 6px;
-  padding: 3px 2px 1px;
-}
-
-.slowModeBack {
-  justify-self: start;
-  padding: 4px 6px;
-  margin-bottom: 1px;
-
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
-  border: 0;
-  background: transparent;
-  color: #8a90a0;
-
-  font-family: var(--wf-font-ui);
-  font-size: 10px;
-  font-weight: 620;
-  cursor: pointer;
-}
-
-.slowModeBack:hover {
-  color: var(--wf-navy, #000d51);
-}
-
-.slowModeBack svg {
-  width: 11px;
-  height: 11px;
-}
-
 .backButton {
   display: none;
 }
@@ -846,16 +743,108 @@
   padding-right: 52px;
 }
 
+.conversationThread .paneHeader {
+  padding-right: 14px;
+}
+
 /*
  * The conversation body is keyed on the conversation id, so switching threads
  * remounts it and replays this entrance. That is the "conversation transition":
  * the outgoing thread is replaced rather than cross-faded, which is honest —
  * the messages really are different messages, not the same ones moving.
  */
+/*
+ * Shares `.conversationThread`'s row 2 (`minmax(0, 1fr)`) with
+ * `.messageScroll` instead of taking its own implicit row — the exact
+ * overlap failure mode described above for the header/error wrapper would
+ * otherwise repeat here, since the grid template only defines 3 rows for
+ * what would then be 4 flow children. Floats above the scrolling transcript;
+ * `.messageScroll`'s own top padding reserves the room for it.
+ */
+.threadContextLayer {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: start;
+  justify-self: stretch;
+  z-index: 3;
+  min-width: 0;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.threadContextLayer > * {
+  pointer-events: auto;
+}
+
+.historyToolbar {
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 8px auto 0;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08), 0 0 0 1px #e6e8ed;
+  backdrop-filter: blur(6px);
+}
+
+.historyToolbarButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #4b5160;
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+  font-weight: 640;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.historyToolbarButton svg {
+  width: 13px;
+  height: 13px;
+}
+
+.historyToolbarButton:hover,
+.historyToolbarButton:focus-visible {
+  background: #f1f2f5;
+  color: #14161b;
+}
+
+.historyToolbarButton:focus-visible {
+  outline: 2px solid rgba(0, 13, 81, 0.28);
+  outline-offset: -2px;
+}
+
+.historyToolbarLatest {
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+}
+
+.historyToolbarLatest:hover,
+.historyToolbarLatest:focus-visible {
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+  opacity: 0.9;
+}
+
 .messageScroll {
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 16px 16px 8px;
+  overscroll-behavior: contain;
+  padding: 58px 16px 8px;
 
   display: flex;
   flex-direction: column;
@@ -875,12 +864,26 @@
   }
 }
 
+.dayDivider {
+  width: min(320px, 72%);
+  margin: 0 auto 12px;
+  display: grid;
+  grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+
+.dayDivider::before,
+.dayDivider::after {
+  content: "";
+  height: 1px;
+  background: #e5e8ee;
+}
+
 .dayHeading {
   align-self: center;
-  padding: 3px 10px;
+  padding: 2px 4px;
 
-  border-radius: 999px;
-  background: #f4f5f8;
   color: #8a909c;
 
   font-size: 9px;
@@ -890,6 +893,8 @@
 }
 
 .messageGroup {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   grid-template-columns: 26px minmax(0, 1fr);
   gap: 8px;
@@ -903,6 +908,8 @@
 
 .messageGroupBody {
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   display: grid;
   gap: 3px;
   justify-items: start;
@@ -919,7 +926,9 @@
 }
 
 .bubble {
+  min-width: 0;
   max-width: 82%;
+  box-sizing: border-box;
   padding: 8px 11px;
 
   border: 1px solid #e8eaef;
@@ -945,6 +954,8 @@
 
 .formattedMessage {
   min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .formattedMessage ul,
@@ -1003,6 +1014,9 @@
 
 .bubbleRow {
   position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: flex-end;
   gap: 6px;
@@ -1301,12 +1315,18 @@
    ========================================================================== */
 
 .composer {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px 12px;
   border-top: 1px solid #eceef2;
   background: #ffffff;
 }
 
 .composerBox {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   display: grid;
   gap: 8px;
 
@@ -1341,6 +1361,7 @@
   border-bottom: 1px solid #eceef2;
   border-radius: 11px 11px 0 0;
   background: #fafbfc;
+  flex-wrap: wrap;
 }
 
 .composerToolbar button {
@@ -1493,15 +1514,18 @@
 }
 
 .composerRow {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .composerHint {
+  min-width: 0;
   margin-right: auto;
   color: #b0b5c0;
   font-size: 9px;
+  overflow-wrap: anywhere;
 }
 
 .composerCount {
@@ -1518,6 +1542,7 @@
 .ghostButton {
   height: 28px;
   padding: 0 10px;
+  flex-shrink: 0;
 
   display: inline-flex;
   align-items: center;
@@ -1563,6 +1588,7 @@
 .sendButton {
   width: 30px;
   height: 30px;
+  flex-shrink: 0;
 
   display: grid;
   place-items: center;
@@ -1657,6 +1683,37 @@
   transition:
     opacity 140ms ease,
     transform 170ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.micDialog {
+  width: min(340px, 100%);
+  text-align: center;
+}
+
+.micDialogIcon {
+  width: 44px;
+  height: 44px;
+  margin: 2px auto 14px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+  background: rgba(0, 13, 81, 0.07);
+  color: var(--wf-navy, #000d51);
+}
+
+.micDialogIcon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.micDialog .dialogHeader {
+  text-align: center;
+}
+
+.micDialog .dialogActions {
+  justify-content: center;
 }
 
 .dialogHeader {
@@ -2361,8 +2418,6 @@
   .dialogClosing,
   .menu,
   .menuClosing,
-  .slowModeMenu,
-  .slowModeMenuClosing,
   .triggerBadge {
     transition-property: opacity;
     transition-duration: 120ms;
@@ -2377,9 +2432,6 @@
   .menu,
   .menuOpen,
   .menuClosing,
-  .slowModeMenu,
-  .slowModeMenuOpen,
-  .slowModeMenuClosing,
   .triggerBadge,
   .triggerBadgeVisible {
     transform: none;
@@ -2440,6 +2492,196 @@
   .taskCard:hover {
     transform: none;
   }
+}
+
+/* Voice messages and pins — compact extensions of the existing Team surface. */
+.voiceRecorderButtonWrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.voiceMicErrorPopover {
+  position: absolute;
+  z-index: 6;
+  bottom: calc(100% + 8px);
+  right: 0;
+
+  width: max-content;
+  max-width: min(230px, 68vw);
+  padding: 7px 10px;
+
+  border-radius: 8px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+
+  font-size: 10.5px;
+  font-weight: 550;
+  line-height: 1.4;
+  text-align: left;
+
+  box-shadow: 0 10px 24px rgba(0, 13, 81, 0.22);
+  animation: voiceMicErrorIn 120ms ease both;
+}
+
+@keyframes voiceMicErrorIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.voiceMicButton,
+.voiceRecorder button,
+.voicePlayButton,
+.voiceRetry {
+  min-width: 30px;
+  min-height: 30px;
+  border: 1px solid #dfe3ec;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--wf-navy, #000d51);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.voiceMicButton svg,
+.voiceRecorder button svg,
+.voicePlayButton svg,
+.voiceRetry svg { width: 14px; height: 14px; }
+.voiceMicButton:disabled,
+.voiceRecorder button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.voiceRecorder {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #31384d;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.voiceRecorder audio { width: min(230px, 42vw); height: 30px; }
+.voiceRecordingDot { width: 7px; height: 7px; border-radius: 50%; background: #b42318; }
+.voiceError { color: #b42318; font-size: 10.5px; line-height: 1.35; }
+
+.voiceMessage {
+  min-width: 220px;
+  display: grid;
+  grid-template-columns: 30px minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.voiceMessage progress { width: 100%; height: 5px; accent-color: var(--wf-navy, #000d51); }
+.voiceRetry { grid-column: 1 / -1; justify-self: start; padding: 0 8px; }
+.voiceExpired { display: inline-flex; align-items: center; gap: 6px; color: #6b7280; font-size: 12px; }
+.voiceExpired svg { width: 14px; height: 14px; }
+
+.pinsRoot { position: relative; flex: 0 0 auto; }
+.pinCount {
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+  font-size: 8px;
+  line-height: 11px;
+  text-align: center;
+}
+
+.pinsPanel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: var(--pins-left, 0px);
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(64vh, 480px);
+  border: 1px solid #dfe3ec;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgba(0, 13, 81, 0.16);
+  color: #20253a;
+  animation: pinsIn 150ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pinsPanel:focus-visible { outline: none; }
+
+.pinsPanel::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: var(--pins-caret, 20px);
+  width: 11px;
+  height: 11px;
+  background: #ffffff;
+  border-left: 1px solid #dfe3ec;
+  border-top: 1px solid #dfe3ec;
+  border-radius: 2px 0 0 0;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+@keyframes pinsIn { from { opacity: 0; transform: translateY(-4px); } }
+.pinsHeader { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 11px 12px; border-bottom: 1px solid #eef0f5; }
+.pinsHeader strong { font-size: 12px; font-weight: 700; }
+.pinsHeader button,
+.pinItem > button:last-child { border: 0; background: transparent; color: #596176; cursor: pointer; padding: 4px; display: inline-grid; place-items: center; border-radius: 6px; }
+.pinsHeader button:hover,
+.pinItem > button:last-child:hover:not(:disabled) { background: #f1f2f5; color: #14161b; }
+.pinsHeader svg,
+.pinItem > button:last-child svg { width: 14px; height: 14px; }
+.pinsBody { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.pinList { display: grid; }
+.pinItem { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; border-bottom: 1px solid #f0f2f6; }
+.pinItem > button:first-child,
+.pinHistoryItem {
+  min-width: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: #ffffff;
+  color: inherit;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+.pinItem > button:first-child:hover,
+.pinHistoryItem:hover { background: #f7f8fb; }
+.pinItem button:disabled,
+.pinHistoryItem:disabled { cursor: default; opacity: 0.65; }
+.pinItem strong,
+.pinHistoryItem strong { font-size: 11px; }
+.pinItem span,
+.pinHistoryItem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.pinItem small,
+.pinHistoryItem small { color: #737b8f; font-size: 9.5px; }
+.pinsSectionTitle { padding: 9px 12px 4px; color: #596176; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.pinsEmpty { margin: 0; padding: 10px 12px 14px; color: #737b8f; font-size: 11px; }
+
+@media (max-width: 860px) {
+  .pinsPanel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-height: 58dvh; }
+  .pinsPanel::before { display: none; }
+  .voiceMessage { min-width: min(210px, 62vw); }
+  .voiceRecorder audio { width: min(190px, 48vw); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pinsPanel { animation: none; }
 }
 
 /* ==========================================================================
@@ -3439,11 +3681,23 @@
  * (mobileActive), which is what gives touch devices a trigger with no hover
  * state at all.
  */
+/*
+ * Floats ABOVE the bubble row rather than overlapping `.bubbleTime` at the
+ * same edge — the two previously shared the same anchor point
+ * (`top: 50%; right/left: 0`, the same corner `.bubbleTime` occupies in
+ * normal flex flow), which covered the timestamp on short messages, where
+ * `.bubbleRow` shrink-wraps close to the bubble+time content width. Floating
+ * above guarantees the two can never overlap regardless of message length,
+ * mirrored side, or a narrower Settings-open column, without reserving any
+ * extra width in the row's own flex flow (so hovering never resizes the row).
+ */
 .reactionRail {
   position: absolute;
   z-index: 8;
-  top: 50%;
-  left: calc(100% + 7px);
+  top: auto;
+  bottom: calc(100% + 6px);
+  right: 0;
+  left: auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -3457,15 +3711,15 @@
 
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%) scale(0.88);
+  transform: translateY(4px) scale(0.9);
   transition:
     opacity 150ms ease,
     transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .messageGroupMine .reactionRail {
-  right: calc(100% + 7px);
-  left: auto;
+  right: auto;
+  left: 0;
 }
 
 .bubbleRow:hover .reactionRail,
@@ -3473,7 +3727,7 @@
 .reactionRailMobileActive {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(-50%) scale(1);
+  transform: translateY(0) scale(1);
 }
 
 .reactionRailButton {
@@ -3940,194 +4194,391 @@
 .messageDeleteActions svg { width: 13px; height: 13px; }
 .messageActionError { margin: 0 14px 12px; color: var(--wf-danger, #8c2f2f); font-size: 10px; text-align: center; }
 
-/*
- * Conversation Controls reuses the messageAction backdrop/card/header/close
- * primitives above for identical overlay mechanics, and adds only the
- * governance-specific body below.
- */
-.controlsCard { width: min(380px, 100%); }
-
-.controlsBody {
-  max-height: min(520px, calc(100dvh - 120px));
-  padding: 0 14px 14px;
-  overflow-y: auto;
-  display: grid;
-  gap: 16px;
-}
-
-.controlsOwnerLine {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #565d6c;
-  font-size: 11px;
-  font-weight: 620;
-}
-
-.controlsOwnerLine svg { color: var(--wf-gold-ink, #7d6120); }
-
-.controlsSection { display: grid; gap: 7px; }
-
-.controlsSectionTitle {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--wf-navy, #000d51);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.controlsSummary { margin: 0; color: #565d6c; font-size: 11.5px; }
-
-.controlsFieldRow { display: flex; gap: 6px; }
-
-.controlsTextInput,
-.controlsSelect {
+/* Integrated conversation control center. It is a real column, not a modal. */
+.settingsPanel {
   min-width: 0;
-  flex: 1;
-  height: 32px;
-  padding: 0 9px;
-  border: 1px solid #e1e3e8;
-  border-radius: 8px;
-  background: #ffffff;
-  color: var(--wf-text, #1a1a18);
-  font-family: var(--wf-font-ui);
-  font-size: 11.5px;
+  min-height: 0;
+  width: 0;
+  overflow: hidden;
+  border-left: 0 solid #e6e8ed;
+  background: #f8f9fb;
+  opacity: 0;
+  transform: translateX(18px);
+  pointer-events: none;
+  transition:
+    width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-width 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.controlsTextInput:focus,
-.controlsSelect:focus { outline: 2px solid rgba(0, 13, 81, 0.18); outline-offset: 1px; }
-
-.controlsSmallButton {
-  height: 32px;
-  padding: 0 11px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--wf-navy, #000d51);
-  color: #ffffff;
-  font-family: var(--wf-font-ui);
-  font-size: 11px;
-  font-weight: 650;
-  cursor: pointer;
-  white-space: nowrap;
+.settingsPanelOpen {
+  width: 390px;
+  border-left-width: 1px;
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
 }
 
-.controlsSmallButton:disabled { opacity: 0.45; cursor: not-allowed; }
-.controlsSmallButton svg { width: 12px; height: 12px; }
-
-.controlsPresetRow { display: flex; flex-wrap: wrap; gap: 5px; }
-
-.controlsPresetButton {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid #e1e3e8;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #454c5c;
-  font-family: var(--wf-font-ui);
-  font-size: 10.5px;
-  font-weight: 620;
-  cursor: pointer;
+.settingsPanelInner {
+  width: 390px;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
-.controlsPresetButton:hover { background: #f4f5f7; }
-.controlsPresetButton:disabled { opacity: 0.5; cursor: wait; }
-
-.controlsPresetButtonActive {
-  border-color: transparent;
-  background: var(--wf-navy, #000d51);
-  color: #ffffff;
-}
-
-.controlsMemberList { display: grid; gap: 2px; }
-
-.controlsMemberRow {
-  min-height: 34px;
-  padding: 4px 2px;
+.settingsPanelHeader {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  min-width: 0;
+  min-height: 64px;
+  padding: 12px 14px 11px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px solid #f0f1f4;
+  gap: 12px;
+  border-bottom: 1px solid #e6e8ed;
+  background: #ffffff;
 }
 
-.controlsMemberRow:last-child { border-bottom: 0; }
+.settingsPanelHeader > span { min-width: 0; display: grid; gap: 2px; }
+.settingsPanelHeader h2 { margin: 0; color: var(--wf-navy, #000d51); font-family: var(--wf-font-display); font-size: 14px; font-weight: 700; letter-spacing: -0.015em; }
+.settingsPanelHeader p { margin: 0; color: #7c8391; font-size: 10.5px; }
 
-.controlsMemberRow span {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  color: #303645;
-  font-size: 11.5px;
-  font-weight: 620;
-}
-
-.controlsRoleTag {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(0, 13, 81, 0.08);
-  color: var(--wf-navy, #000d51);
-  font-size: 9px;
-  font-weight: 700;
-  font-style: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.controlsCapabilitySummary {
-  display: block;
-  color: #8b919e;
-  font-size: 9.5px;
-  font-weight: 500;
-}
-
-.controlsIconButton {
-  width: 26px;
-  height: 26px;
+.settingsCloseButton,
+.settingsMemberManage {
+  width: 28px;
+  height: 28px;
   flex: none;
   display: grid;
   place-items: center;
-  border: 0;
-  border-radius: 999px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
-  color: #8b919e;
+  color: #747b89;
   cursor: pointer;
 }
 
-.controlsIconButton:hover { background: rgba(140, 47, 47, 0.08); color: var(--wf-danger, #8c2f2f); }
-.controlsIconButton:disabled { opacity: 0.5; cursor: wait; }
+.settingsCloseButton:hover,
+.settingsMemberManage:hover { border-color: #e2e5eb; background: #f3f5f8; color: var(--wf-navy, #000d51); }
+.settingsCloseButton:focus-visible,
+.settingsMemberManage:focus-visible,
+.settingsTextButton:focus-visible,
+.settingsBackButton:focus-visible { outline: 2px solid rgba(0, 13, 81, 0.35); outline-offset: 2px; }
+.settingsCloseButton svg,
+.settingsMemberManage svg { width: 14px; height: 14px; }
 
-.controlsGrantForm {
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px solid #eceef2;
-  display: grid;
-  gap: 8px;
+.settingsScroll {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #c9ced8 transparent;
 }
 
-.controlsCapabilityGrid {
+.settingsIdentity {
+  min-width: 0;
+  padding: 14px 16px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #e7e9ee;
+  background: #ffffff;
 }
 
-.controlsCapabilityCheckbox {
+.settingsIdentityAvatar { width: 34px; height: 34px; }
+.settingsIdentityText { min-width: 0; display: grid; gap: 2px; }
+.settingsIdentityText strong,
+.settingsIdentityText small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settingsIdentityText strong { color: #272d3a; font-size: 12.5px; font-weight: 680; }
+.settingsIdentityText small { color: #818795; font-size: 9.5px; }
+
+.settingsSection {
+  min-width: 0;
+  padding: 17px 16px;
+  display: grid;
+  gap: 11px;
+  border-bottom: 1px solid #e5e8ed;
+  background: #ffffff;
+}
+
+.settingsSectionHeading { min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.settingsSectionHeading > span { min-width: 0; display: grid; gap: 3px; }
+.settingsSectionHeading h3,
+.permissionEditor h3 { margin: 0; color: var(--wf-navy, #000d51); font-size: 12px; font-weight: 720; letter-spacing: -0.005em; }
+.settingsSectionHeading p { margin: 0; color: #777f8e; font-size: 10.5px; line-height: 1.4; }
+
+.settingsField { min-width: 0; display: grid; gap: 6px; }
+.settingsField > span:first-child,
+.customSlowModeRow label > span,
+.scopeFieldset legend { color: #626a79; font-size: 9.5px; font-weight: 680; }
+.settingsTextRow { min-width: 0; display: flex; gap: 7px; }
+.settingsTextRow input,
+.customSlowModeRow input {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #262c38;
+  font-family: var(--wf-font-ui);
+  font-size: 11.5px;
+}
+.settingsTextRow input { flex: 1 1 auto; padding: 0 10px; }
+.settingsTextRow input:focus,
+.customSlowModeRow input:focus { outline: 2px solid rgba(0, 13, 81, 0.2); outline-offset: 1px; border-color: rgba(0, 13, 81, 0.34); }
+
+.settingsSaveButton,
+.settingsPrimaryButton,
+.settingsDangerButton {
+  min-height: 32px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-family: var(--wf-font-ui);
+  font-size: 10.5px;
+  font-weight: 670;
+  cursor: pointer;
+}
+.settingsSaveButton,
+.settingsPrimaryButton { background: var(--wf-navy, #000d51); color: #ffffff; }
+.settingsSaveButton:disabled,
+.settingsPrimaryButton:disabled { background: #eceef2; color: #a0a5af; cursor: not-allowed; }
+.settingsPrimaryButton svg,
+.settingsDangerButton svg { width: 12px; height: 12px; }
+.settingsDangerButton { justify-self: start; border-color: rgba(140, 47, 47, 0.2); background: transparent; color: var(--wf-danger, #8c2f2f); }
+.settingsDangerButton:hover:not(:disabled) { background: rgba(140, 47, 47, 0.06); }
+
+.settingsReadOnlyValue { margin: 0; color: #303645; font-size: 11.5px; font-weight: 620; }
+.settingsMetadata { margin: 0; display: flex; align-items: center; gap: 8px; color: #777e8c; font-size: 10px; }
+.settingsMetadata svg { width: 14px; height: 14px; color: var(--wf-gold-ink, #7d6120); }
+.settingsMetadata span { display: flex; gap: 7px; }
+.settingsMetadata strong { color: #4d5564; }
+
+.segmentedControl {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 3px;
+  border: 1px solid #e0e3e9;
+  border-radius: 9px;
+  background: #f3f5f8;
+}
+.segmentedControl button {
+  min-width: 0;
+  height: 29px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #626a79;
+  font-family: var(--wf-font-ui);
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.segmentedControl button:hover:not(:disabled) { color: var(--wf-navy, #000d51); }
+.segmentedControl button:disabled { opacity: 0.5; cursor: not-allowed; }
+.segmentedControl .segmentedControlActive { background: var(--wf-navy, #000d51); color: #ffffff; box-shadow: 0 2px 5px rgba(0, 13, 81, 0.14); }
+
+.customSlowModeRow,
+.addMemberControl { min-width: 0; padding: 9px; display: flex; align-items: end; gap: 7px; border-radius: 9px; background: #f5f6f8; }
+.customSlowModeRow label { min-width: 0; flex: 1 1 auto; display: grid; gap: 4px; }
+.customSlowModeRow input { width: 100%; padding: 0 9px; }
+
+.memberPicker { flex: 1 1 auto; min-width: 0; }
+.memberPickerMenu { max-height: 220px; }
+
+.memberPickerOption {
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #454c5c;
-  font-size: 10.5px;
-  font-weight: 600;
+  gap: 9px;
+}
+.memberPickerOption strong { display: block; color: #272d3a; font-size: 11.5px; font-weight: 640; }
+.memberPickerOption small { display: block; color: #818795; font-size: 10px; }
+
+.scopeFieldset { min-width: 0; margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.scopeFieldset:disabled { opacity: 0.44; }
+.scopeControl { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.scopeControl button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #606877;
+  font-family: var(--wf-font-ui);
+  font-size: 10px;
+  font-weight: 620;
+  cursor: pointer;
+}
+.scopeControl button[aria-pressed="true"] { border-color: rgba(0, 13, 81, 0.35); background: rgba(0, 13, 81, 0.06); color: var(--wf-navy, #000d51); }
+.slowModeStatus { margin: 0; color: #4f5766; font-size: 10.5px; line-height: 1.45; }
+.slowModeStatus span { display: block; color: #858b97; }
+
+.taskPolicyList { display: grid; gap: 5px; }
+.taskPolicyList button {
+  min-width: 0;
+  width: 100%;
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  border: 1px solid #e1e4e9;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #333a48;
+  font-family: var(--wf-font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.taskPolicyList button:hover:not(:disabled) { background: #f7f8fa; }
+.taskPolicyList button:disabled { cursor: not-allowed; }
+.taskPolicyList button > span:last-child { min-width: 0; display: grid; gap: 2px; }
+.taskPolicyList strong { color: #343b49; font-size: 10.8px; font-weight: 680; }
+.taskPolicyList small { color: #7f8693; font-size: 9.5px; line-height: 1.35; }
+.radioMark { width: 14px; height: 14px; margin-top: 1px; border: 1.5px solid #b7bdc8; border-radius: 999px; }
+.taskPolicyList .taskPolicyActive { border-color: rgba(0, 13, 81, 0.3); background: rgba(0, 13, 81, 0.045); }
+.taskPolicyActive .radioMark { border: 4px solid var(--wf-navy, #000d51); }
+.taskPolicyActive strong { color: var(--wf-navy, #000d51); }
+
+.settingsTextButton,
+.settingsBackButton {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--wf-navy, #000d51);
+  font-family: var(--wf-font-ui);
+  font-size: 9.8px;
+  font-weight: 680;
+  cursor: pointer;
+}
+.settingsTextButton svg,
+.settingsBackButton svg { width: 12px; height: 12px; }
+
+.settingsMemberList { min-width: 0; display: grid; }
+.settingsMemberRow {
+  min-width: 0;
+  min-height: 47px;
+  padding: 6px 0;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #edf0f3;
+}
+.settingsMemberRow:last-child { border-bottom: 0; }
+.settingsMemberIdentity { min-width: 0; display: grid; gap: 1px; }
+.settingsMemberIdentity strong,
+.settingsMemberIdentity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settingsMemberIdentity strong { color: #313846; font-size: 10.8px; font-weight: 650; }
+.settingsMemberIdentity small { color: #89909c; font-size: 9px; }
+.settingsMemberActions { display: flex; align-items: center; gap: 4px; }
+.settingsRoleBadge { padding: 2px 6px; border-radius: 999px; background: #f0f2f5; color: #69717f; font-size: 8px; font-weight: 720; font-style: normal; letter-spacing: 0.02em; }
+.settingsRoleBadgeOwner { background: rgba(168, 131, 46, 0.1); color: var(--wf-gold-ink, #7d6120); }
+.settingsMemberManage { width: 25px; height: 25px; }
+.settingsMemberManage svg { width: 12px; height: 12px; }
+
+.permissionEditor { min-width: 0; padding: 16px; display: grid; gap: 14px; background: #ffffff; }
+.permissionEditorIdentity { min-width: 0; display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: center; gap: 9px; padding-bottom: 13px; border-bottom: 1px solid #e7e9ee; }
+.permissionEditorIdentity > span { min-width: 0; display: grid; gap: 1px; }
+.permissionEditorIdentity strong { color: #2f3643; font-size: 11.5px; }
+.permissionEditorIdentity small { color: #858c99; font-size: 9.5px; }
+.permissionList { display: grid; gap: 2px; }
+.permissionCheckRow { min-height: 34px; padding: 0 7px; display: flex; align-items: center; gap: 9px; border-radius: 7px; color: #424a59; font-size: 10.5px; font-weight: 600; cursor: pointer; }
+.permissionCheckRow:hover { background: #f5f6f8; }
+.permissionCheckRow input { accent-color: var(--wf-navy, #000d51); }
+
+.settingsSaveStatus,
+.settingsError { position: sticky; bottom: 10px; width: fit-content; max-width: calc(100% - 32px); margin: 10px auto; padding: 6px 9px; display: flex; align-items: center; gap: 5px; border-radius: 8px; font-size: 9.5px; font-weight: 650; }
+.settingsSaveStatus { background: var(--wf-navy, #000d51); color: #ffffff; box-shadow: 0 6px 18px rgba(0, 13, 81, 0.16); }
+.settingsError { background: #fff3f2; color: var(--wf-danger, #8c2f2f); overflow-wrap: anywhere; }
+.settingsSaveStatus svg { width: 11px; height: 11px; }
+
+.segmentedControl button:focus-visible,
+.scopeControl button:focus-visible,
+.taskPolicyList button:focus-visible,
+.settingsSaveButton:focus-visible,
+.settingsPrimaryButton:focus-visible,
+.settingsDangerButton:focus-visible {
+  outline: 2px solid rgba(0, 13, 81, 0.35);
+  outline-offset: 2px;
 }
 
-.controlsBusyRow { display: grid; place-items: center; padding: 0 0 10px; }
+@media (max-width: 1100px) {
+  .drawer:has(.conversationPaneSettingsOpen) {
+    width: min(760px, calc(100vw - 24px));
+  }
+
+  .conversationPaneSettingsOpen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settingsPanel,
+  .settingsPanelOpen {
+    position: absolute;
+    z-index: 6;
+    inset: 0 0 0 auto;
+    width: min(420px, 100%);
+    max-width: 100%;
+    border-left-width: 1px;
+  }
+
+  .settingsPanel {
+    transform: translateX(100%);
+  }
+
+  .settingsPanelOpen {
+    transform: translateX(0);
+  }
+
+  .settingsPanelInner {
+    width: min(420px, 100vw);
+  }
+}
+
+@media (max-width: 860px) {
+  .drawer:has(.conversationPaneSettingsOpen) {
+    width: 100%;
+  }
+
+  .settingsPanel,
+  .settingsPanelOpen,
+  .settingsPanelInner {
+    width: 100%;
+  }
+
+  .settingsPanelHeader {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+
+  .settingsScroll {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .conversationPane,
+  .settingsPanel {
+    transition-duration: 0.01ms;
+  }
+}
 
 /*
  * Chips sit directly under the bubble they belong to, native to it rather
@@ -4232,25 +4683,6 @@
 
   .messageActionCardClosing {
     transform: translateY(14px) scale(0.995);
-  }
-
-  .reactionRail {
-    top: auto;
-    right: 0;
-    bottom: calc(100% + 6px);
-    left: auto;
-    transform: translateY(4px) scale(0.9);
-  }
-
-  .messageGroupMine .reactionRail {
-    right: auto;
-    left: 0;
-  }
-
-  .bubbleRow:hover .reactionRail,
-  .bubbleRow:focus-within .reactionRail,
-  .reactionRailMobileActive {
-    transform: translateY(0) scale(1);
   }
 
   .messageGroup:has(.reactionRailMobileActive) {

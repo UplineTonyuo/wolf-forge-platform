@@ -9,6 +9,7 @@ import {
   type TeamConversationDetailRow,
   type TeamConversationRow,
   type TeamMemberRow,
+  type TeamMessagePinRow,
   type TeamMessageReactionRow,
   type TeamMessageRow,
   type TeamReactionCode,
@@ -91,10 +92,11 @@ export type TeamConversationView = {
   conversationId: string;
   kind: "direct" | "group";
   name: string;
+  imageUrl?: string | null;
   memberCount: number;
   otherMember: TeamMemberView | null;
   lastMessageId: string | null;
-  lastMessageType: "text" | "task_activity" | "governance_activity" | null;
+  lastMessageType: "text" | "voice" | "task_activity" | "governance_activity" | null;
   lastAuthorProfileId: string | null;
   lastAuthorName: string | null;
   lastAuthorAvatarUrl: string | null;
@@ -124,6 +126,7 @@ export function toTeamConversationView(row: TeamConversationRow): TeamConversati
       kind === "group"
         ? row.conversation_title?.trim() || "Team group"
         : otherMember?.name ?? unnamedTeamMember,
+    imageUrl: kind === "group" ? row.conversation_image_url?.trim() || null : null,
     memberCount: Math.max(kind === "group" ? 3 : 2, row.member_count ?? 0),
     otherMember,
     lastMessageId: row.last_message_id ?? null,
@@ -219,7 +222,7 @@ export type TeamMessageView = {
   authorAvatarUrl: string | null;
   authorInitials: string;
   body: string;
-  messageType: "text" | "task_activity" | "governance_activity";
+  messageType: "text" | "voice" | "task_activity" | "governance_activity";
   taskId: string | null;
   taskAction: "completed" | "reopened" | "created" | null;
   createdAt: string;
@@ -237,6 +240,14 @@ export type TeamMessageView = {
   forwardedFromMessageId: string | null;
   forwardedFromAuthorName: string | null;
   deletedForEveryone: boolean;
+  voice?: {
+    storagePath: string | null;
+    durationMs: number;
+    sizeBytes: number;
+    mimeType: string | null;
+    expiresAt: string | null;
+    expiredAt: string | null;
+  } | null;
 };
 
 export function toTeamMessageView(row: TeamMessageRow, actorProfileId: string): TeamMessageView {
@@ -250,7 +261,9 @@ export function toTeamMessageView(row: TeamMessageRow, actorProfileId: string): 
     authorInitials: teamInitials(row.author_name),
     body: row.body,
     messageType:
-      row.message_type === "task_activity" || row.message_type === "governance_activity"
+      row.message_type === "voice" ||
+      row.message_type === "task_activity" ||
+      row.message_type === "governance_activity"
         ? row.message_type
         : "text",
     taskId: row.task_id ?? null,
@@ -270,6 +283,17 @@ export function toTeamMessageView(row: TeamMessageRow, actorProfileId: string): 
     forwardedFromMessageId: row.forwarded_from_message_id ?? null,
     forwardedFromAuthorName: row.forwarded_from_author_name?.trim() || null,
     deletedForEveryone: row.deleted_for_everyone === true,
+    voice:
+      row.message_type === "voice"
+        ? {
+            storagePath: row.voice_storage_path?.trim() || null,
+            durationMs: Math.max(0, row.voice_duration_ms ?? 0),
+            sizeBytes: Math.max(0, row.voice_size_bytes ?? 0),
+            mimeType: row.voice_mime_type?.trim() || null,
+            expiresAt: row.voice_expires_at ?? null,
+            expiredAt: row.voice_expired_at ?? null,
+          }
+        : null,
   };
 }
 
@@ -775,6 +799,8 @@ export type TeamConversationCapabilitiesView = {
   canManageSlowMode: boolean;
   canRenameConversation: boolean;
   canManageTaskPolicy: boolean;
+  canSendVoice?: boolean;
+  canManagePins?: boolean;
 };
 
 const defaultTeamConversationCapabilities: TeamConversationCapabilitiesView = {
@@ -785,6 +811,8 @@ const defaultTeamConversationCapabilities: TeamConversationCapabilitiesView = {
   canManageSlowMode: false,
   canRenameConversation: false,
   canManageTaskPolicy: false,
+  canSendVoice: false,
+  canManagePins: false,
 };
 
 function toTeamConversationCapabilitiesView(
@@ -799,6 +827,46 @@ function toTeamConversationCapabilitiesView(
     canManageSlowMode: row.can_manage_slow_mode,
     canRenameConversation: row.can_rename_conversation,
     canManageTaskPolicy: row.can_manage_task_policy,
+    canSendVoice: row.can_send_voice === true,
+    canManagePins: row.can_manage_pins === true,
+  };
+}
+
+export type TeamMessagePinView = {
+  id: string;
+  conversationId: string;
+  messageId: string;
+  authorProfileId: string;
+  authorName: string;
+  textPreview: string | null;
+  messageCreatedAt: string;
+  messageDeleted: boolean;
+  pinnedByProfileId: string;
+  pinnedByName: string;
+  pinnedAt: string;
+  unpinnedByProfileId: string | null;
+  unpinnedByName: string | null;
+  unpinnedAt: string | null;
+  active: boolean;
+};
+
+function toTeamMessagePinView(row: TeamMessagePinRow): TeamMessagePinView {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    messageId: row.message_id,
+    authorProfileId: row.author_profile_id,
+    authorName: row.author_name?.trim() || unnamedTeamMember,
+    textPreview: row.text_preview?.trim() || null,
+    messageCreatedAt: row.message_created_at,
+    messageDeleted: row.message_deleted,
+    pinnedByProfileId: row.pinned_by_profile_id,
+    pinnedByName: row.pinned_by_name?.trim() || unnamedTeamMember,
+    pinnedAt: row.pinned_at,
+    unpinnedByProfileId: row.unpinned_by_profile_id,
+    unpinnedByName: row.unpinned_by_name?.trim() || null,
+    unpinnedAt: row.unpinned_at,
+    active: row.unpinned_at === null,
   };
 }
 
@@ -818,6 +886,7 @@ export type TeamConversationDetailView = {
   kind: "direct" | "group";
   title: string | null;
   name: string;
+  imageUrl?: string | null;
   members: TeamMemberView[];
   typingMembers: TeamMemberView[];
   otherMember: TeamMemberView | null;
@@ -836,6 +905,8 @@ export type TeamConversationDetailView = {
   taskCreationPolicy: TeamTaskCreationPolicy;
   /** Set only while a Slow Mode cooldown is actively blocking my next send. */
   myNextAllowedSendAt: string | null;
+  currentPins?: TeamMessagePinView[];
+  previousPins?: TeamMessagePinView[];
 };
 
 export function toTeamConversationDetailView(
@@ -869,6 +940,7 @@ export function toTeamConversationDetailView(
     row.my_next_allowed_send_at && new Date(row.my_next_allowed_send_at).getTime() > now.getTime()
       ? row.my_next_allowed_send_at
       : null;
+  const pins = (row.pins ?? []).map(toTeamMessagePinView);
 
   return {
     conversationId: row.conversation_id,
@@ -878,6 +950,7 @@ export function toTeamConversationDetailView(
       kind === "group"
         ? row.conversation_title?.trim() || "Team group"
         : otherMember?.name ?? "Conversation",
+    imageUrl: kind === "group" ? row.conversation_image_url?.trim() || null : null,
     members,
     typingMembers: toTeamMemberViews(row.typing ?? []),
     otherMember,
@@ -893,6 +966,8 @@ export function toTeamConversationDetailView(
     slowModeScope: row.slow_mode_scope ?? "members_and_admins",
     taskCreationPolicy: row.task_creation_policy ?? "everyone",
     myNextAllowedSendAt,
+    currentPins: pins.filter((pin) => pin.active),
+    previousPins: pins.filter((pin) => !pin.active),
   };
 }
 

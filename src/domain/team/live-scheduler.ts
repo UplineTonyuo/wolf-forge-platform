@@ -138,9 +138,11 @@ type FingerprintableDetail = {
   messages: Array<{
     id: string;
     deleted_for_everyone?: boolean;
+    voice_expired_at?: string | null;
     reactions?: Array<{ reaction_code: string; reaction_count: number }>;
   }>;
   typing?: Array<{ profile_id: string; last_typed_at: string }>;
+  pins?: Array<{ id: string; message_id: string; unpinned_at: string | null }>;
 } | null;
 
 /**
@@ -163,13 +165,16 @@ export function teamDetailFingerprint(detail: FingerprintableDetail): string {
       const reactions = (message.reactions ?? [])
         .map((reaction) => `${reaction.reaction_code}:${reaction.reaction_count}`)
         .join(",");
-      return `${message.id}:${message.deleted_for_everyone ? 1 : 0}:${reactions}`;
+      return `${message.id}:${message.deleted_for_everyone ? 1 : 0}:${message.voice_expired_at ?? ""}:${reactions}`;
     })
     .join("|");
   const typingPart = (detail.typing ?? [])
     .map((entry) => `${entry.profile_id}@${entry.last_typed_at}`)
     .join(",");
-  return `${messagePart}#${typingPart}`;
+  const pinPart = (detail.pins ?? [])
+    .map((pin) => `${pin.id}:${pin.message_id}:${pin.unpinned_at ?? "active"}`)
+    .join(",");
+  return `${messagePart}#${typingPart}#${pinPart}`;
 }
 
 /** A non-empty `signals` delta means something moved since the caller's cursor. */

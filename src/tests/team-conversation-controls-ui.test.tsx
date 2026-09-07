@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComponentProps } from "react";
 import type {
@@ -102,12 +102,12 @@ describe("TeamConversationControls — Remove Member affordance matches server a
     });
 
     // Ordinary member stays removable.
-    expect(screen.getByLabelText("Remove Regular Member")).toBeInTheDocument();
+    expect(screen.getByLabelText("Manage Regular Member")).toBeInTheDocument();
     // The delegated admin is NOT removable from the Members list — the server
     // (app_remove_team_conversation_member) refuses this without manage_admins.
-    expect(screen.queryByLabelText("Remove Dana Admin")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Manage Dana Admin")).not.toBeInTheDocument();
     // The owner is never removable regardless of capability.
-    expect(screen.queryByLabelText("Remove Owner One")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Manage Owner One")).not.toBeInTheDocument();
   });
 
   it("shows the Members-list remove control for a delegated-admin target once the actor also holds manage_admins", () => {
@@ -115,9 +115,9 @@ describe("TeamConversationControls — Remove Member affordance matches server a
       detail: detail({ capabilities: capabilities({ canManageMembers: true, canManageAdmins: true }) }),
     });
 
-    expect(screen.getByLabelText("Remove Regular Member")).toBeInTheDocument();
-    expect(screen.getByLabelText("Remove Dana Admin")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Remove Owner One")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Manage Regular Member")).toBeInTheDocument();
+    expect(screen.getByLabelText("Manage Dana Admin")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Manage Owner One")).not.toBeInTheDocument();
   });
 
   it("shows the Members-list remove control for a delegated-admin target when the actor is the owner", () => {
@@ -125,7 +125,102 @@ describe("TeamConversationControls — Remove Member affordance matches server a
       detail: detail({ capabilities: capabilities({ isOwner: true, canManageMembers: true, canManageAdmins: true }) }),
     });
 
-    expect(screen.getByLabelText("Remove Dana Admin")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Remove Owner One")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Manage Dana Admin")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Manage Owner One")).not.toBeInTheDocument();
+  });
+});
+
+describe("TeamConversationControls — integrated settings interactions", () => {
+  it("keeps rename Save disabled until the group name is dirty", async () => {
+    const onRename = vi.fn().mockResolvedValue(null);
+    renderControls({
+      detail: detail({ capabilities: capabilities({ canRenameConversation: true }) }),
+      onRename,
+    });
+
+    const save = screen.getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Group name"), { target: { value: "Launch Crew" } });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    await waitFor(() => expect(onRename).toHaveBeenCalledWith("Launch Crew"));
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+  });
+
+  it("applies Slow Mode presets and scope immediately through the existing callback", async () => {
+    const onSetSlowMode = vi.fn().mockResolvedValue(null);
+    renderControls({
+      detail: detail({
+        slowModeSeconds: 60,
+        slowModeScope: "members_only",
+        capabilities: capabilities({ canManageSlowMode: true }),
+      }),
+      onSetSlowMode,
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: "5m" }));
+    await waitFor(() => expect(onSetSlowMode).toHaveBeenCalledWith(300, "members_only"));
+    fireEvent.click(screen.getByRole("button", { name: "Members + Admins" }));
+    await waitFor(() => expect(onSetSlowMode).toHaveBeenCalledWith(60, "members_and_admins"));
+    expect(screen.getByText("Owner is always exempt.")).toBeInTheDocument();
+  });
+
+  it("supports the existing custom Slow Mode range without inventing durations", async () => {
+    const onSetSlowMode = vi.fn().mockResolvedValue(null);
+    renderControls({
+      detail: detail({ capabilities: capabilities({ canManageSlowMode: true }) }),
+      onSetSlowMode,
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: "Custom" }));
+    const set = screen.getByRole("button", { name: "Set" });
+    expect(set).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Custom seconds"), { target: { value: "90" } });
+    fireEvent.click(set);
+    await waitFor(() => expect(onSetSlowMode).toHaveBeenCalledWith(90, "members_and_admins"));
+  });
+
+  it("renders descriptive task-policy rows and saves a selection immediately", async () => {
+    const onSetTaskCreationPolicy = vi.fn().mockResolvedValue(null);
+    renderControls({
+      detail: detail({ capabilities: capabilities({ canManageTaskPolicy: true }) }),
+      onSetTaskCreationPolicy,
+    });
+
+    expect(screen.getByText("Delegated admins and the owner can create tasks")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: /Owner only/ }));
+    await waitFor(() => expect(onSetTaskCreationPolicy).toHaveBeenCalledWith("owner_only"));
+  });
+
+  it("reveals add-member controls only after the secondary action is used", () => {
+    renderControls({
+      detail: detail({ capabilities: capabilities({ canManageMembers: true }) }),
+      roster: [member("55555555-5555-4555-8555-555555555555", "New Teammate")],
+    });
+
+    expect(screen.queryByLabelText("Teammate to add")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add member" }));
+    expect(screen.getByLabelText("Teammate to add")).toBeInTheDocument();
+  });
+
+  it("opens delegated permissions as a secondary editor and limits grants to held capabilities", () => {
+    renderControls({
+      detail: detail({ capabilities: capabilities({ canManageAdmins: true }) }),
+    });
+
+    fireEvent.click(screen.getByLabelText("Manage Dana Admin"));
+    expect(screen.getByRole("region", { name: "Permissions for Dana Admin" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Manage admins")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Manage members")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove admin access" })).toBeInTheDocument();
+  });
+
+  it("closes on Escape and exposes a labelled panel heading", () => {
+    const onClose = vi.fn();
+    renderControls({ onClose });
+
+    expect(screen.getByRole("heading", { name: "Conversation settings" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

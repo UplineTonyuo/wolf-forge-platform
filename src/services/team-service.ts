@@ -15,6 +15,8 @@ import {
   setTeamTaskCreationPolicySchema,
   startTeamConversationSchema,
   teamConversationIdSchema,
+  teamConversationMessageSchema,
+  teamConversationPinSchema,
   teamLiveRequestSchema,
   teamMessagesBeforeSchema,
   teamMessageWindowSchema,
@@ -26,6 +28,7 @@ import {
   updateTeamTaskStatusSchema,
 } from "../domain/team/schema";
 import type { TeamRepository } from "../repositories/team-repository";
+import { PermissionDeniedError, ValidationError } from "../lib/errors/application-error";
 import {
   requireVerifiedActor,
   type ServiceDependencies,
@@ -155,6 +158,37 @@ export class TeamService {
     return this.dependencies.repository.toggleReaction(
       parseInput(toggleTeamMessageReactionSchema, input),
     );
+  }
+
+  async pinMessage(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    const parsed = parseInput(teamConversationMessageSchema, input);
+    const [detail, window] = await Promise.all([
+      this.dependencies.repository.getConversation({ conversationId: parsed.conversationId }),
+      this.dependencies.repository.getMessageWindow({
+        conversationId: parsed.conversationId,
+        messageId: parsed.messageId,
+        before: 0,
+        after: 0,
+      }),
+    ]);
+    if (detail.my_capabilities?.can_manage_pins !== true) throw new PermissionDeniedError();
+    const target = window.messages.find((message) => message.id === parsed.messageId);
+    if (!target || target.message_type !== "text" || target.deleted_for_everyone) {
+      throw new ValidationError("Only available text messages can be pinned.");
+    }
+    // The mutation RPC independently derives the real conversation and actor.
+    return this.dependencies.repository.pinMessage(parsed);
+  }
+
+  async unpinMessage(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    const parsed = parseInput(teamConversationPinSchema, input);
+    const detail = await this.dependencies.repository.getConversation({
+      conversationId: parsed.conversationId,
+    });
+    if (detail.my_capabilities?.can_manage_pins !== true) throw new PermissionDeniedError();
+    return this.dependencies.repository.unpinMessage(parsed);
   }
 
   markRead(input: unknown, actor: UserMutationActor) {

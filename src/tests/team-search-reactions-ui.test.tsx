@@ -17,6 +17,7 @@ vi.mock("../app/actions/team-messages", () => ({
 
 import { TeamReactionChips, TeamReactionRail } from "../components/team/team-message-reactions";
 import { TeamSearchPanel } from "../components/team/team-search-panel";
+import styles from "../components/team/team-messages.module.css";
 
 afterEach(cleanup);
 
@@ -135,6 +136,77 @@ describe("TeamReactionRail", () => {
 
     rerender(<ReactionRailHarness mobileActive />);
     expect(rail.className.toLowerCase()).toContain("mobileactive");
+  });
+});
+
+/**
+ * Structural approximation of the bubble row assembled inline inside
+ * `TeamConversationPane` (`team-conversation-view.tsx`) — that component has
+ * no test harness anywhere in this repo, because it needs real layout
+ * (`scrollHeight`/`scrollTop`) that jsdom does not compute. This harness
+ * reproduces only the static DOM shape (`.bubbleRow` > bubble, `<time>`,
+ * `TeamReactionRail`, using the real CSS module so the class names match
+ * production) to prove structurally that the timestamp and the action rail
+ * coexist as separate sibling elements — real hover reveal / pixel
+ * positioning is covered by rendered browser QA, not here.
+ */
+function BubbleRowHarness({ isMine = false }: { isMine?: boolean }) {
+  return (
+    <div className={isMine ? styles.messageGroupMine : ""}>
+      <div className={styles.bubbleRow}>
+        <div className={styles.bubble}>hy</div>
+        <time className={styles.bubbleTime} dateTime="2026-08-27T08:00:00.000Z">
+          8:00 AM
+        </time>
+        <TeamReactionRail
+          reactions={[]}
+          onReact={vi.fn()}
+          mobileActive={false}
+          onInteract={vi.fn()}
+          pickerOpen={false}
+          onTogglePicker={vi.fn()}
+          onClosePicker={vi.fn()}
+          onReply={vi.fn()}
+          onMore={vi.fn()}
+        />
+      </div>
+    </div>
+  );
+}
+
+describe("Message row metadata (timestamp + action rail hover regression)", () => {
+  it("renders the timestamp and the full action rail at the same time, not one instead of the other", () => {
+    render(<BubbleRowHarness />);
+    const time = screen.getByText("8:00 AM");
+    expect(time.tagName).toBe("TIME");
+    expect(time.className).toMatch(/bubbleTime/i);
+    expect(screen.getByRole("toolbar", { name: "Message actions" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "React" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reply" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More" })).toBeInTheDocument();
+  });
+
+  it("renders exactly one timestamp for the message, never a duplicate", () => {
+    render(<BubbleRowHarness />);
+    expect(screen.getAllByText("8:00 AM")).toHaveLength(1);
+  });
+
+  it("keeps the timestamp and the action toolbar as siblings inside the same row container", () => {
+    render(<BubbleRowHarness />);
+    const time = screen.getByText("8:00 AM");
+    const toolbar = screen.getByRole("toolbar", { name: "Message actions" });
+    expect(time.parentElement).toBe(toolbar.parentElement);
+    expect(time.parentElement?.className).toMatch(/bubbleRow/i);
+  });
+
+  it("does not apply the outgoing/mine modifier class for a colleague's message", () => {
+    const { container } = render(<BubbleRowHarness isMine={false} />);
+    expect(container.firstElementChild?.className ?? "").toBe("");
+  });
+
+  it("applies the outgoing/mine modifier class for the actor's own message", () => {
+    const { container } = render(<BubbleRowHarness isMine />);
+    expect((container.firstElementChild?.className ?? "").toLowerCase()).toContain("messagegroupmine");
   });
 });
 

@@ -106,6 +106,23 @@ export const teamTaskTitleMaxLength = 200;
 export const teamTaskDescriptionMaxLength = 2000;
 export const teamSearchQueryMaxLength = 200;
 export const teamReplyQuoteMaxLength = 500;
+export const teamVoiceMaxDurationMs = 5 * 60 * 1000;
+export const teamVoiceMaxBytes = 5 * 1024 * 1024;
+export const teamVoiceDefaultRetentionDays = 90;
+export const teamVoiceMinRetentionDays = 30;
+export const teamVoiceMaxRetentionDays = 365;
+export const teamVoicePlaybackUrlSeconds = 5 * 60;
+
+/** Browser-declared values are only upload-slot hints; finalize sniffs the file server-side. */
+export const teamVoiceMimeTypes = [
+  "audio/webm",
+  "audio/webm;codecs=opus",
+  "audio/ogg",
+  "audio/ogg;codecs=opus",
+  "audio/mp4",
+] as const;
+export const teamVoiceMimeTypeSchema = z.enum(teamVoiceMimeTypes);
+export type TeamVoiceMimeType = z.infer<typeof teamVoiceMimeTypeSchema>;
 
 /** Mirrors `team_message_reactions_code_valid`. Stable codes, never a raw emoji. */
 export const teamReactionCodes = [
@@ -184,6 +201,31 @@ export type ForwardTeamMessageInput = z.infer<typeof forwardTeamMessageSchema>;
 
 export const teamMessageIdSchema = z.object({ messageId: uuidSchema });
 export type TeamMessageIdInput = z.infer<typeof teamMessageIdSchema>;
+
+export const teamConversationMessageSchema = z.object({
+  conversationId: uuidSchema,
+  messageId: uuidSchema,
+});
+export type TeamConversationMessageInput = z.infer<typeof teamConversationMessageSchema>;
+
+export const teamConversationPinSchema = z.object({
+  conversationId: uuidSchema,
+  pinId: uuidSchema,
+});
+export type TeamConversationPinInput = z.infer<typeof teamConversationPinSchema>;
+
+export const prepareTeamVoiceUploadSchema = z.object({
+  conversationId: uuidSchema,
+  mimeType: teamVoiceMimeTypeSchema,
+});
+export type PrepareTeamVoiceUploadInput = z.infer<typeof prepareTeamVoiceUploadSchema>;
+
+export const finalizeTeamVoiceUploadSchema = z.object({
+  uploadId: uuidSchema,
+  /** Used only as a cross-check against server-measured duration. */
+  recordedDurationMs: z.number().int().min(1).max(teamVoiceMaxDurationMs),
+});
+export type FinalizeTeamVoiceUploadInput = z.infer<typeof finalizeTeamVoiceUploadSchema>;
 
 export const teamConversationIdSchema = z.object({
   conversationId: uuidSchema,
@@ -397,12 +439,14 @@ export type TeamConversationRow = {
   conversation_id: string;
   conversation_kind?: "direct" | "group";
   conversation_title?: string | null;
+  /** Reserved read-model seam for a future persisted group image migration. */
+  conversation_image_url?: string | null;
   member_count?: number;
   other_member_profile_id: string | null;
   other_member_name: string | null;
   other_member_avatar_url: string | null;
   last_message_id?: string | null;
-  last_message_type?: "text" | "task_activity" | "governance_activity" | null;
+  last_message_type?: "text" | "voice" | "task_activity" | "governance_activity" | null;
   last_message_author_profile_id?: string | null;
   last_message_author_name?: string | null;
   last_message_author_avatar_url?: string | null;
@@ -429,7 +473,7 @@ export type TeamMessageRow = {
   author_name: string | null;
   author_avatar_url: string | null;
   body: string;
-  message_type?: "text" | "task_activity" | "governance_activity";
+  message_type?: "text" | "voice" | "task_activity" | "governance_activity";
   task_id?: string | null;
   task_action?: "completed" | "reopened" | "created" | null;
   created_at: string;
@@ -441,6 +485,29 @@ export type TeamMessageRow = {
   forwarded_from_message_id?: string | null;
   forwarded_from_author_name?: string | null;
   deleted_for_everyone?: boolean;
+  voice_storage_path?: string | null;
+  voice_duration_ms?: number | null;
+  voice_size_bytes?: number | null;
+  voice_mime_type?: string | null;
+  voice_expires_at?: string | null;
+  voice_expired_at?: string | null;
+};
+
+export type TeamMessagePinRow = {
+  id: string;
+  conversation_id: string;
+  message_id: string;
+  author_profile_id: string;
+  author_name: string | null;
+  text_preview: string | null;
+  message_created_at: string;
+  message_deleted: boolean;
+  pinned_by_profile_id: string;
+  pinned_by_name: string | null;
+  pinned_at: string;
+  unpinned_by_profile_id: string | null;
+  unpinned_by_name: string | null;
+  unpinned_at: string | null;
 };
 
 export type TeamTaskRow = {
@@ -495,6 +562,8 @@ export type TeamConversationCapabilitiesRow = {
   can_manage_slow_mode: boolean;
   can_rename_conversation: boolean;
   can_manage_task_policy: boolean;
+  can_send_voice?: boolean;
+  can_manage_pins?: boolean;
 };
 
 /** The `app_get_team_conversation` JSON envelope. */
@@ -502,6 +571,8 @@ export type TeamConversationDetailRow = {
   conversation_id: string;
   conversation_kind?: "direct" | "group";
   conversation_title?: string | null;
+  /** Absent until the owner-authorized group image persistence migration exists. */
+  conversation_image_url?: string | null;
   owner_profile_id?: string;
   slow_mode_seconds?: number | null;
   slow_mode_scope?: TeamSlowModeScope;
@@ -519,6 +590,7 @@ export type TeamConversationDetailRow = {
   messages: TeamMessageRow[];
   tasks: TeamTaskRow[];
   typing?: TeamTypingRow[];
+  pins?: TeamMessagePinRow[];
 };
 
 /**
@@ -546,6 +618,39 @@ export type TeamMessageWriteRow = {
   author_profile_id: string;
   body: string;
   created_at: string;
+  message_type?: "text" | "voice";
+  voice_duration_ms?: number | null;
+  voice_size_bytes?: number | null;
+  voice_mime_type?: string | null;
+  voice_expires_at?: string | null;
+};
+
+export type TeamVoiceUploadClaimRow = {
+  upload_id: string;
+  conversation_id: string;
+  storage_path: string;
+  declared_mime_type: TeamVoiceMimeType;
+  expires_at: string;
+};
+
+export type TeamVoiceUploadContextRow = TeamVoiceUploadClaimRow & {
+  status: "pending" | "finalized" | "abandoned";
+  message_id: string | null;
+};
+
+export type TeamVoicePlaybackRow = {
+  message_id: string;
+  conversation_id: string;
+  storage_path: string | null;
+  mime_type: string | null;
+  duration_ms: number | null;
+  expired_at: string | null;
+};
+
+export type TeamVoiceCleanupObjectRow = {
+  object_kind: "message" | "upload";
+  record_id: string;
+  storage_path: string;
 };
 
 /** `app_toggle_team_message_reaction`'s envelope. */
