@@ -40,7 +40,7 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "tickets", label: "Tickets", route: "/tickets" },
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
-      { id: "todo", label: "To Do", route: "/todo" },
+      { id: "todo", label: "Operations", route: "/todo" },
     ],
   },
   {
@@ -95,7 +95,7 @@ export function routeIsCurrent(route: string, pathname: string): boolean {
 }
 
 export function titleForPath(pathname: string): string {
-  if (pathname === "/") return "To Do";
+  if (pathname === "/") return "Operations";
   if (pathname === "/clients/new") return "New client";
   if (pathname === "/reporting/new") return "New report";
   if (pathname.startsWith("/reporting/")) return "Report";

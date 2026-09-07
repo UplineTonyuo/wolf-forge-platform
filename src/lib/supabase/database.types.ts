@@ -5124,6 +5124,13 @@ export type Database = {
           sort_order: number
         }[]
       }
+      app_list_operational_assignees: {
+        Args: never
+        Returns: {
+          display_name: string
+          profile_id: string
+        }[]
+      }
       app_list_internal_reports: {
         Args: { p_limit?: number; p_status?: string }
         Returns: {

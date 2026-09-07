@@ -186,12 +186,32 @@ export const SECURITY_EVENTS = {
   /** A Gmail route was reached while the OAuth environment is not configured. */
   "integration.gmail.not_configured": { category: "integration", severity: "warn" },
 
+  /**
+   * The Podcast SEO Google Sheets read failed — missing config, a token/JWT
+   * problem, a Sheets API error, tab detection, or an unexpected shape. The
+   * pipeline stage and a machine error code live in metadata; never the
+   * credential, the spreadsheet id, or a sheet's row contents.
+   */
+  "integration.podcast_sheets.fetch_failed": { category: "integration", severity: "warn" },
+
+  /** A signed Apps Script change notification was accepted and a refetch was triggered. */
+  "integration.podcast_sync.accepted": { category: "integration", severity: "info" },
+  /** A Podcast SEO sync webhook call was refused — bad/missing signature, stale timestamp, bad shape, or wrong event type. */
+  "integration.podcast_sync.rejected": { category: "integration", severity: "warn" },
+
   /* ------------------------------------------------------------ system --- */
 
   /** An unexpected database/RPC failure reached an application boundary. */
   "system.database.failed": { category: "system", severity: "error" },
   /** Anything else that failed in a way the domain does not model. */
   "system.unexpected_error": { category: "system", severity: "error" },
+
+  /**
+   * A scheduled Team voice retention sweep ran to completion. Metadata holds
+   * only the selected/removed/failed counts — never a storage path, message
+   * id, or conversation id.
+   */
+  "system.team_voice_cleanup.completed": { category: "system", severity: "info" },
 } as const satisfies Record<string, SecurityEventDefinition>;
 
 export type SecurityEventCode = keyof typeof SECURITY_EVENTS;
