@@ -32,16 +32,17 @@ export function isFormFieldVisible(
 
 function FieldControl({
   field,
+  id,
   value,
   onChange,
   disabled,
 }: {
   field: FormPublishedSchema["fields"][number];
+  id: string;
   value: Json | undefined;
   onChange: (value: Json) => void;
   disabled: boolean;
 }) {
-  const id = `form-field-${field.stable_field_key}`;
   const stringValue = typeof value === "string" ? value : "";
   const common = {
     id,
@@ -125,7 +126,8 @@ export function FormRenderer({
         {schema.information_html ? <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(schema.information_html) }} /> : null}
       </header>
       <div className={styles.rendererFields}>
-        {fields.map((field) => {
+        {fields.map((field, fieldIndex) => {
+          const fieldDomId = `form-field-${fieldIndex}`;
           if (!isFormFieldVisible(field.stable_field_key, schema.rules, answers)) return null;
           if (field.field_type === "break") return <section className={styles.sectionBreak} key={field.stable_field_key}><h2>{field.label}</h2></section>;
           if (field.field_type === "pagebreak") return <div className={styles.pageBreak} key={field.stable_field_key}><span>{field.label}</span></div>;
@@ -135,9 +137,9 @@ export function FormRenderer({
           if (field.field_type === "file") return <div className={styles.integrationNotice} key={field.stable_field_key}><FileLock2 aria-hidden="true" /><div><strong>{field.label}</strong><span>File upload is not enabled. No file will be collected.</span></div></div>;
           if (["payment", "captcha", "calendly"].includes(field.field_type)) return <div className={styles.integrationNotice} key={field.stable_field_key}><ShieldAlert aria-hidden="true" /><div><strong>{field.label}</strong><span>{field.field_type === "payment" ? "Payment is configured separately and is not collected by this Form." : field.field_type === "captcha" ? "Captcha verification is not enabled." : "Scheduling is not connected; this field is presentation-only."}</span></div></div>;
           return <div className={styles.renderField} key={field.stable_field_key}>
-            <label htmlFor={`form-field-${field.stable_field_key}`}>{field.label}{field.required ? <span aria-hidden="true"> *</span> : null}</label>
+            <label htmlFor={fieldDomId}>{field.label}{field.required ? <span aria-hidden="true"> *</span> : null}</label>
             {field.help_html ? <div className={styles.fieldHelp} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}
-            <FieldControl field={field} value={answers[field.stable_field_key]} disabled={readonly || pending} onChange={(value) => setAnswers((current) => ({ ...current, [field.stable_field_key]: value }))} />
+            <FieldControl field={field} id={fieldDomId} value={answers[field.stable_field_key]} disabled={readonly || pending} onChange={(value) => setAnswers((current) => ({ ...current, [field.stable_field_key]: value }))} />
           </div>;
         })}
       </div>

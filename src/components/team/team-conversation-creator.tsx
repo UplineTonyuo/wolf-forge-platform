@@ -83,7 +83,7 @@ export function TeamConversationCreator({ members, statusFor, onStartDirect, onC
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-expanded="true"
-          aria-activedescendant={results[resolvedActiveIndex] ? `${listboxId}-${results[resolvedActiveIndex]!.profileId}` : undefined}
+          aria-activedescendant={results[resolvedActiveIndex] ? `${listboxId}-${resolvedActiveIndex}` : undefined}
           autoFocus={mode === "direct"}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -105,7 +105,7 @@ export function TeamConversationCreator({ members, statusFor, onStartDirect, onC
               const next = (resolvedActiveIndex + direction + results.length) % results.length;
               setActiveIndex(next);
               requestAnimationFrame(() => {
-                document.getElementById(`${listboxId}-${results[next]!.profileId}`)?.scrollIntoView({ block: "nearest" });
+                document.getElementById(`${listboxId}-${next}`)?.scrollIntoView({ block: "nearest" });
               });
               return;
             }
@@ -130,7 +130,7 @@ export function TeamConversationCreator({ members, statusFor, onStartDirect, onC
           return (
             <button
               key={member.profileId}
-              id={`${listboxId}-${member.profileId}`}
+              id={`${listboxId}-${index}`}
               type="button"
               role="option"
               aria-selected={mode === "group" ? checked : index === resolvedActiveIndex}
