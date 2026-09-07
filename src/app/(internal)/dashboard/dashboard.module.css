@@ -115,10 +115,6 @@
     0 8px 28px rgba(0,13,81,.035),
     inset 0 1px 0 #fff;
   animation: metricIn 230ms cubic-bezier(.2,.8,.2,1) both;
-  transition:
-    transform 190ms cubic-bezier(.2,.8,.2,1),
-    box-shadow 190ms ease,
-    border-color 190ms ease;
 }
 
 .metricCard:nth-child(1) { animation-delay: 30ms; }
@@ -126,49 +122,11 @@
 .metricCard:nth-child(3) { animation-delay: 90ms; }
 .metricCard:nth-child(4) { animation-delay: 120ms; }
 
-.metricCard::after {
-  position: absolute;
-  inset: auto 0 0;
-  height: 2px;
-  content: "";
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0,13,81,.48),
-    transparent
-  );
-  transform: scaleX(.12);
-  opacity: 0;
-  transition:
-    opacity 190ms ease,
-    transform 300ms cubic-bezier(.2,.8,.2,1);
-}
-
-.metricCard:hover {
-  border-color: rgba(0,13,81,.18);
-  box-shadow:
-    0 16px 42px rgba(0,13,81,.09),
-    inset 0 1px 0 #fff;
-}
-
-.metricCard:hover::after {
-  opacity: 1;
-}
-
 .metricFeatured {
   border-color: rgba(199,154,34,.32);
   background:
     radial-gradient(circle at 105% -10%, rgba(199,154,34,.18), transparent 38%),
     linear-gradient(180deg, #fffdf7, #fff);
-}
-
-.metricFeatured::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(199,154,34,.88),
-    transparent
-  );
 }
 
 .metricHalo {
@@ -186,9 +144,6 @@
   );
   transform: scale(.8);
   opacity: .55;
-  transition:
-    transform 300ms cubic-bezier(.2,.8,.2,1),
-    opacity 220ms ease;
 }
 
 .metricFeatured .metricHalo {
@@ -199,14 +154,9 @@
   );
 }
 
-.metricCard:hover .metricHalo {
-  opacity: .9;
-}
-
 .metricHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
 .metricIcon,
@@ -218,38 +168,6 @@
   border-radius: 10px;
   color: var(--dash-navy);
   background: rgba(0,13,81,.055);
-  transition:
-    transform 180ms cubic-bezier(.2,.8,.2,1),
-    background 180ms ease,
-    color 180ms ease;
-}
-
-.metricCard:hover .metricIcon {
-  color: #fff;
-  background: var(--dash-navy);
-}
-
-.metricFeatured:hover .metricIcon {
-  color: var(--dash-navy);
-  background: rgba(199,154,34,.16);
-}
-
-.metricArrow {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  color: #b0b5c4;
-  transition:
-    transform 190ms cubic-bezier(.2,.8,.2,1),
-    color 190ms ease,
-    background 190ms ease;
-}
-
-.metricCard:hover .metricArrow {
-  color: var(--dash-navy);
-  background: #f0f2f7;
 }
 
 .metricBody {
@@ -885,32 +803,13 @@
 
 /*
  * Every hover effect that MOVES something lives here. Touch pointers report a
- * hover on tap and then keep it, which left cards lifted, icons rotated and a
- * chart column gold long after the finger was gone.
+ * hover on tap and then keep it, which left interactive controls (range chips,
+ * pipeline stages, chart columns) sticky after the finger was gone. Metric
+ * cards are deliberately excluded — they are non-interactive reading surfaces.
  */
 @media (hover: hover) and (pointer: fine) {
   .rangeFilter a:hover {
     transform: translateY(-1px);
-  }
-
-  .metricCard:hover {
-    transform: translateY(-4px);
-  }
-
-  .metricCard:hover::after {
-    transform: scaleX(.82);
-  }
-
-  .metricCard:hover .metricHalo {
-    transform: scale(1.12);
-  }
-
-  .metricCard:hover .metricIcon {
-    transform: rotate(-5deg) scale(1.04);
-  }
-
-  .metricCard:hover .metricArrow {
-    transform: translateX(2px);
   }
 
   .chartColumn:hover .blockFilled {
@@ -951,23 +850,11 @@
     animation: none;
   }
 
-  .metricCard:hover,
-  .metricCard:hover .metricIcon,
-  .metricCard:hover .metricArrow,
   .rangeFilter a:hover,
   .rangeFilter a:active,
   .pipelineStage:hover,
   .pipelineStage:hover::after {
     transform: none;
-  }
-
-  /* These two carry a resting transform, so hover holds it rather than resets. */
-  .metricCard:hover::after {
-    transform: scaleX(.12);
-  }
-
-  .metricCard:hover .metricHalo {
-    transform: scale(.8);
   }
 
   /* Press still registers, it just does so with tone instead of scale. */
