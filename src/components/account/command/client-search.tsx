@@ -184,7 +184,7 @@ export function ClientSearch() {
   }
 
   const showPanel = open && searchable;
-  const activeId = flat[activeIndex] ? `client-search-option-${flat[activeIndex].id}` : undefined;
+  const activeId = flat[activeIndex] ? `client-search-option-${activeIndex}` : undefined;
 
   return (
     <HeaderPanelAnchor className="portal-command-search-anchor">
@@ -243,7 +243,7 @@ export function ClientSearch() {
                       return (
                         <ResultRow
                           key={`${result.kind}-${result.id}`}
-                          id={`client-search-option-${result.id}`}
+                          id={`client-search-option-${index}`}
                           result={result}
                           active={index === activeIndex}
                           onHover={() => setActiveIndex(index)}

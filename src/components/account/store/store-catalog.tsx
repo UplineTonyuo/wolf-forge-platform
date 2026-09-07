@@ -547,10 +547,10 @@ export function StoreCatalogView({
         // Keyed on the category so the stagger replays on a switch, but not on
         // every keystroke while filtering.
         <div className={styles.sections} key={folderId ?? "all"}>
-          {sections.map((section) => (
-            <section className={styles.section} key={section.key} aria-labelledby={`store-section-${section.key}`}>
+          {sections.map((section, sectionIndex) => (
+            <section className={styles.section} key={section.key} aria-labelledby={`store-section-${sectionIndex}`}>
               <header className={styles.sectionHead}>
-                <h2 id={`store-section-${section.key}`}>{section.name}</h2>
+                <h2 id={`store-section-${sectionIndex}`}>{section.name}</h2>
                 <span className={styles.sectionCount}>
                   {section.services.length} {section.services.length === 1 ? "investment" : "investments"}
                 </span>

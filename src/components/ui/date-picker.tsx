@@ -118,6 +118,11 @@ export function DatePicker({
     return cells;
   }, [viewMonth, viewYear]);
 
+  const cursorGridIndex = useMemo(
+    () => grid.findIndex((cell) => formatISO(new Date(cell.year, cell.month, cell.day)) === cursorISO),
+    [grid, cursorISO],
+  );
+
   function openCalendar() {
     const anchor = selected ?? todayDate;
     setCursor(anchor);
@@ -310,11 +315,11 @@ export function DatePicker({
             role="grid"
             aria-label="Day grid"
             tabIndex={0}
-            aria-activedescendant={`${calendarId}-${cursorISO}`}
+            aria-activedescendant={cursorGridIndex >= 0 ? `${calendarId}-day-${cursorGridIndex}` : undefined}
             className={styles.days}
             onKeyDown={handleGridKeyDown}
           >
-            {grid.map((cell) => {
+            {grid.map((cell, cellIndex) => {
               const iso = formatISO(new Date(cell.year, cell.month, cell.day));
               const isSelected = iso === value;
               const isToday = iso === formatISO(todayDate);
@@ -328,7 +333,7 @@ export function DatePicker({
               return (
                 <button
                   type="button"
-                  id={`${calendarId}-${iso}`}
+                  id={`${calendarId}-day-${cellIndex}`}
                   key={iso}
                   tabIndex={-1}
                   className={classes.join(" ")}

@@ -90,8 +90,8 @@ describe("native client report viewer", () => {
 
     const sections = screen.getAllByRole("region");
     expect(sections.map((node) => node.getAttribute("aria-labelledby"))).toEqual([
-      "report-section-ranking-1",
-      "report-section-site_audits-2",
+      "report-section-1",
+      "report-section-2",
     ]);
 
     const terms = sections.flatMap((section) =>

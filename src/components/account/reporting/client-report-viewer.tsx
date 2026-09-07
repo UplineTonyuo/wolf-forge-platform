@@ -8,8 +8,8 @@ import { formatDate } from "../../../lib/format";
 import { ClientReportReadReceipt } from "./client-report-read-receipt";
 import styles from "./client-report-viewer.module.css";
 
-function sectionAnchor(sectionKey: string, index: number) {
-  return `report-section-${sectionKey}-${index + 1}`;
+function sectionAnchor(index: number) {
+  return `report-section-${index + 1}`;
 }
 
 export function ClientReportViewer({ report }: { report: ClientReportDocument }) {
@@ -59,7 +59,7 @@ export function ClientReportViewer({ report }: { report: ClientReportDocument })
                 <ul>
                   {report.sections.map((section, index) => (
                     <li key={`${section.section_key}-${index}`}>
-                      <a href={`#${sectionAnchor(section.section_key, index)}`}>
+                      <a href={`#${sectionAnchor(index)}`}>
                         {section.title}
                       </a>
                     </li>
@@ -71,7 +71,7 @@ export function ClientReportViewer({ report }: { report: ClientReportDocument })
 
           <div className={styles.document}>
             {report.sections.map((section, sectionIndex) => {
-              const headingId = sectionAnchor(section.section_key, sectionIndex);
+              const headingId = sectionAnchor(sectionIndex);
               const repeatLabel = singleEntryRepeatsSectionTitle(section);
 
               return (
