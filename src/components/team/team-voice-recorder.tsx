@@ -27,6 +27,17 @@ export function __resetTeamVoiceRecorderPermissionMemory() {
   microphoneGrantedOnce = false;
 }
 
+/**
+ * Strongly typed recovery categories. Control behavior keys off `category`,
+ * never off human-readable `message` text.
+ */
+export type VoiceRecorderError =
+  | { readonly category: "PLAYBACK_ERROR"; readonly message: string }
+  | { readonly category: "SEND_PREPARE_ERROR"; readonly message: string }
+  | { readonly category: "SEND_UPLOAD_ERROR"; readonly message: string }
+  | { readonly category: "SEND_FINALIZE_ERROR"; readonly message: string }
+  | { readonly category: "RECORDING_TOO_LARGE"; readonly message: string };
+
 function supportedMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
   return choices.find((type) => MediaRecorder.isTypeSupported(type)) ?? null;
@@ -61,6 +72,14 @@ function clock(milliseconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function isSendRecoveryError(error: VoiceRecorderError | null): boolean {
+  return (
+    error?.category === "SEND_PREPARE_ERROR" ||
+    error?.category === "SEND_UPLOAD_ERROR" ||
+    error?.category === "SEND_FINALIZE_ERROR"
+  );
+}
+
 export function TeamVoiceRecorder({
   conversationId,
   disabled,
@@ -78,13 +97,20 @@ export function TeamVoiceRecorder({
   const micButtonRef = useRef<HTMLButtonElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement>(null);
   const permissionStatusRef = useRef<PermissionStatus | null>(null);
+  /*
+   * After the blob has been uploaded for a given prepare slot, keep that
+   * uploadId so an ambiguous/lost finalize response retries FINALIZE only.
+   * Database idempotency on the same uploadId prevents a duplicate message.
+   * Cleared on discard, successful send, and starting a new recording.
+   */
+  const committedUploadIdRef = useRef<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VoiceRecorderError | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState | null>(null);
   const [dialogKind, setDialogKind] = useState<MicDialogKind | null>(null);
   const [dialogBusy, setDialogBusy] = useState(false);
@@ -130,6 +156,10 @@ export function TeamVoiceRecorder({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
   }, [previewUrl]);
 
+  function clearSendAttempt() {
+    committedUploadIdRef.current = null;
+  }
+
   function discard() {
     previewAudioRef.current?.pause();
     setPreviewPlaying(false);
@@ -138,6 +168,7 @@ export function TeamVoiceRecorder({
     setBlob(null);
     setElapsed(0);
     setError(null);
+    clearSendAttempt();
   }
 
   function stopForDeviceLoss() {
@@ -182,7 +213,10 @@ export function TeamVoiceRecorder({
         }
         const next = new Blob(chunksRef.current, { type: mimeType! });
         if (next.size > teamVoiceMaxBytes) {
-          setError("Recording exceeds the 5 MB limit.");
+          setError({
+            category: "RECORDING_TOO_LARGE",
+            message: "Recording exceeds the 5 MB limit.",
+          });
           return;
         }
         setBlob(next);
@@ -224,6 +258,20 @@ export function TeamVoiceRecorder({
     setDialogBusy(false);
   }
 
+  async function playPreview() {
+    const audio = previewAudioRef.current;
+    if (!audio || busy) return;
+    try {
+      await audio.play();
+      setError((current) => (current?.category === "PLAYBACK_ERROR" ? null : current));
+    } catch {
+      setError({
+        category: "PLAYBACK_ERROR",
+        message: "Voice recording could not be played.",
+      });
+    }
+  }
+
   async function togglePreviewPlayback() {
     const audio = previewAudioRef.current;
     if (!audio || busy) return;
@@ -231,32 +279,56 @@ export function TeamVoiceRecorder({
       audio.pause();
       return;
     }
-    try {
-      await audio.play();
-    } catch {
-      setError("Voice recording could not be played.");
-    }
+    await playPreview();
   }
 
   /*
-   * Retry re-runs the full prepare → upload → finalize chain against the
-   * retained local blob. That is safe with the current architecture: each
-   * attempt mints a fresh upload slot, so a failed attempt never leaves the
-   * UI holding a half-consumed slot that must be resumed in place.
+   * Send recovery:
+   * - Before upload has succeeded: prepare + upload may mint a fresh slot.
+   * - After upload has succeeded: keep uploadId and retry FINALIZE only.
+   *   Same-uploadId finalize is idempotent in the database, so an ambiguous
+   *   finalize response cannot create a second message.
+   * Signed upload URLs are never reused after a failed upload; a prepare
+   * failure / upload failure clears any half-started slot identity.
    */
   async function send() {
     if (!blob || busy) return;
     setBusy(true);
     setError(null);
-    const slot = await prepareTeamVoiceUpload({ conversationId, mimeType: blob.type });
-    if (!slot.ok) { setError(slot.error); setBusy(false); return; }
-    const uploaded = await uploadTeamVoiceBlob(slot.data.uploadUrl, blob);
-    if (!uploaded.ok) { setError(uploaded.error); setBusy(false); return; }
+
+    let uploadId = committedUploadIdRef.current;
+
+    if (!uploadId) {
+      const slot = await prepareTeamVoiceUpload({ conversationId, mimeType: blob.type });
+      if (!slot.ok) {
+        setError({ category: "SEND_PREPARE_ERROR", message: slot.error });
+        setBusy(false);
+        return;
+      }
+      const uploaded = await uploadTeamVoiceBlob(slot.data.uploadUrl, blob);
+      if (!uploaded.ok) {
+        // Do not retain the signed URL or uploadId — retry may prepare fresh.
+        clearSendAttempt();
+        setError({ category: "SEND_UPLOAD_ERROR", message: uploaded.error });
+        setBusy(false);
+        return;
+      }
+      // Commit before finalize so a lost/malformed finalize response still
+      // retries the same logical upload identity.
+      uploadId = slot.data.uploadId;
+      committedUploadIdRef.current = uploadId;
+    }
+
     const finalized = await finalizeTeamVoiceUpload({
-      uploadId: slot.data.uploadId,
+      uploadId,
       recordedDurationMs: Math.max(1, elapsed),
     });
-    if (!finalized.ok) { setError(finalized.error); setBusy(false); return; }
+    if (!finalized.ok) {
+      setError({ category: "SEND_FINALIZE_ERROR", message: finalized.error });
+      setBusy(false);
+      return;
+    }
+
     discard();
     setBusy(false);
     onSent();
@@ -284,6 +356,8 @@ export function TeamVoiceRecorder({
       </div>
     );
   } else if (blob && previewUrl) {
+    const playbackError = error?.category === "PLAYBACK_ERROR" ? error : null;
+    const sendError = isSendRecoveryError(error) ? error : null;
     content = (
       <div className={styles.voiceRecorderReview}>
         <audio
@@ -327,9 +401,24 @@ export function TeamVoiceRecorder({
         >
           {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
         </button>
-        {error ? (
+        {playbackError ? (
           <div className={styles.voiceReviewError} role="alert">
-            <span>{error}</span>
+            <span>{playbackError.message}</span>
+            <button
+              type="button"
+              className={styles.voiceRetry}
+              onClick={() => void playPreview()}
+              disabled={busy}
+              aria-label="Retry playing recording preview"
+            >
+              <RotateCcw aria-hidden="true" />
+              Retry
+            </button>
+          </div>
+        ) : null}
+        {sendError ? (
+          <div className={styles.voiceReviewError} role="alert">
+            <span>{sendError.message}</span>
             <button
               type="button"
               className={styles.voiceRetry}
@@ -358,7 +447,7 @@ export function TeamVoiceRecorder({
         >
           <Mic aria-hidden="true" />
         </button>
-        {error ? <span className={styles.voiceMicErrorPopover} role="alert">{error}</span> : null}
+        {error ? <span className={styles.voiceMicErrorPopover} role="alert">{error.message}</span> : null}
       </div>
     );
   }
