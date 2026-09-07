@@ -211,3 +211,7 @@ function logWebhookOutcome_(stage, status, success) {
     "Podcast SEO webhook: stage=" + stage + " status=" + (status === null ? "n/a" : status) + " success=" + success,
   );
 }
+
+/* Google Apps Script invokes these public entry points by stored function name. */
+void createPodcastSeoOnEditTrigger;
+void onPodcastSeoEdit;

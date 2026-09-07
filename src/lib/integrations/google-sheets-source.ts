@@ -1,6 +1,5 @@
 import "server-only";
 
-import { createSign } from "node:crypto";
 import { z } from "zod";
 import { locateAssignedVaColumns } from "../../domain/operations/podcast-workflow";
 import { readGoogleSheetsEnvironment, type GoogleSheetsEnvironment } from "../env/google-sheets-env";
@@ -11,9 +10,8 @@ import {
   OperationsGoogleSheetsReader,
 } from "./operations-google-sheets";
 
-const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+/** The active reader owns token exchange and requests only https://www.googleapis.com/auth/spreadsheets.readonly. */
 const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
-const READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
 
 /**
  * Next.js Data Cache tag for both Sheets reads below. The Podcast SEO sync
@@ -226,12 +224,6 @@ export interface PodcastWorkflowSource {
   fetchLatestPodcastTab(): Promise<PodcastWorkflowSheet>;
 }
 
-const tokenResponseSchema = z.object({
-  access_token: z.string().min(1),
-  expires_in: z.number().int().positive(),
-  token_type: z.string().optional(),
-});
-
 const spreadsheetMetadataSchema = z.object({
   sheets: z.array(z.object({
     properties: z.object({
@@ -289,80 +281,6 @@ const dataValidationGridSchema = z.object({
     )
     .optional(),
 });
-
-function base64UrlEncode(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-/**
- * The service-account JWT-bearer grant (RFC 7523), signed with Node's own
- * `crypto` module rather than a JWT library or the `googleapis` package —
- * matches this codebase's existing Google integration
- * (`lib/integrations/google-oauth-client.ts`), which is also a hand-rolled
- * fetch client, not a heavier SDK.
- */
-function signServiceAccountJwt(environment: GoogleSheetsEnvironment): string {
-  const header = base64UrlEncode(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const claims = base64UrlEncode(JSON.stringify({
-    iss: environment.GOOGLE_SHEETS_SERVICE_ACCOUNT_EMAIL,
-    scope: READONLY_SCOPE,
-    aud: TOKEN_ENDPOINT,
-    iat: nowSeconds,
-    exp: nowSeconds + 3600,
-  }));
-  const signingInput = `${header}.${claims}`;
-  // Google's JSON key export escapes real newlines as literal `\n`.
-  const privateKey = environment.GOOGLE_SHEETS_SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, "\n");
-  const signature = base64UrlEncode(createSign("RSA-SHA256").update(signingInput).sign(privateKey));
-  return `${signingInput}.${signature}`;
-}
-
-async function fetchAccessToken(
-  environment: GoogleSheetsEnvironment,
-  fetcher: typeof fetch,
-): Promise<string> {
-  let assertion: string;
-  try {
-    assertion = signServiceAccountJwt(environment);
-  } catch (error) {
-    throw new PodcastSourceUnavailableError("Google service-account JWT could not be created.", {
-      cause: error,
-      stage: "jwt_token",
-    });
-  }
-  const response = await fetcher(TOKEN_ENDPOINT, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
-    }),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw new PodcastSourceUnavailableError("Google service-account authorization failed.", {
-      stage: "jwt_token",
-      httpStatus: response.status,
-      apiErrorCode: await readApiErrorCode(response),
-    });
-  }
-  let parsed: z.infer<typeof tokenResponseSchema>;
-  try {
-    parsed = tokenResponseSchema.parse(await response.json());
-  } catch (error) {
-    throw new PodcastSourceUnavailableError("Google token response did not match the expected shape.", {
-      cause: error,
-      stage: "jwt_token",
-      httpStatus: response.status,
-    });
-  }
-  return parsed.access_token;
-}
 
 /**
  * Google Sheets, read via a service account (Viewer access granted on the
