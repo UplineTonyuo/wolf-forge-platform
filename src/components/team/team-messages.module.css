@@ -2533,7 +2533,9 @@
 }
 
 .voiceMicButton,
-.voiceRecorder button,
+.voiceStopButton,
+.voiceDiscardButton,
+.voiceSendButton,
 .voicePlayButton,
 .voiceRetry {
   min-width: 30px;
@@ -2547,19 +2549,34 @@
   justify-content: center;
   gap: 5px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .voiceMicButton svg,
-.voiceRecorder button svg,
+.voiceStopButton svg,
+.voiceDiscardButton svg,
+.voiceSendButton svg,
 .voicePlayButton svg,
 .voiceRetry svg { width: 14px; height: 14px; }
-.voiceMicButton:disabled,
-.voiceRecorder button:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.voiceRecorder {
-  flex: 1 1 auto;
+.voiceMicButton:disabled,
+.voiceStopButton:disabled,
+.voiceDiscardButton:disabled,
+.voiceSendButton:disabled,
+.voicePlayButton:disabled,
+.voiceRetry:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/*
+ * Recording and review stay compact in the composer action row so Task and
+ * Send never get shoved. The old flex-grow + native <audio controls> strip
+ * was what made the live/recording chrome feel like a debug meter.
+ */
+.voiceRecorderLive,
+.voiceRecorderReview {
+  position: relative;
+  flex: 0 0 auto;
   min-width: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   color: #31384d;
@@ -2567,8 +2584,65 @@
   font-variant-numeric: tabular-nums;
 }
 
-.voiceRecorder audio { width: min(230px, 42vw); height: 30px; }
-.voiceRecordingDot { width: 7px; height: 7px; border-radius: 50%; background: #b42318; }
+.voiceTimer {
+  min-width: 2.4em;
+  color: #596176;
+  font-weight: 550;
+  line-height: 1;
+}
+
+.voiceRecordingDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #b42318;
+}
+
+.voiceSendButton {
+  border-color: transparent;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+}
+
+.voiceSendButton:hover:not(:disabled) {
+  background: var(--wf-navy-hover, #001a73);
+}
+
+.voiceReviewError {
+  position: absolute;
+  z-index: 6;
+  bottom: calc(100% + 8px);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(260px, 72vw);
+  padding: 7px 8px 7px 10px;
+  border-radius: 8px;
+  background: var(--wf-navy, #000d51);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 550;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(0, 13, 81, 0.22);
+  animation: voiceMicErrorIn 120ms ease both;
+}
+
+.voiceReviewError .voiceRetry {
+  min-height: 24px;
+  padding: 0 8px;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.voiceReviewError .voiceRetry:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .voiceError { color: #b42318; font-size: 10.5px; line-height: 1.35; }
 
 .voiceMessage {
@@ -2677,11 +2751,15 @@
   .pinsPanel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-height: 58dvh; }
   .pinsPanel::before { display: none; }
   .voiceMessage { min-width: min(210px, 62vw); }
-  .voiceRecorder audio { width: min(190px, 48vw); }
+  .voiceRecorderLive,
+  .voiceRecorderReview { gap: 6px; }
+  .voiceReviewError { max-width: min(240px, 78vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pinsPanel { animation: none; }
+  .voiceMicErrorPopover,
+  .voiceReviewError { animation: none; }
 }
 
 /* ==========================================================================

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Mic, Send, Square, Trash2 } from "lucide-react";
+import { Loader2, Mic, Pause, Play, RotateCcw, Send, Square, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { teamVoiceMaxBytes, teamVoiceMaxDurationMs } from "../../domain/team/schema";
 import {
@@ -76,11 +76,13 @@ export function TeamVoiceRecorder({
   const startedAtRef = useRef(0);
   const deviceLostRef = useRef(false);
   const micButtonRef = useRef<HTMLButtonElement>(null);
+  const previewAudioRef = useRef<HTMLAudioElement>(null);
   const permissionStatusRef = useRef<PermissionStatus | null>(null);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissionState, setPermissionState] = useState<PermissionState | null>(null);
@@ -129,6 +131,8 @@ export function TeamVoiceRecorder({
   }, [previewUrl]);
 
   function discard() {
+    previewAudioRef.current?.pause();
+    setPreviewPlaying(false);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setBlob(null);
@@ -220,6 +224,26 @@ export function TeamVoiceRecorder({
     setDialogBusy(false);
   }
 
+  async function togglePreviewPlayback() {
+    const audio = previewAudioRef.current;
+    if (!audio || busy) return;
+    if (previewPlaying) {
+      audio.pause();
+      return;
+    }
+    try {
+      await audio.play();
+    } catch {
+      setError("Voice recording could not be played.");
+    }
+  }
+
+  /*
+   * Retry re-runs the full prepare → upload → finalize chain against the
+   * retained local blob. That is safe with the current architecture: each
+   * attempt mints a fresh upload slot, so a failed attempt never leaves the
+   * UI holding a half-consumed slot that must be resumed in place.
+   */
   async function send() {
     if (!blob || busy) return;
     setBusy(true);
@@ -243,24 +267,81 @@ export function TeamVoiceRecorder({
   let content;
   if (recording) {
     content = (
-      <div className={styles.voiceRecorder} role="status" aria-label="Recording voice message">
+      <div className={styles.voiceRecorderLive} role="status" aria-label="Recording voice message">
         <span className={styles.voiceRecordingDot} aria-hidden="true" />
-        <span>{clock(elapsed)} / 5:00</span>
-        <button type="button" onClick={() => recorderRef.current?.stop()} aria-label="Stop recording">
-          <Square aria-hidden="true" /> Stop
+        {/* Elapsed time is visual only — the status name already announces
+            recording; ticking the clock into a live region would spam ATs. */}
+        <span className={styles.voiceTimer} aria-hidden="true">{clock(elapsed)}</span>
+        <button
+          type="button"
+          className={styles.voiceStopButton}
+          onClick={() => recorderRef.current?.stop()}
+          aria-label="Stop recording"
+          title="Stop recording"
+        >
+          <Square aria-hidden="true" />
         </button>
       </div>
     );
   } else if (blob && previewUrl) {
     content = (
-      <div className={styles.voiceRecorder}>
-        <audio src={previewUrl} controls preload="metadata" aria-label="Voice recording preview" />
-        <span>{clock(elapsed)}</span>
-        <button type="button" onClick={discard} disabled={busy} aria-label="Discard voice recording"><Trash2 aria-hidden="true" /></button>
-        <button type="button" onClick={() => void send()} disabled={busy} aria-label="Send voice message">
+      <div className={styles.voiceRecorderReview}>
+        <audio
+          ref={previewAudioRef}
+          className={styles.srOnly}
+          src={previewUrl}
+          preload="metadata"
+          onPlay={() => setPreviewPlaying(true)}
+          onPause={() => setPreviewPlaying(false)}
+          onEnded={() => setPreviewPlaying(false)}
+        />
+        <button
+          type="button"
+          className={styles.voicePlayButton}
+          onClick={() => void togglePreviewPlayback()}
+          disabled={busy}
+          aria-label={previewPlaying ? "Pause recording preview" : "Play recording preview"}
+        >
+          {previewPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+        </button>
+        <span className={styles.voiceTimer} aria-label={`Duration ${clock(elapsed)}`}>
+          {clock(elapsed)}
+        </span>
+        <button
+          type="button"
+          className={styles.voiceDiscardButton}
+          onClick={discard}
+          disabled={busy}
+          aria-label="Discard voice recording"
+          title="Discard recording"
+        >
+          <Trash2 aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className={styles.voiceSendButton}
+          onClick={() => void send()}
+          disabled={busy}
+          aria-label="Send voice message"
+          title="Send voice message"
+        >
           {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
         </button>
-        {error ? <span className={styles.voiceError} role="alert">{error}</span> : null}
+        {error ? (
+          <div className={styles.voiceReviewError} role="alert">
+            <span>{error}</span>
+            <button
+              type="button"
+              className={styles.voiceRetry}
+              onClick={() => void send()}
+              disabled={busy}
+              aria-label="Retry sending voice message"
+            >
+              <RotateCcw aria-hidden="true" />
+              Retry
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   } else {
