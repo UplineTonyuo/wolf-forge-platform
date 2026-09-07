@@ -6191,9 +6191,9 @@ td {
   position: relative;
 }
 
-.workspace-command-shortcuts:has(
+.workspace-command-bar:has(
   .workspace-notification-trigger.is-open
-) {
+) .workspace-command-shortcuts {
   overflow: visible !important;
   z-index: 900;
 }
@@ -7427,14 +7427,17 @@ td {
 /* WF COMMAND BAR SHORTCUT STABILITY START */
 
 /*
- * The shortcut rail is collapsed at rest and revealed when the command bar is
- * hovered, focused, or holding an open notification panel. Search contracts
- * because the rail takes real width in the flex row ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â that is the intended
- * behaviour, so this geometry animation is deliberate rather than accidental.
+ * Secondary shortcut rails (Calendar / Team Messages, and Quick Action) are
+ * collapsed at rest and revealed when the command bar is hovered, focused, or
+ * holding an open notification panel. The notification bell lives outside
+ * these rails so the unread badge stays visible without hover/focus (KI-059).
+ * Search contracts because the rails take real width in the flex row — that is
+ * the intended behaviour, so this geometry animation is deliberate rather than
+ * accidental.
  *
  * This block is the single source of truth for the reveal. It replaces an
  * earlier version that also toggled `width: 0 -> auto` (not interpolable, so
- * the rail snapped while max-width animated ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â the icon jump), `visibility`
+ * the rail snapped while max-width animated — the icon jump), `visibility`
  * (never in the transition list, so hover-out killed the fade instantly) and
  * `contain: paint -> none` (re-establishing a containment boundary mid-
  * animation). One gesture now runs on one curve.
@@ -7466,13 +7469,24 @@ td {
 }
 
 /*
- * The clamp must clear the widest rail, otherwise the last control is sliced.
- * Owner/admin get Calendar 38 + Gallery 42 + Bell 42 + Quick Action 42 and
- * three 8px gaps = 188px; Quick Action renders nothing for other roles, so the
- * rail is intrinsically narrower and simply stops early.
+ * Always-visible notification control. Kept as a flex sibling of the
+ * collapsible rails so unread state is not swept into max-width:0 / opacity:0.
+ */
+.workspace-command-bar > .workspace-notification-trigger {
+  flex: 0 0 auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/*
+ * The clamp must clear the widest secondary rail, otherwise the last control
+ * is sliced. Leading rail is Calendar 38 + Team 42 + one gap; trailing rail is
+ * Quick Action 42 when present. Ceiling stays 200px so neither clip.
+ * Open-panel reveal is keyed from the command bar because the bell is no
+ * longer a descendant of `.workspace-command-shortcuts`.
  */
 .workspace-command-bar:focus-within .workspace-command-shortcuts,
-.workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) {
+.workspace-command-bar:has(.workspace-notification-trigger.is-open) .workspace-command-shortcuts {
   max-width: 200px;
 
   opacity: 1;
@@ -7485,7 +7499,8 @@ td {
 /*
  * Hover is added separately so a tap on a touch screen cannot latch the rail
  * open with no way to dismiss it. Focus and an open panel still reveal it on
- * every device, which is how the rail is reached by keyboard and by touch.
+ * every device, which is how the secondary rail is reached by keyboard and by
+ * touch. The notification bell does not depend on this path.
  */
 @media (hover: hover) and (pointer: fine) {
   .workspace-command-bar:hover .workspace-command-shortcuts {
@@ -7510,7 +7525,7 @@ td {
 
   .workspace-command-bar:hover .workspace-command-shortcuts,
   .workspace-command-bar:focus-within .workspace-command-shortcuts,
-  .workspace-command-shortcuts:has(.workspace-notification-trigger.is-open) {
+  .workspace-command-bar:has(.workspace-notification-trigger.is-open) .workspace-command-shortcuts {
     transform: none;
   }
 }
