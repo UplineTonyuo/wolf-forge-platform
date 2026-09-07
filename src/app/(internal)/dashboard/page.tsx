@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import {
-  ChevronRight,
   CircleDollarSign,
   Repeat2,
   ShoppingBag,
@@ -78,6 +77,11 @@ function MetricCard({
         ? styles.deltaPositive
         : styles.deltaNegative;
 
+  /*
+   * Non-interactive on purpose. These KPIs have no trustworthy period-scoped
+   * drill-down route today, so chevrons / lift / arrow motion would be a false
+   * affordance. Keep the article as a reading surface only.
+   */
   return (
     <article
       className={`${styles.metricCard} ${
@@ -88,9 +92,6 @@ function MetricCard({
 
       <div className={styles.metricHeader}>
         <span className={styles.metricIcon}>{icon}</span>
-        <span className={styles.metricArrow}>
-          <ChevronRight size={15} aria-hidden="true" />
-        </span>
       </div>
 
       <div className={styles.metricBody}>

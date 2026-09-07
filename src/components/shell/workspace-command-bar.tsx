@@ -815,8 +815,14 @@ export function WorkspaceCommandBar({
         aria-label="Workspace controls"
       >
         <GlobalSearch />
+        {/*
+          Secondary utilities stay in the collapsible rail. The notification
+          bell sits outside so unread counts remain visible at rest (KI-059),
+          while Calendar / Team Messages / Quick Action keep hover/focus reveal.
+          Order when expanded stays Calendar → Team → Bell → Quick Action.
+        */}
         <div className="workspace-command-shortcuts">
-        <DashboardDateTrigger />
+          <DashboardDateTrigger />
           {/*
             Team Messages. This slot held a dead "Gallery" placeholder that
             opened nothing; it is now internal staff-to-staff communication,
@@ -825,46 +831,48 @@ export function WorkspaceCommandBar({
           <TeamMessagesTrigger
             user={user}
           />
+        </div>
 
-          <button
-            ref={triggerRef}
-            className={[
-              "workspace-command-button",
-              "workspace-notification-trigger",
-              notificationsOpen
-                ? "is-open"
-                : "",
-              notificationRinging
-                ? "is-ringing"
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            type="button"
-            aria-label="Notifications"
-            title="Notifications"
-            aria-expanded={
-              notificationsOpen
-            }
-            aria-haspopup="dialog"
-            onClick={
-              toggleNotifications
-            }
-          >
-            <Bell
-              aria-hidden="true"
-            />
+        <button
+          ref={triggerRef}
+          className={[
+            "workspace-command-button",
+            "workspace-notification-trigger",
+            notificationsOpen
+              ? "is-open"
+              : "",
+            notificationRinging
+              ? "is-ringing"
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          type="button"
+          aria-label="Notifications"
+          title="Notifications"
+          aria-expanded={
+            notificationsOpen
+          }
+          aria-haspopup="dialog"
+          onClick={
+            toggleNotifications
+          }
+        >
+          <Bell
+            aria-hidden="true"
+          />
 
-            {notifications.some((notification) => !notification.readAt) ? (
-              <span
-                className="workspace-notification-badge wf-count-badge"
-                aria-label={`${unreadNotificationCount} unread notifications`}
-              >
-                {notificationBadgeLabel}
-              </span>
-            ) : null}
-          </button>
+          {notifications.some((notification) => !notification.readAt) ? (
+            <span
+              className="workspace-notification-badge wf-count-badge"
+              aria-label={`${unreadNotificationCount} unread notifications`}
+            >
+              {notificationBadgeLabel}
+            </span>
+          ) : null}
+        </button>
 
+        <div className="workspace-command-shortcuts">
           <WorkspaceQuickAction
             user={user}
           />
