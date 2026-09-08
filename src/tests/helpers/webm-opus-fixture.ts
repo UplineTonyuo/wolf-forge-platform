@@ -69,11 +69,19 @@ function el(
 
 export const ID = {
   EBML: [0x1a, 0x45, 0xdf, 0xa3],
+  EBML_VERSION: [0x42, 0x86],
+  EBML_READ_VERSION: [0x42, 0xf7],
+  EBML_MAX_ID_LENGTH: [0x42, 0xf2],
+  EBML_MAX_SIZE_LENGTH: [0x42, 0xf3],
   DOC_TYPE: [0x42, 0x82],
+  DOC_TYPE_VERSION: [0x42, 0x87],
+  DOC_TYPE_READ_VERSION: [0x42, 0x85],
   SEGMENT: [0x18, 0x53, 0x80, 0x67],
   INFO: [0x15, 0x49, 0xa9, 0x66],
   TIMESTAMP_SCALE: [0x2a, 0xd7, 0xb1],
   DURATION: [0x44, 0x89],
+  MUXING_APP: [0x4d, 0x80],
+  WRITING_APP: [0x57, 0x41],
   TRACKS: [0x16, 0x54, 0xae, 0x6b],
   TRACK_ENTRY: [0xae],
   TRACK_NUMBER: [0xd7],
@@ -88,10 +96,29 @@ export const ID = {
   SIMPLE_BLOCK: [0xa3],
   BLOCK_GROUP: [0xa0],
   BLOCK: [0xa1],
+  SILENT_TRACKS: [0x58, 0x54],
+  CUES: [0x1c, 0x53, 0xbb, 0x6b],
+  SEEK_HEAD: [0x11, 0x4d, 0x9b, 0x74],
+  TAGS: [0x12, 0x54, 0xc3, 0x67],
+  CHAPTERS: [0x10, 0x43, 0xa7, 0x70],
+  ATTACHMENTS: [0x19, 0x41, 0xa4, 0x69],
+  VOID: [0xec],
 };
 
-export function ebmlHeader(): Uint8Array {
-  return el(ID.EBML, el(ID.DOC_TYPE, asciiBytes("webm")));
+export function ebmlHeader(extraChildren: Uint8Array[] = []): Uint8Array {
+  return el(
+    ID.EBML,
+    concatBytes([
+      el(ID.EBML_VERSION, uintBytes(1)),
+      el(ID.EBML_READ_VERSION, uintBytes(1)),
+      el(ID.EBML_MAX_ID_LENGTH, uintBytes(4)),
+      el(ID.EBML_MAX_SIZE_LENGTH, uintBytes(8)),
+      el(ID.DOC_TYPE, asciiBytes("webm")),
+      el(ID.DOC_TYPE_VERSION, uintBytes(4)),
+      el(ID.DOC_TYPE_READ_VERSION, uintBytes(2)),
+      ...extraChildren,
+    ]),
+  );
 }
 
 export function info(
@@ -106,6 +133,8 @@ export function info(
   if (!opts.omitTimestampScale) {
     parts.push(el(ID.TIMESTAMP_SCALE, uintBytes(opts.timestampScaleNs ?? 1_000_000, 4)));
   }
+  parts.push(el(ID.MUXING_APP, asciiBytes("Chrome")));
+  parts.push(el(ID.WRITING_APP, asciiBytes("Chrome")));
   if (opts.durationMs !== undefined) {
     const buf = new Uint8Array(8);
     new DataView(buf.buffer).setFloat64(0, opts.durationMs, false);
@@ -115,13 +144,16 @@ export function info(
   return el(ID.INFO, concatBytes(parts));
 }
 
-export function audioSettings(opts: { samplingFrequency?: number; channels?: number } = {}): Uint8Array {
+export function audioSettings(
+  opts: { samplingFrequency?: number; channels?: number; extraChildren?: Uint8Array[] } = {},
+): Uint8Array {
   const freqBuf = new Uint8Array(4);
   new DataView(freqBuf.buffer).setFloat32(0, opts.samplingFrequency ?? 48_000, false);
   const parts = [
     el(ID.SAMPLING_FREQUENCY, freqBuf),
     el(ID.CHANNELS, uintBytes(opts.channels ?? 1, 1)),
   ];
+  if (opts.extraChildren) parts.push(...opts.extraChildren);
   return el(ID.AUDIO, concatBytes(parts));
 }
 
@@ -247,6 +279,23 @@ export function block(trackNumber: number, relativeTimestamp: number, packet: Ui
   const flags = new Uint8Array([0]);
   const blockContent = concatBytes([trackVint, tsBytes, flags, packet]);
   return el(ID.BLOCK, blockContent);
+}
+
+export function silentTracks(children: Uint8Array[]): Uint8Array {
+  return el(ID.SILENT_TRACKS, concatBytes(children));
+}
+
+type UnsupportedSegmentContainer = "CUES" | "SEEK_HEAD" | "TAGS" | "CHAPTERS" | "ATTACHMENTS";
+
+export function unsupportedSegmentContainer(
+  id: UnsupportedSegmentContainer,
+  children: Uint8Array[],
+): Uint8Array {
+  return el(ID[id], concatBytes(children));
+}
+
+export function voidElement(size: number): Uint8Array {
+  return el(ID.VOID, new Uint8Array(size));
 }
 
 export function cluster(

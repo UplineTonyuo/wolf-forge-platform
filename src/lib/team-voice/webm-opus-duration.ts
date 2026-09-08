@@ -33,17 +33,19 @@ const ID_TRACK_NUMBER = 0xd7;
 const ID_TRACK_TYPE = 0x83;
 const ID_TRACK_TIMESTAMP_SCALE = 0x23314f;
 const ID_CODEC_ID = 0x86;
+const ID_AUDIO = 0xe1;
 const ID_CLUSTER = 0x1f43b675;
 const ID_CLUSTER_TIMESTAMP = 0xe7;
 const ID_SIMPLE_BLOCK = 0xa3;
 const ID_BLOCK_GROUP = 0xa0;
 const ID_BLOCK = 0xa1;
-const MEDIA_BLOCK_IDS = new Set<number>([ID_SIMPLE_BLOCK, ID_BLOCK_GROUP, ID_BLOCK]);
+const ID_SILENT_TRACKS = 0x5854;
+const ID_VOID = 0xec;
+const ID_CRC32 = 0xbf;
 
-// Recognized-but-unparsed Segment-level siblings. Only used to decide where
-// an unknown-size Cluster ends, and to safely skip a known-size element we
-// do not need. Never entered.
-const SEGMENT_LEVEL_IDS = new Set<number>([
+// Segment-level masters are recognized only as boundaries for an unknown-size
+// Cluster. The narrow Team Voice profile rejects all except Info/Tracks/Cluster.
+const SEGMENT_BOUNDARY_IDS = new Set<number>([
   ID_INFO,
   ID_TRACKS,
   ID_CLUSTER,
@@ -54,8 +56,63 @@ const SEGMENT_LEVEL_IDS = new Set<number>([
   0x1941a469, // Attachments
 ]);
 
-// Recognized Cluster-level children. BlockGroup is recognized only so it can
-// be explicitly rejected, never silently skipped.
+const GLOBAL_LEAF_IDS = new Set<number>([ID_VOID, ID_CRC32]);
+
+const EBML_HEADER_LEAF_IDS = new Set<number>([
+  0x4286, // EBMLVersion
+  0x42f7, // EBMLReadVersion
+  0x42f2, // EBMLMaxIDLength
+  0x42f3, // EBMLMaxSizeLength
+  0x4282, // DocType
+  0x4287, // DocTypeVersion
+  0x4285, // DocTypeReadVersion
+  ...GLOBAL_LEAF_IDS,
+]);
+
+const INFO_LEAF_IDS = new Set<number>([
+  ID_TIMESTAMP_SCALE,
+  0x4489, // Duration (fallback eligibility is decided by the caller)
+  0x4461, // DateUTC
+  0x7ba9, // Title
+  0x4d80, // MuxingApp
+  0x5741, // WritingApp
+  ...GLOBAL_LEAF_IDS,
+]);
+
+const TRACK_ENTRY_LEAF_IDS = new Set<number>([
+  ID_TRACK_NUMBER,
+  0x73c5, // TrackUID
+  ID_TRACK_TYPE,
+  0xb9, // FlagEnabled
+  0x88, // FlagDefault
+  0x55aa, // FlagForced
+  0x9c, // FlagLacing
+  0x23e383, // DefaultDuration
+  ID_TRACK_TIMESTAMP_SCALE,
+  0x536e, // Name
+  0x22b59c, // Language
+  0x22b59d, // LanguageIETF
+  ID_CODEC_ID,
+  0x63a2, // CodecPrivate
+  0x258688, // CodecName
+  0x56aa, // CodecDelay
+  0x56bb, // SeekPreRoll
+  ...GLOBAL_LEAF_IDS,
+]);
+
+const AUDIO_LEAF_IDS = new Set<number>([
+  0xb5, // SamplingFrequency
+  0x78b5, // OutputSamplingFrequency
+  0x9f, // Channels
+  0x7d7b, // ChannelPositions
+  0x6264, // BitDepth
+  ...GLOBAL_LEAF_IDS,
+]);
+
+const SEGMENT_LEAF_IDS = GLOBAL_LEAF_IDS;
+
+// Every allowed Cluster child is parsed media or a scalar/global leaf.
+// SilentTracks and BlockGroup are recognized solely so they can be rejected.
 const CLUSTER_CHILD_IDS = new Set<number>([
   ID_CLUSTER_TIMESTAMP,
   ID_SIMPLE_BLOCK,
@@ -63,7 +120,8 @@ const CLUSTER_CHILD_IDS = new Set<number>([
   ID_BLOCK,
   0xa7, // Position
   0xab, // PrevSize
-  0x5854, // SilentTracks
+  ID_SILENT_TRACKS,
+  ...GLOBAL_LEAF_IDS,
 ]);
 
 const TRACK_TYPE_VIDEO = 1;
@@ -279,6 +337,26 @@ function bumpElementCount(state: ParseState): boolean {
   return state.elementCount <= MAX_ELEMENTS;
 }
 
+/** Validates a shallow container whose permitted children are all scalar/binary leaves. */
+function parseLeafOnlyContainer(
+  bytes: Uint8Array,
+  start: number,
+  end: number,
+  state: ParseState,
+  allowedIds: ReadonlySet<number>,
+): boolean {
+  let pos = start;
+  while (pos < end) {
+    if (!bumpElementCount(state)) return false;
+    const header = readElementHeader(bytes, pos, end);
+    if (!header || header.unknown || !allowedIds.has(header.id)) return false;
+    const childEnd = header.contentStart + header.size;
+    if (childEnd > end) return false;
+    pos = childEnd;
+  }
+  return pos === end;
+}
+
 function currentMeasuredMs(state: ParseState): number {
   const encodedMs = state.encodedSamples48k / 48;
   const timelineMs =
@@ -299,7 +377,6 @@ function parseTracks(bytes: Uint8Array, start: number, end: number, state: Parse
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return null;
     if (header.contentStart + header.size > end) return null;
-    if (MEDIA_BLOCK_IDS.has(header.id)) return null; // media-bearing elements are forbidden outside Cluster
     if (header.id !== ID_TRACK_ENTRY) return null; // narrow profile: Tracks holds only TrackEntry
 
     trackEntryCount += 1;
@@ -322,13 +399,13 @@ function parseTrackEntry(bytes: Uint8Array, start: number, end: number, state: P
   let trackType: number | null = null;
   let codecId: string | null = null;
   let sawTrackTimestampScale = false;
+  let sawAudio = false;
 
   while (pos < end) {
     if (!bumpElementCount(state)) return null;
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return null;
     if (header.contentStart + header.size > end) return null;
-    if (MEDIA_BLOCK_IDS.has(header.id)) return null; // media-bearing elements are forbidden outside Cluster
 
     if (header.id === ID_TRACK_NUMBER) {
       if (trackNumber !== null) return null;
@@ -347,8 +424,16 @@ function parseTrackEntry(bytes: Uint8Array, start: number, end: number, state: P
       const scale = readFloatContent(bytes, header.contentStart, header.size, end);
       if (scale !== 1) return null;
       sawTrackTimestampScale = true;
+    } else if (header.id === ID_AUDIO) {
+      if (sawAudio) return null;
+      if (!parseLeafOnlyContainer(bytes, header.contentStart, header.contentStart + header.size, state, AUDIO_LEAF_IDS)) {
+        return null;
+      }
+      sawAudio = true;
+    } else if (!TRACK_ENTRY_LEAF_IDS.has(header.id)) {
+      return null;
     }
-    // Every other TrackEntry child (Audio, Name, Language, ...) is skipped by size; unneeded for duration.
+    // Permitted unparsed TrackEntry children are scalar/binary leaves only.
 
     pos = header.contentStart + header.size;
   }
@@ -370,7 +455,7 @@ function parseInfo(bytes: Uint8Array, start: number, end: number, state: ParseSt
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return false;
     if (header.contentStart + header.size > end) return false;
-    if (MEDIA_BLOCK_IDS.has(header.id)) return false; // media-bearing elements are forbidden outside Cluster
+    if (!INFO_LEAF_IDS.has(header.id)) return false;
 
     if (header.id === ID_TIMESTAMP_SCALE) {
       if (sawTimestampScale) return false; // ambiguous duplicate
@@ -379,8 +464,7 @@ function parseInfo(bytes: Uint8Array, start: number, end: number, state: ParseSt
       state.timestampScaleNs = BigInt(scale);
       sawTimestampScale = true;
     }
-    // Duration and every other Info child is intentionally unparsed: this
-    // fallback only runs when the caller already found no usable duration.
+    // Other permitted Info children are scalar leaves only.
 
     pos = header.contentStart + header.size;
   }
@@ -459,7 +543,7 @@ function parseCluster(
     if (!peekId) return null;
 
     if (header.unknown) {
-      if (peekId.value === ID_CLUSTER || SEGMENT_LEVEL_IDS.has(peekId.value)) {
+      if (peekId.value === ID_CLUSTER || SEGMENT_BOUNDARY_IDS.has(peekId.value)) {
         break; // implicit end of an unknown-size Cluster
       }
       if (!CLUSTER_CHILD_IDS.has(peekId.value)) return null; // unrecognized structure while scanning
@@ -470,7 +554,7 @@ function parseCluster(
     if (!child) return null;
 
     if (!CLUSTER_CHILD_IDS.has(child.id)) return null;
-    if (child.id === ID_BLOCK_GROUP || child.id === ID_BLOCK) return null; // only SimpleBlock carries media in this profile
+    if (child.id === ID_BLOCK_GROUP || child.id === ID_BLOCK || child.id === ID_SILENT_TRACKS) return null;
 
     if (child.unknown) return null; // only Segment/Cluster may be unknown-size
 
@@ -488,7 +572,7 @@ function parseCluster(
         return child.contentStart + child.size; // stop early: already over cap, caller will reject
       }
     }
-    // Position / PrevSize / SilentTracks: recognized, intentionally skipped.
+    // Position / PrevSize and global elements are scalar leaves, intentionally skipped.
 
     pos = child.contentStart + child.size;
   }
@@ -526,11 +610,11 @@ function parseSegmentBody(bytes: Uint8Array, start: number, end: number, state: 
       if (clusterEnd === null) return false;
       pos = clusterEnd;
       if (currentMeasuredMs(state) > teamVoiceMaxDurationMs) break; // stop early
-    } else if (SEGMENT_LEVEL_IDS.has(header.id)) {
-      if (header.unknown || header.contentStart + header.size > end) return false; // cannot safely skip an unknown-size element we don't parse
+    } else if (SEGMENT_LEAF_IDS.has(header.id)) {
+      if (header.unknown || header.contentStart + header.size > end) return false;
       pos = header.contentStart + header.size;
     } else {
-      return false; // unrecognized Segment-level structure
+      return false; // unsupported Segment-level structure, including metadata master containers
     }
   }
 
@@ -552,9 +636,13 @@ export function deriveWebmOpusDurationMs(bytes: Uint8Array): number | null {
 
   const headerElement = readElementHeader(bytes, 0, bytes.length);
   if (!headerElement || headerElement.id !== ID_EBML_HEADER || headerElement.unknown) return null;
-  if (headerElement.contentStart + headerElement.size > bytes.length) return null;
+  const headerEnd = headerElement.contentStart + headerElement.size;
+  if (headerEnd > bytes.length) return null;
+  if (!parseLeafOnlyContainer(bytes, headerElement.contentStart, headerEnd, state, EBML_HEADER_LEAF_IDS)) {
+    return null;
+  }
 
-  const segmentPos = headerElement.contentStart + headerElement.size;
+  const segmentPos = headerEnd;
   const segmentHeader = readElementHeader(bytes, segmentPos, bytes.length);
   if (!segmentHeader || segmentHeader.id !== ID_SEGMENT) return null;
 

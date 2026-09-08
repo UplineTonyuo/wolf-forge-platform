@@ -5,6 +5,7 @@ import {
   OPUS_CONFIG_20MS_CELT_NB,
   OPUS_CONFIG_60MS_SILK_NB,
   ID,
+  audioSettings,
   block,
   blockGroupWithBlock,
   buildUniformClusters,
@@ -21,12 +22,15 @@ import {
   opusPacketTwoFrames,
   opusTrackEntry,
   segment,
+  silentTracks,
   simpleBlock,
   trackEntry,
   trackNumberElement,
   trackTimestampScaleElement,
   trackTypeElement,
   tracks,
+  unsupportedSegmentContainer,
+  voidElement,
   webmFile,
 } from "./helpers/webm-opus-fixture";
 
@@ -39,6 +43,17 @@ describe("deriveWebmOpusDurationMs", () => {
   it("also derives correctly when Segment and Cluster sizes are known, not just unknown-size streaming form", () => {
     const bytes = chromeStyleFixture(2400, { clusterUnknownSize: false, segmentUnknownSize: false });
     expect(deriveWebmOpusDurationMs(bytes)).toBe(2400);
+  });
+
+  it("accepts scalar Void padding without treating its bytes as nested EBML", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info(),
+      voidElement(16),
+      tracks([opusTrackEntry()]),
+      cluster(0, [voidElement(8), simpleBlock(1, 0, packet)]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBe(120);
   });
 
   it("accepts a legal 8-byte unknown-size Segment VINT", () => {
@@ -189,6 +204,98 @@ describe("deriveWebmOpusDurationMs", () => {
     const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
     expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
   });
+
+  it("rejects a Cluster containing a SimpleBlock when it is nested inside Info", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const nestedCluster = cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false });
+    const bytes = webmFile([
+      info({ extraChildren: [nestedCluster] }),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects Tracks when nested inside Info", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info({ extraChildren: [tracks([opusTrackEntry(2)])] }),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a bare Block hidden inside SilentTracks within a Cluster", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info(),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet), silentTracks([block(1, 120, packet)])]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a Cluster hidden inside the EBML header", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const nestedCluster = cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false });
+    const body = segment([info(), tracks([opusTrackEntry(1)]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(concatBytes([ebmlHeader([nestedCluster]), body]))).toBeNull();
+  });
+
+  it("rejects a Cluster hidden inside TrackEntry", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const nestedCluster = cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false });
+    const entry = trackEntry({
+      trackNumber: 1,
+      trackType: 2,
+      codecId: "A_OPUS",
+      audio: audioSettings(),
+      extraChildren: [nestedCluster],
+    });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a Block hidden inside Audio", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({
+      trackNumber: 1,
+      trackType: 2,
+      codecId: "A_OPUS",
+      audio: audioSettings({ extraChildren: [block(1, 0, packet)] }),
+    });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a Cluster hidden inside Audio", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const nestedCluster = cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false });
+    const entry = trackEntry({
+      trackNumber: 1,
+      trackType: 2,
+      codecId: "A_OPUS",
+      audio: audioSettings({ extraChildren: [nestedCluster] }),
+    });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it.each(["CUES", "SEEK_HEAD", "TAGS", "CHAPTERS", "ATTACHMENTS"] as const)(
+    "rejects media hidden inside unsupported Segment container %s",
+    (containerId) => {
+      const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+      const hiddenBlock = simpleBlock(1, 0, packet);
+      const bytes = webmFile([
+        info(),
+        tracks([opusTrackEntry(1)]),
+        unsupportedSegmentContainer(containerId, [hiddenBlock]),
+        cluster(0, [simpleBlock(1, 0, packet)]),
+      ]);
+      expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+    },
+  );
 
   it.each([
     ["TrackNumber", trackNumberElement(1)],

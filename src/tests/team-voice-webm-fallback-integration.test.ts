@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { inspectTeamVoiceBytes } from "../lib/team-voice/media-inspection";
 import {
   OPUS_CONFIG_60MS_SILK_NB,
+  block,
   buildUniformClusters,
   chromeStyleFixture,
   cluster,
@@ -11,6 +12,7 @@ import {
   opusPacketTwoFrames,
   opusTrackEntry,
   segment,
+  silentTracks,
   simpleBlock,
   tracks,
   trackEntry,
@@ -119,6 +121,45 @@ describe("inspectTeamVoiceBytes against real music-metadata (WebM/Opus duration 
         objectMimeType: "audio/webm",
         declaredMimeType: "audio/webm",
         recordedDurationMs: 520,
+      }),
+    ).rejects.toThrow(/not supported/);
+  });
+
+  it("rejects a Cluster containing a SimpleBlock when it is nested inside Info", async () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const nestedCluster = cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false });
+    const bytes = webmFile([
+      info({ extraChildren: [nestedCluster] }),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+
+    await expect(
+      inspectTeamVoiceBytes({
+        bytes,
+        objectSize: bytes.byteLength,
+        objectMimeType: "audio/webm",
+        declaredMimeType: "audio/webm",
+        recordedDurationMs: 120,
+      }),
+    ).rejects.toThrow(/not supported/);
+  });
+
+  it("rejects a bare Block hidden inside SilentTracks within a Cluster", async () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info(),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet), silentTracks([block(1, 120, packet)])]),
+    ]);
+
+    await expect(
+      inspectTeamVoiceBytes({
+        bytes,
+        objectSize: bytes.byteLength,
+        objectMimeType: "audio/webm",
+        declaredMimeType: "audio/webm",
+        recordedDurationMs: 120,
       }),
     ).rejects.toThrow(/not supported/);
   });
