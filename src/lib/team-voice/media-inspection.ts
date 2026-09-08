@@ -7,6 +7,7 @@ import {
   type TeamVoiceMimeType,
 } from "../../domain/team/schema";
 import { ValidationError } from "../errors/application-error";
+import { deriveWebmOpusDurationMs } from "./webm-opus-duration";
 
 export type InspectedTeamVoice = {
   durationMs: number;
@@ -52,12 +53,27 @@ export async function inspectTeamVoiceBytes(input: {
   }
 
   const mimeType = canonicalMime(metadata.format.container, metadata.format.codec);
-  const measuredSeconds = metadata.format.duration;
-  if (!mimeType || !Number.isFinite(measuredSeconds) || !measuredSeconds || measuredSeconds <= 0) {
+  if (!mimeType) {
     throw new ValidationError("Voice recording format is not supported.");
   }
 
-  const durationMs = Math.round(measuredSeconds * 1000);
+  const probedSeconds = metadata.format.duration;
+  let durationMs: number;
+  if (Number.isFinite(probedSeconds) && probedSeconds && probedSeconds > 0) {
+    durationMs = Math.round(probedSeconds * 1000);
+  } else if (mimeType === "audio/webm") {
+    // Chrome's MediaRecorder never backfills a Duration element into a
+    // live-muxed WebM Segment; derive it from the validated Opus payload
+    // instead of trusting client-supplied metadata.
+    const fallbackMs = deriveWebmOpusDurationMs(input.bytes);
+    if (fallbackMs === null) {
+      throw new ValidationError("Voice recording format is not supported.");
+    }
+    durationMs = fallbackMs;
+  } else {
+    throw new ValidationError("Voice recording format is not supported.");
+  }
+
   if (durationMs > teamVoiceMaxDurationMs) {
     throw new ValidationError("Voice recording must be 5 minutes or shorter.");
   }
