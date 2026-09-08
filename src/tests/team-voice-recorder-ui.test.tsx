@@ -285,7 +285,8 @@ describe("Voice composer control — permission and device failures", () => {
     await waitFor(() => expect(screen.getByRole("dialog", { name: "No microphone detected" })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Got it" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(micButton()).toHaveFocus();
+    // Focus returns in a post-close effect (not synchronously with unmount).
+    await waitFor(() => expect(micButton()).toHaveFocus());
   });
 });
 
