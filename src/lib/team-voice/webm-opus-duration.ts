@@ -31,11 +31,14 @@ const ID_TRACKS = 0x1654ae6b;
 const ID_TRACK_ENTRY = 0xae;
 const ID_TRACK_NUMBER = 0xd7;
 const ID_TRACK_TYPE = 0x83;
+const ID_TRACK_TIMESTAMP_SCALE = 0x23314f;
 const ID_CODEC_ID = 0x86;
 const ID_CLUSTER = 0x1f43b675;
 const ID_CLUSTER_TIMESTAMP = 0xe7;
 const ID_SIMPLE_BLOCK = 0xa3;
 const ID_BLOCK_GROUP = 0xa0;
+const ID_BLOCK = 0xa1;
+const MEDIA_BLOCK_IDS = new Set<number>([ID_SIMPLE_BLOCK, ID_BLOCK_GROUP, ID_BLOCK]);
 
 // Recognized-but-unparsed Segment-level siblings. Only used to decide where
 // an unknown-size Cluster ends, and to safely skip a known-size element we
@@ -57,6 +60,7 @@ const CLUSTER_CHILD_IDS = new Set<number>([
   ID_CLUSTER_TIMESTAMP,
   ID_SIMPLE_BLOCK,
   ID_BLOCK_GROUP,
+  ID_BLOCK,
   0xa7, // Position
   0xab, // PrevSize
   0x5854, // SilentTracks
@@ -103,12 +107,18 @@ function readVint(bytes: Uint8Array, offset: number, keepMarker: boolean, limit:
   if (offset + length > limit) return null; // truncated / extends past this container's end
 
   const dataMask = markerBit - 1;
-  let value = keepMarker ? first : first & dataMask;
   let unknown = !keepMarker && (first & dataMask) === dataMask;
   for (let i = 1; i < length; i++) {
     const b = bytes[offset + i]!; // offset + length <= limit was already validated above
-    value = value * 256 + b;
     if (b !== 0xff) unknown = false;
+  }
+  // The valid 8-byte unknown-size sentinel exceeds Number.MAX_SAFE_INTEGER
+  // if accumulated. Recognize it from its byte pattern before conversion.
+  if (unknown) return { value: 0, length, unknown: true };
+
+  let value = keepMarker ? first : first & dataMask;
+  for (let i = 1; i < length; i++) {
+    value = value * 256 + bytes[offset + i]!;
     if (!Number.isSafeInteger(value)) return null;
   }
   return { value, length, unknown };
@@ -146,6 +156,13 @@ function readAsciiContent(bytes: Uint8Array, offset: number, length: number, lim
   let out = "";
   for (let i = 0; i < length; i++) out += String.fromCharCode(bytes[offset + i]!); // bounds-checked above
   return out;
+}
+
+function readFloatContent(bytes: Uint8Array, offset: number, length: number, limit: number): number | null {
+  if ((length !== 4 && length !== 8) || offset + length > limit) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset + offset, length);
+  const value = length === 4 ? view.getFloat32(0, false) : view.getFloat64(0, false);
+  return Number.isFinite(value) ? value : null;
 }
 
 /** Parses exactly one Opus packet's framing (RFC 6716 §3) and returns its duration in 48kHz samples, or null if malformed. */
@@ -282,6 +299,7 @@ function parseTracks(bytes: Uint8Array, start: number, end: number, state: Parse
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return null;
     if (header.contentStart + header.size > end) return null;
+    if (MEDIA_BLOCK_IDS.has(header.id)) return null; // media-bearing elements are forbidden outside Cluster
     if (header.id !== ID_TRACK_ENTRY) return null; // narrow profile: Tracks holds only TrackEntry
 
     trackEntryCount += 1;
@@ -303,22 +321,32 @@ function parseTrackEntry(bytes: Uint8Array, start: number, end: number, state: P
   let trackNumber: number | null = null;
   let trackType: number | null = null;
   let codecId: string | null = null;
+  let sawTrackTimestampScale = false;
 
   while (pos < end) {
     if (!bumpElementCount(state)) return null;
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return null;
     if (header.contentStart + header.size > end) return null;
+    if (MEDIA_BLOCK_IDS.has(header.id)) return null; // media-bearing elements are forbidden outside Cluster
 
     if (header.id === ID_TRACK_NUMBER) {
+      if (trackNumber !== null) return null;
       trackNumber = readUintContent(bytes, header.contentStart, header.size, end);
       if (trackNumber === null || trackNumber < 1) return null;
     } else if (header.id === ID_TRACK_TYPE) {
+      if (trackType !== null) return null;
       trackType = readUintContent(bytes, header.contentStart, header.size, end);
       if (trackType === null) return null;
     } else if (header.id === ID_CODEC_ID) {
+      if (codecId !== null) return null;
       codecId = readAsciiContent(bytes, header.contentStart, header.size, end);
       if (codecId === null) return null;
+    } else if (header.id === ID_TRACK_TIMESTAMP_SCALE) {
+      if (sawTrackTimestampScale) return null;
+      const scale = readFloatContent(bytes, header.contentStart, header.size, end);
+      if (scale !== 1) return null;
+      sawTrackTimestampScale = true;
     }
     // Every other TrackEntry child (Audio, Name, Language, ...) is skipped by size; unneeded for duration.
 
@@ -342,6 +370,7 @@ function parseInfo(bytes: Uint8Array, start: number, end: number, state: ParseSt
     const header = readElementHeader(bytes, pos, end);
     if (!header || header.unknown) return false;
     if (header.contentStart + header.size > end) return false;
+    if (MEDIA_BLOCK_IDS.has(header.id)) return false; // media-bearing elements are forbidden outside Cluster
 
     if (header.id === ID_TIMESTAMP_SCALE) {
       if (sawTimestampScale) return false; // ambiguous duplicate
@@ -440,7 +469,8 @@ function parseCluster(
     const child = readElementHeader(bytes, pos, hardEnd);
     if (!child) return null;
 
-    if (child.id === ID_BLOCK_GROUP) return null; // BlockGroup/Block unsupported: fail closed
+    if (!CLUSTER_CHILD_IDS.has(child.id)) return null;
+    if (child.id === ID_BLOCK_GROUP || child.id === ID_BLOCK) return null; // only SimpleBlock carries media in this profile
 
     if (child.unknown) return null; // only Segment/Cluster may be unknown-size
 
@@ -532,6 +562,7 @@ export function deriveWebmOpusDurationMs(bytes: Uint8Array): number | null {
     ? bytes.length
     : segmentHeader.contentStart + segmentHeader.size;
   if (segmentEnd > bytes.length) return null;
+  if (segmentEnd !== bytes.length) return null; // exactly one Segment; no trailing media/content
 
   const ok = parseSegmentBody(bytes, segmentHeader.contentStart, segmentEnd, state);
   if (!ok) return null;

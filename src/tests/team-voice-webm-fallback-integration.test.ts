@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import { inspectTeamVoiceBytes } from "../lib/team-voice/media-inspection";
 import {
   OPUS_CONFIG_60MS_SILK_NB,
+  buildUniformClusters,
   chromeStyleFixture,
   cluster,
+  concatBytes,
+  ebmlHeader,
   info,
   opusPacketTwoFrames,
   opusTrackEntry,
+  segment,
   simpleBlock,
   tracks,
+  trackEntry,
   webmFile,
 } from "./helpers/webm-opus-fixture";
 
@@ -71,6 +76,70 @@ describe("inspectTeamVoiceBytes against real music-metadata (WebM/Opus duration 
         bytes,
         objectSize: bytes.byteLength,
         objectMimeType: "audio/webm;codecs=opus",
+        declaredMimeType: "audio/webm",
+        recordedDurationMs: 120,
+      }),
+    ).rejects.toThrow(/not supported/);
+  });
+
+  it("rejects a second over-limit Segment instead of measuring only the first short Segment", async () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const shortSegment = segment([info(), tracks([opusTrackEntry()]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    const overLimitSegment = segment([
+      info(),
+      tracks([opusTrackEntry()]),
+      ...buildUniformClusters(2501, 120, () => packet),
+    ]);
+    const bytes = concatBytes([ebmlHeader(), shortSegment, overLimitSegment]);
+
+    await expect(
+      inspectTeamVoiceBytes({
+        bytes,
+        objectSize: bytes.byteLength,
+        objectMimeType: "audio/webm",
+        declaredMimeType: "audio/webm",
+        recordedDurationMs: 120,
+      }),
+    ).rejects.toThrow(/not supported/);
+  });
+
+  it("rejects a non-default TrackTimestampScale instead of undercounting the presentation timeline", async () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({ trackNumber: 1, trackType: 2, codecId: "A_OPUS", trackTimestampScale: 1000 });
+    const bytes = webmFile([
+      info(),
+      tracks([entry]),
+      cluster(0, [simpleBlock(1, 0, packet), simpleBlock(1, 400, packet)]),
+    ]);
+
+    await expect(
+      inspectTeamVoiceBytes({
+        bytes,
+        objectSize: bytes.byteLength,
+        objectMimeType: "audio/webm",
+        declaredMimeType: "audio/webm",
+        recordedDurationMs: 520,
+      }),
+    ).rejects.toThrow(/not supported/);
+  });
+
+  it.each([
+    ["zero", 0],
+    ["negative", -1],
+    ["NaN", Number.NaN],
+  ])("rejects an explicitly invalid %s Duration instead of entering fallback", async (_label, durationMs) => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info({ durationMs }),
+      tracks([opusTrackEntry()]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+
+    await expect(
+      inspectTeamVoiceBytes({
+        bytes,
+        objectSize: bytes.byteLength,
+        objectMimeType: "audio/webm",
         declaredMimeType: "audio/webm",
         recordedDurationMs: 120,
       }),

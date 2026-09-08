@@ -4,10 +4,14 @@ import { deriveWebmOpusDurationMs } from "../lib/team-voice/webm-opus-duration";
 import {
   OPUS_CONFIG_20MS_CELT_NB,
   OPUS_CONFIG_60MS_SILK_NB,
+  ID,
+  block,
   blockGroupWithBlock,
   buildUniformClusters,
   chromeStyleFixture,
   cluster,
+  codecIdElement,
+  concatBytes,
   ebmlHeader,
   info,
   malformedCbrFrameCountOpusPacket,
@@ -19,6 +23,9 @@ import {
   segment,
   simpleBlock,
   trackEntry,
+  trackNumberElement,
+  trackTimestampScaleElement,
+  trackTypeElement,
   tracks,
   webmFile,
 } from "./helpers/webm-opus-fixture";
@@ -32,6 +39,36 @@ describe("deriveWebmOpusDurationMs", () => {
   it("also derives correctly when Segment and Cluster sizes are known, not just unknown-size streaming form", () => {
     const bytes = chromeStyleFixture(2400, { clusterUnknownSize: false, segmentUnknownSize: false });
     expect(deriveWebmOpusDurationMs(bytes)).toBe(2400);
+  });
+
+  it("accepts a legal 8-byte unknown-size Segment VINT", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile(
+      [
+        info(),
+        tracks([opusTrackEntry()]),
+        cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: false }),
+      ],
+      { segmentUnknownSizeLength: 8 },
+    );
+    expect(deriveWebmOpusDurationMs(bytes)).toBe(120);
+  });
+
+  it("accepts a legal 8-byte unknown-size Cluster VINT", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info(),
+      tracks([opusTrackEntry()]),
+      cluster(0, [simpleBlock(1, 0, packet)], { unknownSize: true, unknownSizeLength: 8 }),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBe(120);
+  });
+
+  it("rejects an unsafe 8-byte ordinary size VINT that is not the unknown-size sentinel", () => {
+    const body = concatBytes([info(), tracks([opusTrackEntry()])]);
+    const unsafeSize = new Uint8Array([0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe]);
+    const bytes = concatBytes([ebmlHeader(), new Uint8Array(ID.SEGMENT), unsafeSize, body]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
   });
 
   it("defaults TimestampScale to 1ms/tick when Info omits it", () => {
@@ -119,6 +156,94 @@ describe("deriveWebmOpusDurationMs", () => {
       cluster(0, [blockGroupWithBlock(1, 0, packet)]),
     ]);
     expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a bare Block inside a known-size Cluster", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info(),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet), block(1, 120, packet)], { unknownSize: false }),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a media-bearing Block misplaced inside Info", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const bytes = webmFile([
+      info({ extraChildren: [block(1, 0, packet)] }),
+      tracks([opusTrackEntry(1)]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects a media-bearing SimpleBlock misplaced inside TrackEntry", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({
+      trackNumber: 1,
+      trackType: 2,
+      codecId: "A_OPUS",
+      extraChildren: [simpleBlock(1, 0, packet)],
+    });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it.each([
+    ["TrackNumber", trackNumberElement(1)],
+    ["TrackType", trackTypeElement(2)],
+    ["CodecID", codecIdElement("A_OPUS")],
+    ["TrackTimestampScale", trackTimestampScaleElement(1)],
+  ])("rejects a duplicate security-sensitive %s field", (_label, duplicateField) => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({
+      trackNumber: 1,
+      trackType: 2,
+      codecId: "A_OPUS",
+      trackTimestampScale: 1,
+      extraChildren: [duplicateField],
+    });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("rejects an explicit non-default TrackTimestampScale instead of undercounting its timeline", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({ trackNumber: 1, trackType: 2, codecId: "A_OPUS", trackTimestampScale: 1000 });
+    const bytes = webmFile([
+      info(),
+      tracks([entry]),
+      cluster(0, [simpleBlock(1, 0, packet), simpleBlock(1, 400, packet)]),
+    ]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBeNull();
+  });
+
+  it("accepts an explicitly default TrackTimestampScale of 1", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const entry = trackEntry({ trackNumber: 1, trackType: 2, codecId: "A_OPUS", trackTimestampScale: 1 });
+    const bytes = webmFile([info(), tracks([entry]), cluster(0, [simpleBlock(1, 0, packet)])]);
+    expect(deriveWebmOpusDurationMs(bytes)).toBe(120);
+  });
+
+  it("rejects a second Segment after an otherwise valid known-size Segment", () => {
+    const packet = opusPacketTwoFrames(OPUS_CONFIG_60MS_SILK_NB, 10);
+    const shortSegment = segment([
+      info(),
+      tracks([opusTrackEntry()]),
+      cluster(0, [simpleBlock(1, 0, packet)]),
+    ]);
+    const longSegment = segment([
+      info(),
+      tracks([opusTrackEntry()]),
+      ...buildUniformClusters(2501, 120, () => packet),
+    ]);
+    expect(deriveWebmOpusDurationMs(concatBytes([ebmlHeader(), shortSegment, longSegment]))).toBeNull();
+  });
+
+  it("rejects unsupported trailing bytes after a known-size Segment", () => {
+    const bytes = chromeStyleFixture(120, { clusterUnknownSize: false, segmentUnknownSize: false });
+    expect(deriveWebmOpusDurationMs(concatBytes([bytes, new Uint8Array([0x00])]))).toBeNull();
   });
 
   it("rejects when the encoded packet sum is short but the presentation timeline spans over 5 minutes", () => {

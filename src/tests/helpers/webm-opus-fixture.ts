@@ -5,7 +5,7 @@
  * so tests exercise real bytes rather than a mocked numeric duration.
  */
 
-function concatBytes(parts: Uint8Array[]): Uint8Array {
+export function concatBytes(parts: Uint8Array[]): Uint8Array {
   const total = parts.reduce((sum, part) => sum + part.length, 0);
   const out = new Uint8Array(total);
   let offset = 0;
@@ -30,7 +30,14 @@ function encodeVint(value: number): Uint8Array {
   return bytes;
 }
 
-const UNKNOWN_SIZE = new Uint8Array([0xff]);
+type UnknownSizeLength = 1 | 8;
+
+function unknownSizeVint(length: UnknownSizeLength): Uint8Array {
+  const bytes = new Uint8Array(length).fill(0xff);
+  const marker = 0x80 >> (length - 1);
+  bytes[0] = marker | (marker - 1);
+  return bytes;
+}
 
 /** Plain big-endian unsigned integer content (no vint marker) used for element values. */
 function uintBytes(value: number, length = 1): Uint8Array {
@@ -49,8 +56,14 @@ function asciiBytes(text: string): Uint8Array {
   return new Uint8Array([...text].map((c) => c.charCodeAt(0)));
 }
 
-function el(id: number[], content: Uint8Array, opts: { unknownSize?: boolean } = {}): Uint8Array {
-  const sizeBytes = opts.unknownSize ? UNKNOWN_SIZE : encodeVint(content.length);
+function el(
+  id: number[],
+  content: Uint8Array,
+  opts: { unknownSize?: boolean; unknownSizeLength?: UnknownSizeLength } = {},
+): Uint8Array {
+  const sizeBytes = opts.unknownSize
+    ? unknownSizeVint(opts.unknownSizeLength ?? 1)
+    : encodeVint(content.length);
   return concatBytes([new Uint8Array(id), sizeBytes, content]);
 }
 
@@ -65,6 +78,7 @@ export const ID = {
   TRACK_ENTRY: [0xae],
   TRACK_NUMBER: [0xd7],
   TRACK_TYPE: [0x83],
+  TRACK_TIMESTAMP_SCALE: [0x23, 0x31, 0x4f],
   CODEC_ID: [0x86],
   AUDIO: [0xe1],
   SAMPLING_FREQUENCY: [0xb5],
@@ -80,7 +94,14 @@ export function ebmlHeader(): Uint8Array {
   return el(ID.EBML, el(ID.DOC_TYPE, asciiBytes("webm")));
 }
 
-export function info(opts: { timestampScaleNs?: number; durationMs?: number; omitTimestampScale?: boolean } = {}): Uint8Array {
+export function info(
+  opts: {
+    timestampScaleNs?: number;
+    durationMs?: number;
+    omitTimestampScale?: boolean;
+    extraChildren?: Uint8Array[];
+  } = {},
+): Uint8Array {
   const parts: Uint8Array[] = [];
   if (!opts.omitTimestampScale) {
     parts.push(el(ID.TIMESTAMP_SCALE, uintBytes(opts.timestampScaleNs ?? 1_000_000, 4)));
@@ -90,6 +111,7 @@ export function info(opts: { timestampScaleNs?: number; durationMs?: number; omi
     new DataView(buf.buffer).setFloat64(0, opts.durationMs, false);
     parts.push(el(ID.DURATION, buf));
   }
+  if (opts.extraChildren) parts.push(...opts.extraChildren);
   return el(ID.INFO, concatBytes(parts));
 }
 
@@ -104,14 +126,45 @@ export function audioSettings(opts: { samplingFrequency?: number; channels?: num
 }
 
 export function trackEntry(
-  opts: { trackNumber?: number; trackType?: number; codecId?: string; audio?: Uint8Array } = {},
+  opts: {
+    trackNumber?: number;
+    trackType?: number;
+    codecId?: string;
+    trackTimestampScale?: number;
+    audio?: Uint8Array;
+    extraChildren?: Uint8Array[];
+  } = {},
 ): Uint8Array {
   const parts: Uint8Array[] = [];
   if (opts.trackNumber !== undefined) parts.push(el(ID.TRACK_NUMBER, uintBytes(opts.trackNumber, 1)));
   if (opts.trackType !== undefined) parts.push(el(ID.TRACK_TYPE, uintBytes(opts.trackType, 1)));
   if (opts.codecId !== undefined) parts.push(el(ID.CODEC_ID, asciiBytes(opts.codecId)));
+  if (opts.trackTimestampScale !== undefined) {
+    const scale = new Uint8Array(8);
+    new DataView(scale.buffer).setFloat64(0, opts.trackTimestampScale, false);
+    parts.push(el(ID.TRACK_TIMESTAMP_SCALE, scale));
+  }
   if (opts.audio) parts.push(opts.audio);
+  if (opts.extraChildren) parts.push(...opts.extraChildren);
   return el(ID.TRACK_ENTRY, concatBytes(parts));
+}
+
+export function trackNumberElement(value: number): Uint8Array {
+  return el(ID.TRACK_NUMBER, uintBytes(value));
+}
+
+export function trackTypeElement(value: number): Uint8Array {
+  return el(ID.TRACK_TYPE, uintBytes(value));
+}
+
+export function codecIdElement(value: string): Uint8Array {
+  return el(ID.CODEC_ID, asciiBytes(value));
+}
+
+export function trackTimestampScaleElement(value: number): Uint8Array {
+  const scale = new Uint8Array(8);
+  new DataView(scale.buffer).setFloat64(0, value, false);
+  return el(ID.TRACK_TIMESTAMP_SCALE, scale);
 }
 
 export function opusTrackEntry(trackNumber = 1): Uint8Array {
@@ -184,26 +237,45 @@ export function simpleBlock(
 }
 
 export function blockGroupWithBlock(trackNumber: number, relativeTimestamp: number, packet: Uint8Array): Uint8Array {
+  return el(ID.BLOCK_GROUP, block(trackNumber, relativeTimestamp, packet));
+}
+
+export function block(trackNumber: number, relativeTimestamp: number, packet: Uint8Array): Uint8Array {
   const trackVint = encodeVint(trackNumber);
   const tsBytes = new Uint8Array(2);
   new DataView(tsBytes.buffer).setInt16(0, relativeTimestamp, false);
   const flags = new Uint8Array([0]);
   const blockContent = concatBytes([trackVint, tsBytes, flags, packet]);
-  const block = el(ID.BLOCK, blockContent);
-  return el(ID.BLOCK_GROUP, block);
+  return el(ID.BLOCK, blockContent);
 }
 
-export function cluster(timestamp: number, blocks: Uint8Array[], opts: { unknownSize?: boolean } = {}): Uint8Array {
+export function cluster(
+  timestamp: number,
+  blocks: Uint8Array[],
+  opts: { unknownSize?: boolean; unknownSizeLength?: UnknownSizeLength } = {},
+): Uint8Array {
   const content = concatBytes([el(ID.CLUSTER_TIMESTAMP, uintBytes(timestamp, 4)), ...blocks]);
   return el(ID.CLUSTER, content, opts);
 }
 
-export function segment(children: Uint8Array[], opts: { unknownSize?: boolean } = {}): Uint8Array {
+export function segment(
+  children: Uint8Array[],
+  opts: { unknownSize?: boolean; unknownSizeLength?: UnknownSizeLength } = {},
+): Uint8Array {
   return el(ID.SEGMENT, concatBytes(children), opts);
 }
 
-export function webmFile(children: Uint8Array[], opts: { segmentUnknownSize?: boolean } = {}): Uint8Array {
-  return concatBytes([ebmlHeader(), segment(children, { unknownSize: opts.segmentUnknownSize ?? true })]);
+export function webmFile(
+  children: Uint8Array[],
+  opts: { segmentUnknownSize?: boolean; segmentUnknownSizeLength?: UnknownSizeLength } = {},
+): Uint8Array {
+  return concatBytes([
+    ebmlHeader(),
+    segment(children, {
+      unknownSize: opts.segmentUnknownSize ?? true,
+      unknownSizeLength: opts.segmentUnknownSizeLength,
+    }),
+  ]);
 }
 
 /**

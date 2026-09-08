@@ -59,9 +59,10 @@ export async function inspectTeamVoiceBytes(input: {
 
   const probedSeconds = metadata.format.duration;
   let durationMs: number;
-  if (Number.isFinite(probedSeconds) && probedSeconds && probedSeconds > 0) {
-    durationMs = Math.round(probedSeconds * 1000);
-  } else if (mimeType === "audio/webm") {
+  if (probedSeconds === undefined) {
+    if (mimeType !== "audio/webm") {
+      throw new ValidationError("Voice recording format is not supported.");
+    }
     // Chrome's MediaRecorder never backfills a Duration element into a
     // live-muxed WebM Segment; derive it from the validated Opus payload
     // instead of trusting client-supplied metadata.
@@ -70,6 +71,8 @@ export async function inspectTeamVoiceBytes(input: {
       throw new ValidationError("Voice recording format is not supported.");
     }
     durationMs = fallbackMs;
+  } else if (Number.isFinite(probedSeconds) && probedSeconds > 0) {
+    durationMs = Math.round(probedSeconds * 1000);
   } else {
     throw new ValidationError("Voice recording format is not supported.");
   }
