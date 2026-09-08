@@ -80,6 +80,21 @@ function isSendRecoveryError(error: VoiceRecorderError | null): boolean {
   );
 }
 
+/** Short visible copy for the compact inline recovery row. */
+function voiceErrorShortLabel(error: VoiceRecorderError): string {
+  switch (error.category) {
+    case "PLAYBACK_ERROR":
+      return "Playback failed";
+    case "SEND_PREPARE_ERROR":
+    case "SEND_UPLOAD_ERROR":
+      return "Upload failed";
+    case "SEND_FINALIZE_ERROR":
+      return "Send failed";
+    case "RECORDING_TOO_LARGE":
+      return "Too large";
+  }
+}
+
 export function TeamVoiceRecorder({
   conversationId,
   disabled,
@@ -360,50 +375,13 @@ export function TeamVoiceRecorder({
     const sendError = isSendRecoveryError(error) ? error : null;
     content = (
       <div className={styles.voiceRecorderReview}>
-        <audio
-          ref={previewAudioRef}
-          className={styles.srOnly}
-          src={previewUrl}
-          preload="metadata"
-          onPlay={() => setPreviewPlaying(true)}
-          onPause={() => setPreviewPlaying(false)}
-          onEnded={() => setPreviewPlaying(false)}
-        />
-        <button
-          type="button"
-          className={styles.voicePlayButton}
-          onClick={() => void togglePreviewPlayback()}
-          disabled={busy}
-          aria-label={previewPlaying ? "Pause recording preview" : "Play recording preview"}
-        >
-          {previewPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-        </button>
-        <span className={styles.voiceTimer} aria-label={`Duration ${clock(elapsed)}`}>
-          {clock(elapsed)}
-        </span>
-        <button
-          type="button"
-          className={styles.voiceDiscardButton}
-          onClick={discard}
-          disabled={busy}
-          aria-label="Discard voice recording"
-          title="Discard recording"
-        >
-          <Trash2 aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          className={styles.voiceSendButton}
-          onClick={() => void send()}
-          disabled={busy}
-          aria-label="Send voice message"
-          title="Send voice message"
-        >
-          {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
-        </button>
         {playbackError ? (
-          <div className={styles.voiceReviewError} role="alert">
-            <span>{playbackError.message}</span>
+          <div
+            className={styles.voiceReviewError}
+            role="alert"
+            aria-label={playbackError.message}
+          >
+            <span className={styles.voiceReviewErrorText}>{voiceErrorShortLabel(playbackError)}</span>
             <button
               type="button"
               className={styles.voiceRetry}
@@ -417,8 +395,12 @@ export function TeamVoiceRecorder({
           </div>
         ) : null}
         {sendError ? (
-          <div className={styles.voiceReviewError} role="alert">
-            <span>{sendError.message}</span>
+          <div
+            className={styles.voiceReviewError}
+            role="alert"
+            aria-label={sendError.message}
+          >
+            <span className={styles.voiceReviewErrorText}>{voiceErrorShortLabel(sendError)}</span>
             <button
               type="button"
               className={styles.voiceRetry}
@@ -431,6 +413,49 @@ export function TeamVoiceRecorder({
             </button>
           </div>
         ) : null}
+        <div className={styles.voiceRecorderReviewControls}>
+          <audio
+            ref={previewAudioRef}
+            className={styles.srOnly}
+            src={previewUrl}
+            preload="metadata"
+            onPlay={() => setPreviewPlaying(true)}
+            onPause={() => setPreviewPlaying(false)}
+            onEnded={() => setPreviewPlaying(false)}
+          />
+          <button
+            type="button"
+            className={styles.voicePlayButton}
+            onClick={() => void togglePreviewPlayback()}
+            disabled={busy}
+            aria-label={previewPlaying ? "Pause recording preview" : "Play recording preview"}
+          >
+            {previewPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+          </button>
+          <span className={styles.voiceTimer} aria-label={`Duration ${clock(elapsed)}`}>
+            {clock(elapsed)}
+          </span>
+          <button
+            type="button"
+            className={styles.voiceDiscardButton}
+            onClick={discard}
+            disabled={busy}
+            aria-label="Discard voice recording"
+            title="Discard recording"
+          >
+            <Trash2 aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className={styles.voiceSendButton}
+            onClick={() => void send()}
+            disabled={busy}
+            aria-label="Send voice message"
+            title="Send voice message"
+          >
+            {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
+          </button>
+        </div>
       </div>
     );
   } else {

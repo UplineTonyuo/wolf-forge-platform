@@ -2584,6 +2584,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+.voiceRecorderReview {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.voiceRecorderReviewControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .voiceTimer {
   min-width: 2.4em;
   color: #596176;
@@ -2609,38 +2622,53 @@
   background: var(--wf-navy-hover, #001a73);
 }
 
+/*
+ * Compact inline recovery row above Play/Duration/Discard/Send — never a
+ * floating card. Short visible copy; full detail stays on aria-label.
+ */
 .voiceReviewError {
-  position: absolute;
-  z-index: 6;
-  bottom: calc(100% + 8px);
-  right: 0;
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  max-width: min(260px, 72vw);
-  padding: 7px 8px 7px 10px;
-  border-radius: 8px;
-  background: var(--wf-navy, #000d51);
-  color: #ffffff;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  max-width: min(220px, 72vw);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #b42318;
   font-size: 10.5px;
   font-weight: 550;
-  line-height: 1.35;
-  box-shadow: 0 10px 24px rgba(0, 13, 81, 0.22);
-  animation: voiceMicErrorIn 120ms ease both;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.voiceReviewErrorText {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .voiceReviewError .voiceRetry {
-  min-height: 24px;
-  padding: 0 8px;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: transparent;
-  color: #ffffff;
-  font-size: 10.5px;
+  min-width: 0;
+  min-height: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-color: rgba(180, 35, 24, 0.28);
+  background: #ffffff;
+  color: #b42318;
+  font-size: 10px;
   font-weight: 650;
+  gap: 4px;
 }
 
 .voiceReviewError .voiceRetry:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(180, 35, 24, 0.06);
+}
+
+.voiceReviewError .voiceRetry svg {
+  width: 12px;
+  height: 12px;
 }
 
 .voiceError { color: #b42318; font-size: 10.5px; line-height: 1.35; }
@@ -2751,15 +2779,18 @@
   .pinsPanel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-height: 58dvh; }
   .pinsPanel::before { display: none; }
   .voiceMessage { min-width: min(210px, 62vw); }
-  .voiceRecorderLive,
-  .voiceRecorderReview { gap: 6px; }
-  .voiceReviewError { max-width: min(240px, 78vw); }
+  .voiceRecorderLive { gap: 6px; }
+  .voiceRecorderReviewControls { gap: 6px; }
+  .voiceReviewError {
+    max-width: min(180px, 78vw);
+    justify-content: flex-end;
+  }
+  .voiceReviewErrorText { white-space: normal; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pinsPanel { animation: none; }
-  .voiceMicErrorPopover,
-  .voiceReviewError { animation: none; }
+  .voiceMicErrorPopover { animation: none; }
 }
 
 /* ==========================================================================

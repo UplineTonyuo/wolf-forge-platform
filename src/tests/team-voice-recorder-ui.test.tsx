@@ -461,7 +461,11 @@ describe("Voice composer control — retry safety", () => {
     await stopIntoReview();
     fireEvent.click(screen.getByRole("button", { name: "Send voice message" }));
 
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Voice recording could not be sent."));
+    await waitFor(() => {
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveAccessibleName("Voice recording could not be sent.");
+      expect(alert).toHaveTextContent("Send failed");
+    });
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(upload).toHaveBeenCalledTimes(1);
     expect(finalize).toHaveBeenCalledTimes(1);
@@ -645,7 +649,11 @@ describe("Voice composer control — retry safety", () => {
     play.mockRejectedValueOnce(new Error("autoplay blocked"));
 
     fireEvent.click(screen.getByRole("button", { name: "Play recording preview" }));
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Voice recording could not be played."));
+    await waitFor(() => {
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveAccessibleName("Voice recording could not be played.");
+      expect(alert).toHaveTextContent("Playback failed");
+    });
     expect(screen.getByRole("button", { name: "Retry playing recording preview" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry sending voice message" })).not.toBeInTheDocument();
     expect(prepare).not.toHaveBeenCalled();
