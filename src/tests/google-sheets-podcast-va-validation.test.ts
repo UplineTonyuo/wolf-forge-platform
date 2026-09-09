@@ -35,6 +35,8 @@ function makeFetchMock(options: {
   rows: string[][];
   dataValidationBody?: unknown;
   dataValidationStatus?: number;
+  hyperlinkBody?: unknown;
+  hyperlinkStatus?: number;
 }) {
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -44,12 +46,37 @@ function makeFetchMock(options: {
     if (url.includes("oauth2.googleapis.com/token")) return jsonResponse(TOKEN_RESPONSE);
     if (url.includes("fields=sheets.properties")) return jsonResponse(METADATA_RESPONSE);
     if (url.includes("/values/")) return jsonResponse({ values: options.rows });
+    // No hyperlink anywhere in this fixture's cells by default — an empty
+    // grid leaves every cell's plain display text untouched, matching each
+    // existing test's `result.rows` expectation.
+    if (url.includes("hyperlink")) {
+      return jsonResponse(options.hyperlinkBody ?? { sheets: [] }, options.hyperlinkStatus ?? 200);
+    }
     if (url.includes("dataValidation")) {
       return jsonResponse(options.dataValidationBody ?? { sheets: [] }, options.dataValidationStatus ?? 200);
     }
     throw new Error(`unexpected fetch: ${url}`);
   });
   return { fetchMock, calls };
+}
+
+/** One hyperlink grid response for a single-column range, `rowIndex` 0-based matching `values.get`'s row order; `columnIndex` is the requested column's own 0-based sheet index (`startColumn`). */
+function hyperlinkGridResponse(entries: { rowIndex: number; columnIndex: number; url: string }[]): unknown {
+  const byColumn = new Map<number, { rowIndex: number; url: string }[]>();
+  for (const entry of entries) {
+    const list = byColumn.get(entry.columnIndex) ?? [];
+    list.push(entry);
+    byColumn.set(entry.columnIndex, list);
+  }
+  const data = [...byColumn.entries()].map(([columnIndex, columnEntries]) => {
+    const maxRow = Math.max(...columnEntries.map((entry) => entry.rowIndex));
+    const rowData = Array.from({ length: maxRow + 1 }, (_, rowIndex) => {
+      const match = columnEntries.find((entry) => entry.rowIndex === rowIndex);
+      return { values: [match ? { hyperlink: match.url } : {}] };
+    });
+    return { startRow: 0, startColumn: columnIndex, rowData };
+  });
+  return { sheets: [{ data }] };
 }
 
 /** One data-validation grid response for a single-column range, `rowIndex` 0-based matching `values.get`'s row order. */
@@ -129,5 +156,54 @@ describe("GoogleSheetsPodcastWorkflowSource — Assigned VA data-validation opti
 
     expect(result.assignedVaValidationOptions).toEqual([]);
     expect(calls.some((call) => call.url.includes("dataValidation"))).toBe(false);
+  });
+});
+
+describe("GoogleSheetsPodcastWorkflowSource — cell hyperlink resolution (View Output fix)", () => {
+  it("replaces a friendly-label cell's text with its real hyperlink target end-to-end", async () => {
+    const header = ["Name", "PODCAST LINK", "Status 1"];
+    const row = ["Acme Co", "View Output", "Completed"];
+    const { fetchMock } = makeFetchMock({
+      rows: [header, row],
+      hyperlinkBody: hyperlinkGridResponse([{ rowIndex: 1, columnIndex: 1, url: "https://podcast.example/acme" }]),
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows).toEqual([header, ["Acme Co", "https://podcast.example/acme", "Completed"]]);
+  });
+
+  it("leaves every cell's display text unchanged when no hyperlink is discovered anywhere", async () => {
+    const header = ["Name", "PODCAST LINK", "Status 1"];
+    const row = ["Beta LLC", "https://already-a-url.example", "Stuck"];
+    const { fetchMock } = makeFetchMock({ rows: [header, row] });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows).toEqual([header, row]);
+  });
+
+  it("falls back to plain display text, without failing the whole tab fetch, when the hyperlink request fails", async () => {
+    const header = ["Name", "PODCAST LINK", "Status 1"];
+    const row = ["Gamma Inc", "View Output", "In Progress"];
+    const { fetchMock } = makeFetchMock({ rows: [header, row], hyperlinkStatus: 500 });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows).toEqual([header, row]);
+  });
+
+  it("skips the hyperlink request entirely when the tab has no URL-bearing column", async () => {
+    const header = ["Name", "Status 1"];
+    const row = ["Solo Client", "In Progress"];
+    const { fetchMock, calls } = makeFetchMock({ rows: [header, row] });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    await source.fetchLatestPodcastTab();
+
+    expect(calls.some((call) => call.url.includes("hyperlink"))).toBe(false);
   });
 });

@@ -76,6 +76,20 @@ const dataValidationGridSchema = z.object({
   })).optional(),
 });
 
+const hyperlinkGridSchema = z.object({
+  sheets: z.array(z.object({
+    data: z.array(z.object({
+      startRow: z.number().int().nonnegative().optional(),
+      startColumn: z.number().int().nonnegative().optional(),
+      rowData: z.array(z.object({
+        values: z.array(z.object({
+          hyperlink: z.string().optional(),
+        })).optional(),
+      })).optional(),
+    })).optional(),
+  })).optional(),
+});
+
 function base64UrlEncode(input: Buffer | string): string {
   return Buffer.from(input)
     .toString("base64")
@@ -233,6 +247,66 @@ export class OperationsGoogleSheetsReader {
       return [...values];
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * The real link target behind each cell in the given columns, keyed
+   * `"<0-based row index>,<0-based column index>"` matching the same indices
+   * `values.get` (`readTabValues`) returns rows/cells at — so a caller can
+   * overlay this directly onto that grid. `CellData.hyperlink` is populated
+   * by the Sheets API for both an explicit rich-text link (Insert > Link)
+   * and a resolved `=HYPERLINK(url, label)` formula; `values.get` alone
+   * returns only the second argument's rendered label in either case, which
+   * is the exact inconsistency this exists to close. Scoped to `rowCount`
+   * (the caller's own already-fetched row count), not a generous fixed
+   * height like the validation scan — a hyperlink has no meaning on a row
+   * that carries no data at all, and every column/range here comes from
+   * `locateUrlColumns`'s server-side header discovery, never a caller-
+   * supplied sheet name or range. Never throws: a read failure here falls
+   * back to the plain display text everywhere, which is the existing
+   * (imperfect but safe) behavior, never a broken or blank workflow.
+   */
+  async readCellHyperlinks(
+    spreadsheetId: string,
+    tabTitle: string,
+    columnIndices: readonly number[],
+    rowCount: number,
+  ): Promise<Map<string, string>> {
+    const hyperlinks = new Map<string, string>();
+    if (columnIndices.length === 0 || rowCount <= 0) return hyperlinks;
+    try {
+      const accessToken = await this.fetchAccessToken();
+      const escapedTitle = tabTitle.replace(/'/g, "''");
+      const params = new URLSearchParams();
+      for (const columnIndex of columnIndices) {
+        const columnLetter = columnIndexToLetter(columnIndex);
+        params.append("ranges", `'${escapedTitle}'!${columnLetter}1:${columnLetter}${rowCount}`);
+      }
+      params.set("fields", "sheets.data(startRow,startColumn,rowData.values.hyperlink)");
+
+      const url = `${SHEETS_API_BASE}/${encodeURIComponent(spreadsheetId)}?${params.toString()}`;
+      const response = await this.fetcher(url, {
+        headers: { authorization: `Bearer ${accessToken}` },
+        next: { revalidate: 300, tags: [this.cacheTag] },
+      });
+      if (!response.ok) return hyperlinks;
+
+      const parsed = hyperlinkGridSchema.parse(await response.json());
+      for (const sheet of parsed.sheets ?? []) {
+        for (const data of sheet.data ?? []) {
+          const baseRow = data.startRow ?? 0;
+          const baseColumn = data.startColumn ?? 0;
+          (data.rowData ?? []).forEach((rowData, rowOffset) => {
+            (rowData.values ?? []).forEach((cell, columnOffset) => {
+              if (cell.hyperlink) hyperlinks.set(`${baseRow + rowOffset},${baseColumn + columnOffset}`, cell.hyperlink);
+            });
+          });
+        }
+      }
+      return hyperlinks;
+    } catch {
+      return hyperlinks;
     }
   }
 

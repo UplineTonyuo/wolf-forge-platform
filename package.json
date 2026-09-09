@@ -13,6 +13,7 @@
     "lint": "eslint . --max-warnings=0",
     "memory:sync": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/sync-ai-memory-to-obsidian.ps1",
     "setup:frontend": "tsx scripts/setup-phase3a-local.ts",
+    "qa:local-login": "tsx scripts/qa-local-login.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -350,6 +350,25 @@ export function parsePodcastWorkflowRows(
 
 /**
  * Every distinct column index that some recognized header row in this tab
+ * maps to `field` — one entry per block that has the column, in header
+ * order. Shared by `locateAssignedVaColumns` (data-validation dropdown reads)
+ * and `locateUrlColumns` (hyperlink reads): both need "which column(s), by
+ * index, carry this field" and must agree on what counts as a header row.
+ */
+function locateFieldColumns(rows: readonly (readonly string[])[], field: PodcastFieldKey): number[] {
+  const columns = new Set<number>();
+  for (const row of rows) {
+    const headerMap = matchHeaderRow(row.map((cell) => cell ?? ""));
+    if (!headerMap) continue;
+    for (const [index, mappedField] of Object.entries(headerMap)) {
+      if (mappedField === field) columns.add(Number(index));
+    }
+  }
+  return [...columns].sort((a, b) => a - b);
+}
+
+/**
+ * Every distinct column index that some recognized header row in this tab
  * maps to Assigned VA — one entry per block that has the column, in header
  * order. Read by the Sheets adapter to know exactly which column(s) to pull
  * data-validation rules from, so a VA that currently has zero rows (and so
@@ -357,15 +376,54 @@ export function parsePodcastWorkflowRows(
  * own dropdown definition rather than only from populated cells.
  */
 export function locateAssignedVaColumns(rows: readonly (readonly string[])[]): number[] {
+  return locateFieldColumns(rows, "assignedVa");
+}
+
+/** The three fields a Podcast SEO row can carry as a clickable resource link. */
+const URL_FIELDS = ["loginUrl", "promptSopUrl", "podcastUrl"] as const;
+
+/**
+ * Every distinct column index across the sheet that carries one of the three
+ * URL-bearing fields (Login, Prompt/SOP, Podcast Link) — read by the Sheets
+ * adapter to know exactly which cells to check for a rich-text/HYPERLINK()
+ * target, since `values.get` alone returns only each cell's rendered display
+ * text and silently drops the underlying link when a row's author entered a
+ * friendly label ("View Output") rather than a bare URL. See
+ * `applyCellHyperlinks` for how a discovered link is applied back onto the
+ * grid before parsing.
+ */
+export function locateUrlColumns(rows: readonly (readonly string[])[]): number[] {
   const columns = new Set<number>();
-  for (const row of rows) {
-    const headerMap = matchHeaderRow(row.map((cell) => cell ?? ""));
-    if (!headerMap) continue;
-    for (const [index, field] of Object.entries(headerMap)) {
-      if (field === "assignedVa") columns.add(Number(index));
-    }
+  for (const field of URL_FIELDS) {
+    for (const column of locateFieldColumns(rows, field)) columns.add(column);
   }
   return [...columns].sort((a, b) => a - b);
+}
+
+/**
+ * Overlays discovered cell hyperlinks onto a values grid, before parsing —
+ * the single point where "what a viewer sees in the cell" and "what the cell
+ * actually links to" are reconciled, so `parsePodcastWorkflowRows` and every
+ * UI component downstream keep working with one plain string per cell and
+ * never need to know two representations existed.
+ *
+ * A hyperlink always wins when present, even where the displayed text already
+ * happens to look like a URL: the link target is what a person deliberately
+ * set as the destination, and a displayed URL string can be stale copy left
+ * over from before a cell was turned into a rich-text link. A cell with no
+ * discovered hyperlink is returned completely unchanged — this function only
+ * ever replaces cells it has real evidence for, never guesses or invents one.
+ * Rows/columns outside the sheet's actual bounds in `hyperlinks` are ignored
+ * rather than growing the grid.
+ */
+export function applyCellHyperlinks(
+  rows: readonly (readonly string[])[],
+  hyperlinks: ReadonlyMap<string, string>,
+): string[][] {
+  if (hyperlinks.size === 0) return rows.map((row) => [...row]);
+  return rows.map((row, rowIndex) =>
+    row.map((cell, columnIndex) => hyperlinks.get(`${rowIndex},${columnIndex}`) ?? cell),
+  );
 }
 
 function normalizeVaDisplayValue(value: string): string {

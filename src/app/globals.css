@@ -190,10 +190,11 @@ tbody tr:hover { background: #fbfbfc; }
 
 .dept-workflow { display: grid; gap: 20px; margin-top: 8px; }
 
-.dept-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.dept-header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .dept-header-title-group { display: flex; align-items: baseline; gap: 10px; }
 .dept-header-title { margin: 0; color: var(--wf-navy); font-size: 19px; font-weight: 650; letter-spacing: -.01em; }
 .dept-header-count { margin: 0; color: var(--wf-text-muted); font-size: 13px; }
+.dept-header-trailing { display: flex; align-items: center; width: 168px; flex: 0 0 auto; }
 
 .dept-source-unavailable { padding: 16px; border: 1px solid #d8bebe; border-radius: 6px; color: var(--wf-danger); background: #fffafa; }
 .dept-source-unavailable strong { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; }
@@ -244,7 +245,17 @@ tbody tr:hover { background: #fbfbfc; }
 .dept-resource-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dept-link-invalid { color: var(--wf-text-muted); font-size: 12px; }
 
-.dept-inspector-backdrop { position: fixed; inset: 0; z-index: 400; display: flex; justify-content: flex-end; background: rgba(0, 13, 81, 0); transition: background-color 200ms ease; }
+/*
+  z-index 9700 deliberately matches the tier already used by every other
+  body-portaled overlay (.portal-overlay 9600, .workspace-notification-portal
+  10000, .workspace-quick-modal 12000) rather than the old 400, which sat
+  below the internal shell's own header chrome (.workspace-command-bar 500,
+  .workspace-notification-panel 5000): opening a record while that chrome was
+  visible let the global search/notification/profile controls render on top
+  of the inspector's dimming backdrop and panel instead of being covered by
+  it, since createPortal only controls DOM position, not stacking order.
+*/
+.dept-inspector-backdrop { position: fixed; inset: 0; z-index: 9700; display: flex; justify-content: flex-end; background: rgba(0, 13, 81, 0); transition: background-color 200ms ease; }
 .dept-inspector-backdrop-is-open { background: rgba(0, 13, 81, .28); }
 .dept-inspector-backdrop-is-closing { background: rgba(0, 13, 81, 0); }
 .dept-inspector { width: min(420px, 100vw); height: 100%; display: flex; flex-direction: column; overflow-y: auto; background: var(--wf-white); box-shadow: -12px 0 32px rgba(0, 13, 81, .12); transform: translateX(100%); transition: transform 200ms ease; }
@@ -357,6 +368,9 @@ tbody tr:hover { background: #fbfbfc; }
   .dept-search input,
   .dept-toolbar-select,
   .dept-toolbar-select button { width: 100%; min-width: 0; }
+  .dept-header { gap: 12px; }
+  .dept-header-trailing,
+  .dept-header-trailing button { width: 100%; min-width: 0; }
   .dept-search input,
   .dept-toolbar-select button,
   .dept-clear-filters { min-height: 44px; }

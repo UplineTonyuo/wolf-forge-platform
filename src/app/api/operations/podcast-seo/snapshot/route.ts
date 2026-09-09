@@ -1,4 +1,4 @@
-import { loadPodcastWorkflowSnapshotOrNull } from "../../../../../services/podcast-workflow-service";
+import { loadPodcastWorkflowSnapshotBundleOrNull } from "../../../../../services/podcast-workflow-service";
 import { getInternalActorContext } from "../../../../../lib/supabase/next-server";
 
 export const dynamic = "force-dynamic";
@@ -23,24 +23,34 @@ const NO_STORE = { "cache-control": "private, no-store, max-age=0" };
  * plus `getInternalActorContext()` remains the real boundary; a read with no
  * side effects has no CSRF surface, and this route never sends CORS headers,
  * so no foreign page's script can read the response either way.
+ *
+ * `?month=` is untrusted input, exactly like the page's own `searchParams`
+ * — it flows through the same `getSnapshotForMonth` resolution against the
+ * source's freshly-discovered allowlist, so a background refresh honors
+ * whichever month the viewer currently has selected instead of silently
+ * reverting to the newest one.
  */
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
   const context = await getInternalActorContext();
   if (!context) {
     return Response.json({ ok: false, error: "Session expired." }, { status: 401, headers: NO_STORE });
   }
 
+  const month = new URL(request.url).searchParams.get("month");
+
   try {
-    const snapshot = await loadPodcastWorkflowSnapshotOrNull();
+    const bundle = await loadPodcastWorkflowSnapshotBundleOrNull(month);
     return Response.json(
       {
         ok: true,
-        data: snapshot
+        data: bundle
           ? {
-              items: snapshot.items,
-              sourceMonth: snapshot.sourceMonth,
-              lastSyncedAt: snapshot.lastSyncedAt,
-              vaOptions: snapshot.vaOptions,
+              items: bundle.snapshot.items,
+              sourceMonth: bundle.snapshot.sourceMonth,
+              lastSyncedAt: bundle.snapshot.lastSyncedAt,
+              vaOptions: bundle.snapshot.vaOptions,
+              monthOptions: bundle.monthOptions,
+              selectedMonth: bundle.selectedMonth,
             }
           : null,
       },

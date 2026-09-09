@@ -9,6 +9,8 @@ import {
   type PodcastOperationStatus,
 } from "../../domain/operations/podcast-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
+import type { PodcastMonthOption } from "../../lib/integrations/google-sheets-source";
+import { AnimatedSelect } from "../ui/animated-select";
 import {
   DepartmentInspectorSection,
   DepartmentInspectorTab,
@@ -35,6 +37,17 @@ type Props = {
    * vanish from the filter.
    */
   vaOptions: string[];
+  /**
+   * The month selector's server-discovered allowlist, newest first. Empty
+   * (the default) when the workbook has no dated Podcast tab — the selector
+   * itself simply doesn't render, rather than the caller needing to decide
+   * that.
+   */
+  monthOptions?: PodcastMonthOption[];
+  /** The resolved "YYYY-MM" currently in view — `null` only when `monthOptions` is empty. */
+  selectedMonth?: string | null;
+  /** Requests a different month; the caller owns navigation/URL state. Unused when `monthOptions` is empty. */
+  onMonthChange?: (value: string) => void;
 };
 
 type StatusFilter = "all" | PodcastOperationStatus;
@@ -59,12 +72,36 @@ function statusLabel(status: PodcastOperationStatus): string {
  * mobile list, inspector), not a one-off page. A future department reuses
  * every import here and supplies its own columns/sections/status map.
  */
-export function PodcastSeoWorkflowView({ items, lastSyncedAt, vaOptions }: Props) {
+export function PodcastSeoWorkflowView({
+  items,
+  sourceMonth,
+  lastSyncedAt,
+  vaOptions,
+  monthOptions = [],
+  selectedMonth = null,
+  onMonthChange,
+}: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [vaFilter, setVaFilter] = useState("all");
   const [packageFilter, setPackageFilter] = useState("all");
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // Render-phase reset (the same pattern `DepartmentRecordInspector` uses to
+  // adopt a changed prop, not an effect): a genuine month change is the one
+  // case these filters and the open inspector must NOT survive, since a
+  // stale VA/package value from the old month's option list would otherwise
+  // silently show zero rows with no indication why. A same-month background
+  // refresh (live-sync) never changes `sourceMonth`, so it never trips this.
+  const [lastSeenSourceMonth, setLastSeenSourceMonth] = useState(sourceMonth);
+  if (sourceMonth !== lastSeenSourceMonth) {
+    setLastSeenSourceMonth(sourceMonth);
+    setSearch("");
+    setStatusFilter("all");
+    setVaFilter("all");
+    setPackageFilter("all");
+    setSelectedItemId(null);
+  }
 
   const packageOptions = useMemo(() => distinctSorted(items ?? [], (item) => item.workLabel), [items]);
 
@@ -187,7 +224,23 @@ export function PodcastSeoWorkflowView({ items, lastSyncedAt, vaOptions }: Props
 
   return (
     <div className="dept-workflow">
-      <DepartmentWorkflowHeader title="Podcast SEO" count={items?.length ?? 0} countLabel="workflows" />
+      <DepartmentWorkflowHeader
+        title="Podcast SEO"
+        count={items?.length ?? 0}
+        countLabel="workflows"
+        trailing={
+          monthOptions.length > 0 ? (
+            <AnimatedSelect
+              name="podcast-seo-month"
+              label="Month"
+              menuLabel="Select month"
+              value={selectedMonth ?? monthOptions[0]!.value}
+              onChange={onMonthChange ?? (() => {})}
+              options={monthOptions.map((option) => ({ value: option.value, label: option.label }))}
+            />
+          ) : null
+        }
+      />
 
       {items === null ? (
         <div className="dept-source-unavailable" role="alert">

@@ -1,13 +1,14 @@
 import "server-only";
 
 import { z } from "zod";
-import { locateAssignedVaColumns } from "../../domain/operations/podcast-workflow";
+import { applyCellHyperlinks, locateAssignedVaColumns, locateUrlColumns } from "../../domain/operations/podcast-workflow";
 import { readGoogleSheetsEnvironment, type GoogleSheetsEnvironment } from "../env/google-sheets-env";
 import { currentCorrelationId } from "../security/request-correlation";
 import { recordSecurityEvent } from "../security/security-log";
 import {
   OperationsGoogleSheetsReadError,
   OperationsGoogleSheetsReader,
+  type OperationsSheetTab,
 } from "./operations-google-sheets";
 
 /** The active reader owns token exchange and requests only https://www.googleapis.com/auth/spreadsheets.readonly. */
@@ -205,6 +206,112 @@ export function selectLatestPodcastTabTitle(
   return newest ? newest.title : null;
 }
 
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
+/**
+ * Strict bare "MONTH YYYY" form — the *whole* (trimmed) title, nothing else,
+ * e.g. "SEPTEMBER 2026". Deliberately anchored start-to-end: this is what
+ * keeps it from also matching "PODCAST DEPARTMENT (MAY)" (extra words, no
+ * year) or "Some Other Sheet" (no month/year at all), so it only ever widens
+ * recognition to a tab that unambiguously names one specific month and year,
+ * never to an arbitrary title.
+ */
+const BARE_MONTH_YEAR_PATTERN = new RegExp(
+  `^(${Object.keys(MONTH_NAME_TO_NUMBER)
+    .sort((a, b) => b.length - a.length)
+    .join("|")})\\s+(20\\d{2})$`,
+  "i",
+);
+
+function parseBareMonthYearTitle(candidate: PodcastTabCandidate): ParsedPodcastTabTitle | null {
+  const match = candidate.title.trim().match(BARE_MONTH_YEAR_PATTERN);
+  if (!match) return null;
+  const month = MONTH_NAME_TO_NUMBER[match[1]!.toLowerCase()];
+  if (!month) return null;
+  return { title: candidate.title, index: candidate.index, year: Number(match[2]), month };
+}
+
+export type PodcastMonthOption = {
+  /** "YYYY-MM" — the ?month= URL value and the only key the server accepts. */
+  value: string;
+  /** "August 2026" — display label. */
+  label: string;
+  /** The exact, already-verified workbook tab title this option resolves to. */
+  tabTitle: string;
+};
+
+/**
+ * The month selector's full option list — every tab whose title
+ * unambiguously names a month and year, newest first. This is the
+ * "server-discovered allowlist": every `value` in the returned list traces
+ * back to a real tab title this function itself read from the workbook, so a
+ * caller can never select an arbitrary sheet or range — only ever one of
+ * these already-verified entries.
+ *
+ * Two independent, strict recognition rules — no broad/fuzzy matching of
+ * arbitrary tab names:
+ *
+ * 1. Prefixed: starts with `tabTitlePrefix` (default "PODCAST") AND its
+ *    title encodes both a year and a month, e.g. "PODCAST AUGUST 2026".
+ * 2. Bare: the *entire* (trimmed) title is exactly "MONTH YYYY", e.g.
+ *    "SEPTEMBER 2026" — the real dedicated Podcast workbook drops the
+ *    "PODCAST" prefix on some monthly tabs, and this resolver only ever
+ *    operates against that one dedicated workbook, so a strict bare
+ *    MONTH YYYY form is a safe, unambiguous addition.
+ *
+ * Undated legacy tabs (e.g. "PODCAST DEPARTMENT (MAY)", which fails both
+ * rules — prefixed but no year; not a bare month/year title either) and any
+ * other unrelated tab (e.g. "Some Other Sheet") never become a selectable
+ * option here — `selectLatestPodcastTabTitle` still covers undated legacy
+ * tabs as the sole fallback path for a workbook with no dated tab at all.
+ */
+export function buildPodcastMonthOptions(
+  candidates: readonly PodcastTabCandidate[],
+  tabTitlePrefix = "PODCAST",
+): PodcastMonthOption[] {
+  const normalizedPrefix = tabTitlePrefix.trim().toUpperCase();
+  const byValue = new Map<string, ParsedPodcastTabTitle>();
+  for (const candidate of candidates) {
+    const isPrefixed = candidate.title.trim().toUpperCase().startsWith(normalizedPrefix);
+    const parsed = isPrefixed ? parsePodcastTabTitle(candidate) : parseBareMonthYearTitle(candidate);
+    if (!parsed || parsed.year === null || parsed.month === null) continue;
+    const value = `${parsed.year}-${String(parsed.month).padStart(2, "0")}`;
+    const existing = byValue.get(value);
+    // Two tabs could in principle encode the same month (a duplicate, a
+    // renamed leftover, or a prefixed + bare tab both naming the same month)
+    // — keep whichever one selectLatestPodcastTabTitle's own comparator
+    // would itself pick, so the two never disagree.
+    if (!existing || comparePodcastTabRecency(parsed, existing) > 0) byValue.set(value, parsed);
+  }
+  return [...byValue.entries()]
+    .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
+    .map(([value, parsed]) => ({
+      value,
+      label: `${MONTH_LABELS[parsed.month! - 1]} ${parsed.year}`,
+      tabTitle: parsed.title,
+    }));
+}
+
+/**
+ * Resolves a caller-requested "YYYY-MM" value against the server-discovered
+ * option list — an exact match, or the newest option (`options[0]`, since
+ * the list is always newest-first) for a missing, malformed, or unrecognized
+ * value. `null` only when the workbook has no dated Podcast tab at all.
+ * There is deliberately no other outcome: a request can never select
+ * anything the caller didn't itself already discover and offer.
+ */
+export function resolvePodcastMonthSelection(
+  options: readonly PodcastMonthOption[],
+  requestedValue: string | null,
+): PodcastMonthOption | null {
+  if (options.length === 0) return null;
+  const requested = requestedValue ? options.find((option) => option.value === requestedValue) : undefined;
+  return requested ?? options[0]!;
+}
+
 export type PodcastWorkflowSheet = {
   /** The sheet tab's own title, e.g. "PODCAST AUGUST 2026" — becomes `sourceMonth`. */
   sourceMonth: string;
@@ -222,6 +329,16 @@ export type PodcastWorkflowSheet = {
 
 export interface PodcastWorkflowSource {
   fetchLatestPodcastTab(): Promise<PodcastWorkflowSheet>;
+  /** The month selector's server-discovered allowlist — see `buildPodcastMonthOptions`. */
+  listAvailablePodcastMonths(): Promise<PodcastMonthOption[]>;
+  /**
+   * Fetches one already-discovered tab by its exact title — never a
+   * caller-supplied arbitrary string. Every real call site passes a
+   * `tabTitle` taken directly from `listAvailablePodcastMonths()`'s own
+   * output or from `selectLatestPodcastTabTitle`, both of which only ever
+   * return a title this same source itself read from the live workbook.
+   */
+  fetchPodcastTab(tabTitle: string): Promise<PodcastWorkflowSheet>;
 }
 
 const spreadsheetMetadataSchema = z.object({
@@ -301,26 +418,66 @@ export class GoogleSheetsPodcastWorkflowSource implements PodcastWorkflowSource 
   }
 
   async fetchLatestPodcastTab(): Promise<PodcastWorkflowSheet> {
+    const tabs = await this.listTabsOrThrow();
+    const sourceMonth = selectLatestPodcastTabTitle(tabs, this.tabTitlePrefix);
+    if (!sourceMonth) {
+      throw new PodcastSourceUnavailableError("No Podcast SEO tab was found in the workbook.", {
+        stage: "tab_detection",
+      });
+    }
+    return this.fetchPodcastTab(sourceMonth);
+  }
+
+  async listAvailablePodcastMonths(): Promise<PodcastMonthOption[]> {
+    const tabs = await this.listTabsOrThrow();
+    return buildPodcastMonthOptions(tabs, this.tabTitlePrefix);
+  }
+
+  /**
+   * Fetches rows, resolves every URL-bearing cell's real hyperlink target
+   * (see `applyCellHyperlinks`), and reads the Assigned VA dropdown options —
+   * the same three reads `fetchLatestPodcastTab` always performed, now shared
+   * by both the "latest" path and an explicit month selection so the two can
+   * never drift into fetching a different shape of data.
+   */
+  async fetchPodcastTab(tabTitle: string): Promise<PodcastWorkflowSheet> {
     try {
-      const tabs = await this.reader.listTabs(this.environment.PODCAST_SEO_SPREADSHEET_ID);
-      const sourceMonth = selectLatestPodcastTabTitle(tabs, this.tabTitlePrefix);
-      if (!sourceMonth) {
-        throw new PodcastSourceUnavailableError("No Podcast SEO tab was found in the workbook.", {
-          stage: "tab_detection",
-        });
-      }
-      const rows = await this.reader.readTabValues(
-        this.environment.PODCAST_SEO_SPREADSHEET_ID,
-        sourceMonth,
-      );
+      const rawRows = await this.reader.readTabValues(this.environment.PODCAST_SEO_SPREADSHEET_ID, tabTitle);
+      const urlColumns = locateUrlColumns(rawRows);
+      const hyperlinks =
+        urlColumns.length > 0
+          ? await this.reader.readCellHyperlinks(
+              this.environment.PODCAST_SEO_SPREADSHEET_ID,
+              tabTitle,
+              urlColumns,
+              rawRows.length,
+            )
+          : new Map<string, string>();
+      const rows = applyCellHyperlinks(rawRows, hyperlinks);
       const assignedVaValidationOptions = await this.reader.readListValidationOptions(
         this.environment.PODCAST_SEO_SPREADSHEET_ID,
-        sourceMonth,
+        tabTitle,
         locateAssignedVaColumns(rows),
       );
-      return { sourceMonth, rows, assignedVaValidationOptions };
+      return { sourceMonth: tabTitle, rows, assignedVaValidationOptions };
     } catch (error) {
       if (error instanceof PodcastSourceUnavailableError) throw error;
+      if (error instanceof OperationsGoogleSheetsReadError) {
+        throw new PodcastSourceUnavailableError(error.message, {
+          cause: error,
+          stage: error.stage,
+          httpStatus: error.httpStatus,
+          apiErrorCode: error.apiErrorCode,
+        });
+      }
+      throw error;
+    }
+  }
+
+  private async listTabsOrThrow(): Promise<OperationsSheetTab[]> {
+    try {
+      return await this.reader.listTabs(this.environment.PODCAST_SEO_SPREADSHEET_ID);
+    } catch (error) {
       if (error instanceof OperationsGoogleSheetsReadError) {
         throw new PodcastSourceUnavailableError(error.message, {
           cause: error,

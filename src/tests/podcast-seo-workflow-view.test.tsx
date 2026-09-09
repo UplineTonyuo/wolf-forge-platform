@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PodcastOperationItem } from "../domain/operations/podcast-workflow";
 import { PodcastSeoWorkflowView } from "../components/operations/podcast-seo-workflow-view";
 
@@ -433,5 +433,105 @@ describe("PodcastSeoWorkflowView — background refresh preserves state", () => 
     );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("PodcastSeoWorkflowView — month selector", () => {
+  const MONTH_OPTIONS = [
+    { value: "2026-08", label: "August 2026", tabTitle: "PODCAST AUGUST 2026" },
+    { value: "2026-07", label: "July 2026", tabTitle: "PODCAST JULY 2026" },
+  ];
+
+  it("does not render a selector when there are no discovered months", () => {
+    render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
+    expect(screen.queryByRole("button", { name: /^Month:/ })).not.toBeInTheDocument();
+  });
+
+  it("renders the selector with the resolved month selected, newest-first option order", () => {
+    render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /^Month: August 2026/ });
+    fireEvent.click(trigger);
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["August 2026", "July 2026"]);
+  });
+
+  it("calls onMonthChange with the chosen option's value", () => {
+    const onMonthChange = vi.fn();
+    render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Month:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "July 2026" }));
+
+    expect(onMonthChange).toHaveBeenCalledWith("2026-07");
+  });
+
+  it("resets active filters and closes the inspector when sourceMonth changes, but not on a same-month refresh", async () => {
+    const { rerender } = render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Search Podcast SEO work"), { target: { value: "hvac" } });
+    openRow(/blairllc\.com/);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Same month, refreshed items (background live-sync) — filters/inspector survive.
+    rerender(
+      <PodcastSeoWorkflowView
+        items={ITEMS.map((entry) => ({ ...entry }))}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={new Date().toISOString()}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+    expect(screen.getByLabelText("Search Podcast SEO work")).toHaveValue("hvac");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // A genuine month change — filters and the open inspector must not carry over.
+    const julyItems: PodcastOperationItem[] = [item({ id: "j1", clientName: "https://julyclient.example", sourceMonth: "PODCAST JULY 2026" })];
+    rerender(
+      <PodcastSeoWorkflowView
+        items={julyItems}
+        sourceMonth="PODCAST JULY 2026"
+        lastSyncedAt={new Date().toISOString()}
+        vaOptions={[]}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-07"
+      />,
+    );
+
+    expect(screen.getByLabelText("Search Podcast SEO work")).toHaveValue("");
+    // The inspector's own 200ms exit transition keeps it mounted (closing) for a moment — matches the
+    // established "closes the inspector on Escape" assertion pattern elsewhere in this file.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(within(table()).getByText("julyclient.example")).toBeInTheDocument();
   });
 });
