@@ -133,6 +133,8 @@
   color: var(--wf-navy);
 }
 
+.optionCount { margin-left: auto; color: var(--wf-text-muted); font-variant-numeric: tabular-nums; }
+
 .optionLabel {
   min-width: 0;
   overflow: visible;

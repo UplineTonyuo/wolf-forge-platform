@@ -309,6 +309,10 @@
 }
 
 @media (max-width: 1180px) {
+  .activeDepartmentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .departmentGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

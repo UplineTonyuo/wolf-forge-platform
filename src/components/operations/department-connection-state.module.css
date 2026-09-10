@@ -1,0 +1,131 @@
+.connectionState {
+  overflow: hidden;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  background: var(--wf-white);
+}
+
+.connectionBar {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  color: var(--wf-white);
+  background: var(--wf-navy);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.connectionBar svg {
+  flex: 0 0 auto;
+}
+
+.connectionBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 48px;
+  align-items: start;
+  padding: 30px 32px 32px;
+  background: var(--wf-warm-50);
+}
+
+.connectionMessage h3 {
+  margin: 0 0 8px;
+  color: var(--wf-navy);
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.connectionMessage p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.connectionFacts {
+  margin: 0;
+  padding-left: 24px;
+  border-left: 1px solid var(--wf-border);
+}
+
+.connectionFacts > div {
+  min-height: 36px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.connectionFacts > div:first-child {
+  padding-top: 0;
+}
+
+.connectionFacts > div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.connectionFacts dt,
+.connectionFacts dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.connectionFacts dt {
+  color: var(--wf-text-muted);
+}
+
+.connectionFacts dd {
+  color: var(--wf-text);
+  font-weight: 600;
+  text-align: right;
+}
+
+.connectionFacts .readyValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1f6f56;
+}
+
+.readyValue::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+@media (max-width: 767px) {
+  .connectionBar {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+
+  .connectionBody {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+    padding: 22px 18px 24px;
+  }
+
+  .connectionMessage h3 {
+    font-size: 17px;
+  }
+
+  .connectionFacts {
+    padding: 18px 0 0;
+    border-top: 1px solid var(--wf-border);
+    border-left: 0;
+  }
+}

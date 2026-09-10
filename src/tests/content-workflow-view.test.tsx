@@ -64,7 +64,13 @@ describe("ContentWorkflowView states", () => {
     const { container } = render(
       <ContentWorkflowView state="unconfigured" items={[]} sourceTab={null} lastSyncedAt={null} />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Content workflow is not connected yet.");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Content workflow not connected yet");
+    expect(within(status).getByText("Workspace")).toBeInTheDocument();
+    expect(within(status).getByText("Ready")).toBeInTheDocument();
+    expect(within(status).getByText("Workflow source")).toBeInTheDocument();
+    expect(within(status).getByText("Not connected")).toBeInTheDocument();
+    expect(screen.queryByText("0 records")).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/CONTENT_WORKFLOW_SPREADSHEET_ID|service account|credential|Vercel/i);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
@@ -90,11 +96,14 @@ describe("ContentWorkflowView local worklist behavior", () => {
     expect(within(screen.getByRole("table")).queryByText("zebra.example.com")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-    fireEvent.click(screen.getByRole("button", { name: /Stuck 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    fireEvent.click(screen.getByRole("option", { name: /Stuck.*1/ }));
     expect(within(screen.getByRole("table")).getByText("zebra.example.com")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /All 2/ }));
-    chooseControl("Filter by SEO package", "Starter");
+    fireEvent.click(screen.getByRole("button", { name: /^Filter by status:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /All Statuses.*2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Filters" })).getByRole("button", { name: "Starter" }));
     expect(within(screen.getByRole("table")).getByText("alpha.example.com")).toBeInTheDocument();
   });
 

@@ -1,6 +1,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { GoogleSheetsPodcastWorkflowSource } from "../lib/integrations/google-sheets-source";
+import { PodcastWorkflowService } from "../services/podcast-workflow-service";
 import type { GoogleSheetsEnvironment } from "../lib/env/google-sheets-env";
 
 /**
@@ -37,6 +38,15 @@ function makeFetchMock(options: {
   dataValidationStatus?: number;
   hyperlinkBody?: unknown;
   hyperlinkStatus?: number;
+  /**
+   * Response for the Status-column-recovery request — distinguished from the
+   * Assigned VA validation request (also `fields=...dataValidation`) by the
+   * `startColumn` field it additionally requests. Omit to make that branch
+   * fail; leave routing to never hit it when no block has a blank Status
+   * header.
+   */
+  columnValidationBody?: unknown;
+  columnValidationStatus?: number;
 }) {
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -51,6 +61,9 @@ function makeFetchMock(options: {
     // existing test's `result.rows` expectation.
     if (url.includes("hyperlink")) {
       return jsonResponse(options.hyperlinkBody ?? { sheets: [] }, options.hyperlinkStatus ?? 200);
+    }
+    if (url.includes("startColumn")) {
+      return jsonResponse(options.columnValidationBody ?? { sheets: [] }, options.columnValidationStatus ?? 200);
     }
     if (url.includes("dataValidation")) {
       return jsonResponse(options.dataValidationBody ?? { sheets: [] }, options.dataValidationStatus ?? 200);
@@ -79,6 +92,22 @@ function hyperlinkGridResponse(entries: { rowIndex: number; columnIndex: number;
   return { sheets: [{ data }] };
 }
 
+/**
+ * One hyperlink-grid response for a single cell shaped as a Google Docs/Drive
+ * smart chip — `chipRuns` with a resolved `richLinkProperties.uri`, no
+ * `hyperlink` key — the exact shape proven live against
+ * seeitgonejunkremoval.com's real September 2026 PODCAST cell via
+ * `spreadsheets.get` with `fields=...rowData.values(hyperlink,chipRuns)`.
+ */
+function chipGridResponse(rowIndex: number, columnIndex: number, uri: string | null): unknown {
+  const rowData = Array.from({ length: rowIndex + 1 }, (_, index) =>
+    index === rowIndex
+      ? { values: [uri ? { chipRuns: [{ chip: { richLinkProperties: { uri } } }] } : { chipRuns: [{ chip: {} }] }] }
+      : { values: [{}] },
+  );
+  return { sheets: [{ data: [{ startRow: 0, startColumn: columnIndex, rowData }] }] };
+}
+
 /** One data-validation grid response for a single-column range, `rowIndex` 0-based matching `values.get`'s row order. */
 function oneOfListGridResponse(values: string[], atRowIndex: number): unknown {
   const rowData = Array.from({ length: atRowIndex + 1 }, (_, index) =>
@@ -87,6 +116,24 @@ function oneOfListGridResponse(values: string[], atRowIndex: number): unknown {
       : { values: [{}] },
   );
   return { sheets: [{ data: [{ rowData }] }] };
+}
+
+/**
+ * A `readColumnValidationOptionSets` response — one `data` entry per
+ * requested column, each carrying its own `startColumn` the way the real
+ * Sheets API does for a multi-range `ranges=` request (verified live against
+ * the real September 2026 workbook).
+ */
+function columnValidationGridResponse(columns: { columnIndex: number; values: string[]; atRowIndex: number }[]): unknown {
+  const data = columns.map(({ columnIndex, values, atRowIndex }) => {
+    const rowData = Array.from({ length: atRowIndex + 1 }, (_, index) =>
+      index === atRowIndex
+        ? { values: [{ dataValidation: { condition: { type: "ONE_OF_LIST", values: values.map((v) => ({ userEnteredValue: v })) } } }] }
+        : { values: [{}] },
+    );
+    return { startColumn: columnIndex, rowData };
+  });
+  return { sheets: [{ data }] };
 }
 
 describe("GoogleSheetsPodcastWorkflowSource — Assigned VA data-validation options", () => {
@@ -205,5 +252,189 @@ describe("GoogleSheetsPodcastWorkflowSource — cell hyperlink resolution (View 
     await source.fetchLatestPodcastTab();
 
     expect(calls.some((call) => call.url.includes("hyperlink"))).toBe(false);
+  });
+
+  it("recovers a Google Docs/Drive smart chip cell's real target end-to-end, replacing the visible chip label — the real seeitgonejunkremoval.com shape", async () => {
+    const header = ["Name", "PODCAST LINK", "Status 1"];
+    const row = ["See It Gone Junk Removal", "See It Gone Junk Removal Podcast September 2026", "Completed"];
+    const chipUri = "https://docs.google.com/document/d/1xMhyHncwFWYINn2TTc8c4Y6A_tjvj5UjPN5EMul2Ulo/edit?tab=t.0#heading=h.js12tcjji77h";
+    const { fetchMock } = makeFetchMock({
+      rows: [header, row],
+      hyperlinkBody: chipGridResponse(1, 1, chipUri),
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows).toEqual([header, ["See It Gone Junk Removal", chipUri, "Completed"]]);
+  });
+
+  it("never fabricates a link from a chip's visible title when the chip carries no resolvable URI", async () => {
+    const header = ["Name", "PODCAST LINK", "Status 1"];
+    const row = ["Unresolved Chip Co", "See It Gone Podcast September 2026", "Completed"];
+    const { fetchMock } = makeFetchMock({
+      rows: [header, row],
+      hyperlinkBody: chipGridResponse(1, 1, null),
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows).toEqual([header, row]);
+  });
+});
+
+/**
+ * Real September 2026 sheet's wide/top Podcast block header — byte-verified
+ * against the live workbook. Columns K (10) and L (11) are genuinely blank
+ * header cells; L carries a live ONE_OF_LIST validation of
+ * "Completed"/"Inprogress"/"Stuck"/"cancelled"/"Paused" underneath, which is
+ * why rows like seeitgonejunkremoval.com rendered as In Progress despite
+ * being Completed in the sheet.
+ */
+const WIDE_BLOCK_HEADER = [
+  "Name", "", "Email", "Logins", "Order #", "SEO Package", "Primary Keyword",
+  "City", "PROMPT/ SOP", "PODCAST LINK", "", "", "Notes", "Assigned Va",
+];
+
+describe("GoogleSheetsPodcastWorkflowSource — Status-column recovery for a blank header cell", () => {
+  it("recovers Completed for the wide block whose Status column has no header text, once its dropdown matches the Status vocabulary", async () => {
+    const row = [
+      "https://seeitgonejunkremoval.com/", "", "seeitgone.junk@gmail.com", "", "4B74F54B_3", "Platinum",
+      "Junk removal", "Marysville", "", "See It Gone Junk Removal August 2026 Podcast",
+      "See It Gone Junk Removal Podcast September 2026", "Completed",
+    ];
+    const { fetchMock } = makeFetchMock({
+      rows: [WIDE_BLOCK_HEADER, row],
+      columnValidationBody: columnValidationGridResponse([
+        { columnIndex: 1, values: [], atRowIndex: 0 },
+        { columnIndex: 10, values: [], atRowIndex: 0 },
+        { columnIndex: 11, values: ["Completed", "Inprogress", "Stuck", "cancelled", "Paused"], atRowIndex: 1 },
+      ]),
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows[0]?.[11]).toBe("Status");
+    expect(result.rows[1]).toEqual(row);
+  });
+
+  it("never issues a Status-recovery request for a block whose header already names Status 1 by text (e.g. Hot Mess Cleanup & Junk Removal's compact block)", async () => {
+    const header = ["Name", "", "PODCAST LINK", "Status 1", "Assigned Va"];
+    const row = ["Hot Mess Cleanup & Junk Removal", "", "https://podcast.example/hotmess", "Completed", "Kyle"];
+    const { fetchMock, calls } = makeFetchMock({ rows: [header, row] });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    // Not just "startColumn": the block's own PODCAST LINK cell legitimately
+    // triggers the pre-existing hyperlink-resolution request, whose fields
+    // param (`startRow,startColumn,rowData.values.hyperlink`) also contains
+    // that substring. Only the recovery request's fields param carries both
+    // "startColumn" and "dataValidation" together.
+    expect(calls.some((call) => call.url.includes("startColumn") && call.url.includes("dataValidation"))).toBe(false);
+    expect(result.rows).toEqual([header, row]);
+  });
+
+  it("falls back to leaving the header blank (still In Progress, the pre-existing safe default), without failing the whole tab fetch, when the recovery request fails", async () => {
+    const row = ["Acme Co", "", "", "", "", "Platinum", "", "", "", "", "", "Completed"];
+    const { fetchMock } = makeFetchMock({
+      rows: [WIDE_BLOCK_HEADER, row],
+      columnValidationStatus: 500,
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows[0]?.[11]).toBe("");
+  });
+
+  it("does not recover a blank header column whose dropdown is unrelated to Status (a department tag or VA names)", async () => {
+    const row = ["Acme Co", "", "", "", "", "Platinum", "", "", "", "", "", "Completed"];
+    const { fetchMock } = makeFetchMock({
+      rows: [WIDE_BLOCK_HEADER, row],
+      columnValidationBody: columnValidationGridResponse([
+        { columnIndex: 1, values: [], atRowIndex: 0 },
+        { columnIndex: 10, values: ["PODS"], atRowIndex: 1 },
+        { columnIndex: 11, values: [], atRowIndex: 0 },
+      ]),
+    });
+
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const result = await source.fetchLatestPodcastTab();
+
+    expect(result.rows[0]?.[10]).toBe("");
+    expect(result.rows[0]?.[11]).toBe("");
+  });
+});
+
+/**
+ * Request-count regression coverage for the 429/RESOURCE_EXHAUSTED quota
+ * issue found in local QA: `PodcastWorkflowService.getSnapshotForMonth`
+ * discovers the month allowlist via `listAvailablePodcastMonths` (one
+ * `listTabs` call), then fetches exactly one tab's data by the title that
+ * discovery just returned — it must never issue a second, redundant
+ * spreadsheet-metadata request for the same snapshot build, and switching
+ * the requested month must not multiply that metadata call either. Two
+ * generic dated months (never the specific September workbook or any real
+ * client) are enough to exercise this.
+ */
+describe("PodcastWorkflowService.getSnapshotForMonth — real Google Sheets source request count", () => {
+  const AUGUST_TAB = "PODCAST AUGUST 2026";
+  const JULY_TAB = "PODCAST JULY 2026";
+  const TWO_MONTH_METADATA = {
+    sheets: [
+      { properties: { title: AUGUST_TAB, index: 0 } },
+      { properties: { title: JULY_TAB, index: 1 } },
+    ],
+  };
+  const HEADER = ["Name", "Status 1"];
+
+  function makeTwoMonthFetchMock() {
+    const calls: { url: string }[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      calls.push({ url });
+      if (url.includes("oauth2.googleapis.com/token")) return jsonResponse(TOKEN_RESPONSE);
+      if (url.includes("fields=sheets.properties")) return jsonResponse(TWO_MONTH_METADATA);
+      if (url.includes(`/values/${encodeURIComponent(`'${AUGUST_TAB}'`)}`)) {
+        return jsonResponse({ values: [HEADER, ["Acme Co", "Completed"]] });
+      }
+      if (url.includes(`/values/${encodeURIComponent(`'${JULY_TAB}'`)}`)) {
+        return jsonResponse({ values: [HEADER, ["Beta LLC", "Stuck"]] });
+      }
+      if (url.includes("hyperlink") || url.includes("dataValidation") || url.includes("startColumn")) {
+        return jsonResponse({ sheets: [] });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    return { fetchMock, calls };
+  }
+
+  it("issues exactly one spreadsheet-metadata (listTabs) request for one full snapshot build, never a duplicate", async () => {
+    const { fetchMock, calls } = makeTwoMonthFetchMock();
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const service = new PodcastWorkflowService(source);
+
+    const bundle = await service.getSnapshotForMonth(null);
+
+    const metadataCalls = calls.filter((call) => call.url.includes("fields=sheets.properties"));
+    expect(metadataCalls).toHaveLength(1);
+    expect(bundle.snapshot.sourceMonth).toBe(AUGUST_TAB);
+  });
+
+  it("switching the requested month still issues exactly one metadata request, and fetches only the newly selected tab's values", async () => {
+    const { fetchMock, calls } = makeTwoMonthFetchMock();
+    const source = new GoogleSheetsPodcastWorkflowSource(ENVIRONMENT, fetchMock as unknown as typeof fetch);
+    const service = new PodcastWorkflowService(source);
+
+    const bundle = await service.getSnapshotForMonth("2026-07");
+
+    const metadataCalls = calls.filter((call) => call.url.includes("fields=sheets.properties"));
+    expect(metadataCalls).toHaveLength(1);
+    expect(calls.some((call) => call.url.includes(encodeURIComponent(`'${AUGUST_TAB}'`)))).toBe(false);
+    expect(bundle.snapshot.sourceMonth).toBe(JULY_TAB);
+    expect(bundle.snapshot.items[0]).toMatchObject({ clientName: "Beta LLC", normalizedStatus: "stuck" });
   });
 });

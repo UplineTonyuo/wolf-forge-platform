@@ -1,7 +1,14 @@
 import "server-only";
 
 import { z } from "zod";
-import { applyCellHyperlinks, locateAssignedVaColumns, locateUrlColumns } from "../../domain/operations/podcast-workflow";
+import {
+  applyCellHyperlinks,
+  applyRecoveredStatusHeaders,
+  locateAssignedVaColumns,
+  locateBlankHeaderColumnsNeedingStatus,
+  locateUrlColumns,
+  looksLikeStatusValidationOptions,
+} from "../../domain/operations/podcast-workflow";
 import { readGoogleSheetsEnvironment, type GoogleSheetsEnvironment } from "../env/google-sheets-env";
 import { currentCorrelationId } from "../security/request-correlation";
 import { recordSecurityEvent } from "../security/security-log";
@@ -434,26 +441,47 @@ export class GoogleSheetsPodcastWorkflowSource implements PodcastWorkflowSource 
   }
 
   /**
-   * Fetches rows, resolves every URL-bearing cell's real hyperlink target
-   * (see `applyCellHyperlinks`), and reads the Assigned VA dropdown options —
-   * the same three reads `fetchLatestPodcastTab` always performed, now shared
-   * by both the "latest" path and an explicit month selection so the two can
-   * never drift into fetching a different shape of data.
+   * Fetches rows, recovers any block's Status column that a real-world sheet
+   * left with a genuinely blank header cell (see `applyRecoveredStatusHeaders`
+   * — driven by the sheet's own data-validation vocabulary, never a
+   * hardcoded row/column/client), resolves every URL-bearing cell's real
+   * hyperlink target (see `applyCellHyperlinks`), and reads the Assigned VA
+   * dropdown options — the same reads `fetchLatestPodcastTab` always
+   * performed, now shared by both the "latest" path and an explicit month
+   * selection so the two can never drift into fetching a different shape of
+   * data.
    */
   async fetchPodcastTab(tabTitle: string): Promise<PodcastWorkflowSheet> {
     try {
       const rawRows = await this.reader.readTabValues(this.environment.PODCAST_SEO_SPREADSHEET_ID, tabTitle);
-      const urlColumns = locateUrlColumns(rawRows);
+
+      const statusCandidateColumns = locateBlankHeaderColumnsNeedingStatus(rawRows);
+      let statusColumns = new Set<number>();
+      if (statusCandidateColumns.length > 0) {
+        const optionSets = await this.reader.readColumnValidationOptionSets(
+          this.environment.PODCAST_SEO_SPREADSHEET_ID,
+          tabTitle,
+          statusCandidateColumns,
+        );
+        statusColumns = new Set(
+          [...optionSets.entries()]
+            .filter(([, options]) => looksLikeStatusValidationOptions(options))
+            .map(([columnIndex]) => columnIndex),
+        );
+      }
+      const rowsWithRecoveredStatusHeaders = applyRecoveredStatusHeaders(rawRows, statusColumns);
+
+      const urlColumns = locateUrlColumns(rowsWithRecoveredStatusHeaders);
       const hyperlinks =
         urlColumns.length > 0
           ? await this.reader.readCellHyperlinks(
               this.environment.PODCAST_SEO_SPREADSHEET_ID,
               tabTitle,
               urlColumns,
-              rawRows.length,
+              rowsWithRecoveredStatusHeaders.length,
             )
           : new Map<string, string>();
-      const rows = applyCellHyperlinks(rawRows, hyperlinks);
+      const rows = applyCellHyperlinks(rowsWithRecoveredStatusHeaders, hyperlinks);
       const assignedVaValidationOptions = await this.reader.readListValidationOptions(
         this.environment.PODCAST_SEO_SPREADSHEET_ID,
         tabTitle,

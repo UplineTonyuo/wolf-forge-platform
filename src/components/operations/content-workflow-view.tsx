@@ -9,12 +9,13 @@ import {
   type ContentOperationStatus,
 } from "../../domain/operations/content-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import {
   DepartmentRecordInspector,
   type DepartmentInspectorTab,
 } from "./department-record-inspector";
+import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentResourceLink } from "./department-resource-link";
-import { DepartmentStatusFilter, type DepartmentStatusFilterOption } from "./department-status-filter";
 import { DepartmentWorkTable, type DepartmentWorkColumn } from "./department-work-table";
 import { DepartmentWorkListMobile } from "./department-work-list-mobile";
 import { DepartmentWorkflowHeader } from "./department-workflow-header";
@@ -47,7 +48,6 @@ const STATUS_SORT_ORDER: Record<ContentOperationStatus, number> = {
   cancelled: 3,
 };
 
-const NOTICEABLE_STATUSES = new Set<ContentOperationStatus>(["in_progress", "stuck"]);
 const SORT_OPTIONS: readonly Exclude<SortOption, "all">[] = ["Website A–Z", "Order # A–Z", "Status"];
 
 export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: Props) {
@@ -110,13 +110,12 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
   const hasActiveFilters =
     search.trim() !== "" || statusFilter !== "all" || packageFilter !== "all" || sort !== "all";
 
-  const statusOptions: DepartmentStatusFilterOption<StatusFilter>[] = [
-    { key: "all", label: "All", count: statusCounts.all },
+  const statusSelectOptions: AnimatedSelectOption[] = [
+    { value: "all", label: "All Statuses", count: statusCounts.all },
     ...contentOperationStatuses.map((status) => ({
-      key: status as StatusFilter,
+      value: status,
       label: contentOperationStatusLabels[status],
       count: statusCounts[status],
-      tone: NOTICEABLE_STATUSES.has(status) ? STATUS_TONE[status] : undefined,
     })),
   ];
 
@@ -172,13 +171,18 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
 
   return (
     <div className="dept-workflow">
-      <DepartmentWorkflowHeader title="Content" count={items.length} countLabel="records" />
+      <DepartmentWorkflowHeader
+        title="Content"
+        count={state === "ready" ? items.length : undefined}
+        countLabel="records"
+      />
 
       {state === "unconfigured" ? (
-        <div className="dept-connection-state" role="status">
-          <strong>Content workflow is not connected yet.</strong>
-          <p>The workspace is ready and will populate when its approved source is connected.</p>
-        </div>
+        <DepartmentConnectionState
+          departmentName="Content"
+          headingId="content-connection-title"
+          icon={<FileText aria-hidden="true" size={15} strokeWidth={1.8} />}
+        />
       ) : null}
 
       {state === "error" ? (
@@ -190,7 +194,6 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
 
       {state === "ready" ? (
         <>
-          <DepartmentStatusFilter options={statusOptions} active={statusFilter} onChange={setStatusFilter} />
           <DepartmentWorkflowToolbar
             searchValue={search}
             onSearchChange={setSearch}
@@ -205,13 +208,26 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
                 onChange: (value) => setSort(isSortOption(value) ? value : "all"),
                 size: "compact",
               },
+            ]}
+            secondaryFilters={[
               {
+                key: "package",
+                label: "Package",
                 allLabel: "All Packages",
                 ariaLabel: "Filter by SEO package",
                 value: packageFilter,
                 options: packageOptions,
                 onChange: setPackageFilter,
-                size: "wide",
+              },
+            ]}
+            trailingSelects={[
+              {
+                allLabel: "All Statuses",
+                ariaLabel: "Filter by status",
+                value: statusFilter,
+                options: [],
+                onChange: (value) => setStatusFilter(value as StatusFilter),
+                countedOptions: statusSelectOptions,
               },
             ]}
             hasActiveFilters={hasActiveFilters}

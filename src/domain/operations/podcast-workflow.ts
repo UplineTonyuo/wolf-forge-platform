@@ -158,21 +158,36 @@ function cellFor(
  */
 const CANCELLED_NOTE_PATTERN = /\bcancell?ed\b/i;
 
-export function normalizePodcastStatus(
-  rawStatus: string,
-  notes: string | null,
-): PodcastOperationStatus {
-  if (notes && CANCELLED_NOTE_PATTERN.test(notes)) return "cancelled";
-
-  const normalized = rawStatus.trim().toLowerCase();
-  if (!normalized) return "in_progress";
+/**
+ * The strict spellings a Status cell (or a Status column's own
+ * data-validation dropdown option) can take — `null` for anything else,
+ * never a default. Kept separate from `normalizePodcastStatus`'s own
+ * silent-fallback behavior (blank/unrecognized -> In Progress) because
+ * `looksLikeStatusValidationOptions` below needs to tell "this dropdown's
+ * values are genuinely the Status vocabulary" apart from "every string
+ * defaults to In Progress" — the latter would make an unrelated dropdown
+ * (a department tag, a VA name) falsely look like a Status column.
+ */
+function matchKnownStatusToken(value: string): PodcastOperationStatus | null {
+  const normalized = value.trim().toLowerCase();
   if (normalized === "completed" || normalized === "complete") return "completed";
   if (normalized === "stuck") return "stuck";
   if (normalized === "cancelled" || normalized === "canceled") return "cancelled";
   if (normalized === "in progress" || normalized === "inprogress" || normalized === "paused") {
     return "in_progress";
   }
-  return "in_progress";
+  return null;
+}
+
+export function normalizePodcastStatus(
+  rawStatus: string,
+  notes: string | null,
+): PodcastOperationStatus {
+  if (notes && CANCELLED_NOTE_PATTERN.test(notes)) return "cancelled";
+
+  const normalized = rawStatus.trim();
+  if (!normalized) return "in_progress";
+  return matchKnownStatusToken(normalized) ?? "in_progress";
 }
 
 /** Appended to a normal package block's raw SEO Package value for Operations display. */
@@ -424,6 +439,98 @@ export function applyCellHyperlinks(
   return rows.map((row, rowIndex) =>
     row.map((cell, columnIndex) => hyperlinks.get(`${rowIndex},${columnIndex}`) ?? cell),
   );
+}
+
+/**
+ * Row indices of already-recognized block header rows (via the same
+ * `matchHeaderRow` every other block boundary decision uses) whose header
+ * text never resolves a Status column. A real-world block's header row can
+ * carry a genuinely blank cell above a column that still holds Status
+ * dropdown values underneath — `matchHeaderRow` requires at least two
+ * recognized fields including client identity or status, so a row can be a
+ * perfectly legitimate block header and still be missing Status specifically.
+ * These rows are the only candidates `applyRecoveredStatusHeaders` will ever
+ * touch.
+ */
+export function locateHeaderRowsMissingStatusColumn(
+  rows: readonly (readonly string[])[],
+): number[] {
+  const indices: number[] = [];
+  rows.forEach((row, index) => {
+    const headerMap = matchHeaderRow(row.map((cell) => cell ?? ""));
+    if (headerMap && !Object.values(headerMap).includes("rawStatus")) indices.push(index);
+  });
+  return indices;
+}
+
+/**
+ * Every blank-header column index appearing in a row returned by
+ * `locateHeaderRowsMissingStatusColumn` — the Sheets adapter's only signal
+ * for which columns are even worth checking for a Status-shaped
+ * data-validation dropdown, so a well-formed sheet with every block's Status
+ * column already named never triggers an extra API call at all.
+ */
+export function locateBlankHeaderColumnsNeedingStatus(
+  rows: readonly (readonly string[])[],
+): number[] {
+  const columns = new Set<number>();
+  for (const rowIndex of locateHeaderRowsMissingStatusColumn(rows)) {
+    const row = rows[rowIndex] ?? [];
+    row.forEach((cell, columnIndex) => {
+      if (!(cell ?? "").trim()) columns.add(columnIndex);
+    });
+  }
+  return [...columns].sort((a, b) => a - b);
+}
+
+/**
+ * Recognizes a data-validation dropdown's own option values as the Status
+ * vocabulary: every option must be one of the four canonical statuses (the
+ * same strict spellings `normalizePodcastStatus` accepts, via
+ * `matchKnownStatusToken` — never its default fallback), and at least two
+ * distinct canonical statuses must appear. The two-distinct-values floor is
+ * what keeps a single-value dropdown (a department tag, a fixed label) from
+ * ever being mistaken for Status; an unrelated dropdown (VA names, package
+ * tiers) fails the first condition outright since none of its values are a
+ * recognized status spelling.
+ */
+export function looksLikeStatusValidationOptions(options: readonly string[]): boolean {
+  const matched = new Set<PodcastOperationStatus>();
+  for (const option of options) {
+    const status = matchKnownStatusToken(option);
+    if (!status) return false;
+    matched.add(status);
+  }
+  return matched.size >= 2;
+}
+
+/**
+ * Overlays a synthetic "Status" label onto the blank header cell(s) the
+ * Sheets adapter has confirmed (via `looksLikeStatusValidationOptions`) are
+ * really a Status column — the same "resolve a real-world sheet quirk before
+ * parsing, never inside the parser" shape `applyCellHyperlinks` already
+ * establishes. Only ever touches a row `locateHeaderRowsMissingStatusColumn`
+ * already flagged as missing Status, and only a cell that is itself blank in
+ * that row, so a block whose Status column is merely blank on this
+ * particular row (not missing from the header) is never altered. "Status" is
+ * a recognized `HEADER_ALIASES` spelling, so `parsePodcastWorkflowRows`
+ * needs no changes at all to pick up the recovered column.
+ */
+export function applyRecoveredStatusHeaders(
+  rows: readonly (readonly string[])[],
+  statusColumns: ReadonlySet<number>,
+): string[][] {
+  if (statusColumns.size === 0) return rows.map((row) => [...row]);
+  const rowsNeedingRecovery = new Set(locateHeaderRowsMissingStatusColumn(rows));
+  if (rowsNeedingRecovery.size === 0) return rows.map((row) => [...row]);
+  return rows.map((row, rowIndex) => {
+    if (!rowsNeedingRecovery.has(rowIndex)) return [...row];
+    const patched = [...row];
+    for (const columnIndex of statusColumns) {
+      if (!(patched[columnIndex] ?? "").trim()) patched[columnIndex] = "Status";
+    }
+    return patched;
+  });
 }
 
 function normalizeVaDisplayValue(value: string): string {

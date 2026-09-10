@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
 import { hardenAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
+import { ensureLocalQaSession } from "./lib/qa/local-ui-bypass";
 import {
   CORRELATION_HEADER,
   createCorrelationId,
@@ -61,7 +62,18 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getClaims();
+  const claims = await supabase.auth.getClaims();
+
+  /*
+   * Local-only, opt-in (NODE_ENV=development + LOCAL_UI_QA_BYPASS=true) and
+   * loopback-only, and only when the check just above found no session:
+   * transparently signs the genuine local QA account in via the same real
+   * password grant `/login` uses, on this same request-scoped client — so
+   * its cookie writes above persist the resulting session exactly like any
+   * other sign-in. A no-op everywhere else, including once a session exists.
+   */
+  if (!claims.data) await ensureLocalQaSession(supabase, request);
+
   return response;
 }
 

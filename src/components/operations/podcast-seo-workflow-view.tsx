@@ -10,14 +10,13 @@ import {
 } from "../../domain/operations/podcast-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
 import type { PodcastMonthOption } from "../../lib/integrations/google-sheets-source";
-import { AnimatedSelect } from "../ui/animated-select";
+import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
 import {
   DepartmentInspectorSection,
   DepartmentInspectorTab,
   DepartmentRecordInspector,
 } from "./department-record-inspector";
 import { DepartmentResourceLink } from "./department-resource-link";
-import { DepartmentStatusFilter, type DepartmentStatusFilterOption } from "./department-status-filter";
 import { DepartmentWorkColumn, DepartmentWorkTable } from "./department-work-table";
 import { DepartmentWorkListMobile } from "./department-work-list-mobile";
 import { DepartmentWorkflowHeader } from "./department-workflow-header";
@@ -58,9 +57,6 @@ const STATUS_TONE: Record<PodcastOperationStatus, WorkflowStatusTone> = {
   completed: "positive",
   cancelled: "neutral",
 };
-
-/** Only the statuses worth noticing get a dot in the status nav — Completed/Cancelled stay calm. */
-const NOTICEABLE_STATUSES = new Set<PodcastOperationStatus>(["in_progress", "stuck"]);
 
 function statusLabel(status: PodcastOperationStatus): string {
   return podcastOperationStatusLabels[status];
@@ -157,13 +153,12 @@ export function PodcastSeoWorkflowView({
     setPackageFilter("all");
   }
 
-  const statusFilterOptions: DepartmentStatusFilterOption<StatusFilter>[] = [
-    { key: "all", label: "All", count: statusCounts.all },
+  const statusSelectOptions: AnimatedSelectOption[] = [
+    { value: "all", label: "All Statuses", count: statusCounts.all },
     ...podcastOperationStatuses.map((status) => ({
-      key: status as StatusFilter,
+      value: status,
       label: statusLabel(status),
       count: statusCounts[status],
-      tone: NOTICEABLE_STATUSES.has(status) ? STATUS_TONE[status] : undefined,
     })),
   ];
 
@@ -224,23 +219,7 @@ export function PodcastSeoWorkflowView({
 
   return (
     <div className="dept-workflow">
-      <DepartmentWorkflowHeader
-        title="Podcast SEO"
-        count={items?.length ?? 0}
-        countLabel="workflows"
-        trailing={
-          monthOptions.length > 0 ? (
-            <AnimatedSelect
-              name="podcast-seo-month"
-              label="Month"
-              menuLabel="Select month"
-              value={selectedMonth ?? monthOptions[0]!.value}
-              onChange={onMonthChange ?? (() => {})}
-              options={monthOptions.map((option) => ({ value: option.value, label: option.label }))}
-            />
-          ) : null
-        }
-      />
+      <DepartmentWorkflowHeader title="Podcast SEO" />
 
       {items === null ? (
         <div className="dept-source-unavailable" role="alert">
@@ -249,8 +228,6 @@ export function PodcastSeoWorkflowView({
         </div>
       ) : (
         <>
-          <DepartmentStatusFilter options={statusFilterOptions} active={statusFilter} onChange={setStatusFilter} />
-
           <DepartmentWorkflowToolbar
             searchValue={search}
             onSearchChange={setSearch}
@@ -265,15 +242,40 @@ export function PodcastSeoWorkflowView({
                 onChange: setVaFilter,
                 size: "compact",
               },
+            ]}
+            secondaryFilters={[
               {
+                key: "package",
+                label: "Package",
                 allLabel: "All Packages",
                 ariaLabel: "Filter by SEO package",
                 value: packageFilter,
                 options: packageOptions,
                 onChange: setPackageFilter,
-                size: "wide",
               },
             ]}
+            trailingSelects={[
+              {
+                allLabel: "All Statuses",
+                ariaLabel: "Filter by status",
+                value: statusFilter,
+                options: [],
+                onChange: (value) => setStatusFilter(value as StatusFilter),
+                countedOptions: statusSelectOptions,
+              },
+            ]}
+            trailingControl={
+              monthOptions.length > 0 ? (
+                <AnimatedSelect
+                  name="podcast-seo-month"
+                  label="Month"
+                  menuLabel="Select month"
+                  value={selectedMonth ?? monthOptions[0]!.value}
+                  onChange={onMonthChange ?? (() => {})}
+                  options={monthOptions.map((option) => ({ value: option.value, label: option.label }))}
+                />
+              ) : null
+            }
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
           />

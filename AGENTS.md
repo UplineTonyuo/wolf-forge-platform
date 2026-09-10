@@ -13,23 +13,54 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Shared Claude Code + Codex Project Memory
 
 This repository uses one persistent project memory shared by Claude Code
-and Codex through `.ai-memory/`.
+and Codex. Its canonical, durable copy is a fixed set of Markdown files
+(`00 Project Brain.md`, `01 Current State.md`, `02 Decisions.md`,
+`03 Implementation Log.md`, `04 Known Issues.md`, `05 Architecture Map.md`,
+plus a `Raw/` safety-net folder) that live in the Wolf Forge Obsidian Second
+Brain, at the path `scripts/sync-ai-memory-to-obsidian.ps1` syncs to
+(`$env:WOLF_FORGE_OBSIDIAN_MEMORY_PATH`).
+
+A worktree MAY also keep a local `.ai-memory/` directory holding the same
+six files as a working copy for that checkout, synced to the vault via
+`npm run memory:sync`. Not every worktree has one — a fresh clone or a
+local-only QA checkout (like this one) may not.
+
+**Memory root**, used throughout the rest of this section, means:
+
+- `.ai-memory/` if that directory exists in this worktree — read and write
+  it exactly as described below, and sync it to the vault with
+  `npm run memory:sync` when appropriate; or
+- otherwise, the same six files directly in the canonical Obsidian vault
+  location above. Everything below about what/when/how to read and write
+  applies identically to those files.
+
+**If `.ai-memory/` does not exist in this worktree, do NOT create it.**
+Read and write the vault copy directly instead — do not invent a local
+staging directory just to satisfy this section, and do not treat its
+absence as a reason to skip memory entirely.
+
+Temporary QA scratch details — one-off script output, a reproduction you ran
+and discarded, ordinary debugging — do not need a durable memory write
+unless they harden into an established workflow or decision worth
+remembering next session.
 
 ## Before planning or editing
 
-Read these files in this order:
+Read these files in this order, from the memory root:
 
-1. `.ai-memory/00 Project Brain.md`
-2. `.ai-memory/01 Current State.md`
-3. `.ai-memory/02 Decisions.md`
-4. `.ai-memory/04 Known Issues.md`
+1. `00 Project Brain.md`
+2. `01 Current State.md`
+3. `02 Decisions.md`
+4. `04 Known Issues.md`
 
-Read `.ai-memory/05 Architecture Map.md` when the task affects architecture,
+Read `05 Architecture Map.md` when the task affects architecture,
 authorization, data flow, shared shell behavior, Supabase, or cross-feature
 integration.
 
-Read `.ai-memory/03 Implementation Log.md` only when historical implementation
-detail is actually needed. Do not load the entire history by default.
+Read `03 Implementation Log.md` only when historical implementation
+detail is actually needed. Do not load the entire history by default — these
+files can be large; read the relevant section (e.g. the tail, or a targeted
+search) rather than the whole file.
 
 The actual repository remains the ultimate source of truth. If memory conflicts
 with verified code or database architecture, inspect the implementation,
@@ -40,17 +71,20 @@ explicitly requests that change.
 
 ## Before finishing meaningful implementation work
 
-Before the final response, update the shared memory.
+Before the final response, update the shared memory (the memory root, as
+defined above).
 
 ### Current State
 
-Update `.ai-memory/01 Current State.md` so it describes what is true NOW.
+Update the memory root's `01 Current State.md` so it describes what is true
+NOW.
 
 Do not merely append history to Current State. Replace stale statements.
 
 ### Implementation Log
 
-Append one concise entry to `.ai-memory/03 Implementation Log.md` containing:
+Append one concise entry to the memory root's `03 Implementation Log.md`
+containing:
 
 - timestamp
 - agent: Claude Code or Codex
@@ -65,19 +99,19 @@ Append one concise entry to `.ai-memory/03 Implementation Log.md` containing:
 
 ### Decisions
 
-Update `.ai-memory/02 Decisions.md` only when a genuine product,
+Update the memory root's `02 Decisions.md` only when a genuine product,
 architecture, UX, authorization, naming, data-model, or workflow decision was
 made or reversed.
 
 ### Known Issues
 
-Update `.ai-memory/04 Known Issues.md` only for verified unresolved problems.
-Move resolved issues out of Open when they are actually fixed.
+Update the memory root's `04 Known Issues.md` only for verified unresolved
+problems. Move resolved issues out of Open when they are actually fixed.
 
 ### Architecture Map
 
-Update `.ai-memory/05 Architecture Map.md` when the verified architecture
-materially changes.
+Update the memory root's `05 Architecture Map.md` when the verified
+architecture materially changes.
 
 ## Memory quality rules
 
@@ -110,7 +144,7 @@ Do NOT store:
 
 Never claim memory was updated unless the write succeeded.
 
-The `.ai-memory/Raw/` directory is an automatic safety-net and forensic log.
+The memory root's `Raw/` directory is an automatic safety-net and forensic log.
 Do not load Raw into normal context unless debugging requires it.
 
 If the task is read-only and nothing meaningful changed, no semantic memory
