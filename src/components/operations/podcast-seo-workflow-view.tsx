@@ -62,6 +62,32 @@ function statusLabel(status: PodcastOperationStatus): string {
   return podcastOperationStatusLabels[status];
 }
 
+/** Single-line ellipsis for the free-text table columns (Client, Work, SEO Target, Assigned) — real source
+ * values run up to ~41 characters ("Platinum SBP (100 Targeted Keywords) 4/4") or combine keyword + city
+ * ("personal injury lawyer · Tarzana, California"); without this, a `<td>`'s default text wrapping grows that
+ * one row taller than its neighbors instead of overflowing sideways. Matches the same fix already applied to
+ * the other Operations department views. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
+
+/** The one deliverable link this department exposes at table level (Login/Prompt-SOP stay inspector-only,
+ * same shape as Content's `blogContent`) — extracted so the desktop column and the mobile card's direct
+ * action use the exact same cell, never two hand-written copies of the same 0/1-state logic. */
+function PodcastOutputCell({ item }: { item: PodcastOperationItem }) {
+  if (!item.podcastUrl) return <span className="dept-empty-cell">Not available</span>;
+  return (
+    <span onClick={(event) => event.stopPropagation()}>
+      <DepartmentResourceLink
+        href={item.podcastUrl}
+        label="View Output"
+        icon={<Mic aria-hidden="true" size={12} />}
+        onKeyDown={(event) => event.stopPropagation()}
+      />
+    </span>
+  );
+}
+
 /**
  * The Podcast SEO department workflow — the first configuration of the
  * shared `Department*` components (header, status nav, toolbar, table,
@@ -167,27 +193,28 @@ export function PodcastSeoWorkflowView({
       key: "client",
       header: "Client",
       width: "24%",
-      render: (item) => formatCleanDomain(item.clientName),
+      render: (item) => <ClampText value={formatCleanDomain(item.clientName)} />,
       title: (item) => item.clientName,
     },
     {
       key: "work",
       header: "Work",
-      width: "13%",
-      render: (item) => item.workLabel ?? "—",
+      width: "17%",
+      render: (item) => <ClampText value={item.workLabel ?? "—"} />,
+      title: (item) => item.workLabel ?? undefined,
     },
     {
       key: "target",
       header: "SEO Target",
       width: "23%",
-      render: (item) => seoTargetLabel(item) || "—",
+      render: (item) => <ClampText value={seoTargetLabel(item) || "—"} />,
       title: (item) => seoTargetLabel(item) || undefined,
     },
     {
       key: "assigned",
       header: "Assigned",
-      width: "13%",
-      render: (item) => item.assignedVa ?? "—",
+      width: "9%",
+      render: (item) => <ClampText value={item.assignedVa ?? "—"} />,
     },
     {
       key: "status",
@@ -201,19 +228,7 @@ export function PodcastSeoWorkflowView({
       width: "12%",
       align: "center",
       hideOnTablet: true,
-      render: (item) =>
-        item.podcastUrl ? (
-          <span onClick={(event) => event.stopPropagation()}>
-            <DepartmentResourceLink
-              href={item.podcastUrl}
-              label="View Output"
-              icon={<Mic aria-hidden="true" size={12} />}
-              onKeyDown={(event) => event.stopPropagation()}
-            />
-          </span>
-        ) : (
-          <span className="dept-empty-cell">Not available</span>
-        ),
+      render: (item) => <PodcastOutputCell item={item} />,
     },
   ];
 
@@ -305,6 +320,7 @@ export function PodcastSeoWorkflowView({
                 renderDetailLine={(item) => [item.workLabel, seoTargetLabel(item)].filter(Boolean).join(" · ") || "—"}
                 renderMetaLeft={(item) => item.assignedVa ?? "Unassigned"}
                 renderMetaRight={(item) => (item.podcastUrl ? "Output available" : "No output yet")}
+                renderAction={(item) => <PodcastOutputCell item={item} />}
                 getRowLabel={(item) => `Open ${formatCleanDomain(item.clientName)}`}
                 />
               </>

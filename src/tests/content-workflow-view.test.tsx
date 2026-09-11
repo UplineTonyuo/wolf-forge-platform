@@ -142,4 +142,46 @@ describe("ContentWorkflowView local worklist behavior", () => {
     expect(within(list).getByText("alpha.example.com")).toBeInTheDocument();
     expect(within(list).getAllByRole("button")).toHaveLength(2);
   });
+
+  it("gives the mobile card direct Blog Content access without opening the inspector", () => {
+    renderReady();
+    const list = screen.getByRole("list");
+    const link = within(list).getByRole("link", { name: "Open content" });
+    expect(link).toHaveAttribute("href", "https://docs.example.com/zebra-content");
+    fireEvent.click(link);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("clamps long Website/Package/Content Target values to a single line in the table, never growing the row", () => {
+    const longItem: ContentOperationItem = {
+      id: "3",
+      sourceTab: "CONTENT AUGUST 2026",
+      sourceSection: "Content",
+      website: "https://really-long-client-domain-name-example.com/path",
+      email: null,
+      loginUrl: null,
+      orderNumber: "WF-99",
+      seoPackage: "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      primaryKeyword: "wood floor installation service, hardwood floor installation",
+      city: "Firestone",
+      promptSopUrl: null,
+      blogContent: null,
+      normalizedStatus: "in_progress",
+      rawStatus: "In Progress",
+    };
+    renderReady([longItem]);
+    const row = screen.getByRole("row", { name: /really-long-client-domain-name-example\.com/ });
+    for (const longText of [
+      "really-long-client-domain-name-example.com",
+      "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      "wood floor installation service, hardwood floor installation · Firestone",
+    ]) {
+      const span = within(row).getByText(longText);
+      expect(span.style.overflow).toBe("hidden");
+      expect(span.style.textOverflow).toBe("ellipsis");
+      expect(span.style.whiteSpace).toBe("nowrap");
+    }
+    // The full untruncated package value stays reachable through the cell's own title.
+    expect(row.querySelector('td[title="Platinum SEO Success Blueprint (100 Targeted Keywords)"]')).toBeInTheDocument();
+  });
 });

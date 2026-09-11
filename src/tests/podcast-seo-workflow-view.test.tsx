@@ -333,6 +333,46 @@ describe("PodcastSeoWorkflowView — Podcast link resource", () => {
     expect(within(table()).getAllByRole("link", { name: "View Output" })).toHaveLength(2);
     expect(within(table()).getByText("Not available")).toBeInTheDocument();
   });
+
+  it("clamps long Client/Work/SEO Target/Assigned values to a single line in the table, never growing the row", () => {
+    const longItem = item({
+      id: "4",
+      clientName: "https://really-long-client-domain-name-example.com/path",
+      workLabel: "Platinum SBP (100 Targeted Keywords) 4/4",
+      primaryKeyword: "personal injury lawyer",
+      city: "Tarzana, California",
+      assignedVa: "A Genuinely Long Assigned VA Name",
+    });
+    render(<PodcastSeoWorkflowView items={[longItem]} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={["A Genuinely Long Assigned VA Name"]} />);
+
+    const row = screen.getByRole("row", { name: /really-long-client-domain-name-example\.com/ });
+    for (const longText of [
+      "really-long-client-domain-name-example.com",
+      "Platinum SBP (100 Targeted Keywords) 4/4",
+      "personal injury lawyer · Tarzana, California",
+      "A Genuinely Long Assigned VA Name",
+    ]) {
+      const span = within(row).getByText(longText);
+      expect(span.style.overflow).toBe("hidden");
+      expect(span.style.textOverflow).toBe("ellipsis");
+      expect(span.style.whiteSpace).toBe("nowrap");
+    }
+    // The full untruncated Work value stays reachable through the cell's own title.
+    expect(row.querySelector('td[title="Platinum SBP (100 Targeted Keywords) 4/4"]')).toBeInTheDocument();
+  });
+
+  it("gives the mobile card the same direct Podcast output access as the desktop table, without opening the inspector", () => {
+    render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
+    const list = screen.getByRole("list");
+    // Items 1 and 2 have a podcast URL; item 3 does not — matches the desktop table's 2/1 split.
+    const links = within(list).getAllByRole("link", { name: "View Output" });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "https://podcast.example/acme");
+    fireEvent.click(links[0]!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // Item 3 has no podcast URL — the mobile empty state matches the table's.
+    expect(within(list).getByText("Not available")).toBeInTheDocument();
+  });
 });
 
 describe("PodcastSeoWorkflowView — keyboard interaction", () => {

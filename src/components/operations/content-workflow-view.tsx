@@ -50,6 +50,15 @@ const STATUS_SORT_ORDER: Record<ContentOperationStatus, number> = {
 
 const SORT_OPTIONS: readonly Exclude<SortOption, "all">[] = ["Website A–Z", "Order # A–Z", "Status"];
 
+/** Single-line ellipsis for the free-text table columns (Website, SEO Package, Content Target) — real source
+ * values run up to ~55 characters ("Platinum SEO Success Blueprint (100 Targeted Keywords)") or combine
+ * keyword + city into one cell ("Wood floor installation service, hardwood floor installation · Firestone");
+ * without this, a `<td>`'s default text wrapping grows that one row taller than its neighbors instead of
+ * overflowing sideways. Matches the same fix already applied to the other Operations department views. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
+
 export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -124,26 +133,27 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
       key: "website",
       header: "Website",
       width: "24%",
-      render: (item) => formatCleanDomain(item.website),
+      render: (item) => <ClampText value={formatCleanDomain(item.website)} />,
       title: (item) => item.website,
     },
     {
       key: "package",
       header: "SEO Package",
-      width: "16%",
-      render: (item) => item.seoPackage ?? "—",
+      width: "19%",
+      render: (item) => <ClampText value={item.seoPackage ?? "—"} />,
+      title: (item) => item.seoPackage ?? undefined,
     },
     {
       key: "target",
       header: "Content Target",
       width: "24%",
-      render: (item) => contentTarget(item) || "—",
+      render: (item) => <ClampText value={contentTarget(item) || "—"} />,
       title: (item) => contentTarget(item) || undefined,
     },
     {
       key: "order",
       header: "Order #",
-      width: "12%",
+      width: "9%",
       render: (item) => item.orderNumber ?? "—",
     },
     {
@@ -258,6 +268,7 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
                   renderDetailLine={(item) => [item.seoPackage, contentTarget(item)].filter(Boolean).join(" · ") || "—"}
                   renderMetaLeft={(item) => item.orderNumber ?? "No order number"}
                   renderMetaRight={(item) => (item.blogContent ? "Content recorded" : "No content yet")}
+                  renderAction={(item) => <BlogContentCell item={item} />}
                   getRowLabel={(item) => `Open ${formatCleanDomain(item.website)}`}
                 />
               </>
