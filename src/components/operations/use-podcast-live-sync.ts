@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PodcastOperationItem } from "../../domain/operations/podcast-workflow";
+import type { PodcastMonthOption } from "../../lib/integrations/google-sheets-source";
 
 export type PodcastWorkflowSnapshotState = {
   items: PodcastOperationItem[] | null;
@@ -9,6 +10,10 @@ export type PodcastWorkflowSnapshotState = {
   lastSyncedAt: string | null;
   /** The Assigned VA filter's full option list — see `mergeAssignedVaOptions`. Refreshed on every refetch same as `items`. */
   vaOptions: string[];
+  /** The month selector's server-discovered allowlist, newest first. */
+  monthOptions: PodcastMonthOption[];
+  /** The resolved "YYYY-MM" actually in view — `null` only when the workbook has no dated tab at all. */
+  selectedMonth: string | null;
 };
 
 /** How often an open, visible tab checks the cheap version signal. */
@@ -17,7 +22,8 @@ const POLL_MS = 1_200;
 const DEBOUNCE_MS = 700;
 
 /**
- * Operations V2 near-realtime invalidation, client half.
+ * Operations V2 near-realtime invalidation, client half — now month-aware
+ * (Operations V3).
  *
  * NOT a push channel and NOT Supabase Realtime — this codebase deliberately
  * keeps every Supabase-authenticated boundary server-side (see the doc
@@ -42,11 +48,37 @@ const DEBOUNCE_MS = 700;
  * simply leaves the last known good snapshot on screen until the next tick
  * retries — it never blanks the view or shows a loading state again after
  * the first successful load.
+ *
+ * `month` is the currently selected "YYYY-MM" (or `null` for "no dated tab
+ * exists"), owned by the parent via the page's own `?month=` URL state. Two
+ * things track it: `monthRef`, kept current after every render so the
+ * in-flight poll/refetch loop (mounted once, empty-deps `useEffect`) always
+ * targets the *latest* selection rather than whatever `month` was at mount
+ * time; and a render-phase comparison against `initial.selectedMonth` that
+ * immediately adopts fresh server-rendered data the moment a month change
+ * actually lands, the same synchronous-setState-during-render pattern
+ * `DepartmentRecordInspector` already uses to adopt a changed prop — this
+ * is what keeps rows, status counts, VA/package filters, search, and
+ * output/resource data all correct immediately after a month switch even if
+ * the surrounding client component tree is never unmounted by the
+ * navigation.
  */
-export function usePodcastLiveSync(initial: PodcastWorkflowSnapshotState): PodcastWorkflowSnapshotState {
+export function usePodcastLiveSync(
+  initial: PodcastWorkflowSnapshotState,
+  month: string | null,
+): PodcastWorkflowSnapshotState {
   const [snapshot, setSnapshot] = useState(initial);
   const versionRef = useRef<string | null>(null);
   const snapshotInFlightRef = useRef(false);
+  const monthRef = useRef(month);
+
+  useEffect(() => {
+    monthRef.current = month;
+  });
+
+  if (initial.selectedMonth !== snapshot.selectedMonth) {
+    setSnapshot(initial);
+  }
 
   useEffect(() => {
     let disposed = false;
@@ -57,7 +89,8 @@ export function usePodcastLiveSync(initial: PodcastWorkflowSnapshotState): Podca
       if (snapshotInFlightRef.current) return;
       snapshotInFlightRef.current = true;
       try {
-        const response = await fetch("/api/operations/podcast-seo/snapshot", {
+        const query = monthRef.current ? `?month=${encodeURIComponent(monthRef.current)}` : "";
+        const response = await fetch(`/api/operations/podcast-seo/snapshot${query}`, {
           cache: "no-store",
         });
         if (!response.ok) return;
@@ -79,8 +112,17 @@ export function usePodcastLiveSync(initial: PodcastWorkflowSnapshotState): Podca
                 sourceMonth: data.sourceMonth,
                 lastSyncedAt: data.lastSyncedAt,
                 vaOptions: data.vaOptions ?? [],
+                monthOptions: data.monthOptions ?? [],
+                selectedMonth: data.selectedMonth ?? null,
               }
-            : { items: null, sourceMonth: null, lastSyncedAt: null, vaOptions: [] },
+            : {
+                items: null,
+                sourceMonth: null,
+                lastSyncedAt: null,
+                vaOptions: [],
+                monthOptions: [],
+                selectedMonth: null,
+              },
         );
       } catch {
         /* Transient — the next poll tick will see the version is still new and try again. */

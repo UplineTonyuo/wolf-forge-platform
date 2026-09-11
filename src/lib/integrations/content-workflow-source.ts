@@ -1,5 +1,7 @@
 import "server-only";
 
+import { applyCellHyperlinks } from "../../domain/operations/podcast-workflow";
+import { locateContentUrlColumns } from "../../domain/operations/content-workflow";
 import {
   readContentGoogleSheetsEnvironment,
   type ContentGoogleSheetsEnvironment,
@@ -60,10 +62,22 @@ export class GoogleSheetsContentWorkflowSource implements ContentWorkflowSource 
           stage: "tab_detection",
         });
       }
-      const rows = await this.reader.readTabValues(
+      const rawRows = await this.reader.readTabValues(
         this.environment.CONTENT_WORKFLOW_SPREADSHEET_ID,
         sourceTab,
       );
+
+      const urlColumns = locateContentUrlColumns(rawRows);
+      const hyperlinks =
+        urlColumns.length > 0
+          ? await this.reader.readCellHyperlinks(
+              this.environment.CONTENT_WORKFLOW_SPREADSHEET_ID,
+              sourceTab,
+              urlColumns,
+              rawRows.length,
+            )
+          : new Map<string, string>();
+      const rows = applyCellHyperlinks(rawRows, hyperlinks);
       return { sourceTab, rows };
     } catch (error) {
       if (error instanceof ContentSourceUnavailableError) throw error;

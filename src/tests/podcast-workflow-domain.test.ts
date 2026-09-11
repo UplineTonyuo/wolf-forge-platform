@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyRecoveredStatusHeaders,
+  locateBlankHeaderColumnsNeedingStatus,
+  locateHeaderRowsMissingStatusColumn,
+  looksLikeStatusValidationOptions,
   normalizePodcastStatus,
   parsePodcastWorkflowRows,
 } from "../domain/operations/podcast-workflow";
@@ -178,5 +182,95 @@ describe("parsePodcastWorkflowRows", () => {
       ["", "", "", "", "", "", "", "", "", "Stuck", "orphan status row", ""],
     ];
     expect(parsePodcastWorkflowRows(rows, SOURCE_MONTH)).toHaveLength(0);
+  });
+});
+
+/**
+ * KI: real September 2026 sheet's wide/top Podcast block header row, byte-
+ * verified against the live workbook — "Name","","Email","Logins","Order #",
+ * "SEO Package","Primary Keyword","City","PROMPT/ SOP","PODCAST LINK","","",
+ * "Notes","Assigned Va". Columns K (10) and L (11) are genuinely blank cells
+ * in the real sheet (confirmed via `spreadsheets.get`, not a merge), yet
+ * column L carries a live `ONE_OF_LIST` data-validation rule with exactly
+ * "Completed"/"Inprogress"/"Stuck"/"cancelled"/"Paused" — the real Status
+ * dropdown with no header text above it. This is the exact shape that made
+ * genuinely Completed rows (seeitgonejunkremoval.com, readysetjunkbayarea.com,
+ * trexexpresshauling.com, ...) render as In Progress before this fix.
+ */
+const WIDE_BLOCK_HEADER = [
+  "Name", "", "Email", "Logins", "Order #", "SEO Package", "Primary Keyword",
+  "City", "PROMPT/ SOP", "PODCAST LINK", "", "", "Notes", "Assigned Va",
+];
+
+describe("locateHeaderRowsMissingStatusColumn / locateBlankHeaderColumnsNeedingStatus", () => {
+  it("flags the wide block's header row and its blank columns when Status has no header text", () => {
+    const rows = [
+      WIDE_BLOCK_HEADER,
+      ["Acme Co", "", "acme@example.com", "", "", "Platinum", "", "", "", "podcast title", "podcast link 2", "Completed"],
+    ];
+    expect(locateHeaderRowsMissingStatusColumn(rows)).toEqual([0]);
+    expect(locateBlankHeaderColumnsNeedingStatus(rows)).toEqual([1, 10, 11]);
+  });
+
+  it("finds nothing to recover once the header already names Status 1 by text", () => {
+    const rows = [PRIMARY_HEADER, ["Acme Co", "", "", "", "", "", "", "", "", "Completed", "", ""]];
+    expect(locateHeaderRowsMissingStatusColumn(rows)).toEqual([]);
+    expect(locateBlankHeaderColumnsNeedingStatus(rows)).toEqual([]);
+  });
+});
+
+describe("looksLikeStatusValidationOptions", () => {
+  it("recognizes the real dropdown vocabulary found on the live sheet", () => {
+    expect(looksLikeStatusValidationOptions(["Completed", "Inprogress", "Stuck", "cancelled", "Paused"])).toBe(true);
+  });
+
+  it("rejects a single-value dropdown (a department tag, e.g. the real sheet's own 'PODS' column)", () => {
+    expect(looksLikeStatusValidationOptions(["PODS"])).toBe(false);
+  });
+
+  it("rejects an unrelated multi-value dropdown (VA names)", () => {
+    expect(looksLikeStatusValidationOptions(["LayLay", "Rap", "Anthony", "Kyle"])).toBe(false);
+  });
+
+  it("rejects an empty option list", () => {
+    expect(looksLikeStatusValidationOptions([])).toBe(false);
+  });
+});
+
+describe("applyRecoveredStatusHeaders + parsePodcastWorkflowRows — real sheet's wide block with a blank Status header", () => {
+  it("[A] recovers Completed for the wide/top block once its data-validation-confirmed Status column is labeled", () => {
+    const rows = [
+      WIDE_BLOCK_HEADER,
+      ["Acme Co", "", "acme@example.com", "", "", "Platinum", "", "", "", "podcast title", "podcast link 2", "Completed"],
+    ];
+    const recovered = applyRecoveredStatusHeaders(rows, new Set([11]));
+    expect(recovered[0]).toEqual([
+      "Name", "", "Email", "Logins", "Order #", "SEO Package", "Primary Keyword",
+      "City", "PROMPT/ SOP", "PODCAST LINK", "", "Status", "Notes", "Assigned Va",
+    ]);
+    const items = parsePodcastWorkflowRows(recovered, SOURCE_MONTH);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ clientName: "Acme Co", normalizedStatus: "completed", rawStatus: "Completed" });
+  });
+
+  it("[C] a Cancelled row in the recovered wide block still parses as Cancelled", () => {
+    const rows = [
+      WIDE_BLOCK_HEADER,
+      ["Blair LLC", "", "", "", "", "", "", "", "", "", "", "Cancelled"],
+    ];
+    const items = parsePodcastWorkflowRows(applyRecoveredStatusHeaders(rows, new Set([11])), SOURCE_MONTH);
+    expect(items[0]).toMatchObject({ clientName: "Blair LLC", normalizedStatus: "cancelled", rawStatus: "Cancelled" });
+  });
+
+  it("[B] a compact block already naming Status 1 (e.g. Hot Mess Cleanup & Junk Removal's block) still parses Completed, unaffected by the recovery pathway", () => {
+    const rows = [["Name", "Status 1"], ["Hot Mess Cleanup & Junk Removal", "Completed"]];
+    const items = parsePodcastWorkflowRows(applyRecoveredStatusHeaders(rows, new Set()), SOURCE_MONTH);
+    expect(items[0]).toMatchObject({ clientName: "Hot Mess Cleanup & Junk Removal", normalizedStatus: "completed" });
+  });
+
+  it("never patches a block whose Status column already resolved by header text, even if a candidate column index is passed in", () => {
+    const rows = [PRIMARY_HEADER, ["Acme Co", "", "", "", "", "", "", "", "", "Completed", "", ""]];
+    const recovered = applyRecoveredStatusHeaders(rows, new Set([9]));
+    expect(recovered).toEqual(rows.map((row) => [...row]));
   });
 });

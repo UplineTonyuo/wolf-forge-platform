@@ -16,3 +16,6 @@ coverage/
 # Tailwind follows unignored paths when scanning sources, and this one leaves
 # the filesystem root, which breaks the production build.
 .ai-memory
+
+# Generated local-only QA login credential (scripts/qa-local-login.ts). Never commit.
+.qa-local-credentials.json

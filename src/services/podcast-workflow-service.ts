@@ -8,11 +8,14 @@ import {
 import {
   createPodcastWorkflowSource,
   logPodcastSourceFetchFailure,
+  resolvePodcastMonthSelection,
   PodcastSourceUnavailableError,
+  type PodcastMonthOption,
   type PodcastWorkflowSource,
 } from "../lib/integrations/google-sheets-source";
 
 export { PodcastSourceUnavailableError };
+export type { PodcastMonthOption };
 
 export type PodcastWorkflowSnapshot = {
   items: PodcastOperationItem[];
@@ -30,6 +33,18 @@ export type PodcastWorkflowSnapshot = {
 };
 
 /**
+ * A snapshot plus the month-selector's own state: the full server-discovered
+ * allowlist (`monthOptions`, newest first) and which one was actually used
+ * (`selectedMonth`, `null` only when the workbook has no dated Podcast tab at
+ * all — `snapshot.sourceMonth` still names whatever legacy tab was read).
+ */
+export type PodcastWorkflowSnapshotBundle = {
+  snapshot: PodcastWorkflowSnapshot;
+  monthOptions: PodcastMonthOption[];
+  selectedMonth: string | null;
+};
+
+/**
  * The one seam between the read-only Podcast SEO UI and its data: swap the
  * `PodcastWorkflowSource` (Google Sheets today) without touching the domain
  * parser or any component, and — when a write-back feature is built later —
@@ -39,14 +54,42 @@ export type PodcastWorkflowSnapshot = {
 export class PodcastWorkflowService {
   constructor(private readonly source: PodcastWorkflowSource) {}
 
+  /** Unchanged behavior: always the newest tab, no month awareness. */
   async getSnapshot(): Promise<PodcastWorkflowSnapshot> {
-    const { sourceMonth, rows, assignedVaValidationOptions } = await this.source.fetchLatestPodcastTab();
-    const items = parsePodcastWorkflowRows(rows, sourceMonth);
+    return this.buildSnapshot(await this.source.fetchLatestPodcastTab());
+  }
+
+  /**
+   * Month-aware snapshot for the Podcast SEO header selector. `requestedMonth`
+   * is untrusted input (a URL query value); it is resolved against the
+   * source's own freshly-discovered allowlist by `resolvePodcastMonthSelection`
+   * — an unrecognized, missing, or malformed value safely falls back to the
+   * newest option rather than erroring or guessing a range.
+   */
+  async getSnapshotForMonth(requestedMonth: string | null): Promise<PodcastWorkflowSnapshotBundle> {
+    const monthOptions = await this.source.listAvailablePodcastMonths();
+    const resolved = resolvePodcastMonthSelection(monthOptions, requestedMonth);
+    const sheet = resolved
+      ? await this.source.fetchPodcastTab(resolved.tabTitle)
+      : await this.source.fetchLatestPodcastTab();
+    return {
+      snapshot: this.buildSnapshot(sheet),
+      monthOptions,
+      selectedMonth: resolved?.value ?? null,
+    };
+  }
+
+  private buildSnapshot(sheet: {
+    sourceMonth: string;
+    rows: string[][];
+    assignedVaValidationOptions?: string[];
+  }): PodcastWorkflowSnapshot {
+    const items = parsePodcastWorkflowRows(sheet.rows, sheet.sourceMonth);
     return {
       items,
-      sourceMonth,
+      sourceMonth: sheet.sourceMonth,
       lastSyncedAt: new Date().toISOString(),
-      vaOptions: mergeAssignedVaOptions(assignedVaValidationOptions ?? [], items),
+      vaOptions: mergeAssignedVaOptions(sheet.assignedVaValidationOptions ?? [], items),
     };
   }
 }
@@ -65,6 +108,27 @@ export async function loadPodcastWorkflowSnapshotOrNull(): Promise<PodcastWorkfl
     const source = createPodcastWorkflowSource();
     const service = new PodcastWorkflowService(source);
     return await service.getSnapshot();
+  } catch (error) {
+    await logPodcastSourceFetchFailure(error);
+    if (error instanceof PodcastSourceUnavailableError) return null;
+    throw error;
+  }
+}
+
+/**
+ * Month-aware counterpart of `loadPodcastWorkflowSnapshotOrNull`, used by the
+ * page and the live-sync refetch route once a month selector is involved.
+ * Same `null`-means-unavailable contract; `monthOptions` is `[]` and
+ * `selectedMonth` is `null` in that case too, since neither could be
+ * discovered.
+ */
+export async function loadPodcastWorkflowSnapshotBundleOrNull(
+  requestedMonth: string | null,
+): Promise<PodcastWorkflowSnapshotBundle | null> {
+  try {
+    const source = createPodcastWorkflowSource();
+    const service = new PodcastWorkflowService(source);
+    return await service.getSnapshotForMonth(requestedMonth);
   } catch (error) {
     await logPodcastSourceFetchFailure(error);
     if (error instanceof PodcastSourceUnavailableError) return null;

@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PodcastOperationItem } from "../domain/operations/podcast-workflow";
 import { PodcastSeoWorkflowView } from "../components/operations/podcast-seo-workflow-view";
 
@@ -69,11 +69,17 @@ function openRow(name: RegExp | string) {
   fireEvent.click(row);
 }
 
-/** The toolbar's VA/Package filters are an AnimatedSelect trigger + listbox, not a native <select>. */
+/** The toolbar's VA/Status filters are an AnimatedSelect trigger + listbox, not a native <select>. */
 function chooseToolbarFilter(triggerLabel: string, optionLabel: string) {
   const trigger = screen.getByRole("button", { name: new RegExp(`^${triggerLabel}:`) });
   fireEvent.click(trigger);
   fireEvent.click(screen.getByRole("option", { name: optionLabel }));
+}
+
+/** Package filtering lives behind the shared "Filters" popover, a single-level option list rather than a listbox. */
+function choosePackageFilter(optionLabel: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+  fireEvent.click(within(screen.getByRole("dialog", { name: "Filters" })).getByRole("button", { name: optionLabel }));
 }
 
 function openInspectorTab(label: string) {
@@ -81,7 +87,7 @@ function openInspectorTab(label: string) {
 }
 
 describe("PodcastSeoWorkflowView — header and read-only", () => {
-  it("shows only the title and workflow count in the main header — no source/read-only clutter", () => {
+  it("shows only the title in the main header — no redundant count (the status nav's own \"All N\" already carries it) and no source/read-only clutter", () => {
     render(
       <PodcastSeoWorkflowView
         items={ITEMS}
@@ -92,7 +98,8 @@ describe("PodcastSeoWorkflowView — header and read-only", () => {
     );
 
     expect(screen.getByText("Podcast SEO")).toBeInTheDocument();
-    expect(screen.getByText("3 workflows")).toBeInTheDocument();
+    expect(screen.queryByText(/workflows/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filter by status: All Statuses" })).toBeInTheDocument();
     // Source/read-only/last-synced now live only in the inspector's Source tab.
     expect(screen.queryByText(/Read only/)).not.toBeInTheDocument();
     expect(screen.queryByText("PODCAST AUGUST 2026")).not.toBeInTheDocument();
@@ -125,18 +132,22 @@ describe("PodcastSeoWorkflowView — status counts and filtering", () => {
   it("shows a count per status in the status navigation", () => {
     render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
 
-    const nav = screen.getByRole("group", { name: "Filter by status" });
-    expect(within(nav).getByRole("button", { name: /All 3/ })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: /In Progress 1/ })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: /Stuck 1/ })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: /Completed 1/ })).toBeInTheDocument();
-    expect(within(nav).getByRole("button", { name: /Cancelled 0/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "All Statuses3",
+      "In Progress1",
+      "Stuck1",
+      "Completed1",
+      "Cancelled0",
+    ]);
   });
 
   it("filters the table by status", () => {
     render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Stuck 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    fireEvent.click(screen.getByRole("option", { name: /Stuck.*1/ }));
     expect(within(table()).getByText("blairllc.com")).toBeInTheDocument();
     expect(within(table()).queryByText("seeitgonejunkremoval.com")).not.toBeInTheDocument();
   });
@@ -157,7 +168,7 @@ describe("PodcastSeoWorkflowView — status counts and filtering", () => {
     expect(within(table()).queryByText("seeitgonejunkremoval.com")).not.toBeInTheDocument();
 
     chooseToolbarFilter("Filter by assigned VA", "All VAs");
-    chooseToolbarFilter("Filter by SEO package", "Starter 4/4");
+    choosePackageFilter("Starter 4/4");
     expect(within(table()).getByText("blairllc.com")).toBeInTheDocument();
     expect(within(table()).queryByText("seeitgonejunkremoval.com")).not.toBeInTheDocument();
   });
@@ -220,8 +231,8 @@ describe("PodcastSeoWorkflowView — SEO Success Blueprint displays as SBP", () 
     expect(within(table()).getByText("Platinum SBP (100 Targeted Keywords) 4/4")).toBeInTheDocument();
     expect(within(table()).queryByText(/Success Blueprint/)).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /^Filter by SEO package:/ }));
-    expect(screen.getByRole("option", { name: "Platinum SBP (100 Targeted Keywords) 4/4" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    expect(within(screen.getByRole("dialog", { name: "Filters" })).getByRole("button", { name: "Platinum SBP (100 Targeted Keywords) 4/4" })).toBeInTheDocument();
   });
 
   it("matches search by the abbreviation \"SBP\"", () => {
@@ -321,6 +332,46 @@ describe("PodcastSeoWorkflowView — Podcast link resource", () => {
     // Items 1 and 2 have a podcast URL; item 3 does not.
     expect(within(table()).getAllByRole("link", { name: "View Output" })).toHaveLength(2);
     expect(within(table()).getByText("Not available")).toBeInTheDocument();
+  });
+
+  it("clamps long Client/Work/SEO Target/Assigned values to a single line in the table, never growing the row", () => {
+    const longItem = item({
+      id: "4",
+      clientName: "https://really-long-client-domain-name-example.com/path",
+      workLabel: "Platinum SBP (100 Targeted Keywords) 4/4",
+      primaryKeyword: "personal injury lawyer",
+      city: "Tarzana, California",
+      assignedVa: "A Genuinely Long Assigned VA Name",
+    });
+    render(<PodcastSeoWorkflowView items={[longItem]} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={["A Genuinely Long Assigned VA Name"]} />);
+
+    const row = screen.getByRole("row", { name: /really-long-client-domain-name-example\.com/ });
+    for (const longText of [
+      "really-long-client-domain-name-example.com",
+      "Platinum SBP (100 Targeted Keywords) 4/4",
+      "personal injury lawyer · Tarzana, California",
+      "A Genuinely Long Assigned VA Name",
+    ]) {
+      const span = within(row).getByText(longText);
+      expect(span.style.overflow).toBe("hidden");
+      expect(span.style.textOverflow).toBe("ellipsis");
+      expect(span.style.whiteSpace).toBe("nowrap");
+    }
+    // The full untruncated Work value stays reachable through the cell's own title.
+    expect(row.querySelector('td[title="Platinum SBP (100 Targeted Keywords) 4/4"]')).toBeInTheDocument();
+  });
+
+  it("gives the mobile card the same direct Podcast output access as the desktop table, without opening the inspector", () => {
+    render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
+    const list = screen.getByRole("list");
+    // Items 1 and 2 have a podcast URL; item 3 does not — matches the desktop table's 2/1 split.
+    const links = within(list).getAllByRole("link", { name: "View Output" });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "https://podcast.example/acme");
+    fireEvent.click(links[0]!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    // Item 3 has no podcast URL — the mobile empty state matches the table's.
+    expect(within(list).getByText("Not available")).toBeInTheDocument();
   });
 });
 
@@ -433,5 +484,136 @@ describe("PodcastSeoWorkflowView — background refresh preserves state", () => 
     );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("PodcastSeoWorkflowView — month selector", () => {
+  const MONTH_OPTIONS = [
+    { value: "2026-08", label: "August 2026", tabTitle: "PODCAST AUGUST 2026" },
+    { value: "2026-07", label: "July 2026", tabTitle: "PODCAST JULY 2026" },
+  ];
+
+  it("does not render a selector when there are no discovered months", () => {
+    render(<PodcastSeoWorkflowView items={ITEMS} sourceMonth="PODCAST AUGUST 2026" lastSyncedAt={null} vaOptions={VA_OPTIONS} />);
+    expect(screen.queryByRole("button", { name: /^Month:/ })).not.toBeInTheDocument();
+  });
+
+  it("lives in the same toolbar row as Search/VA/Filters/Status, in Search → VA → Filters → Status → Month order — not a separate floating control above the filters", () => {
+    render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    const search = screen.getByLabelText("Search Podcast SEO work");
+    const vaTrigger = screen.getByRole("button", { name: /^Filter by assigned VA:/ });
+    const filtersTrigger = screen.getByRole("button", { name: "Filters" });
+    const statusTrigger = screen.getByRole("button", { name: /^Filter by status:/ });
+    const monthTrigger = screen.getByRole("button", { name: /^Month: August 2026/ });
+
+    const toolbar = document.querySelector(".dept-toolbar");
+    expect(toolbar).not.toBeNull();
+    for (const control of [search, vaTrigger, filtersTrigger, statusTrigger, monthTrigger]) {
+      expect(toolbar?.contains(control)).toBe(true);
+    }
+
+    // DOCUMENT_POSITION_FOLLOWING (4) means the first node precedes the second.
+    expect(search.compareDocumentPosition(vaTrigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(vaTrigger.compareDocumentPosition(filtersTrigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(filtersTrigger.compareDocumentPosition(statusTrigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(statusTrigger.compareDocumentPosition(monthTrigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("renders the selector with the resolved month selected, newest-first option order", () => {
+    render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /^Month: August 2026/ });
+    fireEvent.click(trigger);
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["August 2026", "July 2026"]);
+  });
+
+  it("calls onMonthChange with the chosen option's value", () => {
+    const onMonthChange = vi.fn();
+    render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+        onMonthChange={onMonthChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Month:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "July 2026" }));
+
+    expect(onMonthChange).toHaveBeenCalledWith("2026-07");
+  });
+
+  it("resets active filters and closes the inspector when sourceMonth changes, but not on a same-month refresh", async () => {
+    const { rerender } = render(
+      <PodcastSeoWorkflowView
+        items={ITEMS}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={null}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Search Podcast SEO work"), { target: { value: "hvac" } });
+    openRow(/blairllc\.com/);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // Same month, refreshed items (background live-sync) — filters/inspector survive.
+    rerender(
+      <PodcastSeoWorkflowView
+        items={ITEMS.map((entry) => ({ ...entry }))}
+        sourceMonth="PODCAST AUGUST 2026"
+        lastSyncedAt={new Date().toISOString()}
+        vaOptions={VA_OPTIONS}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-08"
+      />,
+    );
+    expect(screen.getByLabelText("Search Podcast SEO work")).toHaveValue("hvac");
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    // A genuine month change — filters and the open inspector must not carry over.
+    const julyItems: PodcastOperationItem[] = [item({ id: "j1", clientName: "https://julyclient.example", sourceMonth: "PODCAST JULY 2026" })];
+    rerender(
+      <PodcastSeoWorkflowView
+        items={julyItems}
+        sourceMonth="PODCAST JULY 2026"
+        lastSyncedAt={new Date().toISOString()}
+        vaOptions={[]}
+        monthOptions={MONTH_OPTIONS}
+        selectedMonth="2026-07"
+      />,
+    );
+
+    expect(screen.getByLabelText("Search Podcast SEO work")).toHaveValue("");
+    // The inspector's own 200ms exit transition keeps it mounted (closing) for a moment — matches the
+    // established "closes the inspector on Escape" assertion pattern elsewhere in this file.
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(within(table()).getByText("julyclient.example")).toBeInTheDocument();
   });
 });

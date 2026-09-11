@@ -5,7 +5,7 @@ import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "re
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./animated-select.module.css";
 
-export type AnimatedSelectOption = { value: string; label: string };
+export type AnimatedSelectOption = { value: string; label: string; count?: number };
 
 const VIEWPORT_MARGIN = 12;
 
@@ -138,7 +138,7 @@ export function AnimatedSelect({
         onClick={() => (render ? closeMenu() : openMenu())}
       >
         <span className={styles.triggerValue}>
-          {selected?.label ?? "Select"}
+          {selected?.label ?? "Select"}{selected?.count !== undefined && value !== "all" ? ` \u00b7 ${selected.count}` : ""}
         </span>
 
         <ChevronDown className={styles.caret} aria-hidden="true" />
@@ -178,6 +178,7 @@ export function AnimatedSelect({
             >
               <span className={styles.optionLabel}>{option.label}</span>
 
+              {option.count !== undefined ? <span className={styles.optionCount}>{option.count}</span> : null}
               {option.value === value ? (
                 <Check className={styles.optionCheck} aria-hidden="true" />
               ) : null}

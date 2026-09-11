@@ -25,11 +25,16 @@ export function DepartmentResourceLink({
   href,
   label,
   icon,
+  className,
+  onClick,
   onKeyDown,
 }: {
   href: string;
   label: string;
   icon?: ReactNode;
+  className?: string;
+  /** Lets interactive table cells stop activation from bubbling to their row. */
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   /** Stops a key press (typically Enter/Space) from bubbling to an ancestor row's own activation handler. */
   onKeyDown?: (event: React.KeyboardEvent<HTMLAnchorElement>) => void;
 }) {
@@ -40,7 +45,8 @@ export function DepartmentResourceLink({
       href={safeUrl}
       target="_blank"
       rel="noopener noreferrer nofollow"
-      className="dept-resource-link"
+      className={["dept-resource-link", className].filter(Boolean).join(" ")}
+      onClick={onClick}
       onKeyDown={onKeyDown}
     >
       {icon}

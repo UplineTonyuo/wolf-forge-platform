@@ -63,7 +63,7 @@ describe("GET /api/operations/podcast-seo/snapshot — no Origin header on a rea
     vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
 
     const { GET } = await import("../app/api/operations/podcast-seo/snapshot/route");
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/operations/podcast-seo/snapshot"));
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -75,8 +75,25 @@ describe("GET /api/operations/podcast-seo/snapshot — no Origin header on a rea
     vi.mocked(getInternalActorContext).mockResolvedValue(null);
 
     const { GET } = await import("../app/api/operations/podcast-seo/snapshot/route");
-    const response = await GET();
+    const response = await GET(new Request("http://localhost/api/operations/podcast-seo/snapshot"));
 
     expect(response.status).toBe(401);
+  });
+
+  it("honors a ?month= query value, resolving it through the source's own allowlist rather than trusting it directly", async () => {
+    const { getInternalActorContext } = await import("../lib/supabase/next-server");
+    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
+
+    const { GET } = await import("../app/api/operations/podcast-seo/snapshot/route");
+    const response = await GET(new Request("http://localhost/api/operations/podcast-seo/snapshot?month=2026-07"));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.ok).toBe(true);
+    // No Google Sheets credentials exist in this test environment (KI-046), so
+    // the source is unavailable and `data` is null either way — this proves
+    // the route accepts and forwards the query param without throwing, not
+    // that a real month was resolved (that is `podcast-workflow-service.test.ts`'s job).
+    expect(body.data).toBeNull();
   });
 });

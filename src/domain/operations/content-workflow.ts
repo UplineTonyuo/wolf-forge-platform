@@ -108,6 +108,46 @@ function cellFor(row: readonly string[], columns: ColumnMap, field: ContentField
   return null;
 }
 
+/**
+ * Every distinct column index that some recognized header row in this tab
+ * maps to `field` — one entry per block that has the column, in header
+ * order. Mirrors Podcast's `locateFieldColumns`: the Sheets adapter needs
+ * "which column(s), by index, carry this field" to know exactly which cells
+ * to check for a rich-text/HYPERLINK() target or a Docs/Drive smart chip.
+ */
+function locateContentFieldColumns(rows: readonly (readonly string[])[], field: ContentFieldKey): number[] {
+  const columns = new Set<number>();
+  for (const row of rows) {
+    const headerMap = matchHeaderRow(row.map((cell) => cell ?? ""));
+    if (!headerMap) continue;
+    for (const [index, mappedField] of Object.entries(headerMap)) {
+      if (mappedField === field) columns.add(Number(index));
+    }
+  }
+  return [...columns].sort((a, b) => a - b);
+}
+
+/** The three fields a Content row can carry as a clickable resource link. */
+const CONTENT_URL_FIELDS = ["loginUrl", "promptSopUrl", "blogContent"] as const;
+
+/**
+ * Every distinct column index across the sheet that carries one of the three
+ * URL-bearing fields (Login, Prompt/SOP, 4 Blog Content) — read by the
+ * Sheets adapter to know exactly which cells to check for a rich-text/
+ * HYPERLINK() target or a Google Docs/Drive smart chip, since `values.get`
+ * alone returns only each cell's rendered display text: a bare pasted URL
+ * stays intact, but a Docs/Drive smart chip or a friendly-label
+ * `=HYPERLINK(url, label)` cell renders only its visible text and silently
+ * drops the real destination. Mirrors Podcast's `locateUrlColumns`.
+ */
+export function locateContentUrlColumns(rows: readonly (readonly string[])[]): number[] {
+  const columns = new Set<number>();
+  for (const field of CONTENT_URL_FIELDS) {
+    for (const column of locateContentFieldColumns(rows, field)) columns.add(column);
+  }
+  return [...columns].sort((a, b) => a - b);
+}
+
 export function normalizeContentStatus(rawStatus: string): ContentOperationStatus {
   const normalized = rawStatus.trim().toLowerCase().replace(/[\s_-]+/g, " ");
   if (["complete", "completed", "done", "published"].includes(normalized)) return "completed";

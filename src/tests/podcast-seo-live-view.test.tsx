@@ -6,7 +6,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PodcastOperationItem } from "../domain/operations/podcast-workflow";
 import { PodcastSeoLiveView } from "../components/operations/podcast-seo-live-view";
 
-afterEach(cleanup);
+const push = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push }),
+  usePathname: () => "/todo/departments/podcast-seo",
+  useSearchParams: () => new URLSearchParams("foo=bar"),
+}));
+
+afterEach(() => {
+  cleanup();
+  push.mockClear();
+});
 
 function item(overrides: Partial<PodcastOperationItem> = {}): PodcastOperationItem {
   return {
@@ -200,4 +211,31 @@ describe("PodcastSeoLiveView — near-realtime invalidation", () => {
     },
     REAL_TIMEOUT_MS + 2_000,
   );
+});
+
+describe("PodcastSeoLiveView — month selector navigation", () => {
+  it("pushes the new ?month= value while preserving other existing query params", () => {
+    render(
+      <PodcastSeoLiveView
+        initialItems={[item({ id: "1" })]}
+        initialSourceMonth="PODCAST AUGUST 2026"
+        initialLastSyncedAt={new Date().toISOString()}
+        initialVaOptions={["Jordan"]}
+        monthOptions={[
+          { value: "2026-08", label: "August 2026", tabTitle: "PODCAST AUGUST 2026" },
+          { value: "2026-07", label: "July 2026", tabTitle: "PODCAST JULY 2026" },
+        ]}
+        selectedMonth="2026-08"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Month:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "July 2026" }));
+
+    expect(push).toHaveBeenCalledTimes(1);
+    const target = new URL(push.mock.calls[0]![0] as string, "http://localhost");
+    expect(target.pathname).toBe("/todo/departments/podcast-seo");
+    expect(target.searchParams.get("month")).toBe("2026-07");
+    expect(target.searchParams.get("foo")).toBe("bar");
+  });
 });

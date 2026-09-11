@@ -9,12 +9,13 @@ import {
   type ContentOperationStatus,
 } from "../../domain/operations/content-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import {
   DepartmentRecordInspector,
   type DepartmentInspectorTab,
 } from "./department-record-inspector";
+import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentResourceLink } from "./department-resource-link";
-import { DepartmentStatusFilter, type DepartmentStatusFilterOption } from "./department-status-filter";
 import { DepartmentWorkTable, type DepartmentWorkColumn } from "./department-work-table";
 import { DepartmentWorkListMobile } from "./department-work-list-mobile";
 import { DepartmentWorkflowHeader } from "./department-workflow-header";
@@ -47,8 +48,16 @@ const STATUS_SORT_ORDER: Record<ContentOperationStatus, number> = {
   cancelled: 3,
 };
 
-const NOTICEABLE_STATUSES = new Set<ContentOperationStatus>(["in_progress", "stuck"]);
 const SORT_OPTIONS: readonly Exclude<SortOption, "all">[] = ["Website A–Z", "Order # A–Z", "Status"];
+
+/** Single-line ellipsis for the free-text table columns (Website, SEO Package, Content Target) — real source
+ * values run up to ~55 characters ("Platinum SEO Success Blueprint (100 Targeted Keywords)") or combine
+ * keyword + city into one cell ("Wood floor installation service, hardwood floor installation · Firestone");
+ * without this, a `<td>`'s default text wrapping grows that one row taller than its neighbors instead of
+ * overflowing sideways. Matches the same fix already applied to the other Operations department views. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
 
 export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: Props) {
   const [search, setSearch] = useState("");
@@ -110,13 +119,12 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
   const hasActiveFilters =
     search.trim() !== "" || statusFilter !== "all" || packageFilter !== "all" || sort !== "all";
 
-  const statusOptions: DepartmentStatusFilterOption<StatusFilter>[] = [
-    { key: "all", label: "All", count: statusCounts.all },
+  const statusSelectOptions: AnimatedSelectOption[] = [
+    { value: "all", label: "All Statuses", count: statusCounts.all },
     ...contentOperationStatuses.map((status) => ({
-      key: status as StatusFilter,
+      value: status,
       label: contentOperationStatusLabels[status],
       count: statusCounts[status],
-      tone: NOTICEABLE_STATUSES.has(status) ? STATUS_TONE[status] : undefined,
     })),
   ];
 
@@ -125,26 +133,27 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
       key: "website",
       header: "Website",
       width: "24%",
-      render: (item) => formatCleanDomain(item.website),
+      render: (item) => <ClampText value={formatCleanDomain(item.website)} />,
       title: (item) => item.website,
     },
     {
       key: "package",
       header: "SEO Package",
-      width: "16%",
-      render: (item) => item.seoPackage ?? "—",
+      width: "19%",
+      render: (item) => <ClampText value={item.seoPackage ?? "—"} />,
+      title: (item) => item.seoPackage ?? undefined,
     },
     {
       key: "target",
       header: "Content Target",
       width: "24%",
-      render: (item) => contentTarget(item) || "—",
+      render: (item) => <ClampText value={contentTarget(item) || "—"} />,
       title: (item) => contentTarget(item) || undefined,
     },
     {
       key: "order",
       header: "Order #",
-      width: "12%",
+      width: "9%",
       render: (item) => item.orderNumber ?? "—",
     },
     {
@@ -172,13 +181,18 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
 
   return (
     <div className="dept-workflow">
-      <DepartmentWorkflowHeader title="Content" count={items.length} countLabel="records" />
+      <DepartmentWorkflowHeader
+        title="Content"
+        count={state === "ready" ? items.length : undefined}
+        countLabel="records"
+      />
 
       {state === "unconfigured" ? (
-        <div className="dept-connection-state" role="status">
-          <strong>Content workflow is not connected yet.</strong>
-          <p>The workspace is ready and will populate when its approved source is connected.</p>
-        </div>
+        <DepartmentConnectionState
+          departmentName="Content"
+          headingId="content-connection-title"
+          icon={<FileText aria-hidden="true" size={15} strokeWidth={1.8} />}
+        />
       ) : null}
 
       {state === "error" ? (
@@ -190,7 +204,6 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
 
       {state === "ready" ? (
         <>
-          <DepartmentStatusFilter options={statusOptions} active={statusFilter} onChange={setStatusFilter} />
           <DepartmentWorkflowToolbar
             searchValue={search}
             onSearchChange={setSearch}
@@ -205,13 +218,26 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
                 onChange: (value) => setSort(isSortOption(value) ? value : "all"),
                 size: "compact",
               },
+            ]}
+            secondaryFilters={[
               {
+                key: "package",
+                label: "Package",
                 allLabel: "All Packages",
                 ariaLabel: "Filter by SEO package",
                 value: packageFilter,
                 options: packageOptions,
                 onChange: setPackageFilter,
-                size: "wide",
+              },
+            ]}
+            trailingSelects={[
+              {
+                allLabel: "All Statuses",
+                ariaLabel: "Filter by status",
+                value: statusFilter,
+                options: [],
+                onChange: (value) => setStatusFilter(value as StatusFilter),
+                countedOptions: statusSelectOptions,
               },
             ]}
             hasActiveFilters={hasActiveFilters}
@@ -242,6 +268,7 @@ export function ContentWorkflowView({ state, items, sourceTab, lastSyncedAt }: P
                   renderDetailLine={(item) => [item.seoPackage, contentTarget(item)].filter(Boolean).join(" · ") || "—"}
                   renderMetaLeft={(item) => item.orderNumber ?? "No order number"}
                   renderMetaRight={(item) => (item.blogContent ? "Content recorded" : "No content yet")}
+                  renderAction={(item) => <BlogContentCell item={item} />}
                   getRowLabel={(item) => `Open ${formatCleanDomain(item.website)}`}
                 />
               </>

@@ -64,7 +64,13 @@ describe("ContentWorkflowView states", () => {
     const { container } = render(
       <ContentWorkflowView state="unconfigured" items={[]} sourceTab={null} lastSyncedAt={null} />,
     );
-    expect(screen.getByRole("status")).toHaveTextContent("Content workflow is not connected yet.");
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("Content workflow not connected yet");
+    expect(within(status).getByText("Workspace")).toBeInTheDocument();
+    expect(within(status).getByText("Ready")).toBeInTheDocument();
+    expect(within(status).getByText("Workflow source")).toBeInTheDocument();
+    expect(within(status).getByText("Not connected")).toBeInTheDocument();
+    expect(screen.queryByText("0 records")).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/CONTENT_WORKFLOW_SPREADSHEET_ID|service account|credential|Vercel/i);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
@@ -90,11 +96,14 @@ describe("ContentWorkflowView local worklist behavior", () => {
     expect(within(screen.getByRole("table")).queryByText("zebra.example.com")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-    fireEvent.click(screen.getByRole("button", { name: /Stuck 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    fireEvent.click(screen.getByRole("option", { name: /Stuck.*1/ }));
     expect(within(screen.getByRole("table")).getByText("zebra.example.com")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /All 2/ }));
-    chooseControl("Filter by SEO package", "Starter");
+    fireEvent.click(screen.getByRole("button", { name: /^Filter by status:/ }));
+    fireEvent.click(screen.getByRole("option", { name: /All Statuses.*2/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Filters" })).getByRole("button", { name: "Starter" }));
     expect(within(screen.getByRole("table")).getByText("alpha.example.com")).toBeInTheDocument();
   });
 
@@ -132,5 +141,47 @@ describe("ContentWorkflowView local worklist behavior", () => {
     const list = screen.getByRole("list");
     expect(within(list).getByText("alpha.example.com")).toBeInTheDocument();
     expect(within(list).getAllByRole("button")).toHaveLength(2);
+  });
+
+  it("gives the mobile card direct Blog Content access without opening the inspector", () => {
+    renderReady();
+    const list = screen.getByRole("list");
+    const link = within(list).getByRole("link", { name: "Open content" });
+    expect(link).toHaveAttribute("href", "https://docs.example.com/zebra-content");
+    fireEvent.click(link);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("clamps long Website/Package/Content Target values to a single line in the table, never growing the row", () => {
+    const longItem: ContentOperationItem = {
+      id: "3",
+      sourceTab: "CONTENT AUGUST 2026",
+      sourceSection: "Content",
+      website: "https://really-long-client-domain-name-example.com/path",
+      email: null,
+      loginUrl: null,
+      orderNumber: "WF-99",
+      seoPackage: "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      primaryKeyword: "wood floor installation service, hardwood floor installation",
+      city: "Firestone",
+      promptSopUrl: null,
+      blogContent: null,
+      normalizedStatus: "in_progress",
+      rawStatus: "In Progress",
+    };
+    renderReady([longItem]);
+    const row = screen.getByRole("row", { name: /really-long-client-domain-name-example\.com/ });
+    for (const longText of [
+      "really-long-client-domain-name-example.com",
+      "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      "wood floor installation service, hardwood floor installation · Firestone",
+    ]) {
+      const span = within(row).getByText(longText);
+      expect(span.style.overflow).toBe("hidden");
+      expect(span.style.textOverflow).toBe("ellipsis");
+      expect(span.style.whiteSpace).toBe("nowrap");
+    }
+    // The full untruncated package value stays reachable through the cell's own title.
+    expect(row.querySelector('td[title="Platinum SEO Success Blueprint (100 Targeted Keywords)"]')).toBeInTheDocument();
   });
 });
