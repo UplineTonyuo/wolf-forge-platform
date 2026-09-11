@@ -49,7 +49,7 @@ export default function DepartmentsPage() {
         <div className={styles.activeDepartmentGrid}>
           <Link
             href={PODCAST_SEO_ROUTE}
-            className={`${styles.departmentCard} ${styles.liveCard}`}
+            className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
             style={entranceOrder(0)}
             aria-label="Open Podcast SEO department workflow"
           >
@@ -58,10 +58,7 @@ export default function DepartmentsPage() {
             </span>
 
             <span className={styles.liveCardCopy}>
-              <span className={styles.liveStatus}>
-                <span className={styles.liveStatusDot} aria-hidden="true" />
-                Connected
-              </span>
+              <span className={styles.liveStatus}>Workspace ready</span>
               <strong>Podcast SEO</strong>
               <span>Review the current podcast workflow and operational status.</span>
             </span>

@@ -8,11 +8,11 @@ import {
   type WebsiteBuilderStatusKey,
 } from "../../domain/operations/website-builder-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentOutputs, type DepartmentOutputResource } from "./department-outputs";
 import { DepartmentRecordInspector, type DepartmentInspectorTab } from "./department-record-inspector";
 import { DepartmentResourceLink } from "./department-resource-link";
-import { DepartmentStatusFilter, type DepartmentStatusFilterOption } from "./department-status-filter";
 import { DepartmentWorkListMobile } from "./department-work-list-mobile";
 import { DepartmentWorkTable, type DepartmentWorkColumn } from "./department-work-table";
 import { DepartmentWorkflowHeader } from "./department-workflow-header";
@@ -72,14 +72,9 @@ export function WebsiteBuilderWorkflowView({ state, projects, sourceTab, lastSyn
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? null;
   const hasActiveFilters = search.trim() !== "" || statusFilter !== "all" || executiveFilter !== "all";
 
-  const statusFilterOptions: DepartmentStatusFilterOption<StatusFilter>[] = [
-    { key: "all", label: "All", count: projects.length },
-    ...statusOptions.map((option) => ({
-      key: option.label as StatusFilter,
-      label: option.label,
-      count: option.count,
-      tone: KNOWN_STATUS_TONE[option.key],
-    })),
+  const statusSelectOptions: AnimatedSelectOption[] = [
+    { value: "all", label: "All Statuses", count: projects.length },
+    ...statusOptions.map((option) => ({ value: option.label, label: option.label, count: option.count })),
   ];
 
   const columns: DepartmentWorkColumn<WebsiteBuilderProject>[] = [
@@ -106,13 +101,22 @@ export function WebsiteBuilderWorkflowView({ state, projects, sourceTab, lastSyn
       {state === "error" ? <div className="dept-source-unavailable" role="alert"><strong>Website Builder workflow is temporarily unavailable.</strong><p>The workflow could not be refreshed right now. Try again shortly.</p></div> : null}
       {state === "ready" ? (
         <>
-          <DepartmentStatusFilter options={statusFilterOptions} active={statusFilter} onChange={setStatusFilter} />
           <DepartmentWorkflowToolbar
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search businesses, order #, bottlenecks…"
             searchAriaLabel="Search Website Builder work"
             selects={hasCredibleExecutiveData ? [{ allLabel: "All Executives", ariaLabel: "Filter by executive", value: executiveFilter, options: executiveOptions, onChange: setExecutiveFilter, size: "compact" }] : []}
+            trailingSelects={[
+              {
+                allLabel: "All Statuses",
+                ariaLabel: "Filter by status",
+                value: statusFilter,
+                options: [],
+                onChange: setStatusFilter,
+                countedOptions: statusSelectOptions,
+              },
+            ]}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
           />

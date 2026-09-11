@@ -200,18 +200,6 @@ tbody tr:hover { background: #fbfbfc; }
 .dept-source-unavailable strong { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; }
 .dept-source-unavailable p { margin: 0; color: var(--wf-text); font-size: 13px; }
 
-.dept-status-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--wf-border); }
-.dept-status-filter-item { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0 8px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--wf-text-muted); font: inherit; font-size: 13px; font-weight: 550; cursor: pointer; }
-.dept-status-filter-item:hover { color: var(--wf-navy); }
-.dept-status-filter-item-active { color: var(--wf-navy); font-weight: 650; border-bottom-color: var(--wf-navy); }
-.dept-status-filter-count { color: var(--wf-text-muted); font-weight: 500; }
-.dept-status-filter-item-active .dept-status-filter-count { color: inherit; }
-.dept-status-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: currentColor; }
-.dept-status-dot-info { color: var(--wf-navy); }
-.dept-status-dot-warning { color: var(--wf-gold); }
-.dept-status-dot-positive { color: #1f8564; }
-.dept-status-dot-neutral { color: var(--wf-text-muted); }
-
 .dept-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .dept-search { flex: 1 1 240px; min-width: 200px; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--wf-border); border-radius: 9px; background: var(--wf-white); color: var(--wf-text-muted); }
 .dept-search:focus-within { border-color: var(--wf-navy); }

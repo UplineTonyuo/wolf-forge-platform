@@ -36,6 +36,18 @@ describe("Departments directory", () => {
     expect(screen.getByLabelText("8 department workspaces and 1 coming soon")).toBeInTheDocument();
   });
 
+  it("gives every live department the same status wording and visual treatment — none is more \"connected\" than another", () => {
+    render(<DepartmentsPage />);
+
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(8);
+    for (const link of links) {
+      expect(within(link).getByText("Workspace ready")).toBeInTheDocument();
+    }
+    // Regression guard: an earlier version singled out Podcast SEO with its own "Connected" status text.
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+  });
+
   it("presents every planned department as intentionally non-interactive", () => {
     render(<DepartmentsPage />);
 

@@ -36,13 +36,23 @@ describe("WebsiteBuilderWorkflowView", () => {
     // "Actions" is gone from the main table — it was a stale/ambiguous source header, not a real action item.
     expect(screen.getByRole("table")).toHaveTextContent("BusinessExecutiveOnboardedETADomainStatusBottleneckResources");
     expect(screen.getByRole("button", { name: /^Filter by executive:/ })).toBeInTheDocument();
+    // The legacy horizontal status strip is gone; status filtering lives in the same compact
+    // "All Statuses" dropdown every other Operations department uses.
+    expect(screen.queryByRole("group", { name: "Filter by status" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    const statusOptions = screen.getAllByRole("option");
     // Real pipeline statuses stay distinct — never collapsed into a generic "In Progress".
-    expect(screen.getByRole("button", { name: "In Progress 1" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Waiting for Domain 1" })).toBeInTheDocument();
-    expect(within(screen.getByRole("table")).getByText("Pro mover to import website is not working")).toBeInTheDocument();
+    expect(statusOptions.map((option) => option.textContent)).toEqual([
+      "All Statuses2",
+      "Waiting for Domain1",
+      "In Progress1",
+    ]);
+    fireEvent.click(screen.getByRole("option", { name: /In Progress.*1/ }));
+    expect(within(screen.getByRole("table")).getByText("Pointe Roofing Pros")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Elmwood tow truck")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
 
-    // The header no longer duplicates the status nav's own "All N" chip.
-    expect(screen.getByRole("button", { name: "All 2" })).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Pro mover to import website is not working")).toBeInTheDocument();
     expect(screen.queryByText(/^\d+ projects$/)).not.toBeInTheDocument();
 
     // Neither fixture has zero links, so "Not available" never renders here.
@@ -61,6 +71,26 @@ describe("WebsiteBuilderWorkflowView", () => {
     // The cryptic raw "OB" sheet label reads as "Onboarding Sheet" in the inspector, matching the Resources tab's own naming.
     expect(within(inspector).getByText("Onboarding Sheet")).toBeInTheDocument();
     expect(within(inspector).queryByText("OB")).not.toBeInTheDocument();
+  });
+
+  it("matches the shared Operations toolbar shape — Search, Executive, Status, no Package filter — and combines Executive + Status", () => {
+    const macky = projectFixture({ id: "wb-1", business: "Pointe Roofing Pros", executive: "Macky", status: { key: "in_progress", label: "In Progress" } });
+    const isaiahInProgress = projectFixture({ id: "wb-2", business: "Elmwood tow truck", executive: "ISAIAH", status: { key: "in_progress", label: "In Progress" } });
+    const isaiahBacklog = projectFixture({ id: "wb-3", business: "VJ Plumbing", executive: "ISAIAH", status: { key: "backlog", label: "Backlog" } });
+    render(<WebsiteBuilderWorkflowView state="ready" projects={[macky, isaiahInProgress, isaiahBacklog]} sourceTab="WEB BUILD ORDER" lastSyncedAt={null} />);
+
+    // No Package/Filters control exists for Website Builder — it never had package data.
+    expect(screen.queryByRole("button", { name: "Filters" })).not.toBeInTheDocument();
+    expect(screen.queryByText("All Packages")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Filter by executive:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "ISAIAH" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filter by status: All Statuses" }));
+    fireEvent.click(screen.getByRole("option", { name: /^In Progress/ }));
+
+    expect(within(screen.getByRole("table")).getByText("Elmwood tow truck")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("Pointe Roofing Pros")).not.toBeInTheDocument();
+    expect(within(screen.getByRole("table")).queryByText("VJ Plumbing")).not.toBeInTheDocument();
   });
 
   it("keeps the real Actions source value, verbatim, in the inspector's Delivery tab even though it no longer appears in the main table", () => {
