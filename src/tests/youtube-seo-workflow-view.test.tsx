@@ -52,28 +52,50 @@ describe("YoutubeSeoWorkflowView", () => {
       "https://docs.google.com/document/d/wave",
       "https://drive.google.com/file/d/upload",
     ]);
-    expect(screen.queryByRole("tab", { name: "Workflow" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "YouTube Work" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("row", { name: "Open client.example" }));
-    const inspector = screen.getAllByRole("dialog").find((dialog) => within(dialog).queryByRole("tab", { name: "Workflow" }))!;
-    fireEvent.click(within(inspector).getByRole("tab", { name: "Workflow" }));
+    const inspector = screen.getAllByRole("dialog").find((dialog) => within(dialog).queryByRole("tab", { name: "YouTube Work" }))!;
+    fireEvent.click(within(inspector).getByRole("tab", { name: "YouTube Work" }));
     expect(within(inspector).getByText("Wave Videos")).toBeInTheDocument();
     expect(within(inspector).getByText("YouTube Upload")).toBeInTheDocument();
     expect(within(inspector).getByText("no blog post link")).toBeInTheDocument();
   });
+
+  it("clamps long client, package, and assigned-VA values to a single line in the table", () => {
+    const item = operationItem({
+      assignedVa: "A Very Long Real-World Assignee Display Name For Stress Testing",
+      seoPackage: "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      client: "https://www.a-very-long-real-production-domain-name-for-stress-testing.example/wp-admin",
+      clientUrl: "https://www.a-very-long-real-production-domain-name-for-stress-testing.example/wp-admin",
+    });
+    render(<YoutubeSeoWorkflowView state="ready" items={[item]} sourceTab={item.sourceTab} lastSyncedAt={null} />);
+    const table = screen.getByRole("table");
+    const clampedCells = within(table).getAllByText((_, element) => element?.tagName === "SPAN" && (element as HTMLElement).style.whiteSpace === "nowrap") as HTMLElement[];
+    expect(clampedCells.length).toBeGreaterThanOrEqual(3);
+    for (const cell of clampedCells) {
+      expect(cell.style.overflow).toBe("hidden");
+      expect(cell.style.textOverflow).toBe("ellipsis");
+    }
+  });
 });
 
-function operationItem(overrides: { assignedVa: string | null }): YoutubeOperationItem {
+function operationItem(overrides: {
+  assignedVa: string | null;
+  client?: string;
+  clientUrl?: string;
+  seoPackage?: string;
+}): YoutubeOperationItem {
   return {
     id: "youtube-1",
     sourceTab: "YT SEO September 2026",
     sourceSection: "YouTube SEO",
-    client: "https://client.example",
-    clientUrl: "https://client.example",
+    client: overrides.client ?? "https://client.example",
+    clientUrl: overrides.clientUrl ?? "https://client.example",
     email: "client@example.com",
     loginUrl: "https://docs.google.com/document/d/login",
     orderNumber: "WF-1",
-    seoPackage: "Platinum",
+    seoPackage: overrides.seoPackage ?? "Platinum",
     primaryKeyword: "junk removal",
     city: "Austin",
     promptSopUrl: "https://docs.google.com/document/d/sop",

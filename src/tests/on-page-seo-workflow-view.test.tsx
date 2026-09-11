@@ -58,7 +58,7 @@ describe("OnPageSeoWorkflowView", () => {
     };
     render(<OnPageSeoWorkflowView state="ready" items={[item]} sourceTab={item.sourceTab} lastSyncedAt="2026-09-10T00:00:00.000Z" monthOptions={[{ value: "2026-09", label: "September 2026", tabTitle: item.sourceTab }]} selectedMonth="2026-09" />);
 
-    expect(screen.getByRole("table")).toHaveTextContent("ClientPackageAssignedProgressStatusOutputs");
+    expect(screen.getByRole("table")).toHaveTextContent("ClientPackageProgressStatusAssignedOutputs");
     expect(screen.getByRole("row", { name: "Open client.example" })).toHaveTextContent("1 / 2");
     expect(screen.getByRole("button", { name: /^Filter by assigned VA:/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Filter by SEO package:/ })).not.toBeInTheDocument();
@@ -68,7 +68,7 @@ describe("OnPageSeoWorkflowView", () => {
     expect(screen.getByRole("button", { name: /^Month:/ })).toHaveTextContent("September 2026");
 
     fireEvent.click(screen.getByRole("row", { name: "Open client.example" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("tab", { name: "Deliverables" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("tab", { name: "On-page Work" }));
     expect(within(screen.getByRole("dialog")).getByText("On-page Audit")).toBeInTheDocument();
     expect(within(screen.getByRole("dialog")).getByRole("link", { name: /^Open$/ })).toHaveAttribute("href", "https://docs.example/audit");
   });
@@ -98,7 +98,7 @@ describe("OnPageSeoWorkflowView", () => {
     expect(mobileRowButton).not.toContainElement(mobileOutputsButton);
     expect(mobileRowButton.parentElement).toContainElement(mobileOutputsButton);
     fireEvent.click(threeOutputs);
-    expect(screen.queryByRole("tab", { name: "Deliverables" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "On-page Work" })).not.toBeInTheDocument();
 
     const outputsDialog = screen.getByRole("dialog", { name: "Available outputs" });
     expect(within(outputsDialog).getByText("Audit")).toBeInTheDocument();
@@ -111,18 +111,102 @@ describe("OnPageSeoWorkflowView", () => {
     ]);
 
     fireEvent.click(within(outputsDialog).getAllByRole("link")[0]!);
-    expect(screen.queryByRole("tab", { name: "Deliverables" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "On-page Work" })).not.toBeInTheDocument();
 
     expect(screen.getAllByRole("button", { name: "4 outputs" })).toHaveLength(2);
     const singleLinks = screen.getAllByRole("link", { name: "Open output" });
     expect(singleLinks).toHaveLength(2);
     expect(singleLinks[0]).toHaveAttribute("href", "https://docs.google.com/document/d/optimization");
     fireEvent.click(singleLinks[0]!);
-    expect(screen.queryByRole("tab", { name: "Deliverables" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "On-page Work" })).not.toBeInTheDocument();
     expect(screen.getAllByText("Not available")).toHaveLength(2);
 
     fireEvent.click(screen.getByRole("row", { name: "Open completed.example" }));
-    expect(screen.getByRole("tab", { name: "Deliverables" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "On-page Work" })).toBeInTheDocument();
+  });
+
+  it("hides the Assigned column and VA filter when no item has a credible assignee, and surfaces the rejected source text as a Note instead of dropping it", () => {
+    // "password is incorrect." fails the credible-assignee check (it's not a name), so `assignedVa` is
+    // correctly null here — this is real, current source data (On-page SEO, Sun City Dentistry).
+    const item: OnPageSeoOperationItem = {
+      id: "1",
+      sourceTab: "OnPage September 2026",
+      sourceSection: "On-page SEO",
+      client: "Sun City Dentistry",
+      clientUrl: null,
+      email: null,
+      loginUrl: null,
+      assignedVa: null,
+      assignmentSourceValue: "password is incorrect.",
+      owner: null,
+      orderNumber: null,
+      seoPackage: null,
+      primaryKeyword: null,
+      city: null,
+      promptSopUrl: null,
+      deliverables: [],
+      completedDeliverables: 0,
+      applicableDeliverables: 0,
+      normalizedStatus: "not_started",
+    };
+    render(<OnPageSeoWorkflowView state="ready" items={[item]} sourceTab={item.sourceTab} lastSyncedAt={null} />);
+
+    expect(screen.queryByRole("columnheader", { name: "Assigned" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Filter by assigned VA:/ })).not.toBeInTheDocument();
+    // The rejected text never becomes an assignee name anywhere in the row.
+    expect(within(screen.getByRole("row", { name: "Open Sun City Dentistry" })).queryByText("password is incorrect.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("row", { name: "Open Sun City Dentistry" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Note")).toBeInTheDocument();
+    const noteValue = within(dialog).getByText("password is incorrect.");
+    expect(noteValue.style.overflowWrap).toBe("anywhere");
+  });
+
+  it("hides Assigned entirely when every item is credible, but keeps the column and filter when at least one real VA exists", () => {
+    const items: OnPageSeoOperationItem[] = [
+      outputItem("a", "a.example", "in_progress", []),
+      outputItem("b", "b.example", "in_progress", []),
+    ];
+    render(<OnPageSeoWorkflowView state="ready" items={items} sourceTab="OnPage September 2026" lastSyncedAt={null} />);
+    expect(screen.getByRole("columnheader", { name: "Assigned" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Filter by assigned VA:/ })).toBeInTheDocument();
+  });
+
+  it("clamps long client and package values to a single line in the table (full value in title) without inventing fake data", () => {
+    const item: OnPageSeoOperationItem = {
+      id: "1",
+      sourceTab: "OnPage September 2026",
+      sourceSection: "On-page SEO",
+      client: "Charming Skin Vein Clinics (Oakbrook)",
+      clientUrl: null,
+      email: null,
+      loginUrl: null,
+      assignedVa: "Geraldine",
+      assignmentSourceValue: "Geraldine",
+      owner: null,
+      orderNumber: null,
+      seoPackage: "Platinum SEO Success Blueprint (100 Targeted Keywords)",
+      primaryKeyword: null,
+      city: null,
+      promptSopUrl: null,
+      deliverables: [],
+      completedDeliverables: 0,
+      applicableDeliverables: 0,
+      normalizedStatus: "not_started",
+    };
+    render(<OnPageSeoWorkflowView state="ready" items={[item]} sourceTab={item.sourceTab} lastSyncedAt={null} />);
+    const row = screen.getByRole("row", { name: "Open Charming Skin Vein Clinics (Oakbrook)" });
+    const clampedCells = within(row).getAllByText(/Charming Skin Vein Clinics \(Oakbrook\)|Platinum SEO Success Blueprint/);
+    expect(clampedCells).toHaveLength(2); // Client cell + Package cell.
+    for (const cell of clampedCells) {
+      expect(cell.style.overflow).toBe("hidden");
+      expect(cell.style.textOverflow).toBe("ellipsis");
+      expect(cell.style.whiteSpace).toBe("nowrap");
+    }
+    // The full, untruncated source values remain on the `<td>` itself for hover/assistive access.
+    expect(row.children[0]).toHaveAttribute("title", "Charming Skin Vein Clinics (Oakbrook)");
+    expect(row.children[1]).toHaveAttribute("title", "Platinum SEO Success Blueprint (100 Targeted Keywords)");
   });
 });
 

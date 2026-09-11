@@ -27,7 +27,7 @@ describe("Technical SEO workspace", () => {
     rerender(<TechnicalSeoWorkflowView {...props} items={[]} />);
     expect(screen.getByText("No Technical SEO workflow records were found.")).toBeInTheDocument();
     rerender(<TechnicalSeoWorkflowView {...props} />);
-    expect(screen.getByRole("table")).toHaveTextContent("ClientPackageTechnicalStatusResources");
+    expect(screen.getByRole("table")).toHaveTextContent("ClientPackageTechnicalStatusNotesResources");
     expect(screen.queryByRole("button", { name: /^Filter by assigned VA:/ })).not.toBeInTheDocument();
   });
   it("searches task/status/note fields and filters real packages and statuses", () => {
@@ -59,14 +59,21 @@ describe("Technical SEO workspace", () => {
     expect(screen.getByRole("dialog", { name: "Available resources" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Technical Work" })).not.toBeInTheDocument();
   });
-  it("shows source statuses and blocker notes in the shared inspector", () => {
+  it("shows the note preview and full source statuses/blocker text in the main table and shared inspector", () => {
     render(<TechnicalSeoWorkflowView {...props} />);
+    // The blocker preview is scannable directly in the table, without opening the inspector.
+    expect(within(screen.getByRole("row", { name: "Open Blocked client" })).getByText("NEED LOGIN CREDENTIALS")).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("row", { name: "Open Blocked client" }));
-    fireEvent.click(screen.getByRole("tab", { name: "Technical Work" }));
-    expect(screen.getByText("Technical Before")).toBeInTheDocument();
-    expect(screen.getByText("NEED LOGIN CREDENTIALS")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: "Source" }));
-    expect(screen.getByText(sourceTab)).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Technical Work" }));
+    expect(within(dialog).getByText("Technical Before")).toBeInTheDocument();
+    // Notes/blockers live in their own tab now, not buried under Technical Work.
+    expect(within(dialog).queryByText("NEED LOGIN CREDENTIALS")).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Notes / Blockers" }));
+    expect(within(dialog).getByText("NEED LOGIN CREDENTIALS")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Source" }));
+    expect(within(dialog).getByText(sourceTab)).toBeInTheDocument();
   });
   it("routes month changes and resets filters/selection when the source tab changes", () => {
     const months = [{ value: "2026-09", label: "September 2026", tabTitle: sourceTab }, { value: "2026-08", label: "August 2026", tabTitle: "TECHNICAL SEO AUGUST 2026" }];
@@ -78,6 +85,82 @@ describe("Technical SEO workspace", () => {
     rerender(<TechnicalSeoWorkflowView {...props} sourceTab="TECHNICAL SEO AUGUST 2026" />);
     expect(screen.getByRole("searchbox")).toHaveValue("");
     expect(screen.getAllByRole("row")).toHaveLength(4);
+  });
+  it("contains an anomalously long status value inside its table cell (never escaping into Resources) via real CSS clamping, not string truncation", () => {
+    const longStatus = "https://drive.google.com/file/d/1Mb7tPphgVTFHyErCVUSk3xo6qSoPGRSR/view?usp=drivesdk";
+    const oddItems = parseTechnicalSeoWorkflowRows([header, ["Odd status client", "Platinum", "", longStatus, "", ""]], sourceTab);
+    render(<TechnicalSeoWorkflowView {...props} items={oddItems} />);
+    const row = screen.getByRole("row", { name: "Open Odd status client" });
+    // The row's own derived status is source-honestly the same long value — never reinterpreted or dropped.
+    expect(oddItems[0]!.status).toBe(longStatus);
+
+    // The DOM text is never truncated — jsdom can't render layout, so the actual containment must be
+    // real CSS on the label span (a flex item with its own `min-width: 0`), not a hand-truncated string.
+    // `.workflow-status`'s default flex `min-width: auto` is exactly what let the URL escape in the bug report.
+    const labelSpans = within(row).getAllByText(longStatus);
+    expect(labelSpans.length).toBeGreaterThan(0); // Technical + Status columns both derive from this evidence.
+    for (const labelSpan of labelSpans) {
+      expect(labelSpan.style.minWidth).toBe("0px");
+      expect(labelSpan.style.overflow).toBe("hidden");
+      expect(labelSpan.style.textOverflow).toBe("ellipsis");
+      expect(labelSpan.style.whiteSpace).toBe("nowrap");
+      // The pill wrapper (dot + label) is a flex row that fills — but never exceeds — the fixed-width cell.
+      const pill = labelSpan.parentElement!;
+      expect(pill.style.display).toBe("flex");
+      expect(pill.style.minWidth).toBe("0px");
+      expect(pill.style.maxWidth).toBe("100%");
+      expect(pill.getAttribute("title")).toBe(longStatus);
+    }
+
+    fireEvent.click(row);
+    const dialog = screen.getByRole("dialog");
+    // The panel itself never grows past its own fixed width, in jsdom terms: nothing here can push the
+    // dialog's own rendered width out — real containment is asserted via the per-element CSS below, since
+    // jsdom has no layout engine to measure actual overflow (that's covered by manual live verification).
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Technical Work" }));
+    // The inspector shows the same full value, but wrapped (not clamped) so it can never force horizontal
+    // overflow on the panel: `overflow-wrap: anywhere` (not `break-word`) is what actually shrinks the
+    // element's own intrinsic width, which is what stops `.onpage-deliverable-row`'s `auto` action column
+    // from blowing out — plain wrapping alone would still report a huge max-content size to that grid track.
+    const evidenceLabel = within(dialog).getAllByText(longStatus).find((el) => el.closest(".onpage-deliverable-action"))!;
+    expect(evidenceLabel.style.overflowWrap).toBe("anywhere");
+    expect(evidenceLabel.style.wordBreak).toBe("break-word");
+    expect(evidenceLabel.style.minWidth).toBe("0px");
+    // No ellipsis/title mechanism in the inspector — the full text is directly visible, not hidden behind a tooltip.
+    expect(evidenceLabel.parentElement!.getAttribute("title")).toBeNull();
+
+    // The header identity badge (`.dept-inspector-identity`) shows this same long value too, and was the
+    // first place this bug actually reproduced live: it blew the 420px panel out to ~545px on its own,
+    // even after the evidence row above was already fixed. It needs the identical wrap treatment.
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Overview" }));
+    const headerLabel = within(dialog.querySelector(".dept-inspector-identity")!).getByText(longStatus);
+    expect(headerLabel.style.overflowWrap).toBe("anywhere");
+    expect(headerLabel.style.minWidth).toBe("0px");
+
+    // The Overview tab's own "Status" field row (`.dept-inspector-field`, a `justify-content: space-between`
+    // flex row) renders this same value a second time via the shared, generic field renderer — this was the
+    // actual final source of the panel overflow, since it bypasses the local `Status` component entirely
+    // unless the field's own `value` is passed as an already wrap-safe node instead of a bare string.
+    const fieldLabel = within(dialog.querySelector(".dept-inspector-fields")!).getByText(longStatus);
+    expect(fieldLabel.style.overflowWrap).toBe("anywhere");
+    expect(fieldLabel.style.wordBreak).toBe("break-word");
+    expect(fieldLabel.style.minWidth).toBe("0px");
+  });
+  it("does not change the badge markup for ordinary short statuses", () => {
+    render(<TechnicalSeoWorkflowView {...props} />);
+    for (const label of ["Completed", "In Progress"]) {
+      const badge = screen.getAllByText(label)[0]!;
+      expect(badge.style.overflow).toBe("hidden");
+      expect(badge.textContent).toBe(label);
+    }
+  });
+  it("prioritizes a real blocker note over the phase summary on the mobile detail line, and falls back when there is none", () => {
+    const { container } = render(<TechnicalSeoWorkflowView {...props} />);
+    const mobileList = container.querySelector(".dept-mobile-list") as HTMLElement;
+    const blockedRow = within(mobileList).getByRole("button", { name: /Blocked client/ });
+    expect(within(blockedRow).getByText("NEED LOGIN CREDENTIALS")).toBeInTheDocument();
+    const cleanRow = within(mobileList).getByRole("button", { name: /example\.com/ });
+    expect(within(cleanRow).getByText(/^Technical:/)).toBeInTheDocument();
   });
   it("shows credible assignment only when supplied and handles zero/single resources", () => {
     const assigned = parseTechnicalSeoWorkflowRows([header, ["Assigned client", "", "https://drive.google.com/file/d/one", "", "", "", "", "Rap"], ["No links"]], sourceTab);

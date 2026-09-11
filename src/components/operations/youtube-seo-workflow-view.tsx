@@ -45,6 +45,13 @@ const STATUS_TONE: Record<YoutubeOperationStatus, WorkflowStatusTone> = {
   completed: "positive",
 };
 
+/** Single-line ellipsis for the free-text table columns (Client, Package, Assigned) — real source values run up
+ * to ~55 characters ("Platinum SEO Success Blueprint (100 Targeted Keywords)") or are raw URLs; without this, a
+ * `<td>`'s default text wrapping grows that one row taller than its neighbors instead of overflowing sideways. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
+
 export function YoutubeSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, monthOptions = [], selectedMonth = null }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -103,13 +110,13 @@ export function YoutubeSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, 
     })),
   ];
   const columns: DepartmentWorkColumn<YoutubeOperationItem>[] = [
-    { key: "client", header: "Client", width: hasCredibleVaData ? "22%" : "26%", render: clientLabel, title: (item) => item.client },
-    { key: "package", header: "Package", width: "18%", hideOnTablet: true, render: (item) => item.seoPackage ?? "—", title: (item) => item.seoPackage ?? undefined },
-    ...(hasCredibleVaData ? [{ key: "assigned", header: "Assigned", width: "12%", hideOnTablet: true, render: (item: YoutubeOperationItem) => item.assignedVa ?? "—" }] : []),
-    { key: "wave", header: "Wave Videos", width: "14%", render: (item) => <YoutubeStatus status={item.waveStage.state} /> },
-    { key: "youtube", header: "YouTube", width: "14%", render: (item) => <YoutubeStatus status={item.youtubeStage.state} /> },
-    { key: "status", header: "Status", width: "14%", render: (item) => <YoutubeStatus status={item.normalizedStatus} /> },
-    { key: "outputs", header: "Outputs", width: "13%", render: (item) => <DepartmentOutputs resources={stages(item)} /> },
+    { key: "client", header: "Client", width: hasCredibleVaData ? "20%" : "25%", render: (item) => <ClampText value={clientLabel(item)} />, title: (item) => item.client },
+    { key: "package", header: "Package", width: "16%", hideOnTablet: true, render: (item) => <ClampText value={item.seoPackage ?? "—"} />, title: (item) => item.seoPackage ?? undefined },
+    ...(hasCredibleVaData ? [{ key: "assigned", header: "Assigned", width: "11%", hideOnTablet: true, render: (item: YoutubeOperationItem) => <ClampText value={item.assignedVa ?? "—"} /> }] : []),
+    { key: "wave", header: "Wave Videos", width: "13%", render: (item) => <YoutubeStatus status={item.waveStage.state} /> },
+    { key: "youtube", header: "YouTube", width: "13%", render: (item) => <YoutubeStatus status={item.youtubeStage.state} /> },
+    { key: "status", header: "Status", width: "13%", render: (item) => <YoutubeStatus status={item.normalizedStatus} /> },
+    { key: "outputs", header: "Outputs", width: "12%", render: (item) => <DepartmentOutputs resources={stages(item)} /> },
   ];
 
   function clearFilters() {
@@ -211,7 +218,7 @@ function inspectorTabs(item: YoutubeOperationItem, sourceTab: string | null, las
 
   return [
     { id: "overview", label: "Overview", sections: [{ fields: overviewFields.length > 0 ? overviewFields : [{ label: "Details", value: "No additional overview fields recorded." }] }] },
-    { id: "workflow", label: "Workflow", sections: workflowSections },
+    { id: "youtube-work", label: "YouTube Work", sections: workflowSections },
     { id: "resources", label: "Resources", sections: [{ content: resources.length > 0 ? <div className="dept-resource-list">{resources.map((resource) => <div key={`${resource.label}-${resource.href}`} className="dept-resource-row"><span>{resource.label}</span><DepartmentResourceLink href={resource.href} label="Open" icon={resource.label === "Login" ? <KeyRound aria-hidden="true" size={13} /> : <FileText aria-hidden="true" size={13} />} /></div>)}</div> : <p className="dept-empty-resources">No shared resource links on this record.</p> }] },
     { id: "source", label: "Source", sections: [{ fields: [
       { label: "Sheet tab", value: sourceTab ?? item.sourceTab },

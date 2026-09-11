@@ -45,6 +45,27 @@ const STATUS_TONE: Record<GmbOperationStatus, WorkflowStatusTone> = {
   completed: "positive",
 };
 
+/** Single-line ellipsis for the free-text table columns (Client, Package) — real source values run up to
+ * ~57 characters ("VIS Mountain Marketing & Advertising (Downers Grove, IL)") or ~55 ("Platinum SEO Success
+ * Blueprint (100 Targeted Keywords)"); without this, a `<td>`'s default text wrapping grows that one row
+ * taller than its neighbors instead of overflowing sideways. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
+
+/** Compact, source-honest blocker/note preview for the table — real notes are rare (a handful of rows per
+ * month) but operationally important ("can't post, need to verify GMB"), so this clamps to one line rather
+ * than growing the row; the full text stays reachable via `title` here and unclamped in the inspector's own
+ * Notes / Blockers tab. */
+function NoteCell({ item }: { item: GmbOperationItem }) {
+  if (!item.notes) return <>—</>;
+  return (
+    <span title={item.notes} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      {item.notes}
+    </span>
+  );
+}
+
 export function GmbManagementWorkflowView({ state, items, sourceTab, lastSyncedAt, monthOptions = [], selectedMonth = null }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -64,6 +85,7 @@ export function GmbManagementWorkflowView({ state, items, sourceTab, lastSyncedA
   }
 
   const packageOptions = useMemo(() => distinctSorted(items, (item) => item.seoPackage), [items]);
+  const hasNotes = items.some((item) => item.notes);
   const statusCounts = useMemo(() => {
     const counts = Object.fromEntries([["all", items.length], ...gmbOperationStatuses.map((status) => [status, 0])]) as Record<StatusFilter, number>;
     for (const item of items) counts[item.normalizedStatus] += 1;
@@ -99,12 +121,13 @@ export function GmbManagementWorkflowView({ state, items, sourceTab, lastSyncedA
     })),
   ];
   const columns: DepartmentWorkColumn<GmbOperationItem>[] = [
-    { key: "client", header: "Client", width: "26%", render: clientLabel, title: (item) => item.client },
-    { key: "package", header: "Package", width: "19%", hideOnTablet: true, render: (item) => item.seoPackage ?? "—", title: (item) => item.seoPackage ?? undefined },
-    { key: "content", header: "Content", width: "14%", render: (item) => <GmbStatus status={item.contentStage.state} /> },
-    { key: "posting", header: "Posting", width: "14%", render: (item) => <GmbStatus status={item.postingStage.state} /> },
-    { key: "status", header: "Status", width: "14%", render: (item) => <GmbStatus status={item.normalizedStatus} /> },
-    { key: "outputs", header: "Outputs", width: "13%", render: (item) => <DepartmentOutputs resources={stages(item)} /> },
+    { key: "client", header: "Client", width: hasNotes ? "22%" : "26%", render: (item) => <ClampText value={clientLabel(item)} />, title: (item) => item.client },
+    { key: "package", header: "Package", width: hasNotes ? "16%" : "19%", hideOnTablet: true, render: (item) => <ClampText value={item.seoPackage ?? "—"} />, title: (item) => item.seoPackage ?? undefined },
+    { key: "content", header: "Content", width: hasNotes ? "12%" : "14%", render: (item) => <GmbStatus status={item.contentStage.state} /> },
+    { key: "posting", header: "Posting", width: hasNotes ? "12%" : "14%", render: (item) => <GmbStatus status={item.postingStage.state} /> },
+    { key: "status", header: "Status", width: hasNotes ? "12%" : "14%", render: (item) => <GmbStatus status={item.normalizedStatus} /> },
+    ...(hasNotes ? [{ key: "notes", header: "Notes", width: "14%", render: (item: GmbOperationItem) => <NoteCell item={item} /> }] : []),
+    { key: "outputs", header: "Outputs", width: hasNotes ? "12%" : "13%", render: (item) => <DepartmentOutputs resources={stages(item)} /> },
   ];
 
   function clearFilters() {
@@ -149,7 +172,7 @@ export function GmbManagementWorkflowView({ state, items, sourceTab, lastSyncedA
                   onSelectRow={(item) => setSelectedItemId(item.id)}
                   renderTitle={clientLabel}
                   renderStatus={(item) => <GmbStatus status={item.normalizedStatus} />}
-                  renderDetailLine={(item) => item.seoPackage ?? item.sourceSection}
+                  renderDetailLine={(item) => item.notes ?? item.seoPackage ?? item.sourceSection}
                   renderMetaLeft={(item) => `Content: ${gmbOperationStatusLabels[item.contentStage.state]}`}
                   renderMetaRight={(item) => `Posting: ${gmbOperationStatusLabels[item.postingStage.state]}`}
                   renderAction={(item) => <DepartmentOutputs resources={stages(item)} />}
@@ -200,12 +223,12 @@ function inspectorTabs(item: GmbOperationItem, sourceTab: string | null, lastSyn
   ];
   const workflowSections = [
     { content: <div className="onpage-deliverables">{stages(item).map((stage) => <StageRow key={stage.key} stage={stage} />)}</div> },
-    ...(item.notes ? [{ title: "Notes / blockers", fields: [{ label: "Source note", value: item.notes }] }] : []),
   ];
 
   return [
     { id: "overview", label: "Overview", sections: [{ fields: overviewFields.length > 0 ? overviewFields : [{ label: "Details", value: "No additional overview fields recorded." }] }] },
-    { id: "workflow", label: "Workflow", sections: workflowSections },
+    { id: "gmb-work", label: "GMB Work", sections: workflowSections },
+    ...(item.notes ? [{ id: "notes", label: "Notes / Blockers", sections: [{ fields: [{ label: "Source note", value: item.notes }] }] }] : []),
     { id: "resources", label: "Resources", sections: [{ content: resources.length > 0 ? <div className="dept-resource-list">{resources.map((resource) => <div key={`${resource.label}-${resource.href}`} className="dept-resource-row"><span>{resource.label}</span><DepartmentResourceLink href={resource.href} label="Open" icon={resource.label === "Login" ? <KeyRound aria-hidden="true" size={13} /> : <FileText aria-hidden="true" size={13} />} /></div>)}</div> : <p className="dept-empty-resources">No shared resource links on this record.</p> }] },
     { id: "source", label: "Source", sections: [{ fields: [
       { label: "Sheet tab", value: sourceTab ?? item.sourceTab },

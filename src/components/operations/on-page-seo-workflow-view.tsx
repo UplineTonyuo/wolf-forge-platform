@@ -2,7 +2,7 @@
 
 import { ExternalLink, FileText, KeyRound, ScanSearch } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   onPageSeoOperationStatusLabels,
   onPageSeoOperationStatuses,
@@ -45,6 +45,21 @@ const STATUS_TONE: Record<OnPageSeoOperationStatus, WorkflowStatusTone> = {
   completed: "positive",
 };
 
+/** Single-line ellipsis for the two free-text table columns (Client, Package) — real source values run up to
+ * ~55 characters ("Platinum SEO Success Blueprint (100 Targeted Keywords)"); without this, a `<td>`'s default
+ * text wrapping grows that one row taller than its neighbors instead of overflowing sideways, breaking the
+ * table's otherwise-uniform row rhythm. The column's own `title` (already set on the `<td>`) still carries the
+ * full value — this only changes how the cell paints, never the underlying string. */
+function ClampText({ value }: { value: string }) {
+  return <span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>;
+}
+/** Safe-wraps a free-text inspector value that (unlike status/progress) has no fixed vocabulary and can be
+ * arbitrarily long — same fix as Technical SEO's inspector overflow: `overflow-wrap: anywhere` is what actually
+ * shrinks the element's intrinsic width inside `.dept-inspector-field`'s flex row, not just `word-break`. */
+function WrapText({ value }: { value: string }) {
+  return <span style={{ display: "block", minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word" }}>{value}</span>;
+}
+
 export function OnPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, monthOptions = [], selectedMonth = null }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,6 +81,7 @@ export function OnPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, m
   }
 
   const vaOptions = useMemo(() => distinctSorted(items, (item) => item.assignedVa), [items]);
+  const hasCredibleVaData = vaOptions.length > 0;
   const packageOptions = useMemo(() => distinctSorted(items, (item) => item.seoPackage), [items]);
   const statusCounts = useMemo(() => {
     const counts = Object.fromEntries([["all", items.length], ...onPageSeoOperationStatuses.map((status) => [status, 0])]) as Record<StatusFilter, number>;
@@ -95,12 +111,12 @@ export function OnPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, m
     })),
   ];
   const columns: DepartmentWorkColumn<OnPageSeoOperationItem>[] = [
-    { key: "client", header: "Client", width: "27%", render: clientLabel, title: (item) => item.client },
-    { key: "package", header: "Package", width: "20%", render: (item) => item.seoPackage ?? "—", title: (item) => item.seoPackage ?? undefined },
-    { key: "assigned", header: "Assigned", width: "13%", render: (item) => item.assignedVa ?? "—" },
-    { key: "progress", header: "Progress", width: "11%", render: (item) => `${item.completedDeliverables} / ${item.applicableDeliverables}` },
-    { key: "status", header: "Status", width: "15%", render: (item) => <OnPageStatus status={item.normalizedStatus} /> },
-    { key: "outputs", header: "Outputs", width: "14%", render: (item) => <OnPageSeoOutputs deliverables={item.deliverables} /> },
+    { key: "client", header: "Client", width: "26%", render: (item) => <ClampText value={clientLabel(item)} />, title: (item) => item.client },
+    { key: "package", header: "Package", width: "20%", render: (item) => <ClampText value={item.seoPackage ?? "—"} />, title: (item) => item.seoPackage ?? undefined },
+    { key: "progress", header: "Progress", width: "10%", render: (item) => `${item.completedDeliverables} / ${item.applicableDeliverables}` },
+    { key: "status", header: "Status", width: "14%", render: (item) => <OnPageStatus status={item.normalizedStatus} /> },
+    ...(hasCredibleVaData ? [{ key: "assigned", header: "Assigned", width: "13%", render: (item: OnPageSeoOperationItem) => item.assignedVa ?? "—" }] : []),
+    { key: "outputs", header: "Outputs", width: "13%", render: (item) => <OnPageSeoOutputs deliverables={item.deliverables} /> },
   ];
 
   function clearFilters() {
@@ -124,9 +140,9 @@ export function OnPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, m
             onSearchChange={setSearch}
             searchPlaceholder="Search clients, packages, deliverables…"
             searchAriaLabel="Search On-page SEO work"
-            selects={[
+            selects={hasCredibleVaData ? [
               { allLabel: "All VAs", ariaLabel: "Filter by assigned VA", value: vaFilter, options: vaOptions, onChange: setVaFilter, size: "compact" },
-            ]}
+            ] : []}
             secondaryFilters={[
               { key: "package", label: "Package", allLabel: "All Packages", ariaLabel: "Filter by SEO package", value: packageFilter, options: packageOptions, onChange: setPackageFilter },
             ]}
@@ -141,7 +157,7 @@ export function OnPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, m
             {visibleItems.length === 0 ? <p className="dept-empty">{items.length === 0 && !hasActiveFilters ? "No On-page SEO workflow records were found." : "No On-page SEO work matches these filters."}</p> : (
               <>
                 <DepartmentWorkTable columns={columns} rows={visibleItems} selectedRowId={selectedItemId} onSelectRow={(item) => setSelectedItemId(item.id)} getRowLabel={(item) => `Open ${clientLabel(item)}`} />
-                <DepartmentWorkListMobile rows={visibleItems} onSelectRow={(item) => setSelectedItemId(item.id)} renderTitle={clientLabel} renderStatus={(item) => <OnPageStatus status={item.normalizedStatus} />} renderDetailLine={(item) => item.seoPackage ?? "Package not recorded"} renderMetaLeft={(item) => item.assignedVa ?? "Unassigned"} renderMetaRight={(item) => `${item.completedDeliverables} / ${item.applicableDeliverables} complete`} renderAction={(item) => <OnPageSeoOutputs deliverables={item.deliverables} />} getRowLabel={(item) => `Open ${clientLabel(item)}`} />
+                <DepartmentWorkListMobile rows={visibleItems} onSelectRow={(item) => setSelectedItemId(item.id)} renderTitle={clientLabel} renderStatus={(item) => <OnPageStatus status={item.normalizedStatus} />} renderDetailLine={(item) => item.seoPackage ?? "Package not recorded"} renderMetaLeft={(item) => `${item.completedDeliverables} / ${item.applicableDeliverables} complete`} renderMetaRight={(item) => item.assignedVa ?? "Unassigned"} renderAction={(item) => <OnPageSeoOutputs deliverables={item.deliverables} />} getRowLabel={(item) => `Open ${clientLabel(item)}`} />
               </>
             )}
           </div>
@@ -171,14 +187,21 @@ function inspectorTabs(item: OnPageSeoOperationItem, sourceTab: string | null, l
     ...(item.loginUrl ? [{ label: "Login", href: item.loginUrl, icon: <KeyRound aria-hidden="true" size={13} /> }] : []),
     ...(item.promptSopUrl ? [{ label: "Prompt / SOP", href: item.promptSopUrl, icon: <FileText aria-hidden="true" size={13} /> }] : []),
   ];
+  // `assignmentSourceValue` is the raw Assigned VA cell before the credible-assignee check — when that check
+  // rejects it (e.g. "password is incorrect.", "Site Error", "login is commented"), the text is real operational
+  // signal that answers "is anything stuck?", but until now it was dropped entirely rather than reassigned or
+  // shown anywhere. Surfacing it here changes no domain logic: `assignedVa`/`assignmentSourceValue` are both
+  // already-parsed fields on the item, this only decides whether an already-derived value gets rendered.
+  const overviewFields: { label: string; value: ReactNode }[] = [
+    { label: "Package", value: item.seoPackage ?? "—" }, { label: "Assigned VA", value: item.assignedVa ?? "—" },
+    ...(!item.assignedVa && item.assignmentSourceValue ? [{ label: "Note", value: <WrapText value={item.assignmentSourceValue} /> }] : []),
+    { label: "Owner", value: item.owner ?? "—" }, { label: "Progress", value: `${item.completedDeliverables} / ${item.applicableDeliverables}` },
+    { label: "Order #", value: item.orderNumber ?? "—" }, { label: "Primary keyword", value: item.primaryKeyword ?? "—" },
+    { label: "City", value: item.city ?? "—" }, { label: "Email", value: item.email ?? "—" },
+  ];
   return [
-    { id: "overview", label: "Overview", sections: [{ fields: [
-      { label: "Package", value: item.seoPackage ?? "—" }, { label: "Assigned VA", value: item.assignedVa ?? "—" },
-      { label: "Owner", value: item.owner ?? "—" }, { label: "Progress", value: `${item.completedDeliverables} / ${item.applicableDeliverables}` },
-      { label: "Order #", value: item.orderNumber ?? "—" }, { label: "Primary keyword", value: item.primaryKeyword ?? "—" },
-      { label: "City", value: item.city ?? "—" }, { label: "Email", value: item.email ?? "—" },
-    ] }] },
-    { id: "deliverables", label: "Deliverables", sections: [{ content: <div className="onpage-deliverables">{item.deliverables.map((deliverable) => <DeliverableRow key={deliverable.key} deliverable={deliverable} />)}</div> }] },
+    { id: "overview", label: "Overview", sections: [{ fields: overviewFields }] },
+    { id: "on-page-work", label: "On-page Work", sections: [{ content: <div className="onpage-deliverables">{item.deliverables.map((deliverable) => <DeliverableRow key={deliverable.key} deliverable={deliverable} />)}</div> }] },
     { id: "resources", label: "Resources", sections: [{ content: resources.length > 0 ? <div className="dept-resource-list">{resources.map((resource) => <div key={resource.label} className="dept-resource-row"><span>{resource.label}</span><DepartmentResourceLink href={resource.href} label="Open" icon={resource.icon} /></div>)}</div> : <p className="dept-empty-resources">No shared resource links on this record.</p> }] },
     { id: "source", label: "Source", sections: [{ fields: [
       { label: "Sheet tab", value: sourceTab ?? item.sourceTab }, { label: "Section", value: item.sourceSection },

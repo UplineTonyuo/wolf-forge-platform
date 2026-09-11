@@ -270,8 +270,8 @@ tbody tr:hover { background: #fbfbfc; }
 .dept-inspector-close:hover { color: var(--wf-navy); border-color: var(--wf-navy); }
 .dept-inspector-identity { display: grid; gap: 6px; }
 .dept-inspector-identity strong { color: var(--wf-navy); font-size: 16px; font-weight: 650; }
-.dept-inspector-tabs { display: flex; padding: 0 20px; border-bottom: 1px solid var(--wf-border); }
-.dept-inspector-tab { padding: 12px 6px; margin-right: 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--wf-text-muted); font: inherit; font-size: 13px; font-weight: 550; cursor: pointer; }
+.dept-inspector-tabs { display: flex; padding: 0 20px; border-bottom: 1px solid var(--wf-border); overflow-x: auto; }
+.dept-inspector-tab { flex: 0 0 auto; padding: 12px 6px; margin-right: 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--wf-text-muted); font: inherit; font-size: 13px; font-weight: 550; cursor: pointer; }
 .dept-inspector-tab:hover { color: var(--wf-navy); }
 .dept-inspector-tab-active { color: var(--wf-navy); font-weight: 650; border-bottom-color: var(--wf-navy); }
 .dept-inspector-section { padding: 20px; border-bottom: 1px solid var(--wf-border); }
@@ -280,7 +280,7 @@ tbody tr:hover { background: #fbfbfc; }
 .dept-inspector-fields { display: grid; gap: 12px; }
 .dept-inspector-field { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
 .dept-inspector-field span { color: var(--wf-text-muted); font-size: 12px; }
-.dept-inspector-field strong { color: var(--wf-text); font-size: 13px; font-weight: 500; text-align: right; }
+.dept-inspector-field strong { min-width: 0; overflow-wrap: anywhere; word-break: break-word; color: var(--wf-text); font-size: 13px; font-weight: 500; text-align: right; }
 .dept-inspector-notes { margin: 0; color: var(--wf-text); font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
 .dept-resource-list { display: grid; gap: 10px; }
 .dept-resource-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--wf-border); }
