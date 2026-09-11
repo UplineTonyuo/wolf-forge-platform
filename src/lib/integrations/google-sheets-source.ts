@@ -1,6 +1,5 @@
 import "server-only";
 
-import { z } from "zod";
 import {
   applyCellHyperlinks,
   applyRecoveredStatusHeaders,
@@ -18,8 +17,7 @@ import {
   type OperationsSheetTab,
 } from "./operations-google-sheets";
 
-/** The active reader owns token exchange and requests only https://www.googleapis.com/auth/spreadsheets.readonly. */
-const SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets";
+/** The canonical reader requests only https://www.googleapis.com/auth/spreadsheets.readonly. */
 
 /**
  * Next.js Data Cache tag for both Sheets reads below. The Podcast SEO sync
@@ -71,30 +69,6 @@ export class PodcastSourceUnavailableError extends Error {
     this.httpStatus = options?.httpStatus;
     this.apiErrorCode = options?.apiErrorCode;
   }
-}
-
-/**
- * Extracts only a short machine error code (e.g. `PERMISSION_DENIED`,
- * `invalid_grant`) from a Google API error body — never the full body,
- * which may otherwise be logged verbatim by careless error handling.
- */
-async function readApiErrorCode(response: Response): Promise<string | undefined> {
-  try {
-    const body: unknown = await response.json();
-    if (body && typeof body === "object") {
-      const err = (body as Record<string, unknown>).error;
-      if (typeof err === "string") return err;
-      if (err && typeof err === "object") {
-        const status = (err as Record<string, unknown>).status;
-        const code = (err as Record<string, unknown>).code;
-        if (typeof status === "string") return status;
-        if (typeof code === "string" || typeof code === "number") return String(code);
-      }
-    }
-  } catch {
-    // Response body wasn't JSON or didn't match the expected error shape — no code to report.
-  }
-  return undefined;
 }
 
 /**
@@ -348,64 +322,6 @@ export interface PodcastWorkflowSource {
   fetchPodcastTab(tabTitle: string): Promise<PodcastWorkflowSheet>;
 }
 
-const spreadsheetMetadataSchema = z.object({
-  sheets: z.array(z.object({
-    properties: z.object({
-      title: z.string(),
-      index: z.number().int().nonnegative(),
-    }),
-  })),
-});
-
-const valuesResponseSchema = z.object({
-  values: z.array(z.array(z.string())).optional(),
-});
-
-/**
- * Deliberately optional at every level: a `spreadsheets.get` response over a
- * mostly-empty range omits whole branches rather than sending empty arrays,
- * and this must still parse rather than throw (a validation-read failure
- * falls back to an empty option list, never to "source unavailable").
- */
-const dataValidationGridSchema = z.object({
-  sheets: z
-    .array(
-      z.object({
-        data: z
-          .array(
-            z.object({
-              rowData: z
-                .array(
-                  z.object({
-                    values: z
-                      .array(
-                        z.object({
-                          dataValidation: z
-                            .object({
-                              condition: z
-                                .object({
-                                  type: z.string().optional(),
-                                  values: z
-                                    .array(z.object({ userEnteredValue: z.string().optional() }))
-                                    .optional(),
-                                })
-                                .optional(),
-                            })
-                            .optional(),
-                        }),
-                      )
-                      .optional(),
-                  }),
-                )
-                .optional(),
-            }),
-          )
-          .optional(),
-      }),
-    )
-    .optional(),
-});
-
 /**
  * Google Sheets, read via a service account (Viewer access granted on the
  * sheet itself, not a per-user OAuth consent) — the right shape for
@@ -417,7 +333,7 @@ export class GoogleSheetsPodcastWorkflowSource implements PodcastWorkflowSource 
 
   constructor(
     private readonly environment: GoogleSheetsEnvironment,
-    private readonly fetcher: typeof fetch = fetch,
+    fetcher: typeof fetch = fetch,
     /** Only tabs whose title starts with this (case-insensitive) are candidates for "latest." */
     private readonly tabTitlePrefix = "PODCAST",
   ) {
@@ -518,150 +434,6 @@ export class GoogleSheetsPodcastWorkflowSource implements PodcastWorkflowSource 
     }
   }
 
-  /**
-   * The workbook grows a new tab per month rather than exposing a fixed
-   * "current" range, so the latest tab is resolved dynamically instead of
-   * being hardcoded to one month's title — by the month/year encoded in
-   * each candidate title (`selectLatestPodcastTabTitle`), not by sheet
-   * position, since a legacy undated tab can otherwise sit at a higher
-   * index than a genuinely newer, dated one.
-   */
-  private async resolveLatestPodcastTabTitle(accessToken: string): Promise<string> {
-    const url = `${SHEETS_API_BASE}/${encodeURIComponent(this.environment.PODCAST_SEO_SPREADSHEET_ID)}?fields=sheets.properties(title,index)`;
-    const response = await this.fetcher(url, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      next: { revalidate: 300, tags: [PODCAST_SHEET_CACHE_TAG] },
-    });
-    if (!response.ok) {
-      throw new PodcastSourceUnavailableError("Could not read the Podcast SEO workbook's tab list.", {
-        stage: "spreadsheet_metadata",
-        httpStatus: response.status,
-        apiErrorCode: await readApiErrorCode(response),
-      });
-    }
-    let metadata: z.infer<typeof spreadsheetMetadataSchema>;
-    try {
-      metadata = spreadsheetMetadataSchema.parse(await response.json());
-    } catch (error) {
-      throw new PodcastSourceUnavailableError("Podcast SEO workbook metadata did not match the expected shape.", {
-        cause: error,
-        stage: "spreadsheet_metadata",
-        httpStatus: response.status,
-      });
-    }
-    const latestTitle = selectLatestPodcastTabTitle(
-      metadata.sheets.map((sheet) => ({ title: sheet.properties.title, index: sheet.properties.index })),
-      this.tabTitlePrefix,
-    );
-    if (!latestTitle) {
-      throw new PodcastSourceUnavailableError("No Podcast SEO tab was found in the workbook.", {
-        stage: "tab_detection",
-      });
-    }
-    return latestTitle;
-  }
-
-  private async fetchTabValues(accessToken: string, tabTitle: string): Promise<string[][]> {
-    const range = `'${tabTitle.replace(/'/g, "''")}'`;
-    const url = `${SHEETS_API_BASE}/${encodeURIComponent(this.environment.PODCAST_SEO_SPREADSHEET_ID)}/values/${encodeURIComponent(range)}?majorDimension=ROWS`;
-    const response = await this.fetcher(url, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      next: { revalidate: 300, tags: [PODCAST_SHEET_CACHE_TAG] },
-    });
-    if (!response.ok) {
-      throw new PodcastSourceUnavailableError("Could not read the Podcast SEO tab's data.", {
-        stage: "sheet_values",
-        httpStatus: response.status,
-        apiErrorCode: await readApiErrorCode(response),
-      });
-    }
-    let parsed: z.infer<typeof valuesResponseSchema>;
-    try {
-      parsed = valuesResponseSchema.parse(await response.json());
-    } catch (error) {
-      throw new PodcastSourceUnavailableError("Podcast SEO tab data did not match the expected shape.", {
-        cause: error,
-        stage: "sheet_values",
-        httpStatus: response.status,
-      });
-    }
-    return parsed.values ?? [];
-  }
-
-  /**
-   * The Assigned VA column(s)' own Sheets data-validation dropdown values —
-   * read via `spreadsheets.get` with a `dataValidation`-only field mask over
-   * a generous fixed-height range per column, never `values.update` or
-   * `batchUpdate`. Scanning the whole column height (not just currently
-   * populated rows) is what surfaces a valid VA option that has zero work
-   * items right now: Sheets applies one validation rule across an entire
-   * column range regardless of which cells in it currently hold a value, but
-   * `values.get` only ever returns rows up to the last populated one, so an
-   * empty cell further down would otherwise never be inspected.
-   *
-   * Never throws: a malformed response, a non-OK status, or any other
-   * failure here falls back to an empty list rather than surfacing as
-   * "Podcast source unavailable" — the Assigned VA filter simply falls back
-   * to whatever values are already present in parsed records.
-   */
-  private async fetchAssignedVaValidationOptions(
-    accessToken: string,
-    tabTitle: string,
-    rows: readonly string[][],
-  ): Promise<string[]> {
-    try {
-      const columns = locateAssignedVaColumns(rows);
-      if (columns.length === 0) return [];
-
-      const escapedTitle = tabTitle.replace(/'/g, "''");
-      const params = new URLSearchParams();
-      for (const columnIndex of columns) {
-        const columnLetter = columnIndexToLetter(columnIndex);
-        params.append("ranges", `'${escapedTitle}'!${columnLetter}1:${columnLetter}${VALIDATION_SCAN_ROW_COUNT}`);
-      }
-      params.set("fields", "sheets.data.rowData.values.dataValidation");
-
-      const url = `${SHEETS_API_BASE}/${encodeURIComponent(this.environment.PODCAST_SEO_SPREADSHEET_ID)}?${params.toString()}`;
-      const response = await this.fetcher(url, {
-        headers: { authorization: `Bearer ${accessToken}` },
-        next: { revalidate: 300, tags: [PODCAST_SHEET_CACHE_TAG] },
-      });
-      if (!response.ok) return [];
-
-      const parsed = dataValidationGridSchema.parse(await response.json());
-      const values = new Set<string>();
-      for (const sheet of parsed.sheets ?? []) {
-        for (const data of sheet.data ?? []) {
-          for (const rowData of data.rowData ?? []) {
-            for (const cell of rowData.values ?? []) {
-              const condition = cell.dataValidation?.condition;
-              if (condition?.type !== "ONE_OF_LIST") continue;
-              for (const entry of condition.values ?? []) {
-                if (entry.userEnteredValue) values.add(entry.userEnteredValue);
-              }
-            }
-          }
-        }
-      }
-      return [...values];
-    } catch {
-      return [];
-    }
-  }
-}
-
-/** How far down each Assigned VA column to scan for its data-validation rule — generous enough to include rows with no data yet. */
-const VALIDATION_SCAN_ROW_COUNT = 2000;
-
-/** 0 -> "A", 25 -> "Z", 26 -> "AA" — spreadsheet column letters are base-26 with no zero digit. */
-function columnIndexToLetter(index: number): string {
-  let n = index;
-  let letters = "";
-  do {
-    letters = String.fromCharCode(65 + (n % 26)) + letters;
-    n = Math.floor(n / 26) - 1;
-  } while (n >= 0);
-  return letters;
 }
 
 /**

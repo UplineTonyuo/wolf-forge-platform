@@ -45,13 +45,24 @@ export function DepartmentToolbarFilters({ groups }: { groups: readonly Departme
   const [exiting, setExiting] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [placement, setPlacement] = useState<Placement | null>(null);
+  const focusOptionsOnOpen = useRef(false);
 
   const close = useCallback((restoreFocus = false) => {
+    focusOptionsOnOpen.current = false;
     setOpen(false);
     setExiting(true);
     if (closeTimer.current) clearTimeout(closeTimer.current);
     closeTimer.current = setTimeout(() => setExiting(false), 140);
     if (restoreFocus) triggerRef.current?.focus();
+  }, []);
+
+  const openMenu = useCallback((moveFocusToOptions: boolean) => {
+    document.dispatchEvent(new Event("department-toolbar-filters-open"));
+    document.dispatchEvent(new Event("department-outputs-open"));
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    focusOptionsOnOpen.current = moveFocusToOptions;
+    setExiting(false);
+    setOpen(true);
   }, []);
 
   useEffect(() => () => {
@@ -83,6 +94,15 @@ export function DepartmentToolbarFilters({ groups }: { groups: readonly Departme
       window.removeEventListener("scroll", positionMenu, true);
     };
   }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !placement || !focusOptionsOnOpen.current) return;
+    const options = menuRef.current?.querySelectorAll<HTMLButtonElement>("button[data-filter-option]");
+    if (!options?.length) return;
+    focusOptionsOnOpen.current = false;
+    const selectedOption = Array.from(options).find((option) => option.getAttribute("aria-pressed") === "true");
+    (selectedOption ?? options[0])?.focus();
+  }, [open, placement]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,15 +150,20 @@ export function DepartmentToolbarFilters({ groups }: { groups: readonly Departme
         aria-controls={open ? panelId : undefined}
         onClick={() => {
           if (open) close();
-          else {
-            document.dispatchEvent(new Event("department-toolbar-filters-open"));
-            document.dispatchEvent(new Event("department-outputs-open"));
-            if (closeTimer.current) clearTimeout(closeTimer.current);
-            setExiting(false);
-            setOpen(true);
-          }
+          else openMenu(false);
         }}
         onKeyDown={(event) => {
+          if ((event.key === "Enter" || event.key === " " || event.key === "ArrowDown") && !open) {
+            event.preventDefault();
+            openMenu(true);
+          }
+          if (event.key === "Tab" && open && !event.shiftKey) {
+            const firstOption = menuRef.current?.querySelector<HTMLButtonElement>("button[data-filter-option]");
+            if (firstOption) {
+              event.preventDefault();
+              firstOption.focus();
+            }
+          }
           if (event.key === "Escape" && open) {
             event.preventDefault();
             close(true);
@@ -164,6 +189,26 @@ export function DepartmentToolbarFilters({ groups }: { groups: readonly Departme
               onClick={(event) => event.stopPropagation()}
               onKeyDown={(event) => {
                 event.stopPropagation();
+                const options = Array.from(
+                  menuRef.current?.querySelectorAll<HTMLButtonElement>("button[data-filter-option]") ?? [],
+                );
+                const activeIndex = options.indexOf(document.activeElement as HTMLButtonElement);
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  const direction = event.key === "ArrowDown" ? 1 : -1;
+                  const nextIndex = Math.min(Math.max(activeIndex + direction, 0), options.length - 1);
+                  options[nextIndex]?.focus();
+                } else if (event.key === "Home" || event.key === "End") {
+                  event.preventDefault();
+                  options[event.key === "Home" ? 0 : options.length - 1]?.focus();
+                } else if (event.key === "Tab" && options.length > 0) {
+                  if (event.shiftKey && document.activeElement === options[0]) {
+                    event.preventDefault();
+                    close(true);
+                  } else if (!event.shiftKey && document.activeElement === options[options.length - 1]) {
+                    close(true);
+                  }
+                }
                 if (event.key === "Escape") {
                   event.preventDefault();
                   close(true);
@@ -212,8 +257,15 @@ function FilterOption({ label, selected, onSelect }: { label: string; selected: 
     <button
       type="button"
       className={selected ? `${styles.option} ${styles.optionSelected}` : styles.option}
+      data-filter-option
       aria-pressed={selected}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+      }}
       title={label}
     >
       <span className={styles.optionLabel}>{label}</span>
