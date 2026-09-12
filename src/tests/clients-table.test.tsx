@@ -108,6 +108,24 @@ describe("Clients table selection", () => {
     ).toBe(true);
   });
 
+  it("renders a real Check/Minus icon pair per checkbox, not the retired border-trick glyph", () => {
+    renderTable();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Matt Quinn" }));
+
+    const rowWrap = screen
+      .getByRole("checkbox", { name: "Select Matt Quinn" })
+      .closest(".clients-checkbox-wrap");
+    expect(rowWrap?.querySelector(".clients-checkbox-icon-check")).toBeTruthy();
+    expect(rowWrap?.querySelector(".clients-checkbox-icon-indeterminate")).toBeTruthy();
+
+    const headerWrap = screen
+      .getByRole("checkbox", { name: "Select all visible clients" })
+      .closest(".clients-checkbox-wrap");
+    expect(headerWrap?.querySelector(".clients-checkbox-icon-check")).toBeTruthy();
+    expect(headerWrap?.querySelector(".clients-checkbox-icon-indeterminate")).toBeTruthy();
+  });
+
   it("selects all visible rows and clears selection when the filter view changes", () => {
     const view = renderTable();
     fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible clients" }));

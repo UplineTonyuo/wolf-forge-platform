@@ -24,9 +24,14 @@ function AttentionSection({ title, empty, orders, companyNames, serviceNames }: 
         <div className="attention-rows">
           {orders.slice(0, 8).map((order) => (
             <article className="attention-row" key={order.id}>
-              <div><strong>#{order.order_number} {order.title}</strong><span>{companyNames.get(order.company_id) ?? "Client unavailable"} · {serviceNames.get(order.service_id) ?? "Service unavailable"}</span></div>
-              <StatusBadge status={order.status} />
-              <time dateTime={order.due_at ?? undefined} className={isOverdue(order.due_at, order.status) ? "overdue" : ""}>{formatDate(order.due_at)}</time>
+              <div className="attention-row-main">
+                <strong>#{order.order_number} {order.title}</strong>
+                <span>{companyNames.get(order.company_id) ?? "Client unavailable"} · {serviceNames.get(order.service_id) ?? "Service unavailable"}</span>
+              </div>
+              <div className="attention-row-meta">
+                <StatusBadge status={order.status} />
+                <time dateTime={order.due_at ?? undefined} className={isOverdue(order.due_at, order.status) ? "overdue" : ""}>{formatDate(order.due_at)}</time>
+              </div>
             </article>
           ))}
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import { MoreHorizontal, TriangleAlert } from "lucide-react";
+import { Check, Minus, MoreHorizontal, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   bulkArchiveClientsAction,
   bulkChangeClientStatusAction,
@@ -36,6 +36,33 @@ export function clientInitials(name: string) {
   return words.length > 1
     ? `${words[0]?.[0] ?? ""}${words.at(-1)?.[0] ?? ""}`.toUpperCase()
     : (words[0]?.[0] ?? "?").toUpperCase();
+}
+
+function ClientCheckbox({
+  inputRef,
+  checked,
+  onChange,
+  ariaLabel,
+}: {
+  inputRef?: RefObject<HTMLInputElement | null>;
+  checked: boolean;
+  onChange: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <span className="clients-checkbox-wrap">
+      <input
+        ref={inputRef}
+        className="clients-checkbox"
+        type="checkbox"
+        checked={checked}
+        aria-label={ariaLabel}
+        onChange={onChange}
+      />
+      <Check className="clients-checkbox-icon clients-checkbox-icon-check" aria-hidden="true" />
+      <Minus className="clients-checkbox-icon clients-checkbox-icon-indeterminate" aria-hidden="true" />
+    </span>
+  );
 }
 
 function ClientAvatar({ name, src }: { name: string; src?: string | null }) {
@@ -352,13 +379,11 @@ export function ClientsTable({
           <thead>
             <tr>
               <th>
-                <input
-                  ref={selectAllRef}
-                  className="clients-checkbox"
-                  type="checkbox"
+                <ClientCheckbox
+                  inputRef={selectAllRef}
                   checked={allSelected}
-                  aria-label={allSelected ? "Deselect all visible clients" : "Select all visible clients"}
                   onChange={toggleAll}
+                  ariaLabel={allSelected ? "Deselect all visible clients" : "Select all visible clients"}
                 />
               </th>
               <th>Client</th>
@@ -376,12 +401,10 @@ export function ClientsTable({
               return (
                 <tr className={checked ? "is-selected" : undefined} key={client.id}>
                   <td>
-                    <input
-                      className="clients-checkbox"
-                      type="checkbox"
+                    <ClientCheckbox
                       checked={checked}
-                      aria-label={`Select ${client.name}`}
                       onChange={() => toggleOne(client.id)}
+                      ariaLabel={`Select ${client.name}`}
                     />
                   </td>
                   <td>
