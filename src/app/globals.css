@@ -2501,60 +2501,36 @@ td {
  * they reuse: this loading approach is being judged visually before it is
  * considered for the rest of the product.
  */
-.tasks-skeleton { display: grid; gap: 20px; padding: 4px 0 8px; }
-
-.tasks-skeleton-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
-
-.tasks-skeleton-heading-label,
-.tasks-skeleton-heading-count,
-.tasks-skeleton-row-title,
-.tasks-skeleton-row-sub,
-.tasks-skeleton-row-status,
-.tasks-skeleton-row-date {
+/*
+ * The Tasks skeleton reuses the real .attention-stack/.attention-title/
+ * .attention-section/.section-heading/.attention-rows/.attention-row classes
+ * from src/app/(internal)/todo/page.tsx verbatim, so only the pulsing bars
+ * themselves are skeleton-specific — geometry comes from the shared classes,
+ * not a duplicated set of magic numbers.
+ */
+.tasks-skeleton-bar {
   display: block;
   border-radius: 5px;
   background: #e9ecf2;
   animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite;
 }
 
-.tasks-skeleton-heading-label { width: 96px; height: 11px; }
-.tasks-skeleton-heading-count { width: 18px; height: 18px; border-radius: 999px; }
+.tasks-skeleton-bar-title { width: 62%; height: 10px; }
+.tasks-skeleton-bar-sub { width: 40%; height: 8px; }
+.tasks-skeleton-bar-status { width: 56px; height: 20px; border-radius: 999px; }
+.tasks-skeleton-bar-date { width: 48px; height: 9px; }
 
-.tasks-skeleton-rows { border: 1px solid #e1e4ea; border-radius: 8px; background: #ffffff; overflow: hidden; }
-
-.tasks-skeleton-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 46px;
-  padding: 9px 14px;
-  border-bottom: 1px solid #edf0f4;
-}
-.tasks-skeleton-row:last-child { border-bottom: 0; }
-
-.tasks-skeleton-row-main { min-width: 0; flex: 1 1 auto; display: grid; gap: 5px; }
-.tasks-skeleton-row-title { width: 62%; height: 10px; }
-.tasks-skeleton-row-sub { width: 40%; height: 8px; }
-
-.tasks-skeleton-row-meta { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; }
-.tasks-skeleton-row-status { width: 56px; height: 16px; border-radius: 999px; }
-.tasks-skeleton-row-date { width: 48px; height: 9px; }
-
-.departments-skeleton { display: grid; gap: 22px; padding-bottom: 8px; }
-
-.departments-skeleton-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 2px 0 20px;
-  border-bottom: 1px solid #e2e5ec;
+/*
+ * The Departments directory skeleton reuses the real page's own CSS module
+ * (departments.module.css) for the header/grid/card geometry — only these
+ * per-card placeholder bars are skeleton-specific, with !important because
+ * they layer over that module's own icon/copy background rules.
+ */
+.departments-skeleton-icon {
+  background: #e9ecf2 !important;
+  animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite;
 }
 
-.departments-skeleton-title,
-.departments-skeleton-summary,
-.departments-skeleton-icon,
 .departments-skeleton-copy-title,
 .departments-skeleton-copy-line {
   display: block;
@@ -2563,46 +2539,11 @@ td {
   animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite;
 }
 
-.departments-skeleton-title { width: min(220px, 50vw); height: 20px; }
-.departments-skeleton-summary { width: 70px; height: 12px; }
-
-.departments-skeleton-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-
-.departments-skeleton-card {
-  min-height: 136px;
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 24px 26px;
-  border: 1px solid #e2e5ec;
-  border-radius: 14px;
-  background: #ffffff;
-}
-
-.departments-skeleton-icon { width: 48px; height: 48px; border-radius: 12px; flex: 0 0 auto; }
-.departments-skeleton-copy { min-width: 0; flex: 1 1 auto; display: grid; gap: 8px; }
 .departments-skeleton-copy-title { width: 60%; height: 16px; }
-.departments-skeleton-copy-line { width: 85%; height: 10px; }
-
-@media (max-width: 900px) {
-  .departments-skeleton-grid { grid-template-columns: minmax(0, 1fr); }
-}
-
-@media (max-width: 640px) {
-  .tasks-skeleton-row { flex-wrap: wrap; row-gap: 8px; }
-  .tasks-skeleton-row-main { flex: 1 1 100%; }
-  .tasks-skeleton-row-meta { flex: 1 1 100%; }
-}
+.departments-skeleton-copy-line { width: 85%; height: 10px; margin-top: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .tasks-skeleton-heading-label,
-  .tasks-skeleton-heading-count,
-  .tasks-skeleton-row-title,
-  .tasks-skeleton-row-sub,
-  .tasks-skeleton-row-status,
-  .tasks-skeleton-row-date,
-  .departments-skeleton-title,
-  .departments-skeleton-summary,
+  .tasks-skeleton-bar,
   .departments-skeleton-icon,
   .departments-skeleton-copy-title,
   .departments-skeleton-copy-line {

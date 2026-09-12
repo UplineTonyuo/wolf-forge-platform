@@ -58,19 +58,29 @@ describe("Operations tab active state follows the URL, never local state", () =>
 });
 
 describe("Operations route-transition skeletons", () => {
-  it("Tasks skeleton exposes a busy status region with no generic loading copy", () => {
-    render(<TasksLoading />);
+  it("Tasks skeleton reuses the real page's section chrome and geometry, with no generic loading copy", () => {
+    const { container } = render(<TasksLoading />);
     const region = screen.getByRole("status", { name: "Loading tasks" });
     expect(region.getAttribute("aria-busy")).toBe("true");
-    expect(region.textContent).toBe("");
+    expect(region.className).toContain("attention-stack");
+    // Real, static section labels (not fetched data) are kept so the skeleton
+    // reserves the same vertical space as the resolved page's dividers and
+    // headings — only counts and row content are pulsing placeholders.
+    expect(screen.getByText("Assigned to me")).toBeTruthy();
+    expect(screen.getByText("Overdue")).toBeTruthy();
+    expect(screen.getByText("Unassigned")).toBeTruthy();
+    expect(screen.getByText("Waiting on client")).toBeTruthy();
+    expect(container.querySelectorAll(".attention-rows").length).toBeGreaterThan(0);
     expect(screen.queryByText(/loading workflow/iu)).toBeNull();
   });
 
-  it("Departments directory skeleton exposes a busy status region with no generic loading copy", () => {
-    render(<DepartmentsDirectoryLoading />);
+  it("Departments directory skeleton reuses the real directory's own CSS module classes", () => {
+    const { container } = render(<DepartmentsDirectoryLoading />);
     const region = screen.getByRole("status", { name: "Loading department directory" });
     expect(region.getAttribute("aria-busy")).toBe("true");
-    expect(region.textContent).toBe("");
+    expect(screen.getByText("Department directory")).toBeTruthy();
+    expect(screen.getByText("8 workspaces")).toBeTruthy();
+    expect(container.querySelectorAll('[class*="departmentCard"]').length).toBe(8);
     expect(screen.queryByText(/loading workflow/iu)).toBeNull();
   });
 });
