@@ -73,6 +73,10 @@ describe("ContentWorkflowView states", () => {
     expect(screen.queryByText("0 records")).not.toBeInTheDocument();
     expect(container.textContent).not.toMatch(/CONTENT_WORKFLOW_SPREADSHEET_ID|service account|credential|Vercel/i);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to all departments" })).toHaveAttribute(
+      "href",
+      "/todo/departments",
+    );
   });
 
   it("keeps source failures distinct from missing configuration", () => {

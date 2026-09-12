@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { companyStatuses, type CompanyStatus } from "../../domain/companies/schema";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
@@ -192,6 +193,152 @@ export async function updateClientStatusAction(
           : safe.message,
     };
   }
+}
+
+export type ClientBulkOutcome = {
+  id: string;
+  label: string;
+  error?: string;
+};
+
+export type ClientBulkResult = {
+  attempted: number;
+  succeeded: ClientBulkOutcome[];
+  failed: ClientBulkOutcome[];
+};
+
+type InternalContext = Awaited<ReturnType<typeof getInternalContext>>;
+
+function clientMutationError(error: unknown, validationMessage: string) {
+  const safe = toClientSafeError(error);
+
+  if (safe.code === "VALIDATION_ERROR") return validationMessage;
+  if (safe.code === "PERMISSION_DENIED") {
+    return "You do not have permission to perform this action.";
+  }
+  if (safe.code === "NOT_FOUND") return "That client is no longer available.";
+  return safe.message;
+}
+
+function failedClientBatch(companyIds: string[], error: string): ClientBulkResult {
+  const unique = Array.from(new Set(companyIds.filter(Boolean)));
+
+  return {
+    attempted: unique.length,
+    succeeded: [],
+    failed: unique.map((id) => ({ id, label: "Unavailable client", error })),
+  };
+}
+
+async function runClientBatch(
+  context: InternalContext,
+  companyIds: string[],
+  validationMessage: string,
+  operation: (companyId: string) => Promise<unknown>,
+): Promise<ClientBulkResult> {
+  const unique = Array.from(new Set(companyIds.filter(Boolean)));
+  const labels = new Map<string, string>();
+
+  try {
+    for (const client of await context.services.companies.listActive()) {
+      labels.set(client.id, client.name);
+    }
+  } catch {
+    // A failed label lookup must not hide the real per-client mutation result.
+  }
+
+  const result: ClientBulkResult = {
+    attempted: unique.length,
+    succeeded: [],
+    failed: [],
+  };
+
+  for (const companyId of unique) {
+    const label = labels.get(companyId) ?? "Unavailable client";
+
+    try {
+      await operation(companyId);
+      result.succeeded.push({ id: companyId, label });
+    } catch (error) {
+      result.failed.push({
+        id: companyId,
+        label,
+        error: clientMutationError(error, validationMessage),
+      });
+    }
+  }
+
+  revalidatePath("/clients");
+  for (const outcome of result.succeeded) {
+    revalidatePath(`/clients/${outcome.id}`);
+  }
+
+  return result;
+}
+
+export async function bulkChangeClientStatusAction(
+  companyIds: string[],
+  status: string,
+): Promise<ClientBulkResult> {
+  if (!(companyStatuses as readonly string[]).includes(status)) {
+    return failedClientBatch(companyIds, "Choose a valid client status.");
+  }
+
+  const context = await getInternalContext();
+
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+
+    if (!context.user.clients.edit) {
+      return failedClientBatch(
+        companyIds,
+        "You do not have permission to edit Clients.",
+      );
+    }
+  } catch (error) {
+    return failedClientBatch(companyIds, clientMutationError(error, "That status change was rejected."));
+  }
+
+  return runClientBatch(
+    context,
+    companyIds,
+    "That status change was rejected.",
+    (companyId) =>
+      context.services.companies.update(
+        companyId,
+        { status: status as CompanyStatus },
+        context.actor,
+      ),
+  );
+}
+
+export async function bulkArchiveClientsAction(
+  companyIds: string[],
+): Promise<ClientBulkResult> {
+  const context = await getInternalContext();
+
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+
+    if (!context.user.clients.archive) {
+      return failedClientBatch(
+        companyIds,
+        "You do not have permission to delete Clients.",
+      );
+    }
+  } catch (error) {
+    return failedClientBatch(
+      companyIds,
+      clientMutationError(error, "That client could not be deleted."),
+    );
+  }
+
+  return runClientBatch(
+    context,
+    companyIds,
+    "That client could not be deleted.",
+    (companyId) => context.services.companies.archive(companyId, context.actor),
+  );
 }
 
 

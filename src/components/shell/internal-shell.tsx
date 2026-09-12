@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Workflow,
+  ListChecks,
   FileText,
   FolderKanban,
   FormInput,
@@ -35,7 +35,7 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   projects: FolderKanban,
   tickets: TicketCheck,
   clients: UsersRound,
-  todo: Workflow,
+  todo: ListChecks,
   invoices: ReceiptText,
   subscriptions: HandCoins,
   coupons: Tags,

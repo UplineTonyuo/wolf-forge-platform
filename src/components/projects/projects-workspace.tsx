@@ -353,12 +353,14 @@ export function ProjectsWorkspace({
                 aria-current={active ? "page" : undefined}
                 onClick={() => setActiveTab(tab.value)}
               >
-                {tab.value === "pending_update"
-                  ? "Pending Update"
-                  : tab.value === "waiting_reply"
-                    ? "Waiting Reply"
-                    : tab.label}
-                {count > 0 ? <span>{count}</span> : null}
+                <span className={styles.statusLabel}>
+                  {tab.value === "pending_update"
+                    ? "Pending Update"
+                    : tab.value === "waiting_reply"
+                      ? "Waiting Reply"
+                      : tab.label}
+                </span>
+                {count > 0 ? <span className={styles.statusCount}>{count}</span> : null}
               </button>
             );
           })}

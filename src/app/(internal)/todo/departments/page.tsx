@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, FileText, LayoutTemplate, Link2, MapPinned, Mic, ScanSearch, SquarePlay } from "lucide-react";
@@ -14,43 +13,24 @@ const YOUTUBE_SEO_ROUTE = "/todo/departments/youtube-seo";
 const WEBSITE_BUILDER_ROUTE = "/todo/departments/website-builder";
 const OFF_PAGE_SEO_ROUTE = "/todo/departments/off-page-seo";
 
-const UPCOMING_DEPARTMENTS = [
-  {
-    name: "WF Media",
-    description: "Media production and distribution workflows.",
-  },
-] as const;
-
-function entranceOrder(order: number): CSSProperties {
-  return { "--directory-order": order } as CSSProperties;
-}
-
 export default function DepartmentsPage() {
   return (
     <section className={styles.directory} aria-labelledby="department-directory-heading">
       <header className={styles.directoryHeader}>
         <div className={styles.directoryHeading}>
           <h2 id="department-directory-heading">Department directory</h2>
-          <p>Open live operational workflows and see what is being prepared next.</p>
+          <p>Open live operational workflows across Wolf Forge.</p>
         </div>
 
-        <p className={styles.directorySummary} aria-label="8 department workspaces and 1 coming soon">
-          <span className={styles.summaryLive}>
-            <span className={styles.liveDot} aria-hidden="true" />
-            8 workspaces
-          </span>
-          <span className={styles.summaryDivider} aria-hidden="true" />
-          <span>1 coming soon</span>
-        </p>
+        <p className={styles.directorySummary}>8 workspaces</p>
       </header>
 
       <div className={styles.activeDepartment}>
-        <h3>Active workspace</h3>
+        <h3>Workspaces</h3>
         <div className={styles.activeDepartmentGrid}>
           <Link
             href={PODCAST_SEO_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(0)}
             aria-label="Open Podcast SEO department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -71,7 +51,6 @@ export default function DepartmentsPage() {
           <Link
             href={CONTENT_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(1)}
             aria-label="Open Content department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -92,7 +71,6 @@ export default function DepartmentsPage() {
           <Link
             href={ON_PAGE_SEO_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(2)}
             aria-label="Open On-page SEO department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -113,7 +91,6 @@ export default function DepartmentsPage() {
           <Link
             href={GMB_MANAGEMENT_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(3)}
             aria-label="Open GMB Management department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -134,7 +111,6 @@ export default function DepartmentsPage() {
           <Link
             href={YOUTUBE_SEO_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(4)}
             aria-label="Open YouTube SEO department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -155,7 +131,6 @@ export default function DepartmentsPage() {
           <Link
             href={WEBSITE_BUILDER_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(5)}
             aria-label="Open Website Builder department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true">
@@ -175,7 +150,6 @@ export default function DepartmentsPage() {
           <Link
             href="/todo/departments/technical-seo"
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(6)}
             aria-label="Open Technical SEO department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true"><ScanSearch /></span>
@@ -189,7 +163,6 @@ export default function DepartmentsPage() {
           <Link
             href={OFF_PAGE_SEO_ROUTE}
             className={`${styles.departmentCard} ${styles.liveCard} ${styles.contentCard}`}
-            style={entranceOrder(7)}
             aria-label="Open Off-page SEO department workflow"
           >
             <span className={styles.liveIcon} aria-hidden="true"><Link2 /></span>
@@ -203,28 +176,6 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
-      <section className={styles.upcomingSection} aria-labelledby="upcoming-departments-heading">
-        <div className={styles.upcomingHeader}>
-          <h3 id="upcoming-departments-heading">Coming soon</h3>
-          <span>1 department in preparation</span>
-        </div>
-
-        <div className={styles.departmentGrid} role="list" aria-label="Coming soon departments">
-          {UPCOMING_DEPARTMENTS.map((department, index) => (
-            <article
-              key={department.name}
-              className={`${styles.departmentCard} ${styles.upcomingItem}`}
-              style={entranceOrder(index + 1)}
-              role="listitem"
-            >
-              <div>
-                <h4>{department.name}</h4>
-                <p>{department.description}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </section>
   );
 }

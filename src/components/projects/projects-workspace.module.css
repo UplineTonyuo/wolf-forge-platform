@@ -120,19 +120,32 @@
   color: #000d51;
 }
 
-.statusTabActive::after {
-  content: "";
-  position: absolute;
-  right: 7px;
-  bottom: -1px;
-  left: 7px;
-  height: 2px;
-  border-radius: 999px;
-  background: #c89a2b;
+.statusLabel {
+  position: relative;
 }
 
-.statusTab span,
-.statusTabActive span {
+.statusLabel::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #c89a2b;
+  opacity: 0;
+  transform: translateX(-50%) scaleX(0.76);
+  transition:
+    opacity 140ms ease,
+    transform 170ms ease;
+}
+
+.statusTabActive .statusLabel::after {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+
+.statusCount {
   min-width: 19px;
   height: 18px;
   display: inline-grid;
@@ -144,7 +157,7 @@
   font-size: 8px;
 }
 
-.statusTabActive span {
+.statusTabActive .statusCount {
   background: #eef1ff;
   color: #000d51;
 }
@@ -1007,34 +1020,10 @@
    ACTIVE GOLD INDICATOR
    ========================================================== */
 
-.statusTabActive::after {
-  content: "";
-
-  position: absolute;
-
-  right: 12px !important;
-  bottom: -1px !important;
-  left: 12px !important;
-
-  height: 3px !important;
-
-  border-radius:
-    999px
-    999px
-    0
-    0 !important;
-
-  background:
-    linear-gradient(
-      90deg,
-      #ad7f1b 0%,
-      #d2ad4e 50%,
-      #ad7f1b 100%
-    ) !important;
-
-  box-shadow:
-    0 -1px 5px
-      rgba(201, 164, 73, 0.14);
+.statusLabel::after {
+  bottom: -17px;
+  height: 2px;
+  background: #c9a449;
 }
 
 
@@ -1042,8 +1031,7 @@
    STATUS COUNT BADGES
    ========================================================== */
 
-.statusTab span,
-.statusTabActive span {
+.statusCount {
   min-width: 22px !important;
   height: 20px !important;
 
@@ -1060,12 +1048,12 @@
   font-weight: 780 !important;
 }
 
-.statusTab span {
+.statusTab .statusCount {
   background: #eef0f4 !important;
   color: #778095 !important;
 }
 
-.statusTabActive span {
+.statusTabActive .statusCount {
   background: #edf0ff !important;
   color: #000d51 !important;
 }
@@ -1259,6 +1247,7 @@
 @media (prefers-reduced-motion: reduce) {
   .statusTab,
   .statusTabActive,
+  .statusLabel::after,
   .toolbarButton,
   .toolbarButtonActive {
     transition: none !important;
@@ -1281,13 +1270,13 @@
 .projectRowCanceled {
   grid-template-columns:
     26px
-    minmax(360px, 1.65fr)
-    minmax(220px, 0.90fr)
-    minmax(170px, 0.65fr)
-    minmax(170px, 0.65fr)
+    minmax(320px, 1fr)
+    minmax(170px, 210px)
+    minmax(126px, 150px)
+    110px
     !important;
 
-  column-gap: 18px;
+  column-gap: 14px;
 }
 
 
@@ -1379,13 +1368,13 @@
   .projectRowCanceled {
     grid-template-columns:
       26px
-      minmax(300px, 1.35fr)
-      minmax(190px, 0.85fr)
-      minmax(150px, 0.70fr)
-      minmax(135px, 0.65fr)
+      minmax(260px, 1fr)
+      170px
+      138px
+      104px
       !important;
 
-    column-gap: 14px;
+    column-gap: 12px;
   }
 }
 
@@ -1400,7 +1389,7 @@
   .tableHeader,
   .projectRow,
   .projectRowCanceled {
-    min-width: 900px;
+    min-width: 720px;
   }
 }
 
@@ -1410,14 +1399,14 @@
 
 /* Header labels */
 .tableHeader {
-  min-height: 52px !important;
+  min-height: 46px !important;
 
-  font-size: 11px !important;
+  font-size: 10px !important;
   letter-spacing: 0.08em !important;
 }
 
 .tableHeader > span {
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 800 !important;
 }
 
@@ -1425,30 +1414,30 @@
 /* Project rows */
 .projectRow,
 .projectRowCanceled {
-  min-height: 88px !important;
+  min-height: 74px !important;
 }
 
 
 /* CLIENT / PROJECT */
 
 .projectIdentity {
-  gap: 5px !important;
+  gap: 4px !important;
 }
 
 .projectIdentity strong {
-  font-size: 15px !important;
+  font-size: 14px !important;
   line-height: 1.2 !important;
   font-weight: 750 !important;
 }
 
 .projectIdentity > span {
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   line-height: 1.25 !important;
   font-weight: 580 !important;
 }
 
 .projectIdentity small {
-  font-size: 10px !important;
+  font-size: 9.5px !important;
   line-height: 1.25 !important;
 }
 
@@ -1456,25 +1445,25 @@
 /* PEOPLE */
 
 .personCell {
-  gap: 10px !important;
+  gap: 9px !important;
 
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
 }
 
 .personCell > span:last-child {
-  font-size: 13px !important;
+  font-size: 12px !important;
 }
 
 .personCell .avatar,
 .personCell .avatarEmpty {
-  width: 34px !important;
-  height: 34px !important;
+  width: 30px !important;
+  height: 30px !important;
 
   flex:
     0
     0
-    34px !important;
+    30px !important;
 
   font-size: 9px !important;
 }
@@ -1484,13 +1473,13 @@
 
 .projectRow > :nth-child(4),
 .projectRowCanceled > :nth-child(4) {
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
 }
 
 .projectRow > :nth-child(4) *,
 .projectRowCanceled > :nth-child(4) * {
-  font-size: 12px !important;
+  font-size: 11px !important;
 }
 
 
@@ -1498,7 +1487,7 @@
 
 .projectRow > :nth-child(5),
 .projectRowCanceled > :nth-child(5) {
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
 }
 
@@ -1506,6 +1495,61 @@
 /* Footer count */
 .tableCard > :last-child {
   font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .tableCard {
+    overflow-x: hidden;
+  }
+
+  .tableHeader {
+    min-width: 0 !important;
+    grid-template-columns: 26px minmax(0, 1fr) 104px !important;
+    column-gap: 10px;
+  }
+
+  .tableHeader > span:nth-of-type(2),
+  .tableHeader > span:nth-of-type(4) {
+    display: none;
+  }
+
+  .projectRow,
+  .projectRowCanceled {
+    min-width: 0 !important;
+    min-height: 88px !important;
+    grid-template-columns: 26px minmax(0, 1fr) 104px !important;
+    grid-template-areas:
+      "check identity status"
+      ". people created";
+    column-gap: 10px;
+    row-gap: 7px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .projectRow > button,
+  .projectRowCanceled > button {
+    grid-area: check;
+  }
+
+  .projectIdentity {
+    grid-area: identity;
+  }
+
+  .personCell {
+    grid-area: people;
+  }
+
+  .projectRow > :nth-child(4),
+  .projectRowCanceled > :nth-child(4) {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .created {
+    grid-area: created;
+    justify-self: end;
+  }
 }
 
 /* WF PROJECTS SIZE TUNE END */
