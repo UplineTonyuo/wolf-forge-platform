@@ -7,10 +7,6 @@ import DepartmentsPage from "../app/(internal)/todo/departments/page";
 
 afterEach(cleanup);
 
-const UPCOMING_DEPARTMENTS = [
-  "WF Media",
-];
-
 describe("Departments directory", () => {
   it("links the eight active and source-ready department workspaces", () => {
     render(<DepartmentsPage />);
@@ -33,7 +29,7 @@ describe("Departments directory", () => {
     expect(links[6]).toHaveAttribute("href", "/todo/departments/technical-seo");
     expect(links[7]).toHaveAccessibleName("Open Off-page SEO department workflow");
     expect(links[7]).toHaveAttribute("href", "/todo/departments/off-page-seo");
-    expect(screen.getByLabelText("8 department workspaces and 1 coming soon")).toBeInTheDocument();
+    expect(screen.getByText("8 workspaces")).toBeInTheDocument();
   });
 
   it("gives every live department the same status wording and visual treatment — none is more \"connected\" than another", () => {
@@ -48,18 +44,11 @@ describe("Departments directory", () => {
     expect(screen.queryByText("Connected")).not.toBeInTheDocument();
   });
 
-  it("presents every planned department as intentionally non-interactive", () => {
+  it("does not render the retired Coming Soon directory section", () => {
     render(<DepartmentsPage />);
 
-    const plannedRegion = screen.getByRole("region", { name: "Coming soon" });
-    const plannedDirectory = within(plannedRegion).getByRole("list", { name: "Coming soon departments" });
-    expect(within(plannedDirectory).getAllByRole("listitem")).toHaveLength(1);
-
-    for (const department of UPCOMING_DEPARTMENTS) {
-      expect(within(plannedDirectory).getByRole("heading", { name: department })).toBeInTheDocument();
-    }
-
-    expect(within(plannedDirectory).queryByRole("link")).not.toBeInTheDocument();
-    expect(within(plannedDirectory).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("WF Media")).not.toBeInTheDocument();
+    expect(screen.queryByText(/department in preparation/i)).not.toBeInTheDocument();
   });
 });

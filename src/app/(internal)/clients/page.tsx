@@ -1,4 +1,5 @@
 import { ClientsHeaderTools } from "../../../components/clients/clients-header-tools";
+import { ClientsTable } from "../../../components/clients/clients-table";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ClientsActionMenu } from "../../../components/clients/clients-action-menu";
@@ -272,59 +273,19 @@ export default async function ClientsPage({
             }
           />
         ) : (
-          <div className="clients-table-shell">
-            <table className="clients-table">
-              <thead>
-                <tr>
-                  <th>Client</th>
-                  <th>Created</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filtered.map(
-                  (client) => (
-                    <tr key={client.id}>
-                      <td>
-                        <Link
-                          href={`/clients/${client.id}`}
-                          className="clients-table-name"
-                        >
-                          {client.name}
-                        </Link>
-                      </td>
-
-                      <td className="clients-table-created">
-                        {formatDate(
-                          client.created_at,
-                        )}
-                      </td>
-
-                      <td>
-                        <span
-                          className={`clients-table-status is-${normalizeStatus(
-                            client.status,
-                          )}`}
-                        >
-                          <span
-                            className={`client-status-dot is-${normalizeStatus(
-                              client.status,
-                            )}`}
-                            aria-hidden="true"
-                          />
-
-                          {statusLabel(
-                            client.status,
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  ),
-                )}
-              </tbody>
-            </table>
-          </div>
+          <ClientsTable
+            key={`${selectedStatus}:${search}`}
+            rows={filtered.map((client) => ({
+              id: client.id,
+              name: client.name,
+              createdLabel: formatDate(client.created_at),
+              status: normalizeStatus(client.status),
+              statusLabel: statusLabel(client.status),
+            }))}
+            statuses={filterOptions.filter((option) => option.value !== "all")}
+            canEdit={context.user.clients.edit}
+            canDelete={context.user.clients.archive}
+          />
         )}
       </PageFrame>
     );

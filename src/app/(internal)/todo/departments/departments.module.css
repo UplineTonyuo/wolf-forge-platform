@@ -2,7 +2,7 @@
   --directory-border: #e2e5ec;
   --directory-muted: #676b76;
   display: grid;
-  gap: 30px;
+  gap: 22px;
   padding-bottom: 8px;
 }
 
@@ -50,31 +50,7 @@
   white-space: nowrap;
 }
 
-.summaryLive {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--wf-navy);
-  font-weight: 680;
-}
-
-.liveDot,
-.liveStatusDot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.summaryDivider {
-  width: 1px;
-  height: 13px;
-  background: var(--directory-border);
-}
-
-.activeDepartment,
-.upcomingSection {
+.activeDepartment {
   display: grid;
   gap: 12px;
 }
@@ -85,8 +61,7 @@
   gap: 12px;
 }
 
-.activeDepartment > h3,
-.upcomingHeader h3 {
+.activeDepartment > h3 {
   margin: 0;
   color: #3f424a;
   font-family: var(--wf-font-ui);
@@ -94,11 +69,6 @@
   font-weight: 700;
   letter-spacing: 0.015em;
   line-height: 1.3;
-}
-
-.departmentCard {
-  animation: department-card-enter 280ms var(--wf-ease) both;
-  animation-delay: calc(var(--directory-order, 0) * 28ms);
 }
 
 .liveCard {
@@ -115,9 +85,10 @@
   text-decoration: none;
   box-shadow: 0 8px 22px rgba(0, 13, 81, 0.14);
   transition:
-    background-color 150ms ease,
-    box-shadow 180ms var(--wf-ease),
-    transform 180ms var(--wf-ease);
+    border-color var(--wf-motion-fast) ease,
+    background-color var(--wf-motion-fast) ease,
+    box-shadow var(--wf-motion-normal) var(--wf-ease),
+    transform var(--wf-motion-normal) var(--wf-ease);
 }
 
 .liveCard:hover {
@@ -201,7 +172,7 @@
 .liveAction svg {
   width: 18px;
   height: 18px;
-  transition: transform 160ms var(--wf-ease);
+  transition: transform var(--wf-motion-normal) var(--wf-ease);
 }
 
 .liveCard:hover .liveAction svg {
@@ -237,122 +208,9 @@
   border-left-color: #dfe3ed;
 }
 
-.upcomingSection {
-  gap: 14px;
-}
-
-.upcomingHeader {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.upcomingHeader > span {
-  color: var(--directory-muted);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.departmentGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-top: 1px solid var(--directory-border);
-  border-bottom: 1px solid var(--directory-border);
-}
-
-.upcomingItem {
-  min-height: 124px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 20px 22px;
-  border-right: 1px solid var(--directory-border);
-  background: var(--wf-white);
-}
-
-.upcomingItem:nth-child(4n) {
-  border-right: 0;
-}
-
-.upcomingItem:nth-child(n + 5) {
-  border-top: 1px solid var(--directory-border);
-}
-
-.upcomingItem h4 {
-  margin: 0;
-  color: #22252c;
-  font-family: var(--wf-font-display);
-  font-size: 14.5px;
-  font-weight: 610;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
-}
-
-.upcomingItem p {
-  margin: 6px 0 0;
-  color: var(--directory-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-@keyframes department-card-enter {
-  from {
-    opacity: 0.72;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 1180px) {
-  .activeDepartmentGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .departmentGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .upcomingItem:nth-child(4n) {
-    border-right: 1px solid var(--directory-border);
-  }
-
-  .upcomingItem:nth-child(3n) {
-    border-right: 0;
-  }
-
-  .upcomingItem:last-child {
-    border-right: 0;
-  }
-
-  .upcomingItem:nth-child(n + 4) {
-    border-top: 1px solid var(--directory-border);
-  }
-}
-
 @media (max-width: 900px) {
   .directory {
     gap: 26px;
-  }
-
-  .departmentGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .upcomingItem:nth-child(3n) {
-    border-right: 1px solid var(--directory-border);
-  }
-
-  .upcomingItem:nth-child(2n) {
-    border-right: 0;
-  }
-
-  .upcomingItem:nth-child(n + 3) {
-    border-top: 1px solid var(--directory-border);
   }
 
   .liveCard {
@@ -403,30 +261,7 @@
   }
 }
 
-@media (max-width: 540px) {
-  .departmentGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .upcomingItem,
-  .upcomingItem:nth-child(2n),
-  .upcomingItem:nth-child(3n),
-  .upcomingItem:nth-child(4n) {
-    min-height: 108px;
-    padding-inline: 16px;
-    border-right: 0;
-  }
-
-  .upcomingItem:nth-child(n + 2) {
-    border-top: 1px solid var(--directory-border);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .departmentCard {
-    animation: none;
-  }
-
   .liveCard,
   .liveAction svg {
     transition: none;

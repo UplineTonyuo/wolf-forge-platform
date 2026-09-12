@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 /**
  * The compact header every department workflow page opens with:
@@ -27,13 +29,23 @@ export function DepartmentWorkflowHeader({
 }) {
   return (
     <header className="dept-header">
-      <div className="dept-header-title-group">
-        <h2 className="dept-header-title">{title}</h2>
-        {count !== undefined && countLabel ? (
-          <p className="dept-header-count">
-            {count} {countLabel}
-          </p>
-        ) : null}
+      <div className="dept-header-main">
+        <Link
+          href="/todo/departments"
+          className="dept-back-link"
+          aria-label="Back to all departments"
+        >
+          <ArrowLeft aria-hidden="true" />
+          <span>All departments</span>
+        </Link>
+        <div className="dept-header-title-group">
+          <h2 className="dept-header-title">{title}</h2>
+          {count !== undefined && countLabel ? (
+            <p className="dept-header-count">
+              {count} {countLabel}
+            </p>
+          ) : null}
+        </div>
       </div>
       {trailing ? <div className="dept-header-trailing">{trailing}</div> : null}
     </header>
