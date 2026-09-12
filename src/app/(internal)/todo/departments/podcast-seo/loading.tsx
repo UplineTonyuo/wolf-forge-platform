@@ -1,7 +1,5 @@
+import { DepartmentWorkflowLoading } from "../../../../../components/operations/department-workflow-loading";
+
 export default function PodcastSeoLoading() {
-  return (
-    <div className="podcast-workflow-loading" role="status">
-      Loading workflow…
-    </div>
-  );
+  return <DepartmentWorkflowLoading />;
 }

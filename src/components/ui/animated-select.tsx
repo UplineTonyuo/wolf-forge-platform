@@ -5,7 +5,13 @@ import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "re
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./animated-select.module.css";
 
-export type AnimatedSelectOption = { value: string; label: string; count?: number };
+export type AnimatedSelectOption = {
+  value: string;
+  label: string;
+  count?: number;
+  description?: string;
+  disabled?: boolean;
+};
 
 const VIEWPORT_MARGIN = 12;
 
@@ -24,6 +30,7 @@ export function AnimatedSelect({
   disabled = false,
   required = false,
   menuLabel,
+  compact = false,
 }: {
   name: string;
   label: string;
@@ -33,10 +40,11 @@ export function AnimatedSelect({
   disabled?: boolean;
   required?: boolean;
   menuLabel: string;
+  compact?: boolean;
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const { render, phase, show, hide } = useAnimatedPopover();
+  const { render, phase, animateOpen, show, showWithoutMotion, hide } = useAnimatedPopover();
   const [activeIndex, setActiveIndex] = useState(-1);
   const [menuAlign, setMenuAlign] = useState<"left" | "right">("left");
   const [menuMaxWidth, setMenuMaxWidth] = useState<number | null>(null);
@@ -44,6 +52,13 @@ export function AnimatedSelect({
   const isOpen = render && phase === "open";
   const selected = options.find((option) => option.value === value);
   const selectedIndex = options.findIndex((option) => option.value === value);
+
+  function enabledIndex(start: number, direction: 1 | -1) {
+    for (let index = start; index >= 0 && index < options.length; index += direction) {
+      if (!options[index]?.disabled) return index;
+    }
+    return -1;
+  }
 
   // Keep the popover inside the viewport: a toolbar filter near the right
   // edge flips to right-aligned instead of running off-screen, and the width
@@ -62,10 +77,15 @@ export function AnimatedSelect({
     setMenuMaxWidth(Math.max(rect.width, Math.min(available, 520)));
   }, [isOpen]);
 
-  function openMenu() {
+  function openMenu(animate = true) {
     if (disabled) return;
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
-    show();
+    setActiveIndex(
+      selectedIndex >= 0 && !options[selectedIndex]?.disabled
+        ? selectedIndex
+        : enabledIndex(0, 1),
+    );
+    if (animate) show();
+    else showWithoutMotion();
   }
 
   function closeMenu() {
@@ -73,6 +93,7 @@ export function AnimatedSelect({
   }
 
   function chooseOption(option: AnimatedSelectOption) {
+    if (option.disabled) return;
     onChange(option.value);
     closeMenu();
   }
@@ -83,24 +104,35 @@ export function AnimatedSelect({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       if (!render) {
-        openMenu();
+        openMenu(false);
         return;
       }
-      setActiveIndex((index) => Math.min(index + 1, options.length - 1));
+      setActiveIndex((index) => {
+        const next = enabledIndex(index + 1, 1);
+        return next >= 0 ? next : index;
+      });
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       if (!render) {
-        openMenu();
+        openMenu(false);
         return;
       }
-      setActiveIndex((index) => Math.max(index - 1, 0));
+      setActiveIndex((index) => {
+        const next = enabledIndex(index - 1, -1);
+        return next >= 0 ? next : index;
+      });
     } else if (event.key === "Home") {
       event.preventDefault();
-      setActiveIndex(0);
+      setActiveIndex(enabledIndex(0, 1));
     } else if (event.key === "End") {
       event.preventDefault();
-      setActiveIndex(options.length - 1);
-    } else if (event.key === "Enter") {
+      setActiveIndex(enabledIndex(options.length - 1, -1));
+    } else if (event.key === "Enter" || event.key === " ") {
+      if (!render) {
+        event.preventDefault();
+        openMenu(false);
+        return;
+      }
       if (isOpen && activeIndex >= 0 && options[activeIndex]) {
         event.preventDefault();
         chooseOption(options[activeIndex]);
@@ -126,7 +158,7 @@ export function AnimatedSelect({
     >
       <button
         type="button"
-        className={styles.trigger}
+        className={compact ? `${styles.trigger} ${styles.triggerCompact}` : styles.trigger}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={listboxId}
@@ -135,7 +167,7 @@ export function AnimatedSelect({
           isOpen && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined
         }
         disabled={disabled}
-        onClick={() => (render ? closeMenu() : openMenu())}
+        onClick={() => (render ? closeMenu() : openMenu(true))}
       >
         <span className={styles.triggerValue}>
           {selected?.label ?? "Select"}{selected?.count !== undefined && value !== "all" ? ` \u00b7 ${selected.count}` : ""}
@@ -152,6 +184,7 @@ export function AnimatedSelect({
             isOpen ? `${styles.menu} ${styles.menuOpen}` : `${styles.menu} ${styles.menuClosing}`
           }
           data-align={menuAlign}
+          data-open-motion={animateOpen ? "pointer" : "keyboard"}
           style={menuMaxWidth ? { maxWidth: menuMaxWidth } : undefined}
           role="listbox"
           id={listboxId}
@@ -164,6 +197,8 @@ export function AnimatedSelect({
               id={`${listboxId}-${index}`}
               tabIndex={-1}
               aria-selected={option.value === value}
+              aria-disabled={option.disabled || undefined}
+              disabled={option.disabled}
               className={[
                 styles.option,
                 index === activeIndex ? styles.optionActive : "",
@@ -176,7 +211,12 @@ export function AnimatedSelect({
               onClick={() => chooseOption(option)}
               title={option.label}
             >
-              <span className={styles.optionLabel}>{option.label}</span>
+              <span className={styles.optionText}>
+                <span className={styles.optionLabel}>{option.label}</span>
+                {option.description ? (
+                  <span className={styles.optionDescription}>{option.description}</span>
+                ) : null}
+              </span>
 
               {option.count !== undefined ? <span className={styles.optionCount}>{option.count}</span> : null}
               {option.value === value ? (

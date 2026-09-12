@@ -57,6 +57,19 @@ const SCROLL_AWAY_FROM_LATEST_PX = 320;
 /** Within this distance from the top, it is time to fetch the next page of history. */
 const LOAD_OLDER_TRIGGER_PX = 200;
 
+/**
+ * Geometry for the loading skeleton's placeholder bubbles: an alternating,
+ * believable shape (not a uniform column), sized like one or two lines of a
+ * real message rather than a full-width bar.
+ */
+const SKELETON_MESSAGE_SHAPES = [
+  { mine: false, width: "58%", height: 34 },
+  { mine: false, width: "38%", height: 34 },
+  { mine: true, width: "44%", height: 34 },
+  { mine: false, width: "66%", height: 50 },
+  { mine: true, width: "30%", height: 34 },
+] as const;
+
 export type TeamReplyDraft = {
   sourceMessageId: string;
   authorName: string;
@@ -481,16 +494,56 @@ export function TeamConversationPane({
 
   if (!detail && loading) {
     return (
-      <section className={styles.conversationPane} aria-busy="true">
-        <div className={styles.paneHeader}>
-          <span className={styles.srOnly}>Loading conversation</span>
+      <section
+        className={styles.conversationPane}
+        aria-label="Conversation"
+        role="status"
+        aria-busy="true"
+      >
+        <span className={styles.srOnly}>Loading conversation</span>
+        <div className={styles.conversationThread} aria-hidden="true">
+          <div>
+            <header className={styles.paneHeader}>
+              <span className={`${styles.iconButton} ${styles.backButton}`} />
+              <span className={styles.skeletonAvatar} />
+              <div className={styles.paneHeaderText}>
+                <span className={styles.skeletonBar} style={{ width: "42%", height: 12 }} />
+                <span
+                  className={styles.skeletonBar}
+                  style={{ width: "26%", height: 9, marginTop: 5 }}
+                />
+              </div>
+            </header>
+          </div>
+
+          <div className={styles.messageScroll}>
+            {SKELETON_MESSAGE_SHAPES.map((shape, index) => (
+              <div
+                key={index}
+                className={[styles.messageGroup, shape.mine ? styles.messageGroupMine : ""]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {shape.mine ? null : <span className={styles.skeletonAvatar} />}
+                <div className={styles.messageGroupBody}>
+                  <span
+                    className={[styles.bubble, styles.skeletonBubble].join(" ")}
+                    style={{ width: shape.width, height: shape.height }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.composer}>
+            <div className={styles.composerBox}>
+              <span className={styles.skeletonComposerEditor} />
+              <div className={styles.composerRow}>
+                <span className={styles.skeletonBar} style={{ width: 150, height: 9 }} />
+              </div>
+            </div>
+          </div>
         </div>
-        <div className={styles.skeletonList}>
-          <div className={styles.skeletonRow} />
-          <div className={styles.skeletonRow} />
-          <div className={styles.skeletonRow} />
-        </div>
-        <div />
       </section>
     );
   }
