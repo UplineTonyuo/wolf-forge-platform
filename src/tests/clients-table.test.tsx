@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const refresh = vi.fn();
@@ -150,6 +150,38 @@ describe("Clients table selection", () => {
   });
 });
 
+describe("Clients bulk action tray never overlaps the table", () => {
+  it("renders the tray before the table in the DOM so it pushes rows down, never floats over them", () => {
+    const view = renderTable();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible clients" }));
+    fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
+
+    const tray = view.container.querySelector(".clients-bulk-tray");
+    const tableShell = view.container.querySelector(".clients-table-shell");
+    expect(tray).toBeTruthy();
+    expect(tableShell).toBeTruthy();
+    // DOCUMENT_POSITION_FOLLOWING means `tableShell` comes after `tray` — the
+    // tray is a normal in-flow sibling ahead of the table, not an overlay
+    // painted on top of it.
+    expect(tray!.compareDocumentPosition(tableShell!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tray!.classList.contains("is-open")).toBe(true);
+  });
+
+  it("opens/closes via the trigger, closes on Escape, and restores focus to the trigger", () => {
+    renderTable();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Matt Quinn" }));
+    const trigger = screen.getByRole("button", { name: /Select an action/iu });
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("menu", { name: "Bulk client actions" })).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+  });
+});
+
 describe("Clients bulk actions", () => {
   it("changes status through the existing mutation and clears successful selection", async () => {
     bulkChangeClientStatusAction.mockResolvedValue({
@@ -160,20 +192,13 @@ describe("Clients bulk actions", () => {
     renderTable();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible clients" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "Bulk action: Select an action" }), { key: " " });
-    expect(
-      screen.getByRole("listbox", { name: "Bulk client actions" }).getAttribute(
-        "data-open-motion",
-      ),
-    ).toBe("keyboard");
-    fireEvent.click(screen.getByRole("option", { name: "Change status" }));
-    fireEvent.click(screen.getByRole("button", { name: "New client status: Contact" }));
-    expect(
-      screen.getByRole("listbox", { name: "Client statuses" }).getAttribute(
-        "data-open-motion",
-      ),
-    ).toBe("pointer");
-    fireEvent.click(screen.getByRole("option", { name: "Client Team" }));
+    fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change status" }));
+
+    const statusMenu = screen.getByRole("menu", { name: "Client statuses" });
+    fireEvent.click(within(statusMenu).getByRole("menuitemradio", { name: "Client Team" }));
+
+    expect(screen.getByRole("button", { name: "Change status: Client Team" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     await screen.findByText("3 clients updated.");
@@ -185,6 +210,19 @@ describe("Clients bulk actions", () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it("lets Back return from the status list to the action list within the same tray", () => {
+    renderTable();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Matt Quinn" }));
+    fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change status" }));
+
+    expect(screen.getByRole("menu", { name: "Client statuses" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(screen.getByRole("menu", { name: "Bulk client actions" })).toBeTruthy();
+    expect(screen.queryByRole("menu", { name: "Client statuses" })).toBeNull();
+  });
+
   it("requires counted delete confirmation and keeps only failed rows selected", async () => {
     bulkArchiveClientsAction.mockResolvedValue({
       attempted: 3,
@@ -194,12 +232,8 @@ describe("Clients bulk actions", () => {
     renderTable();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Select all visible clients" }));
-    const bulkTrigger = screen.getByRole("button", { name: "Bulk action: Select an action" });
-    fireEvent.click(bulkTrigger);
-    await waitFor(() => expect(bulkTrigger.getAttribute("aria-expanded")).toBe("true"));
-    fireEvent.keyDown(bulkTrigger, { key: "ArrowDown" });
-    fireEvent.keyDown(bulkTrigger, { key: "ArrowDown" });
-    fireEvent.keyDown(bulkTrigger, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(screen.getByRole("dialog").textContent).toContain("Delete 3 clients?");
@@ -221,9 +255,9 @@ describe("Clients bulk actions", () => {
   it("does not invent a manager mutation that the Clients model cannot store", () => {
     renderTable();
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Matt Quinn" }));
-    fireEvent.click(screen.getByRole("button", { name: "Bulk action: Select an action" }));
+    fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
 
-    const manager = screen.getByRole("option", { name: /Assign a manager/iu });
+    const manager = screen.getByRole("menuitem", { name: /Assign a manager/iu });
 
     expect((manager as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("Available after assignment setup")).toBeTruthy();

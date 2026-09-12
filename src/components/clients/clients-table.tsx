@@ -1,6 +1,13 @@
 "use client";
 
-import { Check, Minus, MoreHorizontal, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Minus,
+  MoreHorizontal,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
@@ -9,7 +16,6 @@ import {
   bulkChangeClientStatusAction,
   type ClientBulkResult,
 } from "../../app/actions/clients";
-import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
 import { AccountAvatar } from "../ui/account-avatar";
 import { useAnimatedPopover } from "../ui/use-animated-popover";
 
@@ -178,6 +184,8 @@ export function ClientsTable({
   const router = useRouter();
   const selectAllRef = useRef<HTMLInputElement>(null);
   const applyRef = useRef<HTMLButtonElement>(null);
+  const trayTriggerRef = useRef<HTMLButtonElement>(null);
+  const trayRootRef = useRef<HTMLDivElement>(null);
   const cancelDeleteRef = useRef<HTMLButtonElement>(null);
   const confirmDeleteRef = useRef<HTMLButtonElement>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -188,6 +196,18 @@ export function ClientsTable({
   const [result, setResult] = useState<ClientBulkResult | null>(null);
   const [resultAction, setResultAction] = useState<"status" | "delete">("status");
 
+  /*
+   * The bulk action tray is an in-flow expanding section (the same
+   * grid-template-rows collapse used by .clients-bulk-region itself), never
+   * a floating popover. It pushes the table down instead of covering rows,
+   * headers, avatars or checkboxes — the opposite of AnimatedSelect's usual
+   * overlay behavior, which is why this toolbar builds its own compact menu
+   * (mirroring ClientQuickActions' existing lightweight role="menu" pattern
+   * elsewhere in this file) rather than reusing that shared component here.
+   */
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [trayView, setTrayView] = useState<"actions" | "status">("actions");
+
   const selectedIds = useMemo(
     () => rows.filter((row) => selected.has(row.id)).map((row) => row.id),
     [rows, selected],
@@ -195,21 +215,60 @@ export function ClientsTable({
   const selectedCount = selectedIds.length;
   const allSelected = rows.length > 0 && selectedCount === rows.length;
   const someSelected = selectedCount > 0 && !allSelected;
-  const bulkOptions: AnimatedSelectOption[] = [
-    { value: "", label: "Select an action" },
-    { value: "status", label: "Change status", disabled: !canEdit },
-    {
-      value: "manager",
-      label: "Assign a manager",
-      description: "Available after assignment setup",
-      disabled: true,
-    },
-    { value: "delete", label: "Delete", disabled: !canDelete },
-  ];
+  const statusLabel = statuses.find((option) => option.value === status)?.label ?? status;
+  const bulkTriggerLabel =
+    action === "status"
+      ? `Change status: ${statusLabel}`
+      : action === "delete"
+        ? "Delete"
+        : "Select an action";
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
   }, [someSelected]);
+
+  function closeTray() {
+    setTrayOpen(false);
+    trayTriggerRef.current?.focus();
+  }
+
+  function openTray() {
+    setTrayView(action === "status" ? "status" : "actions");
+    setTrayOpen(true);
+  }
+
+  function chooseAction(next: "status" | "delete") {
+    setAction(next);
+    if (next === "status") setTrayView("status");
+    else closeTray();
+  }
+
+  function chooseStatus(value: string) {
+    setStatus(value);
+    setAction("status");
+    closeTray();
+  }
+
+  useEffect(() => {
+    if (!trayOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeTray();
+      }
+    }
+    function onPointerDown(event: PointerEvent) {
+      if (!trayRootRef.current?.contains(event.target as Node)) setTrayOpen(false);
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [trayOpen]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -325,43 +384,86 @@ export function ClientsTable({
         inert={selectedCount === 0}
       >
         <div className="clients-bulk-region-inner">
-          <div className="clients-bulk-bar" aria-label="Bulk client actions">
-            <strong aria-live="polite">{selectedCount} selected</strong>
+          <div className="clients-bulk-bar-stack" ref={trayRootRef}>
+            <div className="clients-bulk-bar" aria-label="Bulk client actions">
+              <strong aria-live="polite">{selectedCount} selected</strong>
 
-            <AnimatedSelect
-              name="bulk_action"
-              label="Bulk action"
-              menuLabel="Bulk client actions"
-              options={bulkOptions}
-              value={action}
-              disabled={busy}
-              compact
-              onChange={(value) => setAction(value as BulkAction)}
-            />
-
-            {action === "status" ? (
-              <AnimatedSelect
-                name="client_status"
-                label="New client status"
-                menuLabel="Client statuses"
-                options={statuses}
-                value={status}
+              <button
+                ref={trayTriggerRef}
+                type="button"
+                className="clients-bulk-trigger"
+                aria-haspopup="true"
+                aria-expanded={trayOpen}
                 disabled={busy}
-                compact
-                onChange={setStatus}
-              />
-            ) : null}
+                onClick={() => (trayOpen ? closeTray() : openTray())}
+              >
+                <span>{bulkTriggerLabel}</span>
+                <ChevronDown className="clients-bulk-trigger-caret" aria-hidden="true" />
+              </button>
 
-            <button
-              ref={applyRef}
-              type="button"
-              className={action === "delete" ? "clients-bulk-apply is-danger" : "clients-bulk-apply"}
-              disabled={busy || !action || action === "manager" || (action === "status" && !status)}
-              onClick={requestApply}
-            >
-              {busy ? "Applying…" : "Apply"}
-            </button>
+              <button
+                ref={applyRef}
+                type="button"
+                className={action === "delete" ? "clients-bulk-apply is-danger" : "clients-bulk-apply"}
+                disabled={busy || !action || (action === "status" && !status)}
+                onClick={requestApply}
+              >
+                {busy ? "Applying…" : "Apply"}
+              </button>
+            </div>
 
+            <div className={trayOpen ? "clients-bulk-tray is-open" : "clients-bulk-tray"} inert={!trayOpen}>
+              <div className="clients-bulk-tray-inner">
+                {trayView === "actions" ? (
+                  <div role="menu" aria-label="Bulk client actions" className="clients-bulk-tray-menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      disabled={!canEdit}
+                      onClick={() => chooseAction("status")}
+                    >
+                      Change status
+                    </button>
+                    <button type="button" role="menuitem" disabled>
+                      <span>Assign a manager</span>
+                      <small>Available after assignment setup</small>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="is-danger"
+                      disabled={!canDelete}
+                      onClick={() => chooseAction("delete")}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : (
+                  <div role="menu" aria-label="Client statuses" className="clients-bulk-tray-menu">
+                    {statuses.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={status === option.value}
+                        className={status === option.value ? "is-selected" : undefined}
+                        onClick={() => chooseStatus(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="clients-bulk-tray-back"
+                      onClick={() => setTrayView("actions")}
+                    >
+                      <ArrowLeft aria-hidden="true" />
+                      Back
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

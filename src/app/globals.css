@@ -2955,8 +2955,161 @@ td {
   font-weight: 750;
 }
 
-.clients-bulk-bar > div {
-  min-width: 174px;
+.clients-bulk-trigger {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid #dfe3ea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1a1a18;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color var(--wf-motion-fast, 140ms) ease;
+}
+
+.clients-bulk-trigger:hover:not(:disabled) {
+  border-color: #b9c0cf;
+}
+
+.clients-bulk-trigger:focus-visible {
+  outline: 2px solid #c9a449;
+  outline-offset: 2px;
+}
+
+.clients-bulk-trigger[aria-expanded="true"] {
+  border-color: #000d51;
+}
+
+.clients-bulk-trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.clients-bulk-trigger-caret {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #6d7585;
+  transition: transform 160ms ease;
+}
+
+.clients-bulk-trigger[aria-expanded="true"] .clients-bulk-trigger-caret {
+  transform: rotate(180deg);
+}
+
+/*
+ * The bulk action tray is an in-flow expanding section (the same
+ * grid-template-rows collapse .clients-bulk-region itself uses), sandwiched
+ * between the toolbar and the table — never a floating popover — so it pushes
+ * the table down instead of covering rows, headers, avatars or checkboxes.
+ */
+.clients-bulk-tray {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows var(--wf-motion-normal, 170ms) ease;
+}
+
+.clients-bulk-tray.is-open {
+  grid-template-rows: 1fr;
+}
+
+.clients-bulk-tray-inner {
+  min-height: 0;
+}
+
+.clients-bulk-tray-menu {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid #d9dee8;
+  border-top: 0;
+  background: #ffffff;
+}
+
+.clients-bulk-tray-menu button[role] {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1a1a18;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.clients-bulk-tray-menu button[role]:hover:not(:disabled) {
+  background: #f1f3f9;
+}
+
+.clients-bulk-tray-menu button[role]:focus-visible {
+  outline: 2px solid #c9a449;
+  outline-offset: -2px;
+}
+
+.clients-bulk-tray-menu button[role]:disabled {
+  color: #a3a9b3;
+  cursor: not-allowed;
+}
+
+.clients-bulk-tray-menu button[role] small {
+  color: #8a91a0;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.clients-bulk-tray-menu button.is-danger {
+  color: #9e3030;
+}
+
+.clients-bulk-tray-menu button.is-danger:hover:not(:disabled) {
+  background: rgba(158, 48, 48, 0.08);
+}
+
+.clients-bulk-tray-menu button.is-selected {
+  color: #000d51;
+  font-weight: 700;
+  background: #eef1f7;
+}
+
+.clients-bulk-tray-back {
+  justify-self: start;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6d7585;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.clients-bulk-tray-back:hover {
+  background: #f1f3f9;
+  color: #000d51;
+}
+
+.clients-bulk-tray-back svg {
+  width: 13px;
+  height: 13px;
 }
 
 .clients-bulk-apply {
@@ -3226,7 +3379,7 @@ td {
     width: 100%;
   }
 
-  .clients-bulk-bar > div {
+  .clients-bulk-trigger {
     flex: 1 1 180px;
   }
 
@@ -3259,6 +3412,9 @@ td {
   .clients-checkbox,
   .clients-checkbox::after,
   .clients-bulk-region,
+  .clients-bulk-tray,
+  .clients-bulk-trigger,
+  .clients-bulk-trigger-caret,
   .clients-bulk-apply,
   .clients-delete-actions button,
   .clients-row-action-trigger,
