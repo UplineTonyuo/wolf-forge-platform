@@ -175,6 +175,29 @@ export default async function ClientsPage({
       );
     }
 
+    const primaryContacts = new Map(
+      context.user.clients.privateManage
+        ? await Promise.all(
+            filtered.map(async (client) => {
+              const contacts = await context.services.contacts.listForCompany(client.id);
+              return [client.id, contacts.find((contact) => contact.is_primary) ?? contacts[0]] as const;
+            }),
+          )
+        : [],
+    );
+    const profileIds = Array.from(primaryContacts.values())
+      .map((contact) => contact?.profile_id)
+      .filter((id): id is string => Boolean(id));
+    const avatarRows = profileIds.length
+      ? await context.client
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", profileIds)
+          .is("archived_at", null)
+      : { data: [], error: null };
+    if (avatarRows.error) throw avatarRows.error;
+    const avatars = new Map(avatarRows.data.map((profile) => [profile.id, profile.avatar_url]));
+
     const countFor = (
       target: ClientFilter,
     ) => {
@@ -277,7 +300,10 @@ export default async function ClientsPage({
             key={`${selectedStatus}:${search}`}
             rows={filtered.map((client) => ({
               id: client.id,
-              name: client.name,
+              name: primaryContacts.get(client.id)?.name ?? client.name,
+              companyName: client.name,
+              email: primaryContacts.get(client.id)?.email,
+              avatarUrl: avatars.get(primaryContacts.get(client.id)?.profile_id ?? ""),
               createdLabel: formatDate(client.created_at),
               status: normalizeStatus(client.status),
               statusLabel: statusLabel(client.status),

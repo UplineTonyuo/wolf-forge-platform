@@ -15,19 +15,28 @@ export type PopoverPhase = "open" | "closing";
 export function useAnimatedPopover(closeMs = 150) {
   const [render, setRender] = useState(false);
   const [phase, setPhase] = useState<PopoverPhase>("open");
+  const [animateOpen, setAnimateOpen] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const show = useCallback(() => {
+  const open = useCallback((animate: boolean) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    setAnimateOpen(animate);
     setRender(true);
+    if (!animate) {
+      setPhase("open");
+      return;
+    }
     setPhase("closing");
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setPhase("open"));
     });
   }, []);
+
+  const show = useCallback(() => open(true), [open]);
+  const showWithoutMotion = useCallback(() => open(false), [open]);
 
   const hide = useCallback(() => {
     if (!render) return;
@@ -44,5 +53,5 @@ export function useAnimatedPopover(closeMs = 150) {
     };
   }, []);
 
-  return { render, phase, show, hide };
+  return { render, phase, animateOpen, show, showWithoutMotion, hide };
 }

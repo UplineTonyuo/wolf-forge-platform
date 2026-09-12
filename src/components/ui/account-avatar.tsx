@@ -8,7 +8,7 @@
  */
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { PersonSilhouette } from "./person-silhouette";
 import styles from "./account-avatar.module.css";
 
@@ -42,9 +42,8 @@ function safeAvatarSource(value: string | null | undefined): string | null {
  * A photo that fails to load falls back the same way rather than showing a
  * broken-image glyph, so a deleted or unreachable object degrades quietly.
  *
- * The fallback is deliberately not initials: it is one calm, identical
- * placeholder for everyone, which reads as "no photo yet" instead of turning
- * every account without one into a coloured monogram.
+ * The default fallback is one calm person silhouette. Surfaces that explicitly
+ * need another established identity treatment may provide `fallback`.
  *
  * The image is decorative wherever the account name is already rendered beside
  * it, which is the case on every current surface — hence the empty alt by
@@ -57,6 +56,7 @@ export function AccountAvatar({
   onNavy = false,
   alt = "",
   className,
+  fallback,
 }: {
   /**
    * Kept on the contract because every call site already has it and the
@@ -71,6 +71,7 @@ export function AccountAvatar({
   onNavy?: boolean;
   alt?: string;
   className?: string;
+  fallback?: ReactNode;
 }) {
   const source = useMemo(() => safeAvatarSource(avatarUrl), [avatarUrl]);
 
@@ -109,7 +110,7 @@ export function AccountAvatar({
           onError={() => setFailedSource(source)}
         />
       ) : (
-        <PersonSilhouette className={styles.fallback} />
+        fallback ?? <PersonSilhouette className={styles.fallback} />
       )}
     </span>
   );

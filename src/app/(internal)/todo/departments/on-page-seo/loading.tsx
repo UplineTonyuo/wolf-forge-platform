@@ -1,3 +1,5 @@
+import { DepartmentWorkflowLoading } from "../../../../../components/operations/department-workflow-loading";
+
 export default function OnPageSeoLoading() {
-  return <div className="dept-workflow-loading" role="status">Loading On-page SEO workflow…</div>;
+  return <DepartmentWorkflowLoading />;
 }

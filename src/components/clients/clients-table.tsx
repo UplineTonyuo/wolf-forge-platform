@@ -1,6 +1,6 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
+import { MoreHorizontal, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -9,10 +9,16 @@ import {
   bulkChangeClientStatusAction,
   type ClientBulkResult,
 } from "../../app/actions/clients";
+import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
+import { AccountAvatar } from "../ui/account-avatar";
+import { useAnimatedPopover } from "../ui/use-animated-popover";
 
 export type ClientTableRow = {
   id: string;
   name: string;
+  companyName: string;
+  email?: string | null;
+  avatarUrl?: string | null;
   createdLabel: string;
   status: string;
   statusLabel: string;
@@ -24,6 +30,98 @@ export type ClientStatusOption = {
 };
 
 type BulkAction = "status" | "manager" | "delete" | "";
+
+export function clientInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return words.length > 1
+    ? `${words[0]?.[0] ?? ""}${words.at(-1)?.[0] ?? ""}`.toUpperCase()
+    : (words[0]?.[0] ?? "?").toUpperCase();
+}
+
+function ClientAvatar({ name, src }: { name: string; src?: string | null }) {
+  return (
+    <AccountAvatar
+      avatarUrl={src}
+      size={32}
+      name={name}
+      className="clients-table-avatar"
+      fallback={clientInitials(name)}
+    />
+  );
+}
+
+function ClientQuickActions({ id, name }: { id: string; name: string }) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const editRef = useRef<HTMLAnchorElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { render, phase, animateOpen, show, showWithoutMotion, hide } = useAnimatedPopover(150);
+
+  useEffect(() => {
+    if (!render) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) hide();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [hide, render]);
+
+  function openAndFocus(animate = true) {
+    if (animate) show();
+    else showWithoutMotion();
+    requestAnimationFrame(() => editRef.current?.focus());
+  }
+
+  return (
+    <div
+      className="clients-row-actions"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && render) {
+          event.preventDefault();
+          hide();
+          triggerRef.current?.focus();
+        } else if (
+          ["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key) &&
+          !render
+        ) {
+          event.preventDefault();
+          openAndFocus(false);
+        } else if (render && ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          editRef.current?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) hide();
+      }}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        className="clients-row-action-trigger"
+        aria-label={`Actions for ${name}`}
+        aria-haspopup="menu"
+        aria-expanded={render && phase === "open"}
+        onClick={() => (render ? hide() : openAndFocus(true))}
+      >
+        <MoreHorizontal aria-hidden="true" />
+      </button>
+
+      {render ? (
+        <div
+          className={phase === "open" ? "clients-row-action-menu is-open" : "clients-row-action-menu"}
+          data-open-motion={animateOpen ? "pointer" : "keyboard"}
+          role="menu"
+          aria-label={`Actions for ${name}`}
+        >
+          <Link ref={editRef} href={`/clients/${id}`} role="menuitem" onClick={hide}>
+            Edit
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 function describeResult(result: ClientBulkResult, action: "status" | "delete") {
   const verb = action === "delete" ? "deleted" : "updated";
@@ -70,6 +168,17 @@ export function ClientsTable({
   const selectedCount = selectedIds.length;
   const allSelected = rows.length > 0 && selectedCount === rows.length;
   const someSelected = selectedCount > 0 && !allSelected;
+  const bulkOptions: AnimatedSelectOption[] = [
+    { value: "", label: "Select an action" },
+    { value: "status", label: "Change status", disabled: !canEdit },
+    {
+      value: "manager",
+      label: "Assign a manager",
+      description: "Available after assignment setup",
+      disabled: true,
+    },
+    { value: "delete", label: "Delete", disabled: !canDelete },
+  ];
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
@@ -192,36 +301,28 @@ export function ClientsTable({
           <div className="clients-bulk-bar" aria-label="Bulk client actions">
             <strong aria-live="polite">{selectedCount} selected</strong>
 
-            <label>
-              <span className="sr-only">Bulk action</span>
-              <select
-                value={action}
-                disabled={busy}
-                onChange={(event) => setAction(event.target.value as BulkAction)}
-              >
-                <option value="">Select an action</option>
-                <option value="status" disabled={!canEdit}>Change status</option>
-                <option value="manager">Assign a manager</option>
-                <option value="delete" disabled={!canDelete}>Delete</option>
-              </select>
-            </label>
+            <AnimatedSelect
+              name="bulk_action"
+              label="Bulk action"
+              menuLabel="Bulk client actions"
+              options={bulkOptions}
+              value={action}
+              disabled={busy}
+              compact
+              onChange={(value) => setAction(value as BulkAction)}
+            />
 
             {action === "status" ? (
-              <label>
-                <span className="sr-only">New client status</span>
-                <select
-                  aria-label="New client status"
-                  value={status}
-                  disabled={busy}
-                  onChange={(event) => setStatus(event.target.value)}
-                >
-                  {statuses.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <AnimatedSelect
+                name="client_status"
+                label="New client status"
+                menuLabel="Client statuses"
+                options={statuses}
+                value={status}
+                disabled={busy}
+                compact
+                onChange={setStatus}
+              />
             ) : null}
 
             <button
@@ -234,11 +335,6 @@ export function ClientsTable({
               {busy ? "Applying…" : "Apply"}
             </button>
 
-            {action === "manager" ? (
-              <span className="clients-bulk-unavailable" role="status">
-                Client manager assignment is not available in the current data model.
-              </span>
-            ) : null}
           </div>
         </div>
       </div>
@@ -248,8 +344,10 @@ export function ClientsTable({
           <colgroup>
             <col className="clients-table-check-column" />
             <col />
+            <col className="clients-table-company-column" />
             <col className="clients-table-created-column" />
             <col className="clients-table-status-column" />
+            <col className="clients-table-action-column" />
           </colgroup>
           <thead>
             <tr>
@@ -264,8 +362,10 @@ export function ClientsTable({
                 />
               </th>
               <th>Client</th>
-              <th>Created</th>
+              <th className="clients-table-company-heading">Company</th>
+              <th className="clients-table-created-heading">Created</th>
               <th>Status</th>
+              <th><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
 
@@ -285,10 +385,17 @@ export function ClientsTable({
                     />
                   </td>
                   <td>
-                    <Link href={`/clients/${client.id}`} className="clients-table-name">
-                      {client.name}
-                    </Link>
+                    <div className="clients-table-identity">
+                      <ClientAvatar name={client.name} src={client.avatarUrl} />
+                      <span>
+                        <Link href={`/clients/${client.id}`} className="clients-table-name">
+                          {client.name}
+                        </Link>
+                        {client.email ? <small>{client.email}</small> : null}
+                      </span>
+                    </div>
                   </td>
+                  <td className="clients-table-company">{client.companyName}</td>
                   <td className="clients-table-created">{client.createdLabel}</td>
                   <td>
                     <span className={`clients-table-status is-${client.status}`}>
@@ -296,6 +403,7 @@ export function ClientsTable({
                       {client.statusLabel}
                     </span>
                   </td>
+                  <td><ClientQuickActions id={client.id} name={client.name} /></td>
                 </tr>
               );
             })}

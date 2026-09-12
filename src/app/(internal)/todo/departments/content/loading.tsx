@@ -1,7 +1,5 @@
+import { DepartmentWorkflowLoading } from "../../../../../components/operations/department-workflow-loading";
+
 export default function ContentLoading() {
-  return (
-    <div className="dept-workflow-loading" role="status">
-      Loading Content workflow…
-    </div>
-  );
+  return <DepartmentWorkflowLoading />;
 }
