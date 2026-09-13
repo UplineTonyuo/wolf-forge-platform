@@ -119,6 +119,7 @@ export function TeamMessageActions({
     setError(null);
     try {
       await navigator.clipboard.writeText(stripTeamFormatting(activeMessage!.body));
+      setBusy(false);
       onClose();
     } catch {
       setError("Could not copy this message. Try again.");
@@ -130,9 +131,9 @@ export function TeamMessageActions({
     setBusy(true);
     setError(null);
     const nextError = await operation();
+    setBusy(false);
     if (nextError) {
       setError(nextError);
-      setBusy(false);
       return;
     }
     onClose();
@@ -183,14 +184,29 @@ export function TeamMessageActions({
         </div>
 
         {mode === "menu" ? (
-          <div className={styles.messageActionList}>
-            <ActionButton icon={<Forward />} label="Forward" onClick={() => setMode("forward")} />
-            <ActionButton icon={<Copy />} label="Copy" onClick={() => void copyVisibleText()} />
+          <div className={styles.messageActionList} aria-busy={busy || undefined}>
+            <ActionButton icon={<Forward />} label="Forward" onClick={() => setMode("forward")} disabled={busy} />
+            <ActionButton
+              icon={busy ? <Loader2 className={styles.spin} /> : <Copy />}
+              label="Copy"
+              onClick={() => void copyVisibleText()}
+              disabled={busy}
+            />
             {canManagePins && activeMessage.messageType === "text" ? (
               currentPin ? (
-                <ActionButton icon={<PinOff />} label="Unpin" onClick={() => void runMutation(() => onUnpin(currentPin))} />
+                <ActionButton
+                  icon={busy ? <Loader2 className={styles.spin} /> : <PinOff />}
+                  label="Unpin"
+                  onClick={() => void runMutation(() => onUnpin(currentPin))}
+                  disabled={busy}
+                />
               ) : (
-                <ActionButton icon={<Pin />} label="Pin" onClick={() => void runMutation(() => onPin(activeMessage))} />
+                <ActionButton
+                  icon={busy ? <Loader2 className={styles.spin} /> : <Pin />}
+                  label="Pin"
+                  onClick={() => void runMutation(() => onPin(activeMessage))}
+                  disabled={busy}
+                />
               )
             ) : null}
             {canCreateTask ? (
@@ -201,12 +217,14 @@ export function TeamMessageActions({
                   onClose();
                   onCreateTask(activeMessage);
                 }}
+                disabled={busy}
               />
             ) : null}
             <ActionButton
               icon={<Trash2 />}
               label="Delete for me"
               onClick={() => setMode("delete-me")}
+              disabled={busy}
             />
             {activeMessage.isMine ? (
               <div className={styles.messageActionDestructiveGroup}>
@@ -215,6 +233,7 @@ export function TeamMessageActions({
                   label="Delete for everyone"
                   destructive
                   onClick={() => setMode("delete-everyone")}
+                  disabled={busy}
                 />
               </div>
             ) : null}
@@ -233,7 +252,7 @@ export function TeamMessageActions({
                 aria-label="Search forward destinations"
               />
             </div>
-            <div className={styles.forwardDestinationList}>
+            <div className={styles.forwardDestinationList} aria-busy={busy || undefined}>
               {filteredDestinations.map((destination) => (
                 <button
                   key={destination.conversationId}
@@ -272,6 +291,7 @@ export function TeamMessageActions({
               <button
                 type="button"
                 className={mode === "delete-everyone" ? styles.messageDeleteDanger : ""}
+                aria-busy={busy || undefined}
                 disabled={busy}
                 onClick={() => void runMutation(() =>
                   mode === "delete-me"
@@ -297,17 +317,20 @@ function ActionButton({
   icon,
   label,
   destructive = false,
+  disabled = false,
   onClick,
 }: {
   icon: ReactNode;
   label: string;
   destructive?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       className={destructive ? styles.messageActionOptionDanger : styles.messageActionOption}
+      disabled={disabled}
       onClick={onClick}
     >
       <span aria-hidden="true">{icon}</span>

@@ -592,6 +592,7 @@ export function ClientBalanceControl({
 
                   <button
                     type="submit"
+                    aria-busy={pending || undefined}
                     disabled={
                       pending ||
                       !amount.trim()

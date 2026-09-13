@@ -1,10 +1,21 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { signOutAction } from "../../app/actions/auth";
 import type { InternalUser } from "../../lib/supabase/next-server";
 import { AccountAvatar } from "../ui/account-avatar";
+
+function SignOutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" role="menuitem" aria-busy={pending || undefined} disabled={pending}>
+      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
+      Sign out
+    </button>
+  );
+}
 
 /**
  * How long the menu's closing transition runs, in milliseconds. Must stay in
@@ -140,7 +151,7 @@ export function AccountMenu({ user, mobile = false, sidebar = false }: { user: I
           </div>
           <div role="menu" aria-labelledby={identityId}>
             <form action={signOutAction} role="none">
-              <button type="submit" role="menuitem">Sign out</button>
+              <SignOutButton />
             </form>
           </div>
         </div>

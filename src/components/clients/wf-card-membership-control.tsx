@@ -63,6 +63,7 @@ export function WfCardMembershipControl({
         type="button"
         className="wf-card-membership-toggle"
         onClick={toggle}
+        aria-busy={pending || undefined}
         disabled={pending}
       >
         {pending ? "Saving…" : active ? "Deactivate" : "Activate"}

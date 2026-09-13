@@ -1,12 +1,27 @@
 "use client";
 
-import { Folder, MoreHorizontal, Plus, X } from "lucide-react";
+import { Folder, LoaderCircle, MoreHorizontal, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import { createServiceFolderAction, type CatalogFormState } from "../../app/actions/services";
 import { useAnimatedPopover } from "../ui/use-animated-popover";
 import styles from "./services-root-actions.module.css";
+
+function CreateFolderSubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="button-primary" aria-busy={pending || undefined} disabled={pending}>
+      <LoaderCircle
+        className="spinner"
+        aria-hidden="true"
+        style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }}
+      />
+      Create Folder
+    </button>
+  );
+}
 
 /**
  * Root Services header actions.
@@ -126,9 +141,7 @@ export function ServicesRootActions() {
                 Cancel
               </button>
 
-              <button type="submit" className="button-primary">
-                Create Folder
-              </button>
+              <CreateFolderSubmitButton />
             </footer>
           </form>
         </div>

@@ -203,6 +203,7 @@ export function TicketComposer({
         <button
           type="submit"
           className="button-primary"
+          aria-busy={pending || undefined}
           disabled={
             busy ||
             !body.trim()

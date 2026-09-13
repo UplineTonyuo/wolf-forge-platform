@@ -462,6 +462,7 @@
 }
 
 .primary {
+  min-width: 120px;
   border: 1px solid var(--wf-navy);
   color: #ffffff;
   background: var(--wf-navy);

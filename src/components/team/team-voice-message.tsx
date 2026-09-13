@@ -60,6 +60,8 @@ export function TeamVoiceMessage({ conversationId, messageId, durationMs, expire
         type="button"
         className={styles.voicePlayButton}
         aria-label={playing ? "Pause voice message" : "Play voice message"}
+        aria-busy={loading || undefined}
+        disabled={loading}
         onClick={() => {
           if (playing) audioRef.current?.pause();
           else void loadAndPlay();

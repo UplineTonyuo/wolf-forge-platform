@@ -159,6 +159,7 @@ export function ClientProfile({
                 type="button"
                 className="portal-ghost-action"
                 onClick={() => fileInputRef.current?.click()}
+                aria-busy={avatarBusy || undefined}
                 disabled={avatarBusy}
               >
                 {avatarBusy ? (
@@ -241,7 +242,7 @@ export function ClientProfile({
             ) : null}
 
             <div className="portal-form-actions">
-              <button type="submit" className="portal-primary-action" disabled={pending}>
+              <button type="submit" className="portal-primary-action" aria-busy={pending || undefined} disabled={pending}>
                 {pending ? <Loader2 className="spinner" aria-hidden="true" /> : null}
                 Save changes
               </button>

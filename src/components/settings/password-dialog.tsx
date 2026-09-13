@@ -211,7 +211,7 @@ export function PasswordDialog({
               Cancel
             </button>
 
-            <button type="submit" className={styles.primary} disabled={pending}>
+            <button type="submit" className={styles.primary} aria-busy={pending || undefined} disabled={pending}>
               {pending ? <Loader2 aria-hidden="true" /> : null}
               {pending ? "Updating" : "Update password"}
             </button>

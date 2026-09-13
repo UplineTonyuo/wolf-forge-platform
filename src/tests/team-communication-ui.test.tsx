@@ -98,6 +98,32 @@ describe("Team task card", () => {
     expect(onStatusChange).toHaveBeenCalledWith("in_progress");
   });
 
+  it("marks only the clicked status button busy while the card is saving, not every disabled button", () => {
+    const { rerender } = render(
+      <TeamTaskCard
+        task={toTeamTaskView(task({ id: "1", assigned_to_profile_id: ME }), ME)}
+        actorProfileId={ME}
+        canManageTasks={false}
+        onStatusChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "In Progress" }));
+
+    rerender(
+      <TeamTaskCard
+        task={toTeamTaskView(task({ id: "1", assigned_to_profile_id: ME }), ME)}
+        actorProfileId={ME}
+        canManageTasks={false}
+        onStatusChange={vi.fn()}
+        busy
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "In Progress" })).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "Done" })).not.toHaveAttribute("aria-busy");
+  });
+
   it("disables rather than hides the controls when the viewer may not move it", () => {
     render(
       <TeamTaskCard

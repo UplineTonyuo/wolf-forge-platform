@@ -592,10 +592,11 @@ export function ReportBuilder({
               type="button"
               className={styles.secondaryButton}
               onClick={() => void saveDraftAndLeave()}
+              aria-busy={save.kind === "saving" || undefined}
               disabled={saveNotice || sent || save.kind === "saving" || sending}
             >
               {save.kind === "saving" ? (
-                <LoaderCircle aria-hidden="true" />
+                <LoaderCircle className="spinner" aria-hidden="true" />
               ) : save.kind === "saved" && !dirty ? (
                 <Check aria-hidden="true" />
               ) : (
@@ -657,9 +658,10 @@ export function ReportBuilder({
               type="button"
               className={styles.primaryButton}
               onClick={() => void send()}
+              aria-busy={sending || undefined}
               disabled={sending}
             >
-              <Send aria-hidden="true" />
+              {sending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Send aria-hidden="true" />}
               {sending ? "Sending…" : "Send report"}
             </button>
           </div>

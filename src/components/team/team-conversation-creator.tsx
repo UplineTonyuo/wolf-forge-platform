@@ -155,7 +155,7 @@ export function TeamConversationCreator({ members, statusFor, onStartDirect, onC
       {mode === "group" ? (
         <div className={styles.creatorFooter}>
           <span>{selected.size} selected · 3 members minimum including you</span>
-          <button type="button" className={styles.primaryButton} disabled={!canCreate} onClick={() => onCreateGroup(title.trim(), [...selected])}>
+          <button type="button" className={styles.primaryButton} aria-busy={busy || undefined} disabled={!canCreate} onClick={() => onCreateGroup(title.trim(), [...selected])}>
             {busy ? "Creating…" : "Create group"}
           </button>
         </div>

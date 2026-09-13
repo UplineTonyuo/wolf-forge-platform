@@ -32,7 +32,7 @@ function intervalUnit(value: ServiceRow["recurring_interval_unit"]): "day" | "we
 
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
-  return <button className="button-primary" type="submit" disabled={pending}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}{mode === "create" ? "Create Subscription" : "Create New Plan Version"}</button>;
+  return <button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />{mode === "create" ? "Create Subscription" : "Create New Plan Version"}</button>;
 }
 
 export function SubscriptionPlanForm({

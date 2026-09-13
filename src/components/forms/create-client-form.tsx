@@ -16,6 +16,7 @@ function SubmitButton() {
     <button
       className="button-primary add-account-submit"
       disabled={pending}
+      aria-busy={pending || undefined}
       type="submit"
     >
       {pending ? (

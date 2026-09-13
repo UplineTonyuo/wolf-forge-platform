@@ -220,6 +220,7 @@ export function TeamConversationControls({
                   <button
                     type="button"
                     className={styles.settingsPrimaryButton}
+                    aria-busy={busyAction === "permissions" || undefined}
                     disabled={busyAction !== null || !Object.values(permissionDraft).some(Boolean)}
                     onClick={() => void run("permissions", () => onGrantAdmin(permissionTarget.profileId, permissionDraft))}
                   >
@@ -230,9 +231,11 @@ export function TeamConversationControls({
                     <button
                       type="button"
                       className={styles.settingsDangerButton}
+                      aria-busy={busyAction === "revoke-admin" || undefined}
                       disabled={busyAction !== null}
                       onClick={() => void run("revoke-admin", () => onRevokeAdmin(permissionTarget.profileId)).then((ok) => { if (ok) setPermissionTargetId(null); })}
                     >
+                      {busyAction === "revoke-admin" ? <Loader2 className={styles.spin} aria-hidden="true" /> : null}
                       Remove admin access
                     </button>
                   ) : null}
@@ -243,10 +246,11 @@ export function TeamConversationControls({
                 <button
                   type="button"
                   className={styles.settingsDangerButton}
+                  aria-busy={busyAction === "remove-member" || undefined}
                   disabled={busyAction !== null}
                   onClick={() => void run("remove-member", () => onRemoveMember(permissionTarget.profileId)).then((ok) => { if (ok) setPermissionTargetId(null); })}
                 >
-                  <UserMinus aria-hidden="true" /> Remove from conversation
+                  {busyAction === "remove-member" ? <Loader2 className={styles.spin} aria-hidden="true" /> : <UserMinus aria-hidden="true" />} Remove from conversation
                 </button>
               ) : null}
             </section>
@@ -267,6 +271,7 @@ export function TeamConversationControls({
                       <button
                         type="button"
                         className={styles.settingsSaveButton}
+                        aria-busy={busyAction === "rename" || undefined}
                         disabled={!titleDirty || busyAction !== null}
                         onClick={() => void run("rename", () => onRename(titleDraft.trim()))}
                       >
@@ -279,7 +284,7 @@ export function TeamConversationControls({
 
               <section className={styles.settingsSection}>
                 <div className={styles.settingsSectionHeading}><span><h3>Slow Mode</h3><p>Control how frequently people can send messages.</p></span></div>
-                <div className={styles.segmentedControl} role="radiogroup" aria-label="Slow Mode duration">
+                <div className={styles.segmentedControl} role="radiogroup" aria-label="Slow Mode duration" aria-busy={busyAction === "slow-mode" || undefined}>
                   {slowModeOptions.map((option) => (
                     <button
                       key={option.label}
@@ -308,12 +313,13 @@ export function TeamConversationControls({
                     <button
                       type="button"
                       className={styles.settingsPrimaryButton}
+                      aria-busy={busyAction === "slow-mode" || undefined}
                       disabled={!validCustom || busyAction !== null}
                       onClick={() => void run("slow-mode", () => onSetSlowMode(Number(customSeconds), detail.slowModeScope)).then((ok) => { if (ok) setCustomOpen(false); })}
-                    >Set</button>
+                    >{busyAction === "slow-mode" ? <Loader2 className={styles.spin} aria-hidden="true" /> : "Set"}</button>
                   </div>
                 ) : null}
-                <fieldset className={styles.scopeFieldset} disabled={!capabilities.canManageSlowMode || detail.slowModeSeconds === null || busyAction !== null}>
+                <fieldset className={styles.scopeFieldset} aria-busy={busyAction === "slow-mode-scope" || undefined} disabled={!capabilities.canManageSlowMode || detail.slowModeSeconds === null || busyAction !== null}>
                   <legend>Applies to</legend>
                   <div className={styles.scopeControl}>
                     {teamSlowModeScopes.map((scope) => (
@@ -333,7 +339,7 @@ export function TeamConversationControls({
 
               <section className={styles.settingsSection}>
                 <div className={styles.settingsSectionHeading}><h3>Who can create tasks</h3></div>
-                <div className={styles.taskPolicyList} role="radiogroup" aria-label="Who can create tasks">
+                <div className={styles.taskPolicyList} role="radiogroup" aria-label="Who can create tasks" aria-busy={busyAction === "task-policy" || undefined}>
                   {teamTaskCreationPolicies.map((policy) => (
                     <button
                       key={policy}
@@ -391,9 +397,10 @@ export function TeamConversationControls({
                       <button
                         type="button"
                         className={styles.settingsPrimaryButton}
+                        aria-busy={busyAction === "add-member" || undefined}
                         disabled={!addMemberId || busyAction !== null}
                         onClick={() => void run("add-member", () => onAddMember(addMemberId)).then((ok) => { if (ok) { setAddMemberId(""); setAddMemberOpen(false); } })}
-                      >Add</button>
+                      >{busyAction === "add-member" ? <Loader2 className={styles.spin} aria-hidden="true" /> : "Add"}</button>
                     </div>
                   ) : null}
                   <div className={styles.settingsMemberList}>
