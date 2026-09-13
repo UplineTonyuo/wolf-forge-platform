@@ -308,7 +308,7 @@ export function InvoicePaymentSelector({
           ) : null}
 
           {plan.executableNow ? (
-            <button type="button" className="wf-pay-button" onClick={pay} disabled={isPending}>
+            <button type="button" className="wf-pay-button" onClick={pay} aria-busy={isPending || undefined} disabled={isPending}>
               {isPending
                 ? "Processing securely..."
                 : `Pay ${formatCurrencyCents(plan.walletAppliedCents, plan.currency)} with Wolf Forge Balance`}

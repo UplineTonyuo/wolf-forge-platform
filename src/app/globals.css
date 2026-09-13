@@ -453,7 +453,8 @@ tbody tr:hover { background: #fbfbfc; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
   .sidebar-link { transition: none; }
-  .spinner { animation-duration: 1.4s; }
+  /* No continuous spin: a static ring still reads as "busy" without motion. */
+  .spinner { animation: none; opacity: .7; }
 }
 
 
@@ -3114,6 +3115,7 @@ td {
 
 .clients-bulk-apply {
   min-height: 34px;
+  min-width: 92px;
   padding: 0 13px;
   border: 1px solid #000d51;
   border-radius: 6px;

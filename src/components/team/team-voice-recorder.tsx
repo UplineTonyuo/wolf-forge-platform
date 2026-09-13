@@ -257,7 +257,7 @@ export function TeamVoiceRecorder({
         <audio src={previewUrl} controls preload="metadata" aria-label="Voice recording preview" />
         <span>{clock(elapsed)}</span>
         <button type="button" onClick={discard} disabled={busy} aria-label="Discard voice recording"><Trash2 aria-hidden="true" /></button>
-        <button type="button" onClick={() => void send()} disabled={busy} aria-label="Send voice message">
+        <button type="button" onClick={() => void send()} disabled={busy} aria-busy={busy || undefined} aria-label="Send voice message">
           {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
         </button>
         {error ? <span className={styles.voiceError} role="alert">{error}</span> : null}

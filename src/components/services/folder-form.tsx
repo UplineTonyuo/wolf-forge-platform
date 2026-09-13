@@ -14,8 +14,8 @@ import type { ServiceFolderRow } from "../../lib/supabase/database-rows";
 function SubmitButton({ editing }: { editing: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button className="button-primary" disabled={pending} type="submit">
-      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
+    <button className="button-primary" disabled={pending} aria-busy={pending || undefined} type="submit">
+      <LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />
       {editing ? "Save folder" : "Create folder"}
     </button>
   );

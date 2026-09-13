@@ -144,7 +144,7 @@ export function FormRenderer({
         })}
       </div>
       {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
-      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter}><button className="button-primary" type="submit" disabled={pending}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Submit Form</button><span>Submission is saved to Version {schema.version_number}.</span></footer> : null}
+      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter}><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />Submit Form</button><span>Submission is saved to Version {schema.version_number}.</span></footer> : null}
     </form>
   );
 }

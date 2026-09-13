@@ -8,7 +8,7 @@ import styles from "./coupon-admin.module.css";
 
 function ConfirmButton() {
   const { pending } = useFormStatus();
-  return <button className="button-danger" disabled={pending} type="submit">{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Archive aria-hidden="true" />}Archive Coupon</button>;
+  return <button className="button-danger" disabled={pending} aria-busy={pending || undefined} type="submit">{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Archive aria-hidden="true" />}Archive Coupon</button>;
 }
 
 export function ArchiveCouponButton({ couponId, code, compact = false }: { couponId: string; code: string; compact?: boolean }) {

@@ -6,10 +6,12 @@ import {
   CircleDot,
   Clock3,
   Flag,
+  Loader2,
   MessageSquare,
   Quote,
   User,
 } from "lucide-react";
+import { useState } from "react";
 import {
   canMoveTeamTask,
   type TeamTaskView,
@@ -73,6 +75,14 @@ export function TeamTaskCard({
 }) {
   const canMove = canMoveTeamTask(task, actorProfileId, canManageTasks);
 
+  /**
+   * Which status button was clicked, so only that one shows the spinner while
+   * `busy` covers the whole card. Never reset explicitly: `isPending` below
+   * already gates on `busy`, so a stale value here is inert until the next
+   * click overwrites it — no effect needed to clear it.
+   */
+  const [pendingStatus, setPendingStatus] = useState<TeamTaskStatus | null>(null);
+
   return (
     <article
       className={[
@@ -123,6 +133,7 @@ export function TeamTaskCard({
         {teamTaskStatuses.map((status) => {
           const Icon = statusIcons[status];
           const active = task.status === status;
+          const isPending = busy && pendingStatus === status;
 
           return (
             <button
@@ -135,15 +146,19 @@ export function TeamTaskCard({
                 .filter(Boolean)
                 .join(" ")}
               aria-pressed={active}
+              aria-busy={isPending || undefined}
               disabled={busy || !canMove || active}
               title={
                 canMove
                   ? `Move to ${teamTaskStatusLabels[status]}`
                   : "Only the assignee, the person who created this task, or management can move it"
               }
-              onClick={() => onStatusChange(status)}
+              onClick={() => {
+                setPendingStatus(status);
+                onStatusChange(status);
+              }}
             >
-              <Icon aria-hidden="true" />
+              {isPending ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Icon aria-hidden="true" />}
               {teamTaskStatusLabels[status]}
             </button>
           );

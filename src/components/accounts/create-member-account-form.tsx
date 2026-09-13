@@ -14,7 +14,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button className={styles.submit} disabled={pending} type="submit">
+    <button className={styles.submit} disabled={pending} aria-busy={pending || undefined} type="submit">
       {pending ? (
         <LoaderCircle className={styles.spinner} aria-hidden="true" />
       ) : (

@@ -206,6 +206,7 @@ export function SettingsWorkspace({
                     type="button"
                     className={styles.quiet}
                     onClick={savePhoto}
+                    aria-busy={avatarBusy || undefined}
                     disabled={avatarBusy}
                   >
                     {avatarBusy ? (
@@ -398,7 +399,7 @@ export function SettingsWorkspace({
               </span>
             )}
 
-            <button type="submit" className={styles.primary} disabled={pending}>
+            <button type="submit" className={styles.primary} aria-busy={pending || undefined} disabled={pending}>
               {pending ? <Loader2 aria-hidden="true" /> : null}
               {pending ? "Saving" : "Save changes"}
             </button>

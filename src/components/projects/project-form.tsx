@@ -20,8 +20,8 @@ function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
 
   return (
-    <button className="button-primary" disabled={pending} type="submit">
-      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
+    <button className="button-primary" disabled={pending} aria-busy={pending || undefined} type="submit">
+      <LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />
       {mode === "create" ? "Create project" : "Save changes"}
     </button>
   );

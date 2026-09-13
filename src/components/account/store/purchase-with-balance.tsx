@@ -176,6 +176,7 @@ export function PurchaseWithBalance({
               type="button"
               className={styles.confirm}
               onClick={() => void confirm()}
+              aria-busy={pending || undefined}
               disabled={pending}
               data-pending={pending || undefined}
             >
