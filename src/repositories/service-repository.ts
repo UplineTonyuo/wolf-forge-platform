@@ -12,6 +12,7 @@ import type { UserMutationClient } from "./types";
 export type ServiceAssigneeOption = {
   id: string;
   displayName: string;
+  avatarUrl?: string | null;
 };
 
 export class ServiceRepository {
@@ -171,6 +172,7 @@ export class ServiceRepository {
       .map((profile) => ({
         id: profile.profile_id,
         displayName: profile.display_name ?? "Unnamed teammate",
+        avatarUrl: profile.avatar_url,
       }))
       .sort((left, right) => left.displayName.localeCompare(right.displayName));
   }

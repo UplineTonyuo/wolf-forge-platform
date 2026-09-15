@@ -11,7 +11,7 @@ import type { ListOrdersFilter, UserMutationClient } from "./types";
  * foreign keys. PostgREST applies RLS to every embedded resource, so this never
  * widens visibility, and it avoids a per-row lookup.
  */
-const projectRelationSelect = "*, companies(id, name), services(id, name), profiles(id, display_name)";
+const projectRelationSelect = "*, companies(id, name), services(id, name), profiles(id, display_name, avatar_url)";
 
 export type ProjectLabelRow = Pick<OrderRow, "id" | "order_number" | "title">;
 
@@ -56,6 +56,7 @@ export class OrderRepository {
         profiles: {
           id: row.assigned_to_profile_id,
           display_name: namesById.get(row.assigned_to_profile_id) ?? null,
+          avatar_url: null,
         },
       };
     });

@@ -67,7 +67,7 @@ export default async function ClientMessageDetailPage({
         <div className={styles.clientDetailGrid}>
           <main className={styles.detailMain}>
             <TicketConversation messages={detail.messages} clientView />
-            <TicketComposer ticketId={ticket.id} mode="client" disabled={repliesDisabled} />
+            <TicketComposer target={{ kind: "ticket", ticketId: ticket.id }} mode="client" disabled={repliesDisabled} />
           </main>
 
           <aside className={styles.clientSummary}>

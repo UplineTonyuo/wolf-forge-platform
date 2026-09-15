@@ -23,8 +23,8 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
       <div className={styles.detailGrid}>
         <main className={styles.detailMain}>
           <TicketConversation messages={detail.messages} />
-          {context.user.tickets.reply ? <TicketComposer ticketId={ticket.id} mode="admin" disabled={repliesDisabled} /> : null}
-          {context.user.tickets.internalNotes ? <TicketComposer ticketId={ticket.id} mode="note" disabled={repliesDisabled} /> : null}
+          {context.user.tickets.reply ? <TicketComposer target={{ kind: "ticket", ticketId: ticket.id }} mode="admin" disabled={repliesDisabled} /> : null}
+          {context.user.tickets.internalNotes ? <TicketComposer target={{ kind: "ticket", ticketId: ticket.id }} mode="note" disabled={repliesDisabled} /> : null}
         </main>
         <aside className={styles.ticketSidebar} aria-label="Ticket details and controls">
           <section><h2>Ticket details</h2><dl className={styles.ticketMeta}><div><dt>Client / company</dt><dd>{detail.company_name ?? detail.client_name ?? ticket.requester_name ?? "Contact Form guest"}</dd></div>{detail.client_name && detail.company_name ? <div><dt>Contact</dt><dd>{detail.client_name}</dd></div> : null}<div><dt>Created</dt>

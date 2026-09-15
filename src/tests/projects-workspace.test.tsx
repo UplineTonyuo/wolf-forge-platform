@@ -64,7 +64,7 @@ const rows = composeProjectRows(
       title: "Local SEO Growth Campaign",
       status: "working",
       assigned_to_profile_id: anthony,
-      profiles: { id: anthony, display_name: "Anthony Paghubasan" },
+      profiles: { id: anthony, display_name: "Anthony Paghubasan", avatar_url: null },
     }),
     order("10000000-0000-4000-8000-000000000002", {
       order_number: 102,

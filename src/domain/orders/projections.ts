@@ -30,7 +30,7 @@ const openTaskStatuses = new Set(["todo", "in_progress", "blocked"]);
 export type ProjectRelationRow = OrderRow & {
   companies: { id: string; name: string } | null;
   services: { id: string; name: string } | null;
-  profiles: { id: string; display_name: string | null } | null;
+  profiles: { id: string; display_name: string | null; avatar_url: string | null } | null;
 };
 
 /** Minimal task facts required for attention and the Info column. */

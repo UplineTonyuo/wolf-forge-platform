@@ -5,6 +5,11 @@ import type {
   TicketRow,
 } from "../../lib/supabase/database-rows";
 import { nonBlankTextSchema, uuidSchema } from "../shared";
+import {
+  teamReactionCodeSchema,
+  type TeamMessageReactionRow,
+  type TeamReactionToggleRow,
+} from "../team/schema";
 
 export const ticketStatuses = [
   "open",
@@ -35,6 +40,44 @@ export const ticketMessageInputSchema = z.object({
   body: ticketBodySchema,
 });
 
+export const ticketAttachmentTargetSchema = z.object({
+  request_id: uuidSchema,
+  ticket_id: uuidSchema.nullable(),
+  order_id: uuidSchema.nullable(),
+  reply_to_message_id: uuidSchema.nullable(),
+}).refine((value) => Boolean(value.ticket_id) !== Boolean(value.order_id), {
+  message: "Choose exactly one Ticket attachment target.",
+});
+
+export const ticketAttachmentSubmissionSchema = ticketAttachmentTargetSchema.and(z.object({
+  body: z.string().max(50_000),
+  attachment: z.object({
+    original_name: nonBlankTextSchema.max(255),
+    mime_type: z.enum([
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+      "video/mp4", "video/quicktime", "video/webm", "application/pdf",
+    ]),
+    size_bytes: z.number().int().positive().max(5 * 1024 * 1024),
+    checksum_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
+}));
+
+export const ticketReplyToMessageInputSchema = ticketMessageInputSchema.extend({
+  reply_to_message_id: uuidSchema,
+});
+
+export const ticketReactionInputSchema = z.object({
+  message_id: uuidSchema,
+  reaction_code: teamReactionCodeSchema,
+});
+
+export const ticketForwardToTeamInputSchema = z.object({
+  request_id: uuidSchema,
+  source_message_id: uuidSchema,
+  destination_conversation_id: uuidSchema,
+  comment: z.string().max(1_000).nullable().optional(),
+});
+
 export const updateTicketStatusSchema = z.object({
   status: z.enum(ticketStatuses),
 });
@@ -52,6 +95,12 @@ export type TicketMessage = TicketMessageRow;
 export type TicketAttachment = TicketAttachmentRow;
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
 export type TicketMessageInput = z.infer<typeof ticketMessageInputSchema>;
+export type TicketAttachmentTarget = z.infer<typeof ticketAttachmentTargetSchema>;
+export type TicketAttachmentSubmission = z.infer<typeof ticketAttachmentSubmissionSchema>;
+export type TicketReplyToMessageInput = z.infer<typeof ticketReplyToMessageInputSchema>;
+export type TicketReactionInput = z.infer<typeof ticketReactionInputSchema>;
+export type TicketForwardToTeamInput = z.infer<typeof ticketForwardToTeamInputSchema>;
+export type TicketReactionToggle = TeamReactionToggleRow;
 export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 export type UpdateTicketPriorityInput = z.infer<typeof updateTicketPrioritySchema>;
 export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
@@ -101,6 +150,13 @@ export type TicketDetailMessage = {
   visibility: (typeof ticketVisibilities)[number];
   body: string;
   created_at: string;
+  reply_to_message_id?: string | null;
+  reply_quote_text?: string | null;
+  reply_source_author_name?: string | null;
+  reply_source_available?: boolean;
+  reactions?: TeamMessageReactionRow[];
+  unsent_at?: string | null;
+  can_unsend?: boolean;
   attachments: Array<Pick<TicketAttachmentRow, "id" | "original_name" | "mime_type" | "size_bytes" | "scan_status" | "created_at">>;
 };
 

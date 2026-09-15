@@ -3214,6 +3214,65 @@ export type Database = {
           },
         ]
       }
+      team_message_pins: {
+        Row: {
+          conversation_id: string
+          id: string
+          message_id: string
+          pinned_at: string
+          pinned_by_profile_id: string
+          unpinned_at: string | null
+          unpinned_by_profile_id: string | null
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          message_id: string
+          pinned_at?: string
+          pinned_by_profile_id: string
+          unpinned_at?: string | null
+          unpinned_by_profile_id?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          message_id?: string
+          pinned_at?: string
+          pinned_by_profile_id?: string
+          unpinned_at?: string | null
+          unpinned_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_pins_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_pins_message_conversation_fk"
+            columns: ["message_id", "conversation_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id", "conversation_id"]
+          },
+          {
+            foreignKeyName: "team_message_pins_pinned_by_profile_id_fkey"
+            columns: ["pinned_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_message_pins_unpinned_by_profile_id_fkey"
+            columns: ["unpinned_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_message_reactions: {
         Row: {
           active: boolean
@@ -3269,6 +3328,7 @@ export type Database = {
           deleted_for_everyone_by: string | null
           forwarded_from_author_name: string | null
           forwarded_from_message_id: string | null
+          forwarded_from_ticket_message_id: string | null
           id: string
           message_type: string
           reply_quote_text: string | null
@@ -3277,6 +3337,12 @@ export type Database = {
           search_vector: unknown
           task_action: string | null
           task_id: string | null
+          voice_duration_ms: number | null
+          voice_expired_at: string | null
+          voice_expires_at: string | null
+          voice_mime_type: string | null
+          voice_size_bytes: number | null
+          voice_storage_path: string | null
         }
         Insert: {
           author_profile_id: string
@@ -3287,6 +3353,7 @@ export type Database = {
           deleted_for_everyone_by?: string | null
           forwarded_from_author_name?: string | null
           forwarded_from_message_id?: string | null
+          forwarded_from_ticket_message_id?: string | null
           id?: string
           message_type?: string
           reply_quote_text?: string | null
@@ -3295,6 +3362,12 @@ export type Database = {
           search_vector?: unknown
           task_action?: string | null
           task_id?: string | null
+          voice_duration_ms?: number | null
+          voice_expired_at?: string | null
+          voice_expires_at?: string | null
+          voice_mime_type?: string | null
+          voice_size_bytes?: number | null
+          voice_storage_path?: string | null
         }
         Update: {
           author_profile_id?: string
@@ -3305,6 +3378,7 @@ export type Database = {
           deleted_for_everyone_by?: string | null
           forwarded_from_author_name?: string | null
           forwarded_from_message_id?: string | null
+          forwarded_from_ticket_message_id?: string | null
           id?: string
           message_type?: string
           reply_quote_text?: string | null
@@ -3313,6 +3387,12 @@ export type Database = {
           search_vector?: unknown
           task_action?: string | null
           task_id?: string | null
+          voice_duration_ms?: number | null
+          voice_expired_at?: string | null
+          voice_expires_at?: string | null
+          voice_mime_type?: string | null
+          voice_size_bytes?: number | null
+          voice_storage_path?: string | null
         }
         Relationships: [
           {
@@ -3341,6 +3421,13 @@ export type Database = {
             columns: ["forwarded_from_message_id"]
             isOneToOne: false
             referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_messages_forwarded_from_ticket_message_id_fkey"
+            columns: ["forwarded_from_ticket_message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
             referencedColumns: ["id"]
           },
           {
@@ -3582,6 +3669,51 @@ export type Database = {
           },
         ]
       }
+      ticket_message_reactions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id?: string
+          reaction_code?: string
+          reactor_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_message_reactions_reactor_profile_id_fkey"
+            columns: ["reactor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_messages: {
         Row: {
           author_profile_id: string | null
@@ -3590,8 +3722,12 @@ export type Database = {
           created_at: string
           id: string
           message_kind: string
+          reply_quote_text: string | null
+          reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
+          unsent_at: string | null
+          unsent_by_profile_id: string | null
           visibility: string
         }
         Insert: {
@@ -3601,8 +3737,12 @@ export type Database = {
           created_at?: string
           id?: string
           message_kind: string
+          reply_quote_text?: string | null
+          reply_to_message_id?: string | null
           request_id?: string | null
           ticket_id: string
+          unsent_at?: string | null
+          unsent_by_profile_id?: string | null
           visibility: string
         }
         Update: {
@@ -3612,8 +3752,12 @@ export type Database = {
           created_at?: string
           id?: string
           message_kind?: string
+          reply_quote_text?: string | null
+          reply_to_message_id?: string | null
           request_id?: string | null
           ticket_id?: string
+          unsent_at?: string | null
+          unsent_by_profile_id?: string | null
           visibility?: string
         }
         Relationships: [
@@ -3625,10 +3769,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ticket_messages_reply_source_fkey"
+            columns: ["reply_to_message_id", "ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_messages"
+            referencedColumns: ["id", "ticket_id"]
+          },
+          {
             foreignKeyName: "ticket_messages_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_messages_unsent_by_profile_id_fkey"
+            columns: ["unsent_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3852,8 +4010,12 @@ export type Database = {
           created_at: string
           id: string
           message_kind: string
+          reply_quote_text: string | null
+          reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
+          unsent_at: string | null
+          unsent_by_profile_id: string | null
           visibility: string
         }
         SetofOptions: {
@@ -4324,6 +4486,14 @@ export type Database = {
       }
       app_clear_team_typing: {
         Args: { p_connection_id: string; p_conversation_id: string }
+        Returns: undefined
+      }
+      app_complete_team_voice_cleanup: {
+        Args: {
+          p_expected_path: string
+          p_object_kind: string
+          p_record_id: string
+        }
         Returns: undefined
       }
       app_consume_server_cost_limit: {
@@ -4800,11 +4970,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_finalize_team_voice_upload: {
+        Args: {
+          p_duration_ms: number
+          p_mime_type: string
+          p_retention_days: number
+          p_size_bytes: number
+          p_upload_id: string
+        }
+        Returns: Json
+      }
       app_forward_team_message: {
         Args: {
           p_destination_conversation_id: string
           p_request_id: string
           p_source_message_id: string
+        }
+        Returns: Json
+      }
+      app_forward_ticket_message_to_team: {
+        Args: {
+          p_comment?: string
+          p_destination_conversation_id: string
+          p_request_id: string
+          p_source_ticket_message_id: string
         }
         Returns: Json
       }
@@ -4917,6 +5106,10 @@ export type Database = {
           role_name: string
         }[]
       }
+      app_get_order_conversation: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       app_get_profile_effective_permissions: {
         Args: { p_profile_id?: string }
         Returns: {
@@ -4967,6 +5160,14 @@ export type Database = {
           p_conversation_id: string
           p_message_id: string
         }
+        Returns: Json
+      }
+      app_get_team_voice_playback: {
+        Args: { p_message_id: string }
+        Returns: Json
+      }
+      app_get_team_voice_upload_context: {
+        Args: { p_upload_id: string }
         Returns: Json
       }
       app_get_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
@@ -5124,13 +5325,6 @@ export type Database = {
           sort_order: number
         }[]
       }
-      app_list_operational_assignees: {
-        Args: never
-        Returns: {
-          display_name: string
-          profile_id: string
-        }[]
-      }
       app_list_internal_reports: {
         Args: { p_limit?: number; p_status?: string }
         Returns: {
@@ -5246,6 +5440,14 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+        }[]
+      }
+      app_list_operational_assignees: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          display_name: string
+          profile_id: string
         }[]
       }
       app_list_permission_preset_grants: {
@@ -5387,6 +5589,14 @@ export type Database = {
           profile_id: string
         }[]
       }
+      app_list_team_voice_cleanup_batch: {
+        Args: { p_limit?: number }
+        Returns: {
+          object_kind: string
+          record_id: string
+          storage_path: string
+        }[]
+      }
       app_list_ticket_summaries: {
         Args: { p_include_archived?: boolean }
         Returns: {
@@ -5472,6 +5682,11 @@ export type Database = {
           wallet_balance_cents: number
           wallet_transaction_id: string
         }[]
+      }
+      app_pin_team_message: { Args: { p_message_id: string }; Returns: Json }
+      app_prepare_team_voice_upload: {
+        Args: { p_conversation_id: string; p_mime_type: string }
+        Returns: Json
       }
       app_provision_client_account_profile: {
         Args: {
@@ -5758,8 +5973,41 @@ export type Database = {
           created_at: string
           id: string
           message_kind: string
+          reply_quote_text: string | null
+          reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
+          unsent_at: string | null
+          unsent_by_profile_id: string | null
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ticket_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_reply_to_ticket_message: {
+        Args: {
+          p_body: string
+          p_reply_to_message_id: string
+          p_request_id: string
+          p_ticket_id: string
+        }
+        Returns: {
+          author_profile_id: string | null
+          author_type: string
+          body: string
+          created_at: string
+          id: string
+          message_kind: string
+          reply_quote_text: string | null
+          reply_to_message_id: string | null
+          request_id: string | null
+          ticket_id: string
+          unsent_at: string | null
+          unsent_by_profile_id: string | null
           visibility: string
         }
         SetofOptions: {
@@ -5951,6 +6199,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_send_order_message: {
+        Args: {
+          p_body: string
+          p_internal_note?: boolean
+          p_order_id: string
+          p_request_id: string
+        }
+        Returns: string
       }
       app_send_report_draft: {
         Args: { p_report_id: string; p_request_id: string }
@@ -6185,6 +6442,10 @@ export type Database = {
         Args: { p_message_id: string; p_reaction_code: string }
         Returns: Json
       }
+      app_toggle_ticket_message_reaction: {
+        Args: { p_message_id: string; p_reaction_code: string }
+        Returns: Json
+      }
       app_touch_team_presence: {
         Args: { p_connection_id: string }
         Returns: string[]
@@ -6192,6 +6453,11 @@ export type Database = {
       app_touch_team_typing: {
         Args: { p_connection_id: string; p_conversation_id: string }
         Returns: undefined
+      }
+      app_unpin_team_message: { Args: { p_pin_id: string }; Returns: Json }
+      app_unsend_ticket_internal_note: {
+        Args: { p_message_id: string }
+        Returns: Json
       }
       app_update_company: {
         Args: { p_company_id: string; p_patch: Json }

@@ -2,7 +2,13 @@ import type {
   AssignTicketInput,
   CreateTicketInput,
   TicketDetail,
+  TicketAttachmentSubmission,
+  TicketAttachmentTarget,
+  TicketForwardToTeamInput,
   TicketMessageInput,
+  TicketReactionInput,
+  TicketReactionToggle,
+  TicketReplyToMessageInput,
   TicketSummary,
   UpdateTicketPriorityInput,
   UpdateTicketStatusInput,
@@ -15,6 +21,95 @@ import type { UserMutationClient } from "./types";
 
 export class TicketRepository {
   constructor(private readonly client: UserMutationClient) {}
+
+  async getForOrder(orderId: string): Promise<TicketDetail | null> {
+    const result = await this.client.rpc("app_get_order_conversation", { p_order_id: orderId });
+    if (result.error) throw mapDatabaseError(result.error, "Order conversation");
+    return result.data as TicketDetail | null;
+  }
+
+  async prepareAttachment(input: TicketAttachmentTarget): Promise<{ storage_key: string }> {
+    const rpc = this.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
+    const result = await rpc("app_prepare_ticket_attachment", {
+      p_request_id: input.request_id,
+      p_ticket_id: input.ticket_id ?? undefined,
+      p_order_id: input.order_id ?? undefined,
+      p_reply_to_message_id: input.reply_to_message_id ?? undefined,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Ticket attachment");
+    return result.data as { storage_key: string };
+  }
+
+  async sendWithAttachment(input: TicketAttachmentSubmission): Promise<void> {
+    const rpc = this.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
+    const result = await rpc("app_send_ticket_message_with_attachment", {
+      p_request_id: input.request_id,
+      p_ticket_id: input.ticket_id ?? undefined,
+      p_order_id: input.order_id ?? undefined,
+      p_body: input.body,
+      p_reply_to_message_id: input.reply_to_message_id ?? undefined,
+      p_original_name: input.attachment.original_name,
+      p_mime_type: input.attachment.mime_type,
+      p_size_bytes: input.attachment.size_bytes,
+      p_checksum_sha256: input.attachment.checksum_sha256,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Ticket attachment");
+  }
+
+  async attachmentDownload(attachmentId: string): Promise<{ storage_object_key: string }> {
+    const rpc = this.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
+    const result = await rpc("app_get_ticket_attachment_download", { p_attachment_id: attachmentId });
+    if (result.error) throw mapDatabaseError(result.error, "Ticket attachment");
+    return result.data as { storage_object_key: string };
+  }
+
+  async sendForOrder(orderId: string, input: TicketMessageInput, internalNote: boolean): Promise<string> {
+    const result = await this.client.rpc("app_send_order_message", {
+      p_order_id: orderId, p_request_id: input.request_id, p_body: input.body, p_internal_note: internalNote,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Order message");
+    return result.data as string;
+  }
+
+  async replyToMessage(id: string, input: TicketReplyToMessageInput): Promise<TicketMessageRow> {
+    return unwrapOne(
+      await this.client.rpc("app_reply_to_ticket_message", {
+        p_request_id: input.request_id,
+        p_ticket_id: id,
+        p_body: input.body,
+        p_reply_to_message_id: input.reply_to_message_id,
+      }),
+      "Ticket reply",
+    ) as TicketMessageRow;
+  }
+
+  async toggleReaction(input: TicketReactionInput): Promise<TicketReactionToggle> {
+    const result = await this.client.rpc("app_toggle_ticket_message_reaction", {
+      p_message_id: input.message_id,
+      p_reaction_code: input.reaction_code,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Reaction");
+    return result.data as unknown as TicketReactionToggle;
+  }
+
+  async forwardToTeam(input: TicketForwardToTeamInput): Promise<void> {
+    const result = await this.client.rpc("app_forward_ticket_message_to_team", {
+      p_request_id: input.request_id,
+      p_source_ticket_message_id: input.source_message_id,
+      p_destination_conversation_id: input.destination_conversation_id,
+      p_comment: input.comment ?? undefined,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Forward");
+  }
 
   async list(includeArchived = false): Promise<TicketSummary[]> {
     const result = await this.client.rpc("app_list_ticket_summaries", {
@@ -62,6 +157,12 @@ export class TicketRepository {
       }),
       "Ticket note",
     ) as TicketMessageRow;
+  }
+
+  async unsendInternalNote(messageId: string): Promise<{ ticket_id: string; order_id: string | null }> {
+    const result = await this.client.rpc("app_unsend_ticket_internal_note", { p_message_id: messageId });
+    if (result.error) throw mapDatabaseError(result.error, "Ticket note");
+    return result.data as { ticket_id: string; order_id: string | null };
   }
 
   async updateStatus(id: string, input: UpdateTicketStatusInput): Promise<TicketRow> {

@@ -44,6 +44,7 @@ import styles from "./projects-workspace.module.css";
 export type ProjectOption = {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 };
 
 const TABS: Array<{ value: ProjectTab; label: string }> = [

@@ -9,6 +9,8 @@ import {
 import type {
   TicketDetailMessage,
 } from "../../domain/tickets/schema";
+import type { TeamConversationView } from "../../domain/team/projections";
+import { toTeamReactionViews } from "../../domain/team/projections";
 import {
   formatDateTime,
 } from "../../lib/format";
@@ -19,6 +21,7 @@ import {
   TicketMessageAvatar,
 } from "./ticket-message-avatar";
 import styles from "./tickets.module.css";
+import { OrderMessageActions, type OrderReplyTarget } from "./order-message-actions";
 
 function renderTicketInline(
   text: string,
@@ -307,7 +310,7 @@ function TicketMessageBody({
   );
 }
 
-function chronologicalMessages(
+export function chronologicalMessages(
   messages:
     TicketDetailMessage[],
 ) {
@@ -363,32 +366,67 @@ function chronologicalMessages(
     );
 }
 
+function isInternalActorSide(
+  authorType: TicketDetailMessage["author_type"],
+): boolean {
+  return authorType === "internal" || authorType === "system";
+}
+
 export function TicketConversation({
   messages,
   clientView = false,
+  heading = "Conversation",
+  headerActions,
+  hideInternalNotes = false,
+  orderChat = false,
+  viewerProfileId,
+  forwardDestinations = [],
+  sourceLabel = "Project",
+  onReply,
+  canReact = false,
 }: {
   messages:
     TicketDetailMessage[];
   clientView?: boolean;
+  heading?: ReactNode;
+  headerActions?: ReactNode;
+  hideInternalNotes?: boolean;
+  orderChat?: boolean;
+  viewerProfileId?: string;
+  forwardDestinations?: TeamConversationView[];
+  sourceLabel?: string;
+  onReply?: (message: OrderReplyTarget) => void;
+  canReact?: boolean;
 }) {
   const visibleMessages =
     chronologicalMessages(
       messages.filter(
-        (message) =>
-          !clientView ||
-          (
-            message.visibility ===
-              "client" &&
-            message.message_kind !==
+        (message) => {
+          if (clientView) {
+            return (
+              message.visibility ===
+                "client" &&
+              message.message_kind !==
+                "internal_note"
+            );
+          }
+
+          if (hideInternalNotes || orderChat) {
+            return (
+              message.visibility === "client" && message.message_kind !==
               "internal_note"
-          ),
+            );
+          }
+
+          return true;
+        },
       ),
     );
 
   return (
     <section
       className={
-        styles.conversation
+        `${styles.conversation}${orderChat ? ` ${styles.orderChat}` : ""}`
       }
       aria-label="Conversation"
     >
@@ -400,12 +438,22 @@ export function TicketConversation({
 
           <div>
             <h2>
-              Conversation
+              {heading}
             </h2>
 
 
           </div>
         </div>
+
+        {headerActions && !clientView ? (
+          <div
+            className={
+              styles.conversationHeaderActions
+            }
+          >
+            {headerActions}
+          </div>
+        ) : null}
       </header>
 
       {visibleMessages.length ===
@@ -427,7 +475,7 @@ export function TicketConversation({
           }
         >
           {visibleMessages.map(
-            (message) => {
+            (message, index) => {
               const internalNote =
                 message.message_kind ===
                 "internal_note";
@@ -438,9 +486,28 @@ export function TicketConversation({
                   message.author_name,
                 );
 
+              const side =
+                isInternalActorSide(
+                  message.author_type,
+                )
+                  ? "internal"
+                  : "client";
+              const ownMessage = !clientView && side === "internal" &&
+                Boolean(viewerProfileId) && message.author_profile_id === viewerProfileId;
+              const previous = visibleMessages[index - 1];
+              const grouped = Boolean(previous && message.author_profile_id &&
+                previous.author_profile_id === message.author_profile_id &&
+                previous.author_type === message.author_type &&
+                Date.parse(message.created_at) - Date.parse(previous.created_at) <= 300_000);
+              const showClientIdentity = orderChat && side === "client";
+              const showIdentityTime = showClientIdentity && !grouped;
+
               return (
                 <li
                   key={message.id}
+                  data-side={side}
+                  data-grouped={orderChat && grouped ? "true" : undefined}
+                  data-own={orderChat && ownMessage ? "true" : undefined}
                   className={
                     internalNote
                       ? styles.internalMessage
@@ -452,38 +519,159 @@ export function TicketConversation({
                       styles.messageLayout
                     }
                   >
-                    <TicketMessageAvatar
-                      src={
-                        message.author_avatar_url
-                      }
-                    />
+                    {orderChat ? (
+                      showClientIdentity ? (
+                        grouped ? (
+                          <span
+                            className={styles.messageAvatar}
+                            aria-hidden="true"
+                            style={{ visibility: "hidden" }}
+                          />
+                        ) : (
+                          <TicketMessageAvatar
+                            src={message.author_avatar_url}
+                            name={sender}
+                          />
+                        )
+                      ) : null
+                    ) : (
+                      <TicketMessageAvatar
+                        src={
+                          message.author_avatar_url
+                        }
+                      />
+                    )}
 
                     <div
                       className={
                         styles.messageContent
                       }
                     >
-                      <header>
+                      {!orderChat || (!ownMessage && !grouped) ? <div
+                        className={
+                          styles.messageSender
+                        }
+                      >
+                        <strong>
+                          {sender}
+                        </strong>
+
+                        {internalNote ? (
+                          <span>
+                            <LockKeyhole
+                              aria-hidden="true"
+                            />
+                            Internal note
+                          </span>
+                        ) : null}
+                      </div> : null}
+
+                      {showIdentityTime ? (
+                        <time
+                          className={styles.messageIdentityTime}
+                          dateTime={message.created_at}
+                        >
+                          {formatDateTime(message.created_at)}
+                        </time>
+                      ) : null}
+
+                      <div className={styles.messageStack}>
                         <div
+                          tabIndex={orderChat ? 0 : undefined}
                           className={
-                            styles.messageSender
+                            styles.messageBubble
                           }
                         >
-                          <strong>
-                            {sender}
-                          </strong>
+                        {message.reply_to_message_id ? (
+                          <div className={styles.messageReplyPreview}>
+                            <strong>
+                              {message.reply_source_available === false
+                                ? "Original message unavailable"
+                                : message.reply_source_author_name?.trim() || "Message"}
+                            </strong>
+                            {message.reply_source_available !== false && message.reply_quote_text ? (
+                              <p>{message.reply_quote_text}</p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                        <TicketMessageBody
+                          body={
+                            message.body
+                          }
+                        />
 
-                          {internalNote ? (
-                            <span>
-                              <LockKeyhole
-                                aria-hidden="true"
-                              />
-                              Internal note
-                            </span>
-                          ) : null}
+                        {message
+                          .attachments
+                          .length >
+                        0 ? (
+                          <ul
+                            className={
+                              styles.attachments
+                            }
+                          >
+                            {message.attachments.map(
+                              (
+                                attachment,
+                              ) => (
+                                <li
+                                  key={
+                                    attachment.id
+                                  }
+                                >
+                                  <a
+                                    className={styles.attachmentLink}
+                                    href={`/api/ticket-attachments/${attachment.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    {attachment.mime_type.startsWith("image/") ? (
+                                      // eslint-disable-next-line @next/next/no-img-element -- authenticated per-message download route, not a static-optimizable asset
+                                      <img
+                                        className={styles.attachmentImage}
+                                        src={`/api/ticket-attachments/${attachment.id}`}
+                                        alt={attachment.original_name}
+                                      />
+                                    ) : (
+                                      <FileText aria-hidden="true" />
+                                    )}
+                                    <span>
+                                      <strong>{attachment.original_name}</strong>
+                                      <small>
+                                        {attachment.mime_type} {String.fromCharCode(183)}{" "}
+                                        {attachment.size_bytes.toLocaleString()} bytes
+                                      </small>
+                                    </span>
+                                  </a>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        ) : null}
+
                         </div>
 
+                        {orderChat ? (
+                          <OrderMessageActions
+                            message={{
+                              messageId: message.id,
+                              ticketId: message.ticket_id,
+                              authorName: sender,
+                              body: message.body,
+                            }}
+                            sourceLabel={sourceLabel}
+                            reactions={toTeamReactionViews(message.reactions)}
+                            destinations={forwardDestinations}
+                            onReply={onReply}
+                            canReact={canReact}
+                          />
+                        ) : null}
+                      </div>
+
+                      {!showIdentityTime ? (
                         <time
+                          className={
+                            styles.messageTime
+                          }
                           dateTime={
                             message.created_at
                           }
@@ -492,54 +680,6 @@ export function TicketConversation({
                             message.created_at,
                           )}
                         </time>
-                      </header>
-
-                      <TicketMessageBody
-                        body={
-                          message.body
-                        }
-                      />
-
-                      {message
-                        .attachments
-                        .length >
-                      0 ? (
-                        <ul
-                          className={
-                            styles.attachments
-                          }
-                        >
-                          {message.attachments.map(
-                            (
-                              attachment,
-                            ) => (
-                              <li
-                                key={
-                                  attachment.id
-                                }
-                              >
-                                <FileText
-                                  aria-hidden="true"
-                                />
-
-                                <strong>
-                                  {
-                                    attachment.original_name
-                                  }
-                                </strong>
-
-                                <small>
-                                  {
-                                    attachment.mime_type
-                                  }
-                                  {" Â· "}
-                                  {attachment.size_bytes.toLocaleString()}
-                                  {" bytes"}
-                                </small>
-                              </li>
-                            ),
-                          )}
-                        </ul>
                       ) : null}
                     </div>
                   </div>

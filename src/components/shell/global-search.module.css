@@ -994,3 +994,8 @@
     transform: none;
   }
 }
+@media (max-width: 767px) {
+  .root { min-width: 100px; flex: 1 1 0; }
+  .searchShell { gap: 6px; padding-inline: 10px; }
+  .inputArea input { font-size: 16px; }
+}

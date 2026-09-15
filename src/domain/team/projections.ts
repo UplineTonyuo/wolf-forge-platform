@@ -238,6 +238,7 @@ export type TeamMessageView = {
   replySourceAuthorName: string | null;
   replySourceDeleted: boolean;
   forwardedFromMessageId: string | null;
+  forwardedFromTicketMessageId?: string | null;
   forwardedFromAuthorName: string | null;
   deletedForEveryone: boolean;
   voice?: {
@@ -281,6 +282,7 @@ export function toTeamMessageView(row: TeamMessageRow, actorProfileId: string): 
     replySourceAuthorName: row.reply_source_author_name?.trim() || null,
     replySourceDeleted: row.reply_source_deleted === true,
     forwardedFromMessageId: row.forwarded_from_message_id ?? null,
+    forwardedFromTicketMessageId: row.forwarded_from_ticket_message_id ?? null,
     forwardedFromAuthorName: row.forwarded_from_author_name?.trim() || null,
     deletedForEveryone: row.deleted_for_everyone === true,
     voice:

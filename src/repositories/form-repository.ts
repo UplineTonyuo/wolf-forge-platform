@@ -301,9 +301,10 @@ export class FormRepository {
     return result.data as unknown as AssignedFormDetail;
   }
 
-  async listSubmissions(formId?: string): Promise<FormSubmissionSummary[]> {
+  async listSubmissions(formId?: string, orderId?: string): Promise<FormSubmissionSummary[]> {
     let query = this.client.from("form_submissions").select().order("submitted_at", { ascending: false });
     if (formId) query = query.eq("form_id", formId);
+    if (orderId) query = query.eq("order_id", orderId);
     const result = await query;
     if (result.error) throw mapDatabaseError(result.error, "Form submissions");
     return (result.data ?? []) as unknown as FormSubmissionSummary[];

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChevronDown,
   ChevronRight,
   Archive,
   ArrowLeft,
@@ -1094,6 +1095,7 @@ export function ProjectDetailActions({
           styles.launcher
         }
         aria-label="Open project actions"
+        aria-haspopup="menu"
         aria-expanded={
           mounted &&
           !closing
@@ -1103,7 +1105,14 @@ export function ProjectDetailActions({
         }
       >
         <Plus
-          size={20}
+          size={14}
+          aria-hidden="true"
+        />
+
+        <span>Actions</span>
+
+        <ChevronDown
+          size={13}
           aria-hidden="true"
         />
       </button>

@@ -21,6 +21,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 import {
   createPortal,
@@ -103,8 +104,10 @@ type NotificationPosition = {
 
 export function WorkspaceCommandBar({
   user,
+  mobileNavigation,
 }: {
   user: InternalUser;
+  mobileNavigation?: ReactNode;
 }) {
   const triggerRef =
     useRef<HTMLButtonElement>(null);
@@ -814,6 +817,7 @@ export function WorkspaceCommandBar({
         className="workspace-command-bar"
         aria-label="Workspace controls"
       >
+        {mobileNavigation}
         <GlobalSearch />
         {/*
           Secondary utilities stay in the collapsible rail. The notification

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { touchTeamPresenceAction } from "../../app/actions/team-messages";
+import { randomUuid } from "../../lib/random-uuid";
 
 const HEARTBEAT_INTERVAL_MS = 25_000;
 const DISCONNECT_ENDPOINT = "/api/team-presence/disconnect";
@@ -51,7 +52,7 @@ export function TeamPresenceProvider({
     if (!enabled) return;
 
     let alive = true;
-    const connectionId = crypto.randomUUID();
+    const connectionId = randomUuid();
     activeRef.current = true;
 
     const heartbeat = async () => {
