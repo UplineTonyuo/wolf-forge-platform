@@ -96,6 +96,16 @@
 }
 
 /*
+ * The mobile filter control. It is a fixed-size pill, so it must not be
+ * stretched by the search box flexing beside it.
+ */
+.filterSlot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+/*
  * FilterInput ships with its own page-level margins and a stacked visible
  * label. Inside the toolbar the label would make the control taller than the
  * pills it sits beside, so it stays available to assistive tech only.
@@ -230,6 +240,15 @@
   .filter {
     min-height: 40px;
   }
+
+  /*
+   * Pages that move their filter states into the shared Filter sheet at these
+   * widths hide the tab row instead of restyling it, so the toolbar collapses
+   * to the single search + Filter row.
+   */
+  .filtersDesktopOnly {
+    display: none;
+  }
 }
 
 /* Only at the narrowest widths is there genuinely no room for both on one row. */
@@ -240,6 +259,21 @@
 
   .search {
     flex: 1 1 100%;
+  }
+}
+
+/*
+ * ...unless the page carries the compact Filter control, which is narrow
+ * enough to sit beside the search box on one row at every width.
+ */
+@media (max-width: 430px) {
+  .trailing:has(.filterSlot) {
+    flex-wrap: nowrap;
+  }
+
+  .trailing:has(.filterSlot) .search {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }
 

@@ -32,7 +32,15 @@
 .detailMain { display: grid; gap: 14px; min-width: 0; }
 .conversation > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--wf-border); }.conversation > header > div { display: flex; align-items: center; gap: 10px; }.conversation > header svg { width: 17px; color: var(--wf-navy); }.conversation h2 { margin: 0; color: var(--wf-navy); font: 650 15px var(--wf-font-display); }.conversation header p { margin: 3px 0 0; color: var(--wf-text-muted); font-size: 10px; }
 .thread { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }.message,.internalMessage { padding: 18px; border-top: 1px solid #edf0f4; }.thread > li:first-child { border-top: 0; }.internalMessage { margin: 10px; padding: 14px; border: 1px solid #eadcae; border-radius: 5px; background: #fffbec; }.message > header,.internalMessage > header { display: flex; justify-content: space-between; gap: 16px; }.message header > div,.internalMessage header > div { display: flex; align-items: center; gap: 8px; }.message header strong,.internalMessage header strong { color: var(--wf-navy); font-size: 12px; }.internalMessage header span { display: inline-flex; align-items: center; gap: 4px; color: #796020; font-size: 9px; font-weight: 700; text-transform: uppercase; }.internalMessage header span svg { width: 11px; }.message time,.internalMessage time { color: var(--wf-text-muted); font-size: 10px; }.message > p,.internalMessage > p { margin: 10px 0 0; color: #303745; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
-.attachments { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }.attachments li { display: grid; grid-template-columns: 16px 1fr; gap: 2px 7px; padding: 8px 10px; border: 1px solid var(--wf-border); border-radius: 4px; font-size: 11px; }.attachments svg { grid-row: span 2; width: 14px; }.attachments small { color: var(--wf-text-muted); font-size: 9px; }
+/*
+ * `li` has exactly one child (the `<a class="attachmentLink">` wrapper) —
+ * `.attachmentLink` owns its own grid for laying out the icon/image against
+ * the filename. `li` must not also impose a grid-template-columns here: a
+ * single grid item auto-places into just the first column, so `li` used to
+ * confine the whole wrapper to a 16px-wide track and everything inside
+ * (filename, image) rendered squeezed into that.
+ */
+.attachments { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }.attachments li { padding: 8px 10px; border: 1px solid var(--wf-border); border-radius: 4px; font-size: 11px; }.attachments svg { grid-row: span 2; width: 14px; }.attachments small { color: var(--wf-text-muted); font-size: 9px; }
 .composer,.noteComposer { padding: 16px; }.noteComposer { border-color: #eadcae; background: #fffcf3; }.composer > header,.noteComposer > header { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; color: var(--wf-navy); font-size: 12px; }.noteComposer > header svg { width: 14px; color: #8a6d20; }.noteComposer > header span { color: #7c6e47; font-size: 10px; font-weight: 400; }.composer textarea,.noteComposer textarea { width: 100%; resize: vertical; padding: 11px; border: 1px solid var(--wf-border); border-radius: 4px; font: inherit; font-size: 12px; line-height: 1.55; }.composer textarea:focus,.noteComposer textarea:focus { border-color: #8991b5; outline: 2px solid rgba(0,13,81,.08); }.composer footer,.noteComposer footer { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }.composer footer > span,.noteComposer footer > span,.composerMeta { color: var(--wf-text-muted); font-size: 9px; }.composerMeta { display: flex; align-items: center; gap: 8px; }.composerShortcutHint { padding-left: 8px; border-left: 1px solid var(--wf-border); white-space: nowrap; }.composer button svg,.noteComposer button svg { width: 14px; }
 @media (max-width: 640px) { .composerShortcutHint { display: none; } }
 
@@ -2216,7 +2224,8 @@
 }
 
 .ticketRichToolbar > button,
-.ticketRichLinkControl > button {
+.ticketRichLinkControl > button,
+.ticketRichHistoryGroup > button {
   width: 30px;
   height: 30px;
   display: grid;
@@ -2236,6 +2245,7 @@
 
 .ticketRichToolbar > button:hover:not(:disabled),
 .ticketRichLinkControl > button:hover:not(:disabled),
+.ticketRichHistoryGroup > button:hover:not(:disabled),
 .ticketRichLinkControl > button[aria-expanded="true"] {
   color: #ffffff;
   background: rgba(255, 255, 255, .16);
@@ -2247,7 +2257,8 @@
 }
 
 .ticketRichToolbar > button:active:not(:disabled),
-.ticketRichLinkControl > button:active:not(:disabled) {
+.ticketRichLinkControl > button:active:not(:disabled),
+.ticketRichHistoryGroup > button:active:not(:disabled) {
   transform: scale(.94);
 }
 
@@ -2267,12 +2278,13 @@
   stroke-width: 1.9;
 }
 
-.ticketRichToolbarDivider {
-  width: 1px;
-  height: 18px;
-  flex: 0 0 1px;
-  margin: 0 4px;
-  background: rgba(255, 255, 255, .2);
+.ticketRichHistoryGroup {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 4px;
+  padding-left: 4px;
+  border-left: 1px solid rgba(255, 255, 255, .2);
 }
 
 .ticketRichComposer {
@@ -2734,6 +2746,59 @@
   align-self: flex-end;
 }
 
+.messagePending {
+  opacity: .62;
+}
+
+.messageFailed {
+  border-color: rgba(140, 47, 47, .4);
+  background: rgba(140, 47, 47, .06);
+}
+
+.messagePendingStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--wf-text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.pendingSpin {
+  width: 9px;
+  height: 9px;
+  stroke-width: 2.6;
+  animation: ticketPendingSpin 700ms linear infinite;
+}
+
+@keyframes ticketPendingSpin {
+  to { transform: rotate(360deg); }
+}
+
+.messageRetry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--wf-danger, #8c2f2f);
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.messageRetry svg {
+  width: 11px;
+  height: 11px;
+}
+
+.thread > li[data-side="internal"] .messagePendingStatus,
+.thread > li[data-side="internal"] .messageRetry {
+  align-self: flex-end;
+}
+
 @media (max-width: 800px) {
   .messageLayout {
     max-width: 88%;
@@ -2918,9 +2983,19 @@
 .attachmentDraft > button:hover { background: #e9ecf3; }
 .attachmentDraft > button svg { width: 16px; }
 .attachmentLink { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; color: inherit; text-decoration: none; }
+/* Image attachments render .attachmentLink as a <button> (opens the
+   lightbox instead of navigating) — strip the browser's button chrome so
+   it looks identical to the <a> non-image attachments still use. */
+button.attachmentLink { width: 100%; border: 0; padding: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+/* Image attachments preview above the filename instead of beside it — a
+   72px-tall row is too small to inspect a photo without opening it. */
+.attachmentLink:has(.attachmentImage) { grid-template-columns: 1fr; }
 .attachmentLink > span { display: grid; min-width: 0; gap: 2px; }
 .attachmentLink strong { overflow-wrap: anywhere; }
-.attachmentImage { width: 72px; height: 54px; border-radius: 4px; object-fit: cover; }
+.attachmentImage { display: block; width: 100%; max-width: 220px; height: auto; border-radius: 4px; }
+/* Image attachments show as bare media, not a file card — no border/padding
+   tile around them (that's what non-image attachments still get). */
+.attachments li.attachmentImageCard { padding: 0; border: 0; background: transparent; overflow: hidden; }
 @media (max-width: 900px) {
   .orderConversationSurface > .composer footer { flex-wrap: wrap; }
   .orderConversationSurface > .composer .composerMeta { flex: 1 1 240px; }
@@ -3196,6 +3271,13 @@
   border-radius: 4px;
   background: #f4f5f8;
 }
+.composerReplyThumbnail {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+}
 .composerReplyContext strong { color: #000d51; font-size: 11px; }
 .composerReplyContext p {
   max-width: 70ch;
@@ -3258,6 +3340,21 @@
 .orderChat [data-side="internal"] .messageBody :is(h3, a),
 .orderChat [data-side="internal"] .attachments small { color: #fff; }
 .orderChat .messageBubble .messageBody { margin: 0; }
+/*
+ * A message with no visible text and only image attachment(s) shows as bare
+ * media — no bubble chrome behind it, in either the light generic-ticket
+ * skin or orderChat's navy internal-message skin. Specificity here has to
+ * meet or beat every .messageBubble background/padding rule above.
+ */
+.messageBubble.bareMediaBubble,
+.thread > li[data-side="internal"] .messageBubble.bareMediaBubble,
+.orderChat .messageBubble.bareMediaBubble,
+.orderChat .thread > li[data-side="internal"] .messageBubble.bareMediaBubble {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.bareMediaBubble .attachments { margin-top: 0; }
 .messageReplyPreview {
   margin-bottom: 6px;
   padding: 6px 8px;
@@ -3275,9 +3372,17 @@
   white-space: nowrap;
 }
 .orderChat [data-side="internal"] .messageReplyPreview { background: rgba(255, 255, 255, .13); }
+.messageReplyThumbnail {
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin-top: 3px;
+  border-radius: 3px;
+  object-fit: cover;
+}
 .orderChat .messageBody > :first-child { margin-top: 0; }
 .orderChat .messageBody > :last-child { margin-bottom: 0; }
-.orderChat .attachments li { min-width: 0; grid-template-columns: 16px minmax(0, 1fr); }
+.orderChat .attachments li { min-width: 0; }
 .orderChat .messageTime {
   position: absolute;
   bottom: 0;
@@ -3288,17 +3393,54 @@
   pointer-events: none;
 }
 .orderChat [data-side="internal"] .messageTime { left: auto; right: 0; }
+/*
+ * A pending/failed bubble reuses .messageTime's slot, but unlike .messageTime
+ * it is active status, not metadata — it must stay visible, not wait for a
+ * hover the sender's own device may never receive.
+ */
+.orderChat .messagePendingStatus,
+.orderChat .messageRetry {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: max-content;
+  max-width: calc(100vw - 64px);
+}
+.orderChat [data-side="internal"] .messagePendingStatus,
+.orderChat [data-side="internal"] .messageRetry { left: auto; right: 0; }
 .orderMessageActions {
+  /*
+   * The menu's containing block is this layer, so the layer IS the message
+   * block. The trigger is placed outside it, on the far side of the bubble,
+   * exactly where it has always been.
+   *
+   * Before this the layer was a ~50px strip parked beside the bubble, and the
+   * menu inherited that anchor: it opened one trigger-width off the message --
+   * under the avatar for a left-side message, and past the right edge of a
+   * 390px viewport for a right-aligned one.
+   */
   position: absolute;
   z-index: 2;
-  top: 0;
-  bottom: 0;
-  left: 100%;
-  padding-left: 6px;
+  inset: 0;
   opacity: 0;
   pointer-events: none;
 }
-.orderChat [data-side="internal"] .orderMessageActions { left: auto; right: 100%; padding-left: 0; padding-right: 6px; }
+/*
+ * The layer covers the message so the menu can anchor to it, but only the
+ * trigger and the open menu may receive pointer events -- otherwise the layer
+ * would swallow the tap that is supposed to dismiss the menu.
+ */
+.orderMessageActions > button { position: absolute; top: 0; left: 100%; margin-left: 6px; }
+.orderChat .thread > li[data-own="true"] .orderMessageActions > button {
+  left: auto;
+  right: 100%;
+  margin-left: 0;
+  margin-right: 6px;
+}
+.orderChat .messageContent:hover .orderMessageActions > button,
+.orderChat .messageContent:focus-within .orderMessageActions > button,
+.orderMessageActions[data-open] > button,
+.orderMessageActions[data-open] .orderMessageMenu { pointer-events: auto; }
 .orderMessageActions > button,
 .orderMessageMenu button {
   display: flex;
@@ -3323,7 +3465,15 @@
   position: absolute;
   z-index: 3;
   top: calc(100% + 8px);
-  right: 0;
+  /*
+   * Anchored to the message's own edge: a left-aligned message anchors left, a
+   * right-aligned one anchors right, so the menu always opens inward, under
+   * the message it belongs to. Keyed on `data-own` rather than `data-side`
+   * because which side a bubble sits on depends on WHO is looking, not on who
+   * wrote it.
+   */
+  left: 0;
+  right: auto;
   width: 176px;
   padding: 8px;
   border: 1px solid var(--wf-border);
@@ -3334,11 +3484,21 @@
   opacity: 0;
   transform: translateY(-4px);
 }
-.orderChat [data-side="internal"] .orderMessageMenu { right: auto; left: 0; }
+.orderChat .thread > li[data-own="true"] .orderMessageMenu { left: auto; right: 0; }
 .orderMessageMenu[data-motion] {
   transition: opacity 150ms var(--wf-ease), transform 150ms var(--wf-ease);
 }
 .orderMessageMenu[data-phase="open"] { opacity: 1; transform: translateY(0); }
+/*
+ * Opening upward, for a message near the bottom of the thread. The measurement
+ * lives in the component (see `place()`); this only expresses the result.
+ */
+.orderMessageMenu[data-placement="above"] {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateY(4px);
+}
+.orderMessageMenu[data-placement="above"][data-phase="open"] { transform: translateY(0); }
 .orderMessageMenu[data-phase="closing"] { pointer-events: none; }
 .orderMessageMenu button { justify-content: flex-start; width: 100%; min-height: 40px; padding: 0 10px; background: #fff; }
 .orderMessageMenu p { margin: 6px; color: #a32920; font-size: 11px; }
@@ -3429,7 +3589,7 @@
 .orderChat .messageContent:focus-within .messageTime,
 .orderChat .messageContent:focus-within .orderMessageActions,
 .orderChat .messageContent:has(.orderMessageActions[data-open]) .messageTime,
-.orderMessageActions[data-open] { opacity: 1; pointer-events: auto; }
+.orderMessageActions[data-open] { opacity: 1; }
 @media (hover: hover) and (pointer: fine) {
   .orderChat .messageTime,
   .orderMessageActions {
@@ -3440,7 +3600,7 @@
   .orderChat .messageContent:hover .orderMessageActions,
   .orderChat .messageContent:focus-within .messageTime,
   .orderChat .messageContent:focus-within .orderMessageActions,
-  .orderMessageActions[data-open] { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .orderMessageActions[data-open] { opacity: 1; transform: translateY(0); }
   .orderChat .messageContent:focus-within .messageTime,
   .orderChat .messageContent:focus-within .orderMessageActions { transition: none; }
   .orderMessageActions button:hover { background: #e2e6ef; }
@@ -3503,10 +3663,88 @@
 .orderChat .thread > li[data-side="client"][data-grouped="true"] .messageAvatar { display: none; }
 .orderChat .messageBubble { max-width: 100%; }
 
+/*
+ * A client viewer of their own Ticket conversation: they are the "client"
+ * side, so their own messages take the right/navy "own message" treatment
+ * OrderConversation already gives its own staff viewer, while Wolf Forge/
+ * staff messages take the plain left-side treatment "client" gets everywhere
+ * else. Every declaration below is copied from (or is the reset for) the
+ * existing `[data-side="internal"]` staff-own rules above, mirrored onto
+ * "client" — scoped strictly to `data-client-view` so OrderConversation and
+ * the plain staff Ticket view are untouched. Placed after the client-identity
+ * grid block (`:not([data-grouped])`) so equal-specificity ties resolve here.
+ */
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] {
+  justify-content: flex-end;
+}
+.orderChat[data-client-view="true"] .thread > li[data-side="internal"] {
+  justify-content: flex-start;
+}
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] .messageLayout {
+  display: flex;
+  flex-direction: row-reverse;
+}
+.orderChat[data-client-view="true"] .thread > li[data-side="internal"] .messageLayout {
+  flex-direction: row;
+}
+/*
+ * `[data-side="internal"] .messageSender` is row-reversed so a STAFF viewer's
+ * own name sits against their right edge. For a CLIENT viewer those rows are
+ * the other party, sitting on the left, and the reversal is wrong there -- it
+ * drives the name to the far side of the metadata column while the timestamp
+ * and bubble stay next to the avatar, which reads as a disconnected row.
+ * Undoing it gives the client the same compact [avatar][name / time] stack the
+ * staff and Project views already have.
+ */
+.orderChat[data-client-view="true"] [data-side="internal"] .messageSender {
+  flex-direction: row;
+}
+/*
+ * `justify-self` must match the client-identity grid rule's specificity
+ * (`.orderChat .thread > li[data-side="client"]:not([data-grouped]) .messageStack`)
+ * to win the tie by source order — a shorter selector here would lose to it
+ * for an ungrouped own message and stay left-pinned inside the row.
+ */
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] .messageStack {
+  justify-self: initial;
+  align-items: flex-end;
+}
+.orderChat[data-client-view="true"] [data-side="internal"] .messageStack {
+  align-items: flex-start;
+}
+/* `:not(.bareMediaBubble)` on both: a bare/chromeless image message must stay
+   transparent on either side, and ties with the existing bareMediaBubble
+   reset rules at equal specificity would otherwise let source order (these
+   rules sit later in the file) repaint a navy/white box behind it. */
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] .messageBubble:not(.bareMediaBubble) {
+  border-radius: 12px 12px 4px 12px;
+  background: #000d51;
+  border-color: #000d51;
+  color: #fff;
+}
+.orderChat[data-client-view="true"] .thread > li[data-side="internal"] .messageBubble:not(.bareMediaBubble) {
+  border-radius: 12px 12px 12px 4px;
+  background: #fff;
+  border-color: var(--wf-border);
+  color: inherit;
+}
+.orderChat[data-client-view="true"] [data-side="client"] .messageBody,
+.orderChat[data-client-view="true"] [data-side="client"] .messageBody :is(h3, a),
+.orderChat[data-client-view="true"] [data-side="client"] .attachments small { color: #fff; }
+/* Staff bubbles go back to light/neutral above — the unconditional
+   `[data-side="internal"]` white-text rule (written for the navy staff-own
+   skin) has to be reset here or it leaves invisible white text on it. */
+.orderChat[data-client-view="true"] [data-side="internal"] .messageBody,
+.orderChat[data-client-view="true"] [data-side="internal"] .messageBody :is(h3, a),
+.orderChat[data-client-view="true"] [data-side="internal"] .attachments small { color: inherit; }
+.orderChat[data-client-view="true"] [data-side="client"] .messageReplyPreview { background: rgba(255, 255, 255, .13); }
+/* Only the client's own messages can be pending/failed (optimistic sends), so
+   only "client" needs the mirrored right-hugging position; staff messages
+   never carry these and keep the unqualified left-hugging default. */
+.orderChat[data-client-view="true"] [data-side="client"] .messageTime,
+.orderChat[data-client-view="true"] [data-side="client"] .messagePendingStatus,
+.orderChat[data-client-view="true"] [data-side="client"] .messageRetry { left: auto; right: 0; }
 @media (max-width: 900px) {
-  .orderConversationSurface .ticketRichToolbar { flex-wrap: wrap; }
-  .orderConversationSurface .ticketRichToolbar > button,
-  .orderConversationSurface .ticketRichLinkControl > button { width: 44px; height: 44px; flex-basis: 44px; }
   .orderConversationSurface .ticketRichComposer { font-size: 16px; overflow-wrap: anywhere; }
   .orderConversationSurface > .composer button[type="submit"],
   .orderChat .internalNotesButton,
@@ -3520,7 +3758,7 @@
   .composerReplyContext button { min-height: 44px; }
 }
 @media (max-width: 720px) {
-  .internalNotesDialog { width: calc(100vw - 32px); max-height: calc(100dvh - 32px); }
+  .internalNotesDialog { width: calc(100% - 32px); max-height: calc(100dvh - 32px); }
   .internalNotesLayout { max-height: calc(100dvh - 32px); grid-template-rows: auto minmax(0, 1fr) auto; }
   .internalNotesLayout > header { padding: 12px 16px; }
   .internalNotesLayout > header button { width: 44px; height: 44px; }
@@ -3528,4 +3766,58 @@
   .internalNotesComposerWrap { padding: 12px 16px 16px; }
   .internalNotesComposerWrap textarea { font-size: 16px; }
   .internalNotesComposerWrap button[type="submit"] { min-height: 44px; }
+}
+
+/* Attachment image lightbox — in-app viewer opened by tapping an image
+   attachment, instead of navigating to the download route/signed URL. */
+.imageLightboxBackdrop {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 13, 81, .55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.imageLightboxCard {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: 92vw;
+  max-height: 92vh;
+}
+.imageLightboxImage {
+  display: block;
+  max-width: 92vw;
+  max-height: 92vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.imageLightboxClose {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  cursor: pointer;
+}
+.imageLightboxClose:hover { background: rgba(255, 255, 255, .24); }
+.imageLightboxClose:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.imageLightboxClose svg { width: 18px; height: 18px; }
+@media (max-width: 640px) {
+  .imageLightboxBackdrop { padding: 16px; }
+  .imageLightboxClose { top: 8px; right: 8px; width: 40px; height: 40px; background: rgba(0, 13, 81, .5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .imageLightboxBackdrop::backdrop { backdrop-filter: none; }
 }

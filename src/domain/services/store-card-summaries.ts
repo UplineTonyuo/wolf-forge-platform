@@ -38,13 +38,13 @@ const cardSummaries: Record<string, string> = {
   "WEBSITE SPRINT":
     "Audits your homepage, mobile experience, speed, and conversion path to find what is stopping visitors from becoming leads.",
   "LEAD GEN SPRINT":
-    "Audits your lead generation system — offer, landing pages, capture, and follow-up — to find where prospects drop out.",
+    "Audits your lead generation system (offer, landing pages, capture, and follow-up) to find where prospects drop out.",
   "CONVERSION SPRINT":
     "Audits your website, offers, and sales process to find the leaks between visitor, lead, and customer.",
   "COMPETITOR SPRINT":
     "Analyses your competitors' rankings, website strategy, content, and offers to show where they win and where you can attack.",
   "LEAD GENERATION SYSTEM":
-    "Builds a complete lead capture and follow-up system — funnel, landing page, CRM, and appointments — to turn prospects into sales.",
+    "Builds a complete lead capture and follow-up system (funnel, landing page, CRM, and appointments) to turn prospects into sales.",
   "CONVERSION OPTIMIZATION SYSTEM":
     "Identifies and optimizes the points between visitor, lead, appointment, and customer so more of your existing traffic converts.",
   "COMPETITIVE DOMINATION BLUEPRINT":
@@ -52,9 +52,9 @@ const cardSummaries: Record<string, string> = {
 
   // --- GBP Only SEO -----------------------------------------------------
   "GMB OPTIMIZATION":
-    "Fixes the foundation of your Google Business Profile — categories, services, local keywords, and photos — so you outrank competitors.",
+    "Fixes the foundation of your Google Business Profile (categories, services, local keywords, and photos) so you outrank competitors.",
   "GMB/GBP MANAGEMENT":
-    "Monthly Google Business Profile management — photos, posts, Q&As, and citations — to keep your local presence active and growing.",
+    "Monthly Google Business Profile management (photos, posts, Q&As, and citations) to keep your local presence active and growing.",
   "GOOGLE BUSINESS PROFILE REVIEWS ( 10 REVIEWS)":
     "Adds ten positive reviews to your Google Business Profile to strengthen trust and local credibility.",
   "GMB VERIFICATION":
@@ -66,13 +66,13 @@ const cardSummaries: Record<string, string> = {
   "FOUNDATIONAL SEO (20 TARGETED KEYWORDS)":
     "Twenty targeted keywords with local citations, Google Business Profile management, branded press releases, and monthly content.",
   "SEO SUCCESS BLUEPRINT":
-    "A complete local SEO plan — citations, Google Business Profile management, geo stacks, and four blogs and press releases monthly.",
+    "A complete local SEO plan: citations, Google Business Profile management, geo stacks, and four blogs and press releases monthly.",
   "FRANCHISE IN A BOX SYSTEM":
     "Builds the brand, website, and Google Business Profiles for a multi-location business, with territory-level SEO for each market.",
 
   // --- Ecommerce SEO -----------------------------------------------------
   "E-COMMERCE SEO PACKAGE":
-    "A monthly content and authority plan for online stores — blogs, guest posts, press releases, and link stacks built for e-commerce.",
+    "A monthly content and authority plan for online stores: blogs, guest posts, press releases, and link stacks built for e-commerce.",
 
   // --- Onpage & Technical SEO --------------------------------------------
   "AIO SYSTEM":
@@ -80,11 +80,11 @@ const cardSummaries: Record<string, string> = {
   "KEYWORD RESEARCH":
     "Researches up to 50 targeted keywords with search volume, competition, and intent analysis, delivered in a detailed report.",
   "ON-PAGE SEO":
-    "Optimizes up to 40 pages for your target keywords — titles, headings, meta, internal links, and images — to match search intent.",
+    "Optimizes up to 40 pages for your target keywords (titles, headings, meta, internal links, and images) to match search intent.",
   "WORDPRESS SPEED OPTIMIZATION SERVICES":
-    "Speeds up your WordPress site — Core Web Vitals, caching, image compression, and code minification — with a before-and-after report.",
+    "Speeds up your WordPress site (Core Web Vitals, caching, image compression, and code minification) with a before-and-after report.",
   "TECHNICAL SEO FIXES":
-    "Fixes your technical SEO foundation — titles, schema, internal linking, and priority issues — so your site is ready to compete.",
+    "Fixes your technical SEO foundation (titles, schema, internal linking, and priority issues) so your site is ready to compete.",
   "WEBSITE OPTIMIZATION":
     "Optimizes your homepage, CTAs, mobile experience, and service pages so more of your traffic becomes leads and customers.",
   "ADVANCED SCHEMA MARKUP (1 PAGE ONLY)":
@@ -102,13 +102,13 @@ const cardSummaries: Record<string, string> = {
 
   // --- Press Releases ----------------------------------------------------
   "BASIC PRESS RELEASE DISTRIBUTION SERVICE - GUARANTEED 150 LINKS":
-    "Distributes your 500-word press release to 150 news sites — financial and local — with guaranteed links.",
+    "Distributes your 500-word press release to 150 news sites (financial and local) with guaranteed links.",
   "STANDARD PRESS RELEASE DISTRIBUTION SERVICE - GUARANTEED 350 LINKS":
     "Distributes your press release to 350 guaranteed placements, including Google News, Yahoo, Bing, and online newspapers.",
   "PREMIUM PRESS RELEASE DISTRIBUTION SERVICE - GUARANTEED 450 LINKS":
     "Distributes your 1,500-word press release to 450 placements, including TV, radio, and major financial news outlets.",
   "YAHOO PACKAGE PRESS RELEASE DISTRIBUTION SERVICE - GUARANTEED 450 LINKS":
-    "Distributes your press release across the Yahoo network — Finance, Tech, News, and Crypto — for 450 guaranteed placements.",
+    "Distributes your press release across the Yahoo network (Finance, Tech, News, and Crypto) for 450 guaranteed placements.",
   "BUSINESS INSIDER + YAHOO PACKAGE PRESS RELEASE DISTRIBUTION SERVICE - GUARANTEED 450 LINKS":
     "Distributes your press release to Business Insider, MarketWatch, and the Yahoo network for 450 guaranteed placements.",
 
@@ -120,7 +120,7 @@ const cardSummaries: Record<string, string> = {
   "100+ LOCAL CITATIONS":
     "Builds 100 local citations across trusted directories like Yelp, Apple Maps, and the Better Business Bureau.",
   "GOOGLE GSTACK ADVANCED":
-    "Builds an advanced Google asset stack — Maps, Knowledge Graph, Drive, and content — to strengthen your brand's authority.",
+    "Builds an advanced Google asset stack (Maps, Knowledge Graph, Drive, and content) to strengthen your brand's authority.",
   "CLOUD STACK":
     "Hosts a branded website across a cloud stack of major providers to add authority signals to your online presence.",
   "INFINITE ENTITY LOOP":

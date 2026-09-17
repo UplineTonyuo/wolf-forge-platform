@@ -1,0 +1,120 @@
+.root {
+  display: flex;
+  min-width: 0;
+}
+
+.trigger {
+  min-height: 33px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid #dce0e8;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #36405a;
+  padding: 0 9px;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.trigger:hover { border-color: #b7bfd1; }
+.triggerOpen { border-color: #000d51; }
+.trigger:focus-visible { outline: 1px solid #000d51; outline-offset: 1px; }
+
+.triggerLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret { flex: 0 0 auto; color: #7f889a; }
+
+.heading {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid #eceff4;
+}
+
+.eyebrow {
+  color: #7f889a;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heading strong { color: #000d51; font-size: 13px; }
+.subLabel { color: #7f889a; font-size: 10px; }
+
+.backButton {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 8px 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #000d51;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.backButton:hover { background: #f3f4f8; }
+
+.breadcrumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 12px 0;
+  color: #7f889a;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.menu {
+  position: fixed;
+  z-index: 9800;
+  width: min(268px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dce0e8;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgb(0 13 81 / 12%);
+  transform-origin: top left;
+  animation: project-filter-popover-enter 140ms ease-out both;
+}
+
+.menu[data-state="closing"] {
+  animation: project-filter-popover-exit 140ms ease-in both;
+  pointer-events: none;
+}
+
+@keyframes project-filter-popover-enter {
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes project-filter-popover-exit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-6px) scale(.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu { animation: none; }
+  .menu[data-state="closing"] { animation: none; opacity: 0; }
+}

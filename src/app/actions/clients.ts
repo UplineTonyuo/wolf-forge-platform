@@ -195,6 +195,79 @@ export async function updateClientStatusAction(
   }
 }
 
+export type UpdateClientDetailsResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function updateClientDetailsAction(
+  companyId: string,
+  contactId: string | null,
+  input: {
+    name: string;
+    status: string;
+    contact: {
+      name: string;
+      email: string;
+      phone: string;
+      job_title: string;
+    } | null;
+  },
+): Promise<UpdateClientDetailsResult> {
+  const context = await getInternalContext();
+
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+
+    if (!context.user.clients.edit) {
+      return {
+        ok: false,
+        error: "You do not have permission to edit Clients.",
+      };
+    }
+
+    if (input.contact && !context.user.clients.privateManage) {
+      return {
+        ok: false,
+        error: "You do not have permission to manage client-private contact data.",
+      };
+    }
+
+    await context.services.companies.update(
+      companyId,
+      { name: input.name, status: input.status as CompanyStatus },
+      context.actor,
+    );
+
+    if (input.contact && contactId) {
+      await context.services.contacts.update(
+        contactId,
+        {
+          name: input.contact.name,
+          email: input.contact.email || null,
+          phone: input.contact.phone || null,
+          job_title: input.contact.job_title || null,
+        },
+        context.actor,
+      );
+    }
+
+    revalidatePath("/clients");
+    revalidatePath(`/clients/${companyId}`);
+
+    return { ok: true };
+  } catch (error) {
+    const safe = toClientSafeError(error);
+
+    return {
+      ok: false,
+      error:
+        safe.code === "VALIDATION_ERROR"
+          ? "Check the client details and try again."
+          : safe.message,
+    };
+  }
+}
+
 export type ClientBulkOutcome = {
   id: string;
   label: string;

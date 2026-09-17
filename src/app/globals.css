@@ -3487,7 +3487,57 @@ td {
   padding-bottom: 6px;
 }
 
+/*
+ * The type-tab strip is too crowded at mobile widths and duplicates the
+ * Type filter now wired into the Clients Filter sheet, so it's desktop-only.
+ * The + action lives inside this row, so it goes with it -- the page header
+ * carries the same action at these widths instead.
+ */
+@media (max-width: 767px) {
+  .clients-status-row {
+    display: none;
+  }
+}
+
 /* WF CLIENT STATUS ACTION ALIGNMENT END */
+
+/* WF MOBILE PAGE ACTION START */
+
+/*
+ * A compact page action beside the page title below 768px.
+ *
+ * The marker rides on the action node itself, so only pages that actually
+ * ship one become a single header row -- pages whose trailing action is a
+ * full-width button keep the stacked header they have always had.
+ */
+@media (max-width: 767px) {
+  .page-header:has(> .page-actions > .page-action-compact) {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .page-header:has(> .page-actions > .page-action-compact) > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+/* Rendered by the page, hidden everywhere the desktop action is visible. */
+.clients-header-action,
+.mobile-page-action {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .clients-header-action,
+  .mobile-page-action {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* WF MOBILE PAGE ACTION END */
 
 /* WF SERVICES ENGINE START */
 
@@ -4488,6 +4538,187 @@ td {
 /* WF CLIENT STATUS V2 END */
 
 
+/* WF CLIENT DETAIL ACTIONS START */
+
+.client-actions-picker {
+  position: relative;
+  display: inline-flex;
+}
+
+.client-actions-trigger {
+  height: 36px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 0 14px;
+
+  border: 1px solid #dfe3ea;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #17203a;
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  box-shadow: 0 1px 2px rgba(0, 13, 81, 0.03);
+
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.client-actions-trigger:hover {
+  border-color: #c8ced9;
+  background: #fbfcfe;
+
+  box-shadow: 0 3px 10px rgba(0, 13, 81, 0.06);
+}
+
+.client-actions-trigger:active {
+  transform: scale(0.98);
+}
+
+.client-actions-trigger.is-open {
+  border-color: rgba(0, 13, 81, 0.28);
+
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.055);
+}
+
+.client-actions-chevron {
+  width: 0;
+  height: 0;
+
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #8d95a5;
+
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.client-actions-trigger.is-open .client-actions-chevron {
+  transform: rotate(180deg);
+}
+
+.client-actions-menu {
+  width: 220px;
+
+  position: absolute;
+  z-index: 200;
+
+  top: calc(100% + 8px);
+  right: 0;
+
+  padding: 6px;
+
+  border: 1px solid #e1e4ea;
+  border-radius: 11px;
+
+  background: rgba(255, 255, 255, 0.98);
+
+  box-shadow:
+    0 18px 45px rgba(0, 13, 81, 0.12),
+    0 4px 12px rgba(0, 13, 81, 0.05);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transform: translateY(-7px) scale(0.965);
+  transform-origin: top right;
+
+  transition:
+    opacity 170ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 170ms ease;
+}
+
+.client-actions-menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+
+  transform: translateY(0) scale(1);
+}
+
+.client-actions-option {
+  width: 100%;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 0 10px;
+
+  border: 0;
+  border-radius: 7px;
+
+  background: transparent;
+  color: #323a4c;
+
+  font-family: var(--wf-font-ui);
+  font-size: 12px;
+  font-weight: 550;
+
+  text-align: left;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background-color 130ms ease,
+    color 130ms ease,
+    transform 130ms ease;
+}
+
+.client-actions-option svg {
+  width: 15px;
+  height: 15px;
+
+  color: #7a8190;
+
+  flex-shrink: 0;
+}
+
+.client-actions-option:hover {
+  background: #f5f6f9;
+  color: #000d51;
+}
+
+.client-actions-option:hover svg {
+  color: #000d51;
+}
+
+.client-actions-option:active {
+  transform: scale(0.985);
+}
+
+.client-actions-modal-context {
+  margin: -6px 0 0;
+
+  color: #7a8190;
+
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+}
+
+@media (max-width: 767px) {
+  .client-actions-menu {
+    width: 240px;
+  }
+}
+
+/* WF CLIENT DETAIL ACTIONS END */
+
+
 /* WF CLIENT WALLET START */
 
 .client-balance-row dd {
@@ -4817,6 +5048,7 @@ td {
 }
 
 .client-balance-field > input,
+.client-balance-field > select,
 .client-balance-money-input {
   height: 40px;
 
@@ -4830,7 +5062,8 @@ td {
     box-shadow 150ms ease;
 }
 
-.client-balance-field > input {
+.client-balance-field > input,
+.client-balance-field > select {
   width: 100%;
 
   padding: 0 12px;
@@ -4842,6 +5075,36 @@ td {
   font-size: 11px;
 }
 
+.client-balance-field > textarea {
+  width: 100%;
+  min-height: 84px;
+
+  padding: 10px 12px;
+
+  border: 1px solid #dfe3e9;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #20283a;
+
+  font-family: var(--wf-font-ui);
+  font-size: 11px;
+
+  resize: vertical;
+
+  outline: 0;
+
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.client-balance-field > textarea:focus {
+  border-color: rgba(0, 13, 81, 0.34);
+
+  box-shadow: 0 0 0 3px rgba(0, 13, 81, 0.05);
+}
+
 .client-balance-money-input {
   display: flex;
   align-items: center;
@@ -4850,7 +5113,8 @@ td {
 }
 
 .client-balance-money-input:focus-within,
-.client-balance-field > input:focus {
+.client-balance-field > input:focus,
+.client-balance-field > select:focus {
   border-color:
     rgba(0, 13, 81, 0.34);
 
@@ -6255,20 +6519,22 @@ td {
 
 /* Below this width the rail becomes a drawer behind the portal top bar. */
 @media (max-width: 900px) {
-  .client-portal { grid-template-columns: minmax(0, 1fr); }
+  .client-portal {
+    grid-template-columns: minmax(0, 1fr);
 
-  .portal-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 60;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 56px;
-    padding: 0 14px;
-    color: #fff;
-    background: var(--wf-navy);
-    border-bottom: 1px solid rgba(255, 255, 255, .12);
+    /*
+     * Stacked, the top bar and the page are two grid rows inside a container
+     * that carries a min-height, and align-content defaults to stretch -- so
+     * on any page shorter than the viewport the leftover space was shared out
+     * between those rows. Row 1 is the sticky navy bar, which then rendered as
+     * a 210-260px slab instead of a 56px bar and pushed the page down with it.
+     * Measured at 390x844 before this: /account/projects rows 210.203px
+     * 633.797px, /account/reporting 263.266px 580.734px, while the tall
+     * /account page was a correct 56px. Sizing rows to their content keeps the
+     * bar at 56px and lets the page take the rest; the container's own white
+     * background covers whatever is left.
+     */
+    align-content: start;
   }
 
   .portal-drawer-toggle {
@@ -13593,6 +13859,21 @@ td {
  * it. The navy .portal-topbar owns the sticky slot at <=900px, where the
  * command bar reverts to static so the two never stack.
  */
+/*
+ * Mobile-only header controls.
+ *
+ * The drawer toggle, the page title, the search icon and its back control all
+ * live in the command bar, which renders at every width -- but above 900px the
+ * rail is permanent, the page states its own title, and the search field is
+ * always on screen. Without this they would all appear in the desktop row.
+ */
+.portal-command-bar .portal-drawer-toggle,
+.portal-command-bar .portal-command-title,
+.portal-command-bar .portal-command-search-trigger,
+.portal-command-bar .portal-command-search-back {
+  display: none;
+}
+
 .portal-command-bar {
   width: min(100%, 1040px);
   margin: 0 auto;
@@ -13979,26 +14260,229 @@ td {
 
 /* --- Responsive ----------------------------------------------------------- */
 
+/*
+ * ==========================================================
+ * ONE-ROW MOBILE HEADER
+ *
+ * Below 900px the command bar IS the header: the drawer toggle, the page
+ * title and the utility cluster share a single navy strip, and the search
+ * control morphs that strip in place rather than opening a second row.
+ * The separate navy .portal-topbar that used to sit above it is gone.
+ * ==========================================================
+ */
 @media (max-width: 900px) {
   .portal-command-bar {
-    padding: 14px 18px 0;
-    /* The navy .portal-topbar owns the sticky slot here; the command bar stays
-       in flow so the two never stack or overlap while scrolling. */
-    position: static;
-  }
-}
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 4px;
 
-@media (max-width: 720px) {
-  /* Search keeps its own row so nothing is squeezed into a single strip. */
-  .portal-command-bar {
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 10px;
+    min-height: 56px;
+    padding: 0 10px 0 8px;
+
+    /* It inherits the sticky slot the top bar used to own. */
+    position: sticky;
+    top: 0;
+    z-index: 60;
+
+    color: #fff;
+    background: var(--wf-navy);
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
   }
 
-  /* The field now lives inside the search anchor, which is what flexes. */
-  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
-  .portal-command-actions { order: 1; margin-left: auto; }
+  /* The title takes whatever the fixed-size controls leave, and truncates. */
+  .portal-command-bar .portal-command-title {
+    display: block;
+
+    min-width: 0;
+    flex: 1 1 auto;
+
+    margin-right: 4px;
+
+    overflow: hidden;
+
+    font-family: "Sora Variable", Sora, sans-serif;
+    font-size: 14px;
+    font-weight: 620;
+    letter-spacing: .01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .portal-command-bar .portal-command-actions { margin-left: 0; gap: 2px; }
+
+  /* White on navy, and a full touch target. */
+  .portal-command-bar .portal-command-button,
+  .portal-command-bar .portal-drawer-toggle {
+    display: inline-flex;
+
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+
+    color: #fff;
+    background: transparent;
+  }
+
+  .portal-command-bar .portal-command-button svg,
+  .portal-command-bar .portal-drawer-toggle svg { width: 19px; height: 19px; }
+
+  .portal-command-bar .portal-command-button:hover,
+  .portal-command-bar .portal-command-button.is-open {
+    color: #fff;
+    background: rgba(255, 255, 255, .12);
+  }
+
+  /*
+   * Profile is not in the mobile header. It is one tap away in the navigation
+   * drawer, which is where the rail already lists it.
+   */
+  .portal-command-avatar { display: none; }
+
+  /*
+   * The + leaves the row for a bottom-right floating trigger. Fixed rather
+   * than absolute so it clears page content and the safe area without any
+   * ancestor needing a positioning context.
+   */
+  .portal-command-trailing {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 55;
+
+    display: flex;
+  }
+
+  .portal-command-bar .portal-command-plus {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+
+    border: 0;
+    border-radius: 999px;
+
+    color: #fff;
+    background: var(--wf-navy);
+    box-shadow:
+      0 10px 24px rgba(0, 13, 81, .28),
+      0 3px 8px rgba(0, 13, 81, .18);
+  }
+
+  .portal-command-bar .portal-command-plus svg { width: 22px; height: 22px; }
+
+  .portal-command-bar .portal-command-plus:hover,
+  .portal-command-bar .portal-command-plus[aria-expanded="true"] {
+    color: #fff;
+    background: var(--wf-navy-hover);
+  }
+
+  /*
+   * The + trigger becomes a fixed bottom-right FAB above, but its panel
+   * (.portal-header-panel) is still positioned relative to its anchor with
+   * `top: calc(100% + 10px)`, which opened it below a FAB already pinned to
+   * the bottom edge — off-screen. Anchored upward here so it always lands
+   * inside the viewport, gap and safe-area handled by the anchor itself.
+   */
+  .portal-command-trailing .portal-header-panel {
+    top: auto;
+    bottom: calc(100% + 10px);
+    transform-origin: bottom right;
+  }
+
+  @keyframes portal-header-panel-in-up {
+    from { opacity: 0; transform: translateY(6px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes portal-header-panel-out-up {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(4px) scale(.99); }
+  }
+
+  .portal-command-trailing .portal-header-panel[data-phase="open"] {
+    animation: portal-header-panel-in-up 190ms var(--portal-pop-ease) both;
+  }
+
+  .portal-command-trailing .portal-header-panel[data-phase="closing"] {
+    animation: portal-header-panel-out-up 150ms var(--portal-pop-ease) both;
+  }
+
+  /* A sheet or dialog owns the screen; the trigger steps out of its way. */
+  body:has(.portal-overlay) .portal-command-trailing,
+  body:has(.portal-modal-backdrop) .portal-command-trailing {
+    display: none;
+  }
+
+  /* ---- Search: the field is off the row until the icon asks for it ---- */
+  /*
+   * Scoped, not bare: the shared definition further down sets
+   * `flex: 0 1 340px` on this anchor for the desktop row, and an equally
+   * specific rule inside a media query loses to it. At 340px the anchor ate the
+   * whole strip and squeezed the title down to an ellipsis.
+   */
+  .portal-command-bar .portal-command-search-anchor { flex: 0 0 auto; }
+  .portal-command-bar .portal-command-search { display: none; }
+  .portal-command-bar .portal-command-search-trigger { display: inline-flex; }
+  .portal-command-bar .portal-command-search-back { display: none; }
+
+  /* ---- Search mode: the input takes the row, nothing else shares it ---- */
+  .portal-command-bar[data-search-open="true"] {
+    padding-left: 6px;
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-drawer-toggle,
+  .portal-command-bar[data-search-open="true"] .portal-command-title,
+  .portal-command-bar[data-search-open="true"] .portal-command-search-trigger,
+  .portal-command-bar[data-search-open="true"] .portal-command-actions {
+    display: none;
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search-anchor {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search {
+    display: flex;
+
+    height: 42px;
+
+    border-color: transparent;
+    background: rgba(255, 255, 255, .12);
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search input {
+    color: #fff;
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search input::placeholder {
+    color: rgba(255, 255, 255, .6);
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search svg {
+    color: rgba(255, 255, 255, .72);
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    margin-left: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .portal-command-bar[data-search-open="true"] .portal-command-search-back svg {
+    width: 18px;
+    height: 18px;
+    color: #fff;
+  }
 }
 
 @media (max-width: 620px) {
@@ -14011,6 +14495,12 @@ td {
   /* Full-width targets rather than a cramped right-aligned pair. */
   .portal-overlay-foot { display: grid; grid-template-columns: 1fr 1fr; }
   .portal-overlay-foot > * { width: 100%; justify-content: center; }
+  /*
+   * A footer that is one block rather than a pair -- the cart's summary -- takes
+   * the whole strip. Without this it was laid into the first track and read as a
+   * half-width column pinned left.
+   */
+  .portal-overlay-foot > :only-child { grid-column: 1 / -1; }
 
   .chooser-grid { grid-template-columns: minmax(0, 1fr); }
 
@@ -14127,8 +14617,11 @@ td {
 }
 
 @media (max-width: 720px) {
-  .portal-command-search-anchor { flex: 1 1 100%; order: 2; }
-
+  /*
+   * The anchor no longer claims a full row of its own: the header is one strip
+   * at every width, and the search control morphs in place rather than wrapping
+   * under it. The results panel still goes near-full-width here.
+   */
   .portal-command-search-anchor .portal-header-panel {
     width: calc(100vw - 24px);
   }
@@ -14505,13 +14998,15 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
     width: 44px;
     height: 44px;
     flex: 0 0 44px;
-    border: 1px solid var(--wf-border);
+    border: 0;
     border-radius: 6px;
-    background: #fff;
+    background: transparent;
     color: var(--wf-navy);
     cursor: pointer;
+    transition: color 160ms var(--wf-ease, ease), background-color 160ms ease;
   }
-  .mobile-nav-trigger:active { background: #eef0f7; }
+  .mobile-nav-trigger:active { background: rgba(0, 13, 81, .06); }
+  .mobile-nav-trigger svg { width: 21px; height: 21px; stroke-width: 1.85; }
   .workspace-command-bar { flex-wrap: wrap; gap: 6px; }
   .workspace-command-bar > .workspace-command-shortcuts { order: 1; }
   .workspace-command-bar > .workspace-notification-trigger { width: 44px; height: 44px; }
@@ -14522,4 +15017,247 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
   .mobile-nav-drawer[open],
   .mobile-nav-drawer::backdrop,
   .mobile-nav-drawer[open]::backdrop { transition: none; transform: none; }
+}
+
+/* WF MOBILE HEADER POLISH START
+ * Everything below is scoped to <=767px (or is inert by default and only
+ * activated inside that scope). Desktop's command bar and notification
+ * popover keep every rule defined earlier in this file.
+ */
+
+/* Rendered unconditionally by the component so JSX stays simple; hidden
+   outside the mobile scope so nothing appears on desktop. */
+.workspace-notification-backdrop {
+  display: none;
+}
+
+/* Desktop keeps its bare popover with no visible close affordance. */
+.workspace-notification-close {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* ---- Final mobile header: hamburger, Search, Bell, Quick Action.
+     Nothing else is permanently visible -- no chat icon (right-edge lever
+     instead), no profile icon (reachable through the navigation drawer's
+     AccountMenu). ---- */
+  .workspace-command-bar {
+    flex-wrap: nowrap !important;
+    gap: 4px;
+  }
+
+  .workspace-command-bar > * { min-width: 0; }
+
+  /* GlobalSearch is the bar's 2nd child (after mobileNavigation); let it
+     shrink below its own 160px floor instead of pushing icons off-screen. */
+  .workspace-command-bar > *:nth-child(2) {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* The approved mobile row has no Calendar slot. */
+  .workspace-command-calendar {
+    display: none;
+  }
+
+  /*
+   * Undoes the desktop hover/focus-gated collapse (WF COMMAND BAR SHORTCUT
+   * STABILITY) at mobile widths -- there is no hover on a touch screen, so
+   * the surviving `.workspace-command-shortcuts` wrapper (Quick Action) must
+   * already be full-width and tappable, not waiting on a :hover that can
+   * never fire.
+   */
+  .workspace-command-bar > .workspace-command-shortcuts {
+    max-width: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+
+  /*
+   * Chat moved to the right-edge lever (mobile-team-messages-lever.tsx),
+   * which shares the same open/unread state as the desktop Team Messages
+   * button instead of duplicating it. Calendar has no mobile slot either.
+   * Both share this wrapper with Quick Action's own `.workspace-command-
+   * shortcuts` on desktop; `:has()` tells the two apart without a
+   * dedicated wrapper class.
+   */
+  .workspace-command-bar > .workspace-command-shortcuts:not(:has(.workspace-command-plus)) {
+    display: none;
+  }
+
+  /* Profile is reachable through the navigation drawer (AccountMenu,
+     sidebar variant) instead of a permanent header icon. */
+  .workspace-command-bar > .workspace-command-profile {
+    display: none;
+  }
+
+  /*
+   * Shared offset for any page-level `position: sticky` element that needs
+   * to sit below the header instead of under it (e.g. services-folder-
+   * workspace's .serviceFilter). 44px tallest icon + the command bar's own
+   * 10px top/bottom padding (see the <=1023px .workspace-command-bar rule
+   * above) -- constant across both scroll states, since the bar's own box
+   * never resizes. One definition here, not a per-page magic number.
+   */
+  :root {
+    --wf-mobile-header-h: 64px;
+  }
+
+  /* ---- Scroll morph: flat/integrated at the top of the page, a compact
+   * navy floating pill past SCROLL_THRESHOLD (workspace-command-bar.tsx).
+   * The bar's own box (height, padding, gap) never changes -- only this
+   * pseudo-element's opacity animates, so nothing layout-heavy is ever
+   * animated. Static inset gives the "floating" look without a resize.
+   */
+  .workspace-command-bar {
+    position: sticky;
+    top: 0;
+  }
+
+  .workspace-command-bar::before {
+    content: "";
+    position: absolute;
+    inset: 6px 10px;
+    z-index: -1;
+    border-radius: 14px;
+    background: #000d51;
+    box-shadow: 0 8px 20px rgba(0, 13, 81, .22);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--wf-ease, ease);
+  }
+
+  .workspace-command-bar[data-scrolled="true"]::before {
+    opacity: 1;
+  }
+
+  /*
+   * Hamburger / Bell / Quick Action read as plain icons at mobile widths --
+   * navy against the flat top-of-page header, flipping to white once the
+   * navy pill (::before above) fades in. Quick Action's bordered-circle
+   * identity is a desktop-only treatment; at mobile it matches Bell and the
+   * hamburger instead. `color` is already in each button's own transition
+   * list, so both directions animate for free.
+   */
+  .workspace-command-bar .mobile-nav-trigger,
+  .workspace-command-bar .workspace-notification-trigger,
+  .workspace-command-bar .workspace-command-plus {
+    color: var(--wf-navy);
+  }
+
+  .workspace-command-bar .workspace-command-plus {
+    border: 0;
+    background: transparent;
+  }
+
+  .workspace-command-bar[data-scrolled="true"] .mobile-nav-trigger,
+  .workspace-command-bar[data-scrolled="true"] .workspace-notification-trigger,
+  .workspace-command-bar[data-scrolled="true"] .workspace-command-plus {
+    color: #ffffff;
+  }
+
+  /* The unread badge is a navy disc with a white ring -- unreadable on a
+     navy pill without inverting it. */
+  .workspace-command-bar[data-scrolled="true"] .workspace-notification-trigger .wf-count-badge {
+    background: #ffffff;
+    color: #000d51;
+    border-color: #000d51;
+  }
+
+  /* ---- D. Notifications become a mobile bottom sheet ---- */
+  .workspace-notification-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: rgba(6, 16, 44, 0.38);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 180ms ease;
+  }
+
+  .workspace-notification-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @starting-style {
+    .workspace-notification-backdrop.is-open { opacity: 0; }
+  }
+
+  .workspace-notification-portal {
+    top: auto !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: min(78vh, 620px);
+    border-radius: 16px 16px 0 0;
+    transform-origin: bottom center;
+    transform: translateY(16px) !important;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .workspace-notification-portal.is-open {
+    transform: translateY(0) !important;
+  }
+
+  .workspace-notification-list {
+    max-height: calc(min(78vh, 620px) - 66px - env(safe-area-inset-bottom));
+  }
+
+  .workspace-notification-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border: 0;
+    border-radius: 999px;
+    color: #000d51;
+    background: rgba(0, 13, 81, 0.06);
+    cursor: pointer;
+  }
+
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .workspace-notification-backdrop,
+  .workspace-notification-portal,
+  .workspace-command-bar::before,
+  .mobile-nav-trigger,
+  .workspace-notification-trigger,
+  .workspace-command-plus {
+    transition: none !important;
+  }
+}
+/* WF MOBILE HEADER POLISH END */
+
+/* ==========================================================
+   CLIENT PORTAL — MOBILE FIELD SIZING
+
+   iOS Safari zooms the layout viewport whenever a focused input, select or
+   textarea renders under 16px. That shifts the page mid-interaction and
+   leaves it zoomed after blur. The Store catalog already works around this
+   for its own search box (see store-catalog.module.css); these are the shared
+   portal field rules every other client surface uses, including the global
+   search in the command bar and the Profile form.
+
+   Client-portal-only class families, so the internal workspace is untouched.
+   ========================================================== */
+
+@media (max-width: 900px) {
+  .portal-field > input,
+  .portal-dialog-form input,
+  .portal-dialog-form textarea,
+  .portal-command-search input {
+    font-size: 16px;
+  }
 }

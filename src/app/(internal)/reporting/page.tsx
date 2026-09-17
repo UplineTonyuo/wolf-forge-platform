@@ -65,8 +65,19 @@ export default async function ReportingPage({
       : reports.filter((report) => report.status === activeFilter);
 
   const newReport = user.reporting.send ? (
-    <Link className={styles.primaryButton} href="/reporting/new">
+    <Link className={`${styles.primaryButton} ${styles.toolbarAction}`} href="/reporting/new">
       <Plus aria-hidden="true" />New report
+    </Link>
+  ) : null;
+
+  const newReportCompact = user.reporting.send ? (
+    <Link
+      className={`${styles.compactAction} page-action-compact`}
+      href="/reporting/new"
+      aria-label="New report"
+      title="New report"
+    >
+      <Plus aria-hidden="true" />
     </Link>
   ) : null;
 
@@ -74,6 +85,7 @@ export default async function ReportingPage({
     <PageFrame
       title="Reporting"
       description="Build, save and deliver structured client reports."
+      action={newReportCompact}
     >
       {loadError ? (
         <DataError message={loadError} />

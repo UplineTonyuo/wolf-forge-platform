@@ -159,7 +159,7 @@ export function cartDraftBody(items: CartItem[]): string {
 
   const lines = items.map(
     (item) =>
-      `- ${item.name}${item.categoryName ? ` (${item.categoryName})` : ""} — ${item.priceLabel}`,
+      `- ${item.name}${item.categoryName ? ` (${item.categoryName})` : ""}: ${item.priceLabel}`,
   );
 
   return [

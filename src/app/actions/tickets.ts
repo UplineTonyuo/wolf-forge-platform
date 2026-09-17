@@ -21,6 +21,10 @@ function refreshTicket(ticketId: string) {
   // The rail's "waiting on you" count and the Dashboard both read ticket state,
   // so a reply has to refresh the portal shell as well as the conversation.
   revalidatePath("/account");
+  // Investment Intent reports whether a conversation is live, so a Ticket that
+  // becomes one has to refresh the workspace that decides between Create and
+  // Open. A no-op for every other Ticket.
+  revalidatePath("/investment-intent");
 }
 
 function refreshOrder(orderId: string) {
@@ -47,7 +51,13 @@ export async function createClientTicketAction(input: { requestId: string; subje
 
 export type CreateInternalTicketResult =
   | { ok: true; ticketId: string }
-  | { ok: false; error: string };
+  /**
+   * `conflict` is set only when an investment conversation already exists for
+   * the client + investment. It is the database's unique index answering, not
+   * a guess, and it lets the caller stop pretending nothing happened instead
+   * of printing a constraint message at a human.
+   */
+  | { ok: false; error: string; conflict?: true };
 
 export async function createInternalTicketAction(input: {
   requestId: string;
@@ -55,6 +65,12 @@ export async function createInternalTicketAction(input: {
   subject: string;
   message: string;
   priority: string;
+  /**
+   * Supplied only by the Investment Intent workspace, to open an investment
+   * conversation. Absent for every ordinary Ticket caller, which keeps this one
+   * authoritative creation path rather than adding a second endpoint.
+   */
+  investmentServiceId?: string;
 }): Promise<CreateInternalTicketResult> {
   const context = await getInternalContext();
 
@@ -73,6 +89,7 @@ export async function createInternalTicketAction(input: {
         subject: input.subject,
         message: input.message,
         priority: input.priority,
+        investment_service_id: input.investmentServiceId,
       },
       context.actor,
     );
@@ -84,9 +101,27 @@ export async function createInternalTicketAction(input: {
       ticketId: ticket.id,
     };
   } catch (error) {
+    const safe = toClientSafeError(error);
+
+    /*
+     * Two staff can press Create at the same moment. The partial unique index
+     * is the guard and it wins the race honestly -- so the loser is told what
+     * actually happened and asked to reload, rather than shown a constraint
+     * violation. Scoped to investment conversations only: every other Ticket
+     * failure still reports exactly what it always did.
+     */
+    if (input.investmentServiceId && safe.code === "CONFLICT") {
+      return {
+        ok: false,
+        conflict: true,
+        error:
+          "This client already has an investment conversation for this investment. Reloading the latest state.",
+      };
+    }
+
     return {
       ok: false,
-      error: toClientSafeError(error).message,
+      error: safe.message,
     };
   }
 }
@@ -140,7 +175,7 @@ export type TicketComposerActionInput = {
   requestId: string;
   mode: "admin" | "client" | "note";
   target: { kind: "ticket"; ticketId: string } | { kind: "order"; orderId: string };
-  replyTo?: { ticketId: string; messageId: string } | null;
+  replyTo?: { ticketId: string; messageId: string; attachmentId?: string | null } | null;
 };
 
 export async function sendTicketComposerAction(
@@ -179,11 +214,13 @@ export async function sendTicketComposerAction(
         ...target,
         reply_to_message_id: input.replyTo?.messageId ?? null,
       };
+
       const claim = await context.services.tickets.prepareAttachment(attachmentTarget, context.actor);
       const storage = new TicketAttachmentStorageRepository(
         createTrustedServerSupabaseClient(readServerEnvironment()),
       );
       const checksum = storage.checksum(bytes);
+
       const stored = await storage.storeOrConfirm(claim.storage_key, bytes, validated.mimeType, checksum);
 
       try {
@@ -206,6 +243,7 @@ export async function sendTicketComposerAction(
         request_id: input.requestId,
         body,
         reply_to_message_id: input.replyTo.messageId,
+        reply_to_attachment_id: input.replyTo.attachmentId ?? null,
       }, context.actor);
     } else if (input.target.kind === "order") {
       await context.services.tickets.sendForOrder(
@@ -302,6 +340,32 @@ export async function toggleTicketMessageReactionAction(
   if (!context.user.tickets.reply) {
     return { ok: false, error: "You do not have permission to react to Ticket messages." };
   }
+  try {
+    await context.services.tickets.toggleReaction({
+      message_id: messageId,
+      reaction_code: reactionCode,
+    }, context.actor);
+  } catch (error) {
+    return failure(error);
+  }
+  return { ok: true };
+}
+
+/**
+ * The client's half of the same boundary.
+ *
+ * `app_toggle_ticket_message_reaction` already derives the actor from
+ * `auth.uid()`, requires `tickets.reply` (which the client role holds), checks
+ * Ticket access, and refuses a client actor any message outside
+ * `visibility = 'client'`. So this is the identical server-side operation on
+ * the identical RPC — only the acting context differs. Reactions are shared
+ * conversation state either way; nothing here is local to one viewer.
+ */
+export async function toggleClientTicketMessageReactionAction(
+  messageId: string,
+  reactionCode: string,
+): Promise<TicketMutationResult> {
+  const context = await getClientContext();
   try {
     await context.services.tickets.toggleReaction({
       message_id: messageId,

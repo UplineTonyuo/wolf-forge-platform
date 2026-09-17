@@ -31,9 +31,14 @@ export class TicketAttachmentStorageRepository {
     await this.client.storage.from(TICKET_ATTACHMENT_BUCKET).remove([path]);
   }
 
-  async signedUrl(path: string): Promise<string> {
-    const result = await this.client.storage.from(TICKET_ATTACHMENT_BUCKET).createSignedUrl(path, 60);
+  /**
+   * Downloads the object's bytes server-side so the browser-facing route can
+   * proxy them directly — the browser must never receive a raw Storage
+   * signed URL (or its bucket/token), only the streamed bytes.
+   */
+  async download(path: string): Promise<Blob> {
+    const result = await this.client.storage.from(TICKET_ATTACHMENT_BUCKET).download(path);
     if (result.error || !result.data) throw new DatabaseError(result.error);
-    return result.data.signedUrl;
+    return result.data;
   }
 }

@@ -1,0 +1,563 @@
+/*
+ * Shipped mobile filter language: a compact pill trigger that opens a bottom
+ * sheet. The values match the trigger already used by the Clients filter
+ * panel and the sheet chrome already used by the Projects filter sheet, so
+ * the index pages read as one surface.
+ */
+
+.trigger {
+  min-height: 40px;
+
+  display: none; /* mobile-only; the parent may hide its own wrapper too */
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  flex: 0 0 auto;
+
+  padding: 0 14px;
+
+  border: 1px solid #d8dde7;
+  border-radius: 6px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fbfcff 100%
+    );
+
+  color: #17213f;
+
+  font-family: var(--wf-font-ui);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 650;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 1px 2px
+      rgba(0, 13, 81, 0.04);
+
+  transition:
+    transform 150ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.trigger:hover {
+  border-color: #bec6d5;
+
+  box-shadow:
+    0 7px 18px
+      rgba(0, 13, 81, 0.08);
+
+  transform: translateY(-1px);
+}
+
+.trigger:active {
+  transform: scale(0.975);
+}
+
+.triggerOpen {
+  border-color:
+    rgba(0, 13, 81, 0.30);
+
+  background: #f8f9fd;
+}
+
+.badge {
+  min-width: 18px;
+  height: 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 5px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #d6b354 0%,
+      #bd9630 100%
+    );
+
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 767px) {
+  .trigger {
+    display: inline-flex;
+  }
+}
+
+
+/* ==========================================================
+   SHEET
+   ========================================================== */
+
+.backdrop {
+  position: fixed;
+
+  z-index: 50000;
+
+  inset: 0;
+
+  display: grid;
+  place-items: center;
+
+  padding: 28px;
+
+  background: rgba(10, 18, 48, 0.18);
+
+  backdrop-filter: blur(11px) saturate(0.92);
+  -webkit-backdrop-filter: blur(11px) saturate(0.92);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transition:
+    opacity 190ms ease,
+    visibility 0s linear 240ms;
+}
+
+.backdropOpen {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+
+  transition:
+    opacity 190ms ease,
+    visibility 0s linear 0s;
+}
+
+.panel {
+  position: relative;
+
+  width: min(520px, calc(100vw - 40px));
+
+  max-height: calc(100dvh - 40px);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(0, 13, 81, 0.11);
+  border-radius: 18px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 30px 70px rgba(0, 13, 81, 0.20),
+    0 8px 22px rgba(0, 13, 81, 0.08);
+
+  opacity: 0;
+  transform: translateY(14px) scale(0.985);
+  transform-origin: bottom center;
+
+  transition:
+    opacity 190ms ease,
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.panelOpen {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.goldLine {
+  height: 3px;
+
+  flex: 0 0 auto;
+
+  background:
+    linear-gradient(
+      90deg,
+      #c9a449,
+      rgba(201, 164, 73, 0.15)
+    );
+}
+
+.panelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  flex: 0 0 auto;
+
+  padding: 22px 22px 18px;
+
+  border-bottom: 1px solid rgba(0, 13, 81, 0.07);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(248, 249, 253, 0.92),
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.panelHeading {
+  min-width: 0;
+
+  display: grid;
+  gap: 5px;
+}
+
+.eyebrow {
+  color: #929bad;
+
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+
+  letter-spacing: 0.14em;
+}
+
+.panelHeading h2 {
+  margin: 0;
+
+  color: #000d51;
+
+  font-size: 19px;
+  line-height: 1.15;
+  font-weight: 780;
+
+  letter-spacing: -0.025em;
+}
+
+.closeButton {
+  width: 36px;
+  height: 36px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #4b5877;
+
+  cursor: pointer;
+
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.closeButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.closeButton:hover {
+  border-color: #c3cad8;
+
+  background: #f7f8fc;
+  color: #000d51;
+}
+
+.panelBody {
+  min-height: 0;
+
+  flex: 1 1 auto;
+
+  display: grid;
+  gap: 22px;
+
+  padding: 18px 22px 20px;
+
+  overflow-y: auto;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 13, 81, 0.15) transparent;
+}
+
+.panelFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  flex: 0 0 auto;
+
+  padding: 14px 22px;
+
+  border-top: 1px solid rgba(0, 13, 81, 0.07);
+
+  background:
+    linear-gradient(
+      0deg,
+      rgba(248, 249, 253, 0.92),
+      rgba(255, 255, 255, 0)
+    );
+}
+
+.clear,
+.apply {
+  min-height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 18px;
+
+  border-radius: 8px;
+
+  font-family: var(--wf-font-ui);
+  font-size: 13px;
+  font-weight: 650;
+
+  cursor: pointer;
+
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 120ms ease;
+}
+
+.clear {
+  border: 1px solid #d8dde7;
+
+  background: #ffffff;
+  color: #17213f;
+}
+
+.clear:hover {
+  border-color: #bec6d5;
+  background: #f7f8fc;
+}
+
+.apply {
+  border: 1px solid #000d51;
+
+  background: #000d51;
+  color: #ffffff;
+}
+
+.apply:hover {
+  background: #071760;
+}
+
+.clear:active,
+.apply:active {
+  transform: scale(0.975);
+}
+
+
+/* ==========================================================
+   OPTION ROWS
+   ========================================================== */
+
+.group {
+  display: grid;
+  gap: 6px;
+}
+
+.groupLabel {
+  color: #929bad;
+
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 750;
+
+  letter-spacing: 0.09em;
+
+  text-transform: uppercase;
+}
+
+.optionList {
+  display: grid;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(0, 13, 81, 0.10);
+  border-radius: 12px;
+
+  background: #ffffff;
+}
+
+.optionRow {
+  width: 100%;
+
+  min-height: 53px;
+
+  display: grid;
+
+  grid-template-columns: minmax(0, 1fr) auto 22px;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 7px 14px 7px 16px;
+
+  border: 0;
+  border-bottom: 1px solid rgba(0, 13, 81, 0.06);
+
+  background: transparent;
+
+  color: #33405b;
+
+  font-family: var(--wf-font-ui);
+  font-size: 14px;
+  font-weight: 550;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.optionRow:last-child {
+  border-bottom: 0;
+}
+
+.optionRow:hover {
+  background: rgba(0, 13, 81, 0.035);
+  color: #000d51;
+}
+
+.optionIcon {
+  width: 20px;
+  height: 20px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  color: #7b8397;
+}
+
+.optionIcon svg {
+  width: 18px;
+  height: 18px;
+
+  stroke-width: 1.8;
+}
+
+/* One fixed icon column, only on rows that have one, so the label keeps its
+   own gutter whether or not the group is icon-bearing. */
+.optionRow[data-icon="true"] {
+  grid-template-columns: auto minmax(0, 1fr) auto 22px;
+}
+
+.optionRow[data-icon="true"] .optionLabel {
+  padding-left: 2px;
+}
+
+.optionLabel {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionCount {
+  color: #929bad;
+
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.optionCheck {
+  width: 22px;
+  height: 22px;
+
+  display: grid;
+  place-items: center;
+
+  color: #000d51;
+}
+
+.optionRowSelected {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(201, 164, 73, 0.10),
+      rgba(201, 164, 73, 0.02)
+    );
+
+  color: #000d51;
+  font-weight: 700;
+}
+
+/*
+ * The picker's current value. A picker row is a location, not an active
+ * filter, so it takes a quiet navy tint rather than the gold accent -- gold
+ * is an accent in this system, never a selection fill.
+ */
+.optionRowSelectedNavy {
+  background: rgba(0, 13, 81, 0.055);
+
+  color: #000d51;
+  font-weight: 700;
+}
+
+.optionRowSelectedNavy .optionIcon,
+.optionRowSelectedNavy .optionCheck {
+  color: #000d51;
+}
+
+
+/* ==========================================================
+   MOBILE
+   ========================================================== */
+
+@media (max-width: 640px) {
+  .backdrop {
+    align-items: end;
+
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .panel {
+    width: 100%;
+
+    max-height: calc(100dvh - 24px);
+
+    border-radius: 18px 18px 14px 14px;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger,
+  .backdrop,
+  .panel,
+  .clear,
+  .apply,
+  .optionRow {
+    transition: none !important;
+  }
+}

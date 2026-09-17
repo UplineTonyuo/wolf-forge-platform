@@ -11,6 +11,7 @@ import {
   Ticket,
   UserPlus,
   WalletCards,
+  X,
 } from "lucide-react";
 import { GlobalSearch } from "./global-search";
 import { DashboardDateTrigger } from "../dashboard/dashboard-date-trigger";
@@ -49,6 +50,9 @@ import {
 import {
   TeamMessagesTrigger,
 } from "../team/team-messages-trigger";
+import { MobileTeamMessagesLever } from "../team/mobile-team-messages-lever";
+import { useTeamMessagesChat } from "../team/use-team-messages-chat";
+import { useHeaderOverlay } from "./use-header-overlay";
 
 function formatActivityTime(
   value: string,
@@ -109,6 +113,14 @@ export function WorkspaceCommandBar({
   user: InternalUser;
   mobileNavigation?: ReactNode;
 }) {
+  /*
+   * Lifted here (rather than owned inside TeamMessagesTrigger) so the
+   * desktop header button and the mobile edge lever can both drive the same
+   * open/unread state -- and therefore the same single <TeamMessagesDrawer>
+   * mount -- regardless of which one is visible at the current breakpoint.
+   */
+  const chat = useTeamMessagesChat(user);
+
   const triggerRef =
     useRef<HTMLButtonElement>(null);
 
@@ -517,22 +529,39 @@ export function WorkspaceCommandBar({
     updatePanelPosition,
   ]);
 
+  useHeaderOverlay(
+    "notifications",
+    notificationsOpen,
+    () => setNotificationsOpen(false),
+  );
+
+  /*
+   * Mobile scroll morph (<=767px, see globals.css): flat/integrated at the
+   * top of the page, a compact floating pill past SCROLL_THRESHOLD. Desktop
+   * ignores `data-scrolled` entirely, so this listener is harmless there.
+   */
+  const SCROLL_THRESHOLD = 12;
+
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
-    const closeForQuickAction = () => {
-      setNotificationsOpen(false);
+    let ticking = false;
+
+    const evaluate = () => {
+      ticking = false;
+      setScrolled(window.scrollY > SCROLL_THRESHOLD);
     };
 
-    window.addEventListener(
-      "wf:quick-action-open",
-      closeForQuickAction,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "wf:quick-action-open",
-        closeForQuickAction,
-      );
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(evaluate);
     };
+
+    evaluate();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -656,57 +685,82 @@ export function WorkspaceCommandBar({
     void markAllNotificationsReadAction();
   };
   const notificationPanel = (
-    <section
-      ref={panelRef}
-      className={
-        notificationsOpen
-          ? "workspace-notification-portal is-open"
-          : "workspace-notification-portal"
-      }
-      style={{
-        top:
-          notificationPosition.top,
-        right:
-          notificationPosition.right,
-      }}
-      aria-hidden={
-        !notificationsOpen
-      }
-      aria-label="Notifications"
-    >
-      <header className="workspace-notification-header">
-        <div>
-          <strong>
-            Notifications
-          </strong>
+    <>
+      {/* Mobile-only dim backdrop; hidden on desktop where the panel is a
+          plain anchored popover. Reuses the same open state as the panel
+          itself, so there is one source of truth for both. */}
+      <button
+        type="button"
+        className={
+          notificationsOpen
+            ? "workspace-notification-backdrop is-open"
+            : "workspace-notification-backdrop"
+        }
+        aria-hidden={!notificationsOpen}
+        tabIndex={-1}
+        onClick={() => setNotificationsOpen(false)}
+      />
 
-          <span>
-            Recent activity
-          </span>
-        </div>
+      <section
+        ref={panelRef}
+        className={
+          notificationsOpen
+            ? "workspace-notification-portal is-open"
+            : "workspace-notification-portal"
+        }
+        style={{
+          top:
+            notificationPosition.top,
+          right:
+            notificationPosition.right,
+        }}
+        aria-hidden={
+          !notificationsOpen
+        }
+        aria-label="Notifications"
+      >
+        <header className="workspace-notification-header">
+          <div>
+            <strong>
+              Notifications
+            </strong>
 
-        <div className="workspace-notification-header-actions">
-          {notificationsLoading ? (
-            <span className="workspace-notification-refreshing">
-              Refreshing...
+            <span>
+              Recent activity
             </span>
-          ) : null}
+          </div>
 
-          {unreadNotificationCount > 0 ? (
+          <div className="workspace-notification-header-actions">
+            {notificationsLoading ? (
+              <span className="workspace-notification-refreshing">
+                Refreshing...
+              </span>
+            ) : null}
+
+            {unreadNotificationCount > 0 ? (
+              <button
+                type="button"
+                className="workspace-notification-mark-all"
+                onClick={markAllAsRead}
+              >
+                Mark all as read
+              </button>
+            ) : (
+              <span className="workspace-notification-all-read">
+                All read
+              </span>
+            )}
+
             <button
               type="button"
-              className="workspace-notification-mark-all"
-              onClick={markAllAsRead}
+              className="workspace-notification-close"
+              aria-label="Close notifications"
+              onClick={() => setNotificationsOpen(false)}
             >
-              Mark all as read
+              <X aria-hidden="true" size={16} />
             </button>
-          ) : (
-            <span className="workspace-notification-all-read">
-              All read
-            </span>
-          )}
-        </div>
-      </header>
+          </div>
+        </header>
 
       <div className="workspace-notification-list">
         {notificationsError ? (
@@ -807,8 +861,9 @@ export function WorkspaceCommandBar({
             ),
           )
         )}
-      </div>
-    </section>
+        </div>
+      </section>
+    </>
   );
 
   return (
@@ -816,6 +871,7 @@ export function WorkspaceCommandBar({
       <div
         className="workspace-command-bar"
         aria-label="Workspace controls"
+        data-scrolled={scrolled}
       >
         {mobileNavigation}
         <GlobalSearch />
@@ -831,9 +887,12 @@ export function WorkspaceCommandBar({
             Team Messages. This slot held a dead "Gallery" placeholder that
             opened nothing; it is now internal staff-to-staff communication,
             and it renders only for an account holding team_messages.use.
+            Desktop only -- mobile hides this wrapper (globals.css) and uses
+            the right-edge lever below instead, both sharing `chat`.
           */}
           <TeamMessagesTrigger
             user={user}
+            chat={chat}
           />
         </div>
 
@@ -888,6 +947,11 @@ export function WorkspaceCommandBar({
           />
         </div>
       </div>
+
+      {/* Mobile-only (globals.css / team-messages.module.css); shares
+          `chat` with the desktop TeamMessagesTrigger above so there is
+          still one drawer, one sync controller, regardless of breakpoint. */}
+      <MobileTeamMessagesLever chat={chat} />
 
       {mounted
         ? createPortal(

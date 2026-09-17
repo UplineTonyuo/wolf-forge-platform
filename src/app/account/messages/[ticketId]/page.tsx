@@ -3,8 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttentionPill } from "../../../../components/account/ui/attention-pill";
-import { TicketComposer } from "../../../../components/tickets/ticket-composer";
-import { TicketConversation } from "../../../../components/tickets/ticket-conversation";
+import { TicketClientConversation } from "../../../../components/tickets/ticket-client-conversation";
 import styles from "../../../../components/tickets/tickets.module.css";
 import { ticketAttention } from "../../../../domain/client-portal/attention";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
@@ -66,8 +65,11 @@ export default async function ClientMessageDetailPage({
 
         <div className={styles.clientDetailGrid}>
           <main className={styles.detailMain}>
-            <TicketConversation messages={detail.messages} clientView />
-            <TicketComposer target={{ kind: "ticket", ticketId: ticket.id }} mode="client" disabled={repliesDisabled} />
+            <TicketClientConversation
+              ticketId={ticket.id}
+              messages={detail.messages}
+              repliesDisabled={repliesDisabled}
+            />
           </main>
 
           <aside className={styles.clientSummary}>

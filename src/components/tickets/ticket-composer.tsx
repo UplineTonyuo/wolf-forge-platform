@@ -17,6 +17,7 @@ import {
 } from "react";
 import {
   sendTicketComposerAction,
+  type TicketComposerActionInput,
 } from "../../app/actions/tickets";
 import { randomUuid } from "../../lib/random-uuid";
 import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-file";
@@ -39,6 +40,24 @@ type TicketComposerTarget =
   | { kind: "ticket"; ticketId: string }
   | { kind: "order"; orderId: string };
 
+/**
+ * When supplied, the composer clears and hands the draft to `onSend`
+ * synchronously instead of waiting on the server round-trip — the caller owns
+ * rendering the outgoing message as a pending bubble and reconciling it via
+ * `onSettled`. Without this prop the composer keeps its original blocking
+ * behavior (draft stays until the request resolves).
+ */
+type TicketComposerOptimistic = {
+  onSend: (draft: {
+    requestId: string;
+    body: string;
+    attachment: File | null;
+    replyTo: OrderReplyTarget | null;
+    target: TicketComposerActionInput["target"];
+  }) => void;
+  onSettled: (requestId: string, ok: boolean) => void;
+};
+
 export function TicketComposer({
   target,
   mode,
@@ -47,6 +66,7 @@ export function TicketComposer({
   replyTo = null,
   onCancelReply,
   hideSubmitIcon = false,
+  optimistic,
 }: {
   target: TicketComposerTarget;
   mode: TicketComposerMode;
@@ -55,6 +75,7 @@ export function TicketComposer({
   replyTo?: OrderReplyTarget | null;
   onCancelReply?: () => void;
   hideSubmitIcon?: boolean;
+  optimistic?: TicketComposerOptimistic;
 }) {
   const router =
     useRouter();
@@ -121,6 +142,8 @@ export function TicketComposer({
     previewUrlRef.current = null;
     setPreviewUrl(null);
     setAttachment(file);
+    // Note: there is no client-side MIME/size validation here — that check
+    // only happens server-side in sendTicketComposerAction / the DB RPC.
     if (file?.type.startsWith("image/") && typeof URL.createObjectURL === "function") {
       const url = URL.createObjectURL(file);
       previewUrlRef.current = url;
@@ -131,8 +154,11 @@ export function TicketComposer({
   const isNote =
     mode === "note";
 
+  /* Under optimistic sends the draft is already cleared and in the thread as
+   * a pending bubble, so an in-flight request must not block typing the next
+   * message — only the external `disabled` prop should. */
   const busy =
-    disabled || pending;
+    disabled || (!optimistic && pending);
 
   async function submit(
     event:
@@ -162,48 +188,79 @@ export function TicketComposer({
     const requestId =
       requestIdRef.current;
 
+    const pendingAttachment = attachment;
+    const pendingReplyTo = replyTo;
+
     submittingRef.current = true;
+
+    if (optimistic) {
+      optimistic.onSend({
+        requestId,
+        body: normalized,
+        attachment: pendingAttachment,
+        replyTo: pendingReplyTo,
+        target,
+      });
+
+      requestIdRef.current = "";
+      requestSignatureRef.current = "";
+      setBody("");
+      clearAttachment();
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (!isNote) setResetKey((value) => value + 1);
+      onCancelReply?.();
+    }
+
     startTransition(
       async () => {
         try {
           const formData = new FormData();
           formData.set("body", normalized);
-          if (attachment) formData.set("attachment", attachment);
+          if (pendingAttachment) formData.set("attachment", pendingAttachment);
           const result = await sendTicketComposerAction({
             requestId,
             mode,
             target,
-            replyTo: replyTo ? { ticketId: replyTo.ticketId, messageId: replyTo.messageId } : null,
+            replyTo: pendingReplyTo
+              ? {
+                  ticketId: pendingReplyTo.ticketId,
+                  messageId: pendingReplyTo.messageId,
+                  attachmentId: pendingReplyTo.replyAttachment?.id ?? null,
+                }
+              : null,
           }, formData);
 
           if (!result.ok) {
-            setError(
-              result.error,
-            );
+            if (optimistic) optimistic.onSettled(requestId, false);
+            else setError(result.error);
 
             return;
           }
 
-          requestIdRef.current =
-            "";
-          requestSignatureRef.current = "";
+          if (optimistic) {
+            optimistic.onSettled(requestId, true);
+          } else {
+            requestIdRef.current = "";
+            requestSignatureRef.current = "";
 
-          setBody("");
-          clearAttachment();
-          if (fileInputRef.current) fileInputRef.current.value = "";
+            setBody("");
+            clearAttachment();
+            if (fileInputRef.current) fileInputRef.current.value = "";
 
-          if (!isNote) {
-            setResetKey(
-              (value) =>
-                value + 1,
-            );
+            if (!isNote) {
+              setResetKey(
+                (value) =>
+                  value + 1,
+              );
+            }
+
+            onCancelReply?.();
           }
-
-          onCancelReply?.();
 
           router.refresh();
         } catch {
-          setError("Could not confirm sending. Your text is still here. Please try again.");
+          if (optimistic) optimistic.onSettled(requestId, false);
+          else setError("Could not confirm sending. Your text is still here. Please try again.");
         } finally {
           submittingRef.current = false;
         }
@@ -232,9 +289,21 @@ export function TicketComposer({
 
       {!isNote && replyTo ? (
         <div className={styles.composerReplyContext}>
+          {replyTo.replyAttachment?.isImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/ticket-attachments/${replyTo.replyAttachment.id}`}
+              alt=""
+              className={styles.composerReplyThumbnail}
+            />
+          ) : null}
           <div>
             <strong>Replying to {replyTo.authorName}</strong>
-            <p>{replyTo.body}</p>
+            <p>
+              {replyTo.replyAttachment && !replyTo.replyAttachment.isImage
+                ? replyTo.replyAttachment.originalName
+                : replyTo.replyPreview}
+            </p>
           </div>
           <button type="button" onClick={onCancelReply} disabled={busy} aria-label="Cancel reply">
             Cancel
@@ -262,6 +331,7 @@ export function TicketComposer({
           disabled={busy}
           label="Write a reply"
           onChange={setBody}
+          onPasteFile={pickAttachment}
         />
       )}
 
@@ -324,13 +394,18 @@ export function TicketComposer({
                 accept={TICKET_ATTACHMENT_ACCEPT}
                 className="sr-only"
                 tabIndex={-1}
-                onChange={(event) => pickAttachment(event.currentTarget.files?.[0] ?? null)}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null;
+                  pickAttachment(file);
+                }}
               />
               <button
                 type="button"
                 className={styles.addFileButton}
                 disabled={busy}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  fileInputRef.current?.click();
+                }}
               >
                 <Paperclip aria-hidden="true" />
                 Add file
@@ -339,12 +414,12 @@ export function TicketComposer({
           ) : null}
           <button
             type="submit"
-            aria-busy={pending}
+            aria-busy={!optimistic && pending}
             className="button-primary"
             disabled={busy || (!body.trim() && !attachment)}
           >
             {!hideSubmitIcon ? <Send aria-hidden="true" /> : null}
-            {pending ? "Sending..." : isNote ? "Add note" : "Send reply"}
+            {!optimistic && pending ? "Sending..." : isNote ? "Add note" : "Send reply"}
           </button>
         </div>
       </footer>

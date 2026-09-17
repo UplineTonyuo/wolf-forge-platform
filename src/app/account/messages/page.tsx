@@ -41,7 +41,6 @@ export default async function ClientMessagesPage({
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Work</span>
           <h1>Messages</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

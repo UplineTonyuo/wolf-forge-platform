@@ -1,0 +1,83 @@
+"use client";
+
+import { useState } from "react";
+import type { TicketDetailMessage } from "../../domain/tickets/schema";
+import { toggleClientTicketMessageReactionAction } from "../../app/actions/tickets";
+import type { OrderReplyTarget } from "./order-message-actions";
+import { TicketComposer } from "./ticket-composer";
+import { TicketConversation } from "./ticket-conversation";
+import styles from "./tickets.module.css";
+import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
+
+/**
+ * The client Ticket conversation — the same chat surface as the staff one
+ * (`orderChat`, no dividers, identity only on the other party, optimistic
+ * sends), plus the Reply state Ticket client messages need.
+ *
+ * The client gets exactly three actions: Reply, React and Copy. `React` goes
+ * through `toggleClientTicketMessageReactionAction`, which reaches the SAME
+ * `app_toggle_ticket_message_reaction` RPC the staff action uses from the
+ * client's own authorized context — reactions are shared conversation state
+ * on both sides, never a local toggle.
+ *
+ * There is deliberately no `forwardDestinations`: Forward is a staff workflow
+ * (`forwardTicketMessageToTeamAction` requires `tickets.view` plus Team
+ * access), so the client is given no Forward entry rather than one that would
+ * fail. Internal notes never reach a client at all — `app_get_ticket_detail`
+ * refuses them to a client actor inside Postgres, so they are not in the
+ * transcript this component is handed, live lane included.
+ *
+ * The transcript comes from `useTicketConversationMessages`, so a reply or
+ * reaction from staff arrives here without a reload.
+ */
+export function TicketClientConversation({
+  ticketId,
+  messages,
+  repliesDisabled,
+}: {
+  ticketId: string;
+  messages: TicketDetailMessage[];
+  repliesDisabled: boolean;
+}) {
+  const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const conversation = useTicketConversationMessages({
+    ticketId,
+    serverMessages: messages,
+    mode: "client",
+  });
+
+  /* A local reaction wakes the lane too, so the two views converge on the
+     same authoritative aggregate rather than each trusting its own click. */
+  const toggleReaction = async (messageId: string, reactionCode: string) => {
+    const result = await toggleClientTicketMessageReactionAction(messageId, reactionCode);
+    if (result.ok) conversation.wake();
+    return result;
+  };
+
+  return (
+    <div className={styles.orderConversationSurface}>
+      <TicketConversation
+        orderChat
+        clientView
+        sourceLabel="Ticket"
+        messages={conversation.messages}
+        onReply={repliesDisabled ? undefined : setReplyTo}
+        canReact
+        onToggleReaction={toggleReaction}
+        onRetryMessage={(message) => void conversation.retry(message.requestId ?? "")}
+      />
+      <TicketComposer
+        target={{ kind: "ticket", ticketId }}
+        mode="client"
+        disabled={repliesDisabled}
+        attached
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        optimistic={{
+          onSend: conversation.addOptimistic,
+          onSettled: conversation.settle,
+        }}
+      />
+    </div>
+  );
+}

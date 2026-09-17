@@ -18,4 +18,4 @@ coverage/
 .ai-memory
 
 # Generated local-only QA login credential (scripts/qa-local-login.ts). Never commit.
-.qa-local-credentials.json
+.qa-local-credentials*.json

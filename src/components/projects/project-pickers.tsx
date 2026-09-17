@@ -32,14 +32,14 @@ import styles from "./project-pickers.module.css";
    SHARED HELPERS
    ========================================================== */
 
-function normalize(value: string) {
+export function normalize(value: string) {
   return value
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");
 }
 
-function rankName(
+export function rankName(
   name: string,
   query: string,
 ) {

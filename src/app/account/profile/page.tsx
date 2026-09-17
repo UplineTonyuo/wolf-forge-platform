@@ -49,7 +49,6 @@ export default async function ClientProfilePage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Account</span>
           <h1>Profile</h1>
         </header>
         <p className="portal-empty">Your profile could not be loaded.</p>

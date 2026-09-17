@@ -113,6 +113,7 @@ a.tab:hover {
 
 .main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 22px;
   min-width: 0;
 }
@@ -129,15 +130,61 @@ a.tab:hover {
   padding: 18px;
 }
 
-.railCard h2 {
+.railDetails {
+  margin: 0;
+}
+
+.railToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+  background: none;
   color: #000d51;
   font-size: 13px;
   font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  list-style: none;
+}
+
+.railToggle::-webkit-details-marker {
+  display: none;
+}
+
+.railToggleIcon {
+  display: none;
+  flex: 0 0 auto;
+  width: 16px;
+  color: #7f889a;
+  transition: transform 160ms var(--wf-ease);
+}
+
+.railDetails[open] > .railToggle .railToggleIcon {
+  transform: rotate(180deg);
+}
+
+/* Desktop keeps Details always visible: this beats the native <details>
+   closed-by-default rendering regardless of the `open` attribute or
+   whether JS has run, so there is no flash and no JS dependency. */
+@media (min-width: 901px) {
+  .railDetailsContent {
+    display: block;
+  }
+
+  .railToggle {
+    pointer-events: none;
+    cursor: default;
+  }
 }
 
 .railList {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -147,7 +194,7 @@ a.tab:hover {
 }
 
 .railRow dt {
-  color: #7f889a;
+  color: #626b7d;
   font-size: 10.5px;
   font-weight: 750;
   text-transform: uppercase;
@@ -276,7 +323,7 @@ a.tab:hover {
 }
 
 .filesMeta {
-  color: #97a0b1;
+  color: #626b7d;
   font-size: 10.5px;
   white-space: nowrap;
 }
@@ -337,12 +384,12 @@ a.tab:hover {
 }
 
 .historyBody time {
-  color: #97a0b1;
+  color: #626b7d;
   font-size: 10.5px;
 }
 
 .muted {
-  color: #97a0b1;
+  color: #626b7d;
   font-weight: 500;
 }
 
@@ -431,7 +478,7 @@ a.tab:hover {
 
 .secondaryHeading {
   margin: 0 0 12px;
-  color: #8b93a4;
+  color: #626b7d;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -500,7 +547,7 @@ a.tab:hover {
   align-items: center;
   gap: 8px;
   margin-top: 3px;
-  color: #8b93a4;
+  color: #626b7d;
   font-size: 9.5px;
 }
 
@@ -536,7 +583,7 @@ a.tab:hover {
 
 @media (max-width: 900px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .rail {
@@ -544,7 +591,7 @@ a.tab:hover {
   }
 
   .panels {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .subnav {
@@ -593,8 +640,14 @@ a.tab:hover {
   .headerStatValue { height: auto; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
   .rail, .railEntity, .historyBody { min-width: 0; overflow-wrap: anywhere; }
   .railEntity { max-width: 100%; }
+  .railToggle { min-height: 38px; }
+  .railToggleIcon { display: inline-flex; }
   .fieldsCard { padding: 16px; }
   .fieldsCard > .panelEmpty { margin: 0; padding: 8px 0; font-size: 13px; line-height: 1.5; text-align: left; color: #626b7d; }
+  .railCard { padding: 16px; }
+  .panelHeading { padding: 11px 16px; }
+  .taskRow { padding: 10px 16px; }
+  .panelEmpty { padding: 22px 16px; }
   .fieldGrid { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
   .fieldGrid dd + dt { margin-top: 10px; }
   .filesHeaderRow { grid-template-columns: minmax(0, 1fr); }
@@ -605,8 +658,19 @@ a.tab:hover {
   .filesDate { grid-column: 2; }
   .historyBody time { font-size: 12px; color: #626b7d; }
 }
-@media (max-width: 359px) {
-  .headerControls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+/* Phone widths (390/430 primarily, 320/360 kept safe): Working + Assignee
+   share a row, Actions gets its own full-width row below — tablet (768-900)
+   keeps the 3-column row above unchanged. */
+@media (max-width: 767px) {
+  .headerControls {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 10px;
+  }
   .headerControls > :nth-child(3) { grid-column: 1 / -1; justify-self: stretch; }
-  .tabs { gap: 10px; }
+}
+@media (max-width: 359px) {
+  .subnavLeft { gap: 6px; }
+  .subnavLeft > button { padding-inline: 6px; }
+  .tabs { gap: 8px; }
+  .tab, .tabActive { gap: 4px; padding: 0 1px; }
 }

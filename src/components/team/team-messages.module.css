@@ -58,6 +58,97 @@
   opacity: 1;
 }
 
+/* ==========================================================================
+   Mobile edge lever
+   ========================================================================== */
+
+/*
+ * Desktop never shows this; only the <=767px block below does. Present at
+ * every width (it always mounts) so its z-index tier sits above .drawer
+ * (11900) / .backdrop (11800). Only a thin edge bar paints inside it -- see
+ * .leverBar -- the button itself is the full invisible hit target, and it
+ * stays live even while the drawer is open (leverOpenState hides the bar,
+ * not the button), doubling as the swipe-right-to-close grip instead of a
+ * second control floating on top of the open sheet.
+ */
+.lever {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .lever {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    position: fixed;
+    top: 58%;
+    right: 0;
+    z-index: 12050;
+
+    /* ~44px effective tap target; only .leverBar below actually paints. */
+    width: 44px;
+    height: 68px;
+    padding: 0;
+    margin: 0;
+
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+
+    cursor: pointer;
+    touch-action: none;
+
+    transform: translateY(-50%);
+    transform-origin: right center;
+    transition: transform 160ms ease;
+  }
+
+  /* The only visible part: a flat ~10px sliver flush with the edge. No
+     icon, no label -- a badge (triggerBadge below) is the only thing ever
+     added to it, and only when there is a real unread count. */
+  .leverBar {
+    width: 10px;
+    height: 100%;
+
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+
+    background: var(--wf-navy, #000d51);
+    box-shadow: -4px 0 14px rgba(0, 13, 81, .22);
+
+    opacity: 1;
+    transition: opacity 160ms ease;
+    pointer-events: none;
+  }
+
+  /*
+   * Per-frame drag tracking: the base class's 160ms transform transition
+   * would smooth/lag behind a pointermove update, so it's switched off here
+   * and only re-enabled (by removing this class on release) for the
+   * snap-back / settle.
+   */
+  .leverDragging {
+    transition: transform 0ms linear;
+  }
+
+  /* No duplicate handle floating on top of the open drawer: the bar (and
+     its badge) hide once Team Messages is open. The button's hit zone stays
+     live at the same edge the whole time. */
+  .leverOpenState .leverBar,
+  .leverOpenState .triggerBadgeVisible {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .lever,
+  .leverBar,
+  .leverDragging {
+    transition: none;
+  }
+}
+
 /* A live message is useful now, not permanent bell history. */
 .messagePeek {
   position: fixed;
@@ -2373,17 +2464,28 @@
     border: 0;
     border-radius: 0;
 
-    /* Rises from the bottom edge, which is where a thumb expects it. */
-    transform: translateY(24px) scale(1);
-    transform-origin: bottom center;
+    /* Slides in from the right edge -- where the lever lives (mobile-team-
+       messages-lever.tsx), so the two read as physically connected. */
+    transform: translateX(100%);
+    transform-origin: right center;
   }
 
   .drawerOpen {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 
   .drawerClosing {
-    transform: translateY(20px);
+    transform: translateX(20px);
+  }
+
+  /*
+   * Set imperatively by the lever while a drag is live, so a pointermove-
+   * driven inline `transform` tracks the finger with zero lag instead of
+   * fighting the transition above. Removed before the inline value changes
+   * again on release, so the snap-back / completion still animates.
+   */
+  .drawer[data-drag-active="true"] {
+    transition: none;
   }
 
   /*

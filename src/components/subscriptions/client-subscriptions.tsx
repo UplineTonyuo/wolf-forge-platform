@@ -65,7 +65,6 @@ export function ClientSubscriptionsList({ summaries }: { summaries: Subscription
     <div className="portal-page">
       <header className="portal-page-head portal-page-head-actions">
         <div>
-          <span className="portal-eyebrow">Billing</span>
           <h1>Subscriptions</h1>
           <p>Your ongoing services, what they cost and when they renew.</p>
         </div>
@@ -184,7 +183,7 @@ export function ClientSubscriptionDetail({
           <dt>Next billing</dt>
           <dd>
             {summary.status === "canceled"
-              ? "—"
+              ? "Canceled"
               : summary.next_payment_on
                 ? formatDate(summary.next_payment_on)
                 : "Not scheduled"}
@@ -196,7 +195,7 @@ export function ClientSubscriptionDetail({
         </div>
         <div>
           <dt>Last payment</dt>
-          <dd>{summary.last_payment_at ? formatDate(summary.last_payment_at) : "—"}</dd>
+          <dd>{summary.last_payment_at ? formatDate(summary.last_payment_at) : "No payment yet"}</dd>
         </div>
       </dl>
 

@@ -103,6 +103,65 @@
 .mobileCard dl > div { min-width: 0; }
 .mobileCard dt { color: var(--wf-text-muted); font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.04em; }
 .mobileCard dd { margin: 3px 0 0; overflow-wrap: anywhere; color: var(--wf-text); font-size: 12px; }
+/*
+ * Mobile index chrome.
+ *
+ * The toolbar's full-size Add Coupon gives way to the compact title action at
+ * mobile widths, so the page does not offer the same destination twice above
+ * the list. The empty state keeps its own CTA.
+ */
+.compactAction {
+  display: none;
+}
+
+.desktopAction {
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .desktopAction {
+    display: none;
+  }
+
+  .compactAction {
+    width: 40px;
+    height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: 1px solid var(--wf-navy);
+    border-radius: 10px;
+    background: var(--wf-navy);
+
+    color: var(--wf-white);
+
+    transition: background-color 160ms var(--wf-ease), transform 160ms var(--wf-ease);
+  }
+
+  .compactAction svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .compactAction:hover {
+    background: var(--wf-navy-hover);
+  }
+
+  .compactAction:active {
+    transform: translateY(1px);
+  }
+
+  .compactAction:focus-visible {
+    outline: 2px solid var(--wf-navy);
+    outline-offset: 2px;
+  }
+}
+
 .mobileActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
 .mobileActions > button { min-width: 0; min-height: 40px; }
 

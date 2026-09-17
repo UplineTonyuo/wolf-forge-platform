@@ -10,23 +10,66 @@ import { assertLocalSupabaseUrl } from "../src/lib/env/public-env";
 const execFileAsync = promisify(execFile);
 
 /**
- * Permanent, reusable local QA identity — one fixed email so a human (or a
- * browser automation script) can always sign in the same way, but never a
- * fixed or committed password. The password is generated once, on first run,
- * and persisted only to a gitignored local file; every later run reuses it
- * unchanged so an already-remembered browser session/password manager entry
- * keeps working. This provisions the account only — actual sign-in still
- * goes through the ordinary /login page and Supabase's real password grant.
- * There is no bypass anywhere in this file or in the app it targets.
+ * Permanent, reusable local QA identities — one fixed email per surface so a
+ * human (or a browser automation script) can always sign in the same way, but
+ * never a fixed or committed password. Each password is generated once, on
+ * first run, and persisted only to a gitignored local file; every later run
+ * reuses it unchanged so an already-remembered browser session/password
+ * manager entry keeps working. This provisions the accounts only — actual
+ * sign-in still goes through the ordinary /login page and Supabase's real
+ * password grant. There is no bypass anywhere in this file or in the app it
+ * targets.
+ *
+ * Two identities, because the platform has two surfaces and they are separated
+ * by authorization rather than by data store:
+ *
+ *   - `owner`  — src/app/(internal)/**, the staff workspace.
+ *   - `client` — src/app/account/**, the client portal. It needs a real
+ *     `companies` row and `roles.name = 'client'`, because
+ *     `app_get_client_account_context()` joins both and returns nothing
+ *     otherwise, which is what turns a staff session away from /account with
+ *     `?reason=client-only`. Without this account the entire client portal is
+ *     untestable.
+ *
+ * Neither account is a bypass: both are ordinary password-grant logins that
+ * then pass the same server-side authorization every real user does.
  */
-const QA_ACCOUNT = {
-  email: "qa-local@wolf-forge.local",
-  displayName: "QA Local",
-} as const;
+type QaAccountSpec = {
+  email: string;
+  displayName: string;
+  /** Resolved by name from `public.roles`. */
+  role: "owner" | "client";
+  /**
+   * Resolved by name from `public.companies` and attached to the profile.
+   * Null for the staff account, which belongs to no company.
+   */
+  companyName: string | null;
+  /** Gitignored, local-only. One file per identity, never shared. */
+  credentialsFile: string;
+};
 
-const CREDENTIALS_PATH = resolve(import.meta.dirname, "..", ".qa-local-credentials.json");
+const QA_ACCOUNTS: QaAccountSpec[] = [
+  {
+    email: "qa-local@wolf-forge.local",
+    displayName: "QA Local",
+    role: "owner",
+    companyName: null,
+    credentialsFile: ".qa-local-credentials.json",
+  },
+  {
+    email: "qa-local-client@wolf-forge.local",
+    displayName: "QA Local Sample Client Contact",
+    role: "client",
+    companyName: "QA Local Sample Client",
+    credentialsFile: ".qa-local-credentials.client.json",
+  },
+];
 
 type QaCredentials = { email: string; password: string };
+
+function credentialsPath(account: QaAccountSpec) {
+  return resolve(import.meta.dirname, "..", account.credentialsFile);
+}
 
 function parseStatus(output: string) {
   return Object.fromEntries(
@@ -44,16 +87,120 @@ function generatePassword(): string {
   return randomBytes(24).toString("base64url");
 }
 
-async function readExistingCredentials(): Promise<QaCredentials | null> {
+async function readExistingCredentials(account: QaAccountSpec): Promise<QaCredentials | null> {
   try {
-    const raw = await readFile(CREDENTIALS_PATH, "utf8");
+    const raw = await readFile(credentialsPath(account), "utf8");
     const parsed = JSON.parse(raw) as Partial<QaCredentials>;
-    if (typeof parsed.email === "string" && typeof parsed.password === "string" && parsed.email === QA_ACCOUNT.email) {
+    if (typeof parsed.email === "string" && typeof parsed.password === "string" && parsed.email === account.email) {
       return { email: parsed.email, password: parsed.password };
     }
     return null;
   } catch {
     return null;
+  }
+}
+
+type AdminClient = ReturnType<typeof createClient<Database>>;
+
+/**
+ * Creates or updates one auth user and the profile row it owns.
+ *
+ * `private.handle_new_auth_user` owns profile creation on signup; this only
+ * ever updates the row it already created, matching the existing
+ * `setup-phase3a-local.ts` convention.
+ */
+async function provisionAccount(
+  admin: AdminClient,
+  account: QaAccountSpec,
+  password: string,
+  emails: Set<string>,
+) {
+  const { data: roleRow, error: roleError } = await admin
+    .from("roles")
+    .select("id")
+    .eq("name", account.role)
+    .single();
+  if (roleError || !roleRow) {
+    throw roleError ?? new Error(`Role "${account.role}" is missing.`);
+  }
+
+  let companyId: string | null = null;
+  if (account.companyName) {
+    const { data: companyRow, error: companyError } = await admin
+      .from("companies")
+      .select("id")
+      .eq("name", account.companyName)
+      .is("archived_at", null)
+      .single();
+    if (companyError || !companyRow) {
+      throw (
+        companyError ??
+        new Error(
+          `Company "${account.companyName}" is missing. Run the local QA seed before provisioning the client identity.`,
+        )
+      );
+    }
+    companyId = companyRow.id;
+  }
+
+  let userId: string | null = null;
+
+  if (emails.has(account.email)) {
+    const { data: usersData, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (usersError) throw usersError;
+    const existingUser = usersData.users.find((candidate) => candidate.email?.toLowerCase() === account.email);
+    if (existingUser) {
+      const { data, error } = await admin.auth.admin.updateUserById(existingUser.id, {
+        password,
+        email_confirm: true,
+      });
+      if (error) throw error;
+      userId = data.user.id;
+    }
+  }
+
+  if (!userId) {
+    const { data, error } = await admin.auth.admin.createUser({
+      email: account.email,
+      password,
+      email_confirm: true,
+    });
+
+    if (error || !data.user) {
+      /*
+       * A row can exist in auth.users that GoTrue does not recognise — no
+       * encrypted_password, not confirmed, and no auth.identities entry. That
+       * happens when a fixture inserts the row directly instead of going
+       * through the admin API, and it is invisible to listUsers, so the
+       * lookup above cannot see it and createUser then conflicts with it.
+       * GoTrue returns this same opaque "Database error creating new user"
+       * for that case. Naming it here saves the next person the hour it cost.
+       */
+      throw new Error(
+        `Could not create ${account.email}. If this account was seeded by inserting into auth.users directly, ` +
+          `its row has no password and no auth.identities entry, which makes it invisible to GoTrue. ` +
+          `Repair it by setting encrypted_password = crypt(<password>, gen_salt('bf')), email_confirmed_at = now(), ` +
+          `instance_id = '00000000-0000-0000-0000-000000000000', and inserting the matching auth.identities row ` +
+          `(provider 'email', provider_id = user id). Original error: ${error?.message ?? "unknown"}`,
+      );
+    }
+
+    userId = data.user.id;
+  }
+
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .update({
+      role_id: roleRow.id,
+      display_name: account.displayName,
+      company_id: companyId,
+      archived_at: null,
+    })
+    .eq("id", userId)
+    .select("id")
+    .single();
+  if (profileError || !profile) {
+    throw profileError ?? new Error(`Local QA profile for ${account.email} is missing.`);
   }
 }
 
@@ -80,68 +227,39 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 
-  // Idempotent: reuse the previously generated password if this has already
-  // run before, so re-running the bootstrap never silently invalidates a
-  // password a human or a browser session already has.
-  const existing = await readExistingCredentials();
-  const password = existing?.password ?? generatePassword();
-
   const { data: usersData, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (usersError) throw usersError;
-  const { data: ownerRole, error: roleError } = await admin.from("roles").select("id").eq("name", "owner").single();
-  if (roleError || !ownerRole) throw roleError ?? new Error("Owner role is missing.");
+  const emails = new Set(
+    usersData.users
+      .map((candidate) => candidate.email?.toLowerCase())
+      .filter((email): email is string => typeof email === "string"),
+  );
 
-  let user = usersData.users.find((candidate) => candidate.email?.toLowerCase() === QA_ACCOUNT.email);
+  for (const account of QA_ACCOUNTS) {
+    // Idempotent: reuse the previously generated password if this has already
+    // run before, so re-running the bootstrap never silently invalidates a
+    // password a human or a browser session already has.
+    const existing = await readExistingCredentials(account);
+    const password = existing?.password ?? generatePassword();
 
-  if (user) {
-    const { data, error } = await admin.auth.admin.updateUserById(user.id, {
-      password,
-      email_confirm: true,
-    });
-    if (error) throw error;
-    user = data.user;
-  } else {
-    const { data, error } = await admin.auth.admin.createUser({
-      email: QA_ACCOUNT.email,
-      password,
-      email_confirm: true,
-    });
-    if (error || !data.user) throw error ?? new Error(`Local QA user ${QA_ACCOUNT.email} was not created.`);
-    user = data.user;
+    await provisionAccount(admin, account, password, emails);
+
+    // Written only when the password is new/changed, and only ever to these
+    // gitignored files — never to .env.local, a tracked script, stdout logs
+    // that could be captured elsewhere, or any committed fixture.
+    if (!existing) {
+      await writeFile(
+        credentialsPath(account),
+        `${JSON.stringify({ email: account.email, password } satisfies QaCredentials, null, 2)}\n`,
+        "utf8",
+      );
+    }
+
+    console.log(`Local QA ${account.role} login is ready (real auth, no bypass): ${account.email}`);
+    console.log(`  password stored in ${account.credentialsFile} (gitignored)`);
   }
 
-  // private.handle_new_auth_user owns profile creation on signup; this only
-  // ever updates the row it already created, matching the existing
-  // setup-phase3a-local.ts convention.
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .update({
-      role_id: ownerRole.id,
-      display_name: QA_ACCOUNT.displayName,
-      company_id: null,
-      archived_at: null,
-    })
-    .eq("id", user.id)
-    .select("id")
-    .single();
-  if (profileError || !profile) {
-    throw profileError ?? new Error(`Local QA profile for ${QA_ACCOUNT.email} is missing.`);
-  }
-
-  // Written only when the password is new/changed, and only ever to this one
-  // gitignored file — never to .env.local, a tracked script, stdout logs
-  // that could be captured elsewhere, or any committed fixture.
-  if (!existing) {
-    await writeFile(
-      CREDENTIALS_PATH,
-      `${JSON.stringify({ email: QA_ACCOUNT.email, password } satisfies QaCredentials, null, 2)}\n`,
-      "utf8",
-    );
-  }
-
-  console.log("Local QA login is ready (real auth, no bypass).");
-  console.log(`Sign in at /login with: ${QA_ACCOUNT.email}`);
-  console.log(`Password stored in: ${CREDENTIALS_PATH} (gitignored)`);
+  console.log("Sign in at /login. Staff sees the workspace; the client identity sees /account.");
 }
 
 main().catch((error: unknown) => {

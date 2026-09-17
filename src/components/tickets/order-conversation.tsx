@@ -5,6 +5,7 @@ import type { TeamConversationView } from "../../domain/team/projections";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
 import { TicketConversation } from "./ticket-conversation";
+import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
 import type { OrderReplyTarget } from "./order-message-actions";
 import styles from "./tickets.module.css";
 
@@ -28,13 +29,14 @@ export function OrderConversation({
   headerActions?: ReactNode;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const optimistic = useOptimisticTicketMessages(messages, { mode: "admin", viewerProfileId });
 
   return (
     <div className={styles.orderConversationSurface}>
       <TicketConversation
         orderChat
         viewerProfileId={viewerProfileId}
-        messages={messages}
+        messages={optimistic.messages}
         heading={heading}
         sourceLabel={heading}
         hideInternalNotes
@@ -42,6 +44,7 @@ export function OrderConversation({
         forwardDestinations={destinations}
         onReply={canReply && !repliesDisabled ? setReplyTo : undefined}
         canReact={canReply}
+        onRetryMessage={(message) => void optimistic.retry(message.requestId ?? "")}
       />
       {canReply ? (
         <TicketComposer
@@ -51,6 +54,7 @@ export function OrderConversation({
           attached
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
+          optimistic={{ onSend: optimistic.addOptimistic, onSettled: optimistic.settle }}
         />
       ) : null}
     </div>

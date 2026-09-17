@@ -30,6 +30,7 @@ import type { InternalUser } from "../../lib/supabase/next-server";
 import { navigationForModules, routeIsCurrent } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
+import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 
 const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
@@ -450,6 +451,7 @@ export function InternalShell({
           </button>
         </div>
         {renderNavigation(true)}
+        <AccountMenu user={user} sidebar />
       </dialog>
 
       <div

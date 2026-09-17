@@ -60,24 +60,54 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 42px 24px 46px;
+  justify-content: center;
+  gap: 22px;
+  min-height: 300px;
+  padding: 20px 24px;
   text-align: center;
 }
 
-.empty > svg {
-  width: 26px;
-  height: 26px;
-  color: var(--wf-gold);
+/* The focal point: a large mark, not a small floating glyph. */
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  background: var(--wf-navy-wash);
+}
+
+.emptyIcon svg {
+  width: 36px;
+  height: 36px;
+  color: var(--wf-navy);
   stroke-width: 1.5;
 }
 
-.empty p {
-  margin: 0;
+/* Headline, short description and the CTA read as one connected group. */
+.emptyCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   max-width: 40ch;
+}
+
+.emptyCopy h3 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: "Sora Variable", Sora, sans-serif;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -.005em;
+}
+
+.emptyCopy p {
+  margin: 0;
   color: var(--wf-text-muted);
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .emptyAction {
@@ -86,6 +116,7 @@
   gap: 8px;
   height: 38px;
   padding: 0 18px;
+  margin-top: 2px;
   border-radius: 999px;
   color: #fff;
   background: var(--wf-navy);
@@ -353,6 +384,13 @@
 }
 
 /*
+ * The reassurance row reads as one line of quiet text. On a phone it leads with
+ * the portal's own info glyph; on desktop the note keeps exactly the treatment
+ * it had, so the icon is simply not drawn there.
+ */
+.note > svg { display: none; }
+
+/*
  * A 28-30px control is fine for a mouse and too small for a thumb. The header
  * utility icons already grow on coarse pointers; these follow the same rule.
  */
@@ -376,11 +414,40 @@
 }
 
 @media (max-width: 720px) {
-  .foot { flex-direction: column; align-items: stretch; gap: 16px; }
-  .footActions { align-items: stretch; }
-  .cta { width: 100%; }
-  .note { max-width: none; text-align: center; }
-  .totals { gap: 8px 20px; }
+  /*
+   * One checkout summary rather than three unrelated blocks: the real total,
+   * the action it leads to, and the promise that sits under both.
+   */
+  .foot { flex-direction: column; align-items: stretch; gap: 14px; }
+
+  /* Each billing rhythm is one row: its name on the left, its total on the right. */
+  .totals { flex-direction: column; flex-wrap: nowrap; gap: 10px; }
+  .totals > div {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .totals dt { font-size: 10px; }
+  /* On a phone the row is a total, so the label says so. The stored label is
+     unchanged; this is the only place it is read as a total rather than a bucket. */
+  .totals dt::after { content: " total"; }
+  .totals dd { font-size: 20px; }
+
+  .footActions { align-items: stretch; gap: 10px; }
+  /* Full strip, with the arrow held at the far end of it. */
+  .cta { width: 100%; min-height: 46px; padding: 0 18px; justify-content: space-between; }
+  .note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: none;
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .note > svg { display: block; width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+
   .row { padding: 14px; }
 }
 

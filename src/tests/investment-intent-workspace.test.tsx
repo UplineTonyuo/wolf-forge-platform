@@ -44,6 +44,8 @@ function row(overrides: Partial<InvestmentIntentRow> = {}): InvestmentIntentRow 
     contacted_by_profile_id: null,
     contacted_by_name: null,
     updated_at: "2026-08-01T10:00:00.000Z",
+    active_ticket_id: null,
+    active_ticket_status: null,
     ...overrides,
   };
 }
@@ -173,15 +175,21 @@ describe("Investment Intent workspace", () => {
     expect(within(rows[0]!).getByText("Southgate Legal")).toBeInTheDocument();
   });
 
-  it("links to the client and to the investment", () => {
+  it("links to the client and to the investment, from behind the row's + menu", () => {
     render(<InvestmentIntentWorkspace intents={intents} />);
 
     const first = tableRows()[0]!;
-    expect(within(first).getByRole("link", { name: /Open client/u })).toHaveAttribute(
+    /* One compact trigger per row, and the two destinations moved into it. */
+    fireEvent.click(
+      within(first).getByRole("button", { name: /^Actions for /u }),
+    );
+
+    const menu = within(first).getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: /Open client/u })).toHaveAttribute(
       "href",
       "/clients/company-2",
     );
-    expect(within(first).getByRole("link", { name: /Open investment/u })).toHaveAttribute(
+    expect(within(menu).getByRole("menuitem", { name: /Open investment/u })).toHaveAttribute(
       "href",
       "/services/service-2",
     );

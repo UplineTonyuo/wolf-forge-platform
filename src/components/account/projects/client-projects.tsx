@@ -4,8 +4,7 @@ import { projectAttention } from "../../../domain/client-portal/attention";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
 import { clientProjectIsOpen } from "../../../domain/orders/client-projections";
 import type { TicketDetail } from "../../../domain/tickets/schema";
-import { TicketComposer } from "../../tickets/ticket-composer";
-import { TicketConversation } from "../../tickets/ticket-conversation";
+import { ProjectConversation } from "../../tickets/project-conversation";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
 
@@ -71,7 +70,6 @@ export function ClientProjectsList({ projects }: { projects: ClientProjectView[]
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Work</span>
         <h1>Projects</h1>
         <p>
           {projects.length === 0
@@ -140,11 +138,11 @@ export function ClientProjectDetail({
    */
   const facts: Array<{ label: string; value: string }> = [
     { label: "Reference", value: project.reference },
-    { label: "Service", value: project.serviceName ?? "—" },
+    { label: "Service", value: project.serviceName ?? "Not set" },
     { label: "Opened", value: project.createdLabel },
     { label: "Started", value: project.startedLabel ?? "Not started yet" },
     { label: "Due", value: project.dueLabel ?? "No due date" },
-    { label: "Completed", value: project.completedLabel ?? "—" },
+    { label: "Completed", value: project.completedLabel ?? "Not completed yet" },
   ];
 
   return (
@@ -217,15 +215,11 @@ export function ClientProjectDetail({
         <h2 id="portal-project-conversation" className="sr-only">
           Conversation
         </h2>
-        <TicketConversation
-          messages={conversation?.messages ?? []}
-          clientView
+        <ProjectConversation
+          orderId={project.id}
           heading={project.reference}
-        />
-        <TicketComposer
-          target={{ kind: "order", orderId: project.id }}
-          mode="client"
-          disabled={repliesDisabled}
+          messages={conversation?.messages ?? []}
+          repliesDisabled={repliesDisabled}
         />
       </section>
     </div>

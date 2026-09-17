@@ -17,7 +17,22 @@ it("opens the native modal, preserves permitted navigation and closes on destina
   vi.stubGlobal("matchMedia", () => media);
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
-  render(<InternalShell user={{ modules: { projects: true, tickets: true }, teamMessaging: { use: false } } as unknown as InternalUser}><p>Order content</p></InternalShell>);
+  render(
+    <InternalShell
+      user={
+        {
+          id: "u1",
+          displayName: "Test User",
+          role: "staff",
+          avatarUrl: null,
+          modules: { projects: true, tickets: true },
+          teamMessaging: { use: false },
+        } as unknown as InternalUser
+      }
+    >
+      <p>Order content</p>
+    </InternalShell>,
+  );
   const trigger = screen.getByRole("button", { name: "Open navigation" });
   const open = () => {
     fireEvent.click(trigger);

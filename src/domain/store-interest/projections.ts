@@ -40,6 +40,13 @@ export type InvestmentIntentView = {
   removedAt: string | null;
   contactedAt: string | null;
   contactedByName: string | null;
+  /**
+   * The live investment conversation for this pair, when one exists. A row with
+   * this set offers to OPEN it; a row without offers to CREATE one. The
+   * database still decides -- see `InvestmentIntentRow.active_ticket_id`.
+   */
+  activeTicketId: string | null;
+  activeTicketStatus: string | null;
 };
 
 /** Cadence wording matches the cart's short labels rather than inventing a second vocabulary. */
@@ -85,6 +92,12 @@ export function toInvestmentIntentView(row: InvestmentIntentRow): InvestmentInte
     removedAt: row.removed_at,
     contactedAt: row.contacted_at,
     contactedByName: row.contacted_by_name,
+    /*
+     * A status without an id would be a half-answer the menu cannot act on, so
+     * the pair is read through one guard rather than independently.
+     */
+    activeTicketId: row.active_ticket_id ?? null,
+    activeTicketStatus: row.active_ticket_id ? (row.active_ticket_status ?? null) : null,
   };
 }
 

@@ -29,7 +29,6 @@ export default async function ClientInvoicesPage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Billing</span>
           <h1>Invoices</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

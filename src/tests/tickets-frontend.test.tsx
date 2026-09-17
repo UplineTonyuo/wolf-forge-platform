@@ -509,6 +509,45 @@ describe("Order chat final polish", () => {
   });
 });
 
+describe("Ticket client view: chat alignment and actions", () => {
+  const clientMsg: TicketDetailMessage = {
+    ...messages[0]!, id: "cv-client", body: "Can you help with the brief?",
+  };
+  const staffReply: TicketDetailMessage = {
+    ...messages[1]!, id: "cv-staff", message_kind: "reply", visibility: "client", body: "Sure, sending it now.",
+  };
+
+  it("gives the client's own message the own/right-side treatment and Wolf Forge's the other/left-side treatment", () => {
+    render(<TicketConversation orderChat clientView messages={[clientMsg, staffReply]} />);
+    const ownRow = screen.getByText("Can you help with the brief?").closest("li")!;
+    const staffRow = screen.getByText("Sure, sending it now.").closest("li")!;
+    expect(ownRow).toHaveAttribute("data-side", "client");
+    expect(ownRow).toHaveAttribute("data-own", "true");
+    expect(staffRow).toHaveAttribute("data-side", "internal");
+    expect(staffRow).not.toHaveAttribute("data-own");
+  });
+
+  it("offers Reply and Copy on the client's own message, but no React, Forward, or internal-note controls", () => {
+    render(<TicketConversation orderChat clientView messages={[clientMsg, staffReply]} onReply={vi.fn()} />);
+    const ownRow = screen.getByText("Can you help with the brief?").closest("li")!;
+    fireEvent.click(within(ownRow).getByRole("button", { name: "Message actions" }));
+    const menu = screen.getByRole("menu", { name: "Message actions" });
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Reply", "Copy"]);
+    expect(screen.queryByRole("menuitem", { name: "React" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Forward" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Internal notes/ })).not.toBeInTheDocument();
+  });
+
+  it("calls onReply with the client's own message when Reply is chosen", () => {
+    const onReply = vi.fn();
+    render(<TicketConversation orderChat clientView messages={[clientMsg, staffReply]} onReply={onReply} />);
+    const ownRow = screen.getByText("Can you help with the brief?").closest("li")!;
+    fireEvent.click(within(ownRow).getByRole("button", { name: "Message actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Reply" }));
+    expect(onReply).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ messageId: "cv-client" }));
+  });
+});
+
 describe("Order persisted message actions", () => {
   const source: TicketDetailMessage = {
     ...messages[0]!,
@@ -744,6 +783,77 @@ describe("Order send pending and recovery", () => {
   });
 });
 
+describe("Order chat optimistic send", () => {
+  function renderConversation(initialMessages: TicketDetailMessage[] = []) {
+    return render(
+      <OrderConversation
+        orderId="order-1"
+        heading="Project #41"
+        messages={initialMessages}
+        viewerProfileId="me"
+        destinations={[]}
+        canReply
+        repliesDisabled={false}
+      />,
+    );
+  }
+
+  it("shows an outgoing bubble immediately, clears the composer, and reconciles only once the refresh lands", async () => {
+    let finish!: (value: actions.TicketMutationResult) => void;
+    vi.mocked(actions.sendTicketComposerAction).mockImplementationOnce(
+      () => new Promise((resolve) => { finish = resolve; }),
+    );
+    const { rerender } = renderConversation();
+    const editor = screen.getByRole("textbox", { name: "Write a reply" });
+    editor.textContent = "On it now.";
+    fireEvent.input(editor);
+    fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
+
+    expect(screen.getByRole("textbox", { name: "Write a reply" })).toBeEmptyDOMElement();
+    expect(screen.queryByRole("button", { name: "Sending..." })).not.toBeInTheDocument();
+    expect(screen.getByText("On it now.")).toBeInTheDocument();
+    expect(screen.getByText("Sending…")).toBeInTheDocument();
+
+    await act(async () => finish({ ok: true }));
+    expect(screen.getByText("Sending…")).toBeInTheDocument();
+    expect(screen.getAllByText("On it now.")).toHaveLength(1);
+
+    const canonical: TicketDetailMessage = {
+      id: "m-real", ticket_id: ticket.ticket_id, author_profile_id: "me", author_name: "William", author_avatar_url: null,
+      author_type: "internal", message_kind: "reply", visibility: "client", body: "On it now.", created_at: "2026-08-14T09:00:00Z", attachments: [],
+    };
+    rerender(
+      <OrderConversation
+        orderId="order-1"
+        heading="Project #41"
+        messages={[canonical]}
+        viewerProfileId="me"
+        destinations={[]}
+        canReply
+        repliesDisabled={false}
+      />,
+    );
+    expect(screen.queryByText("Sending…")).not.toBeInTheDocument();
+    expect(screen.getAllByText("On it now.")).toHaveLength(1);
+  });
+
+  it("marks a failed send with a retry affordance that resends the same request id", async () => {
+    vi.mocked(actions.sendTicketComposerAction).mockResolvedValueOnce({ ok: false, error: "down" });
+    renderConversation();
+    const editor = screen.getByRole("textbox", { name: "Write a reply" });
+    editor.textContent = "Retry me.";
+    fireEvent.input(editor);
+    fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Not sent/ })).toBeInTheDocument());
+
+    vi.mocked(actions.sendTicketComposerAction).mockResolvedValueOnce({ ok: true });
+    fireEvent.click(screen.getByRole("button", { name: /Not sent/ }));
+    await waitFor(() => expect(actions.sendTicketComposerAction).toHaveBeenCalledTimes(2));
+    const [firstCall, secondCall] = vi.mocked(actions.sendTicketComposerAction).mock.calls;
+    expect(secondCall![0].requestId).toBe(firstCall![0].requestId);
+  });
+});
+
 describe("Composer Ctrl+Shift+Enter send shortcut", () => {
   it("sends exactly once via the same canonical action as clicking Send", async () => {
     render(<TicketComposer target={{ kind: "order", orderId: ticket.ticket_id }} mode="admin" attached />);
@@ -828,5 +938,43 @@ describe("Ticket composer attachments", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Upload failed."));
     expect(screen.getByText("brief.pdf")).toBeInTheDocument();
+  });
+});
+
+describe("Project and Ticket composers share one canonical toolbar", () => {
+  const TOOLBAR_ACTIONS = [
+    "Bold", "Italic", "Add link", "Heading", "Bulleted list", "Numbered list", "Undo", "Redo",
+  ];
+
+  function toolbarActionsIn(toolbar: HTMLElement) {
+    return within(toolbar).getAllByRole("button").map((button) => button.getAttribute("aria-label"));
+  }
+
+  it("renders the same toolbar actions, in the same single-row grouping, for both surfaces", () => {
+    const { container: ticketContainer } = render(
+      <TicketComposer target={{ kind: "ticket", ticketId: ticket.ticket_id }} mode="admin" />,
+    );
+    const ticketToolbar = screen.getByLabelText("Reply formatting");
+    expect(toolbarActionsIn(ticketToolbar)).toEqual(TOOLBAR_ACTIONS);
+    const ticketUndo = screen.getByRole("button", { name: "Undo" });
+    expect(ticketUndo.parentElement!.parentElement).toBe(ticketToolbar);
+    expect(ticketContainer.querySelectorAll('[aria-label="Reply formatting"]')).toHaveLength(1);
+    cleanup();
+
+    render(
+      <OrderConversation
+        orderId="order-1"
+        heading="Project #41"
+        messages={[]}
+        viewerProfileId="me"
+        destinations={[]}
+        canReply
+        repliesDisabled={false}
+      />,
+    );
+    const orderToolbar = screen.getByLabelText("Reply formatting");
+    expect(toolbarActionsIn(orderToolbar)).toEqual(TOOLBAR_ACTIONS);
+    const orderUndo = screen.getByRole("button", { name: "Undo" });
+    expect(orderUndo.parentElement!.parentElement).toBe(orderToolbar);
   });
 });

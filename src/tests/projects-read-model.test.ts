@@ -252,7 +252,7 @@ describe("Project initials", () => {
   it("derives initials from real display names and degrades safely", () => {
     expect(projectInitials("Anthony Paghubasan")).toBe("AP");
     expect(projectInitials("Isaiah")).toBe("IS");
-    expect(projectInitials(null)).toBe("—");
+    expect(projectInitials(null)).toBe("?");
   });
 });
 

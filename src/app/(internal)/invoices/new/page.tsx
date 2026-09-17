@@ -9,9 +9,14 @@ import { getInternalContext } from "../../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "Add Invoice" };
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ companyId?: string }>;
+}) {
   const context = await getInternalContext();
   if (!context.user.invoices.manage) forbidden();
+  const { companyId } = await searchParams;
   const [companies, services, folders] = await Promise.all([
     context.services.companies.listActive(),
     context.services.catalog.listActive(),
@@ -26,5 +31,5 @@ export default async function NewInvoicePage() {
     currency: service.currency,
     folderName: service.folder_id ? folderNames.get(service.folder_id) ?? null : null,
   }));
-  return <PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} /></PageFrame>;
+  return <PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} defaultCompanyId={companyId} /></PageFrame>;
 }

@@ -101,6 +101,7 @@ export function InvoiceForm({
   services,
   initial,
   defaultDueDate = "",
+  defaultCompanyId,
 }: {
   mode: "create" | "edit";
   requestId: string;
@@ -108,6 +109,7 @@ export function InvoiceForm({
   services: InvoiceServiceOption[];
   initial?: InvoiceFormInitial;
   defaultDueDate?: string;
+  defaultCompanyId?: string;
 }) {
   const issued = Boolean(initial && initial.status !== "draft");
   const action = mode === "create" ? createInvoiceAction : updateInvoiceAction.bind(null, initial?.id ?? "");
@@ -165,7 +167,7 @@ export function InvoiceForm({
         <div className={styles.basicFields}>
           {!issued ? (
             <>
-              <label className={styles.field}><span>Client / Company</span><select name="company_id" required defaultValue={initial?.companyId ?? ""}><option value="" disabled>Select a client</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select>{state.fieldErrors.company_id ? <em>{state.fieldErrors.company_id}</em> : null}</label>
+              <label className={styles.field}><span>Client / Company</span><select name="company_id" required defaultValue={initial?.companyId ?? defaultCompanyId ?? ""}><option value="" disabled>Select a client</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select>{state.fieldErrors.company_id ? <em>{state.fieldErrors.company_id}</em> : null}</label>
               <label className={styles.field}><span>Currency</span><select name="currency" defaultValue={initial?.currency ?? "USD"}><option value="USD">USD</option><option value="GBP">GBP</option><option value="EUR">EUR</option><option value="PHP">PHP</option></select></label>
             </>
           ) : null}

@@ -56,7 +56,14 @@ export function TeamPresenceProvider({
     activeRef.current = true;
 
     const heartbeat = async () => {
+      /*
+       * A hidden tab still runs this interval (Chrome throttles it to ~once/min
+       * rather than clearing it), so the Server Action call itself must be the
+       * thing that stops — otherwise every open-but-backgrounded tab keeps
+       * POSTing to whatever route it happens to be on, indefinitely.
+       */
       if (!alive || !activeRef.current || inFlightRef.current) return;
+      if (document.visibilityState !== "visible") return;
 
       inFlightRef.current = true;
       try {

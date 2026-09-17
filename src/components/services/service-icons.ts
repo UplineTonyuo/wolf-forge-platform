@@ -22,6 +22,7 @@ import {
   Crosshair,
   FileCode2,
   FileCog,
+  FolderOpen,
   FileSignature,
   FileText,
   Filter,
@@ -225,4 +226,64 @@ export function assignServiceIconsById(
   }
 
   return assigned;
+}
+
+/**
+ * Folder icon vocabulary.
+ *
+ * `service_folders` has no icon column -- folders are created through the
+ * Services UI with a name and nothing else -- so the icon is derived from the
+ * folder's real name here rather than stored. Same shape and same family as
+ * SERVICE_ICON_RULES above: ordered keyword rules, first match wins, so
+ * "Local SEO" resolves to a location glyph instead of the generic SEO one.
+ *
+ * A folder that matches no rule lands on a fallback picked by a hash of its
+ * name, so an unknown folder still gets a stable icon rather than a random one.
+ */
+export const FOLDER_ICON_RULES: Array<{
+  keywords: string[];
+  icon: LucideIcon;
+}> = [
+  { keywords: ["unfiled", "unsorted", "inbox", "no folder"], icon: FolderOpen },
+  { keywords: ["sprint"], icon: TrendingUp },
+  { keywords: ["backlink", "link building", "link"], icon: Link2 },
+  { keywords: ["press release", "pr "], icon: Newspaper },
+  { keywords: ["website design", "web design", "design", "web build"], icon: LayoutTemplate },
+  { keywords: ["ecommerce", "e-commerce", "woocommerce", "shop"], icon: ShoppingBag },
+  { keywords: ["gbp", "gmb", "google business"], icon: MapPinned },
+  { keywords: ["local"], icon: Navigation },
+  { keywords: ["technical", "onpage", "on-page", "on page"], icon: Code2 },
+  { keywords: ["citation"], icon: MapPin },
+  { keywords: ["content"], icon: FileText },
+  { keywords: ["review"], icon: Star },
+  { keywords: ["social"], icon: Users },
+  { keywords: ["hosting", "server", "cloud"], icon: Server },
+  { keywords: ["analytics", "reporting", "report"], icon: BarChart3 },
+];
+
+/** Where a folder whose name matches no rule lands. Stable, never random. */
+const FOLDER_ICON_FALLBACKS: LucideIcon[] = [
+  FolderOpen,
+  Layers,
+  Blocks,
+  Boxes,
+  Compass,
+  Globe,
+];
+
+/** The icon for one service folder, chosen from its real name. */
+export function folderIconFor(name: string): LucideIcon {
+  const needle = normalizeServiceName(name);
+  const rule = FOLDER_ICON_RULES.find((entry) =>
+    entry.keywords.some((keyword) => needle.includes(keyword)),
+  );
+
+  if (rule) {
+    return rule.icon;
+  }
+
+  return (
+    FOLDER_ICON_FALLBACKS[serviceNameHash(needle) % FOLDER_ICON_FALLBACKS.length] ??
+    FolderOpen
+  );
 }

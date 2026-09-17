@@ -2,10 +2,14 @@
 
 import {
   BellRing,
+  Building2,
   Check,
   Filter,
+  ListChecks,
   ListFilter,
+  Search,
   TriangleAlert,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,6 +42,12 @@ import {
   type ProjectTab,
 } from "../../domain/orders/projections";
 import { orderStatuses } from "../../domain/orders/schema";
+import type { ServiceFolderRow } from "../../lib/supabase/database-rows";
+import { ProjectsFilterSheet } from "./projects-filter-sheet";
+import { ProjectServiceFilterPicker } from "./project-service-filter-picker";
+import { ProjectSimpleFilterPicker } from "./project-simple-filter-picker";
+import type { SimpleFilterOption } from "./project-simple-filter-content";
+import type { ServiceFilterOption } from "./use-service-folder-filter";
 import { ProjectsHeaderActions } from "./projects-header-actions";
 import styles from "./projects-workspace.module.css";
 
@@ -84,13 +94,15 @@ export function ProjectsWorkspace({
   complete,
   people,
   services,
+  serviceFolders,
   clients,
   capabilities,
 }: {
   rows: ProjectListRow[];
   complete: boolean;
   people: ProjectOption[];
-  services: ProjectOption[];
+  services: ServiceFilterOption[];
+  serviceFolders: ServiceFolderRow[];
   clients: ProjectOption[];
   capabilities: ProjectCapabilities;
 }) {
@@ -99,6 +111,7 @@ export function ProjectsWorkspace({
   const [activeTab, setActiveTab] = useState<ProjectTab>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
+  const [mobileFilters, setMobileFilters] = useState(false);
   const [openRowMenu, setOpenRowMenu] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [personFilter, setPersonFilter] = useState("all");
@@ -143,8 +156,36 @@ export function ProjectsWorkspace({
     Number(personFilter !== "all") +
     Number(serviceFilter !== "all") +
     Number(clientFilter !== "all") +
+    Number(activeTab !== "all") +
     Number(attentionOnly) +
     Number(search.trim().length > 0);
+
+  const personOptions: SimpleFilterOption[] = useMemo(
+    () => people.map((person) => ({ id: person.id, label: person.name, avatarUrl: person.avatarUrl ?? null })),
+    [people],
+  );
+
+  const clientOptions: SimpleFilterOption[] = useMemo(
+    () => clients.map((client) => ({ id: client.id, label: client.name, icon: <Building2 size={16} aria-hidden="true" /> })),
+    [clients],
+  );
+
+  const statusOptions: SimpleFilterOption[] = useMemo(
+    () => orderStatuses.map((status) => ({ id: status, label: projectStatusLabels[status], status })),
+    [],
+  );
+
+  const selectedPersonName =
+    personFilter === "all"
+      ? "Everyone"
+      : personFilter === "unassigned"
+        ? "Unassigned"
+        : (people.find((person) => person.id === personFilter)?.name ?? "Everyone");
+
+  const selectedClientName =
+    clientFilter === "all" ? "All clients" : (clients.find((client) => client.id === clientFilter)?.name ?? "All clients");
+
+  const selectedStatusName = activeTab === "all" ? "All statuses" : projectStatusLabels[activeTab];
 
   const selectedIds = useMemo(
     () => rows.filter((project) => selected.has(project.id)).map((project) => project.id),
@@ -219,6 +260,17 @@ export function ProjectsWorkspace({
     return () => window.removeEventListener("mousedown", onPointerDown);
   }, [filterOpen, openRowMenu]);
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+
+    const mobile = window.matchMedia("(max-width: 767px)");
+    const sync = () => setMobileFilters(mobile.matches);
+
+    sync();
+    mobile.addEventListener("change", sync);
+    return () => mobile.removeEventListener("change", sync);
+  }, []);
+
   function toggleProject(projectId: string) {
     setSelected((current) => {
       const next = new Set(current);
@@ -226,6 +278,15 @@ export function ProjectsWorkspace({
       else next.add(projectId);
       return next;
     });
+  }
+
+  function clearAllFilters() {
+    setSearch("");
+    setPersonFilter("all");
+    setServiceFilter("all");
+    setClientFilter("all");
+    setActiveTab("all");
+    setAttentionOnly(false);
   }
 
   function toggleAllVisible() {
@@ -389,7 +450,19 @@ export function ProjectsWorkspace({
         </div>
       </div>
 
-      {filterOpen ? (
+      <div className={styles.mobileSearchRow}>
+        <Search size={15} aria-hidden="true" />
+        <input
+          type="search"
+          value={search}
+          placeholder="Title, project number or client"
+          autoComplete="off"
+          aria-label="Search projects"
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </div>
+
+      {filterOpen && !mobileFilters ? (
         <div className={styles.filterPanel} id="projects-filter-panel">
           <div>
             <label htmlFor="project-search">Search</label>
@@ -405,51 +478,57 @@ export function ProjectsWorkspace({
 
           <div>
             <label htmlFor="project-person-filter">Person</label>
-            <select
-              id="project-person-filter"
+            <ProjectSimpleFilterPicker
+              triggerId="project-person-filter"
+              ariaLabel="Choose a person"
+              triggerLabel={selectedPersonName}
+              fixedOptions={[
+                { id: "all", label: "Everyone", icon: <UserRound size={16} aria-hidden="true" /> },
+                { id: "unassigned", label: "Unassigned", icon: <UserRound size={16} aria-hidden="true" /> },
+              ]}
+              options={personOptions}
               value={personFilter}
-              onChange={(event) => setPersonFilter(event.target.value)}
-            >
-              <option value="all">Everyone</option>
-              <option value="unassigned">Unassigned</option>
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
+              onChange={setPersonFilter}
+              searchPlaceholder="Search people..."
+            />
           </div>
 
           <div>
             <label htmlFor="project-service-filter">Service</label>
-            <select
-              id="project-service-filter"
+            <ProjectServiceFilterPicker
+              folders={serviceFolders}
+              services={services}
               value={serviceFilter}
-              onChange={(event) => setServiceFilter(event.target.value)}
-            >
-              <option value="all">All services</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
+              onChange={setServiceFilter}
+            />
           </div>
 
           <div>
             <label htmlFor="project-client-filter">Client</label>
-            <select
-              id="project-client-filter"
+            <ProjectSimpleFilterPicker
+              triggerId="project-client-filter"
+              ariaLabel="Choose a client"
+              triggerLabel={selectedClientName}
+              fixedOptions={[{ id: "all", label: "All clients", icon: <Building2 size={16} aria-hidden="true" /> }]}
+              options={clientOptions}
               value={clientFilter}
-              onChange={(event) => setClientFilter(event.target.value)}
-            >
-              <option value="all">All clients</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              onChange={setClientFilter}
+              searchPlaceholder="Search clients..."
+            />
+          </div>
+
+          <div>
+            <label htmlFor="project-status-filter">Status</label>
+            <ProjectSimpleFilterPicker
+              triggerId="project-status-filter"
+              ariaLabel="Choose a status"
+              triggerLabel={selectedStatusName}
+              fixedOptions={[{ id: "all", label: "All statuses", icon: <ListChecks size={16} aria-hidden="true" /> }]}
+              options={statusOptions}
+              value={activeTab}
+              onChange={(value) => setActiveTab(value as ProjectTab)}
+              searchPlaceholder="Search statuses..."
+            />
           </div>
 
           <button
@@ -462,21 +541,32 @@ export function ProjectsWorkspace({
             Needs attention
           </button>
 
-          <button
-            type="button"
-            className={styles.clearFilters}
-            onClick={() => {
-              setSearch("");
-              setPersonFilter("all");
-              setServiceFilter("all");
-              setClientFilter("all");
-              setAttentionOnly(false);
-            }}
-          >
+          <button type="button" className={styles.clearFilters} onClick={clearAllFilters}>
             Clear
           </button>
         </div>
       ) : null}
+
+      <ProjectsFilterSheet
+        open={filterOpen && mobileFilters}
+        onClose={() => setFilterOpen(false)}
+        people={people}
+        clients={clients}
+        serviceFolders={serviceFolders}
+        services={services}
+        personFilter={personFilter}
+        onPersonFilterChange={setPersonFilter}
+        clientFilter={clientFilter}
+        onClientFilterChange={setClientFilter}
+        serviceFilter={serviceFilter}
+        onServiceFilterChange={setServiceFilter}
+        statusFilter={activeTab}
+        onStatusFilterChange={setActiveTab}
+        attentionOnly={attentionOnly}
+        onAttentionOnlyChange={setAttentionOnly}
+        onClear={clearAllFilters}
+        activeFilterCount={activeFilterCount}
+      />
 
       <div className={styles.tableCard}>
         <div className={styles.tableHeader}>

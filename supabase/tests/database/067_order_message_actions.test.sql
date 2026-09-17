@@ -1,5 +1,5 @@
 begin;
-select plan(42);
+select plan(56);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at) values
   ('f0000000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'actions-owner@example.invalid', now(), now()),
@@ -35,7 +35,16 @@ insert into public.tickets (id, company_id, client_profile_id, order_id, subject
 insert into public.ticket_messages (id, ticket_id, author_profile_id, author_type, message_kind, visibility, body) values
   ('f0400000-0000-4000-8000-000000000001', 'f0300000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000002', 'client', 'reply', 'client', 'Thanks,   the postcard should arrive Thursday.'),
   ('f0400000-0000-4000-8000-000000000002', 'f0300000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000001', 'internal', 'internal_note', 'internal', 'Private production note'),
-  ('f0400000-0000-4000-8000-000000000003', 'f0300000-0000-4000-8000-000000000002', 'f0000000-0000-4000-8000-000000000003', 'client', 'reply', 'client', 'Other company source');
+  ('f0400000-0000-4000-8000-000000000003', 'f0300000-0000-4000-8000-000000000002', 'f0000000-0000-4000-8000-000000000003', 'client', 'reply', 'client', 'Other company source'),
+  ('f0400000-0000-4000-8000-000000000004', 'f0300000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000002', 'client', 'reply', 'client', '￼'),
+  ('f0400000-0000-4000-8000-000000000005', 'f0300000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000002', 'client', 'reply', 'client', '￼'),
+  ('f0400000-0000-4000-8000-000000000006', 'f0300000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000002', 'client', 'reply', 'client', '￼');
+
+insert into public.ticket_attachments (id, ticket_id, ticket_message_id, storage_object_key, original_name, mime_type, size_bytes, checksum_sha256, uploaded_by_profile_id) values
+  ('f0450000-0000-4000-8000-000000000001', 'f0300000-0000-4000-8000-000000000001', 'f0400000-0000-4000-8000-000000000004', 'ticket-attachments/media-reply-image.jpg', 'photo.jpg', 'image/jpeg', 1000, repeat('a', 64), 'f0000000-0000-4000-8000-000000000002'),
+  ('f0450000-0000-4000-8000-000000000002', 'f0300000-0000-4000-8000-000000000001', 'f0400000-0000-4000-8000-000000000005', 'ticket-attachments/media-reply-doc.pdf', 'invoice.pdf', 'application/pdf', 1000, repeat('b', 64), 'f0000000-0000-4000-8000-000000000002'),
+  ('f0450000-0000-4000-8000-000000000003', 'f0300000-0000-4000-8000-000000000001', 'f0400000-0000-4000-8000-000000000006', 'ticket-attachments/media-reply-image-1.jpg', 'first.jpg', 'image/jpeg', 1000, repeat('c', 64), 'f0000000-0000-4000-8000-000000000002'),
+  ('f0450000-0000-4000-8000-000000000004', 'f0300000-0000-4000-8000-000000000001', 'f0400000-0000-4000-8000-000000000006', 'ticket-attachments/media-reply-image-2.jpg', 'second.jpg', 'image/jpeg', 1000, repeat('d', 64), 'f0000000-0000-4000-8000-000000000002');
 
 create or replace function pg_temp.become(p_user uuid)
 returns void language sql as $$
@@ -48,7 +57,7 @@ select has_table('public', 'ticket_message_reactions', 'Ticket reactions have a 
 select has_column('public', 'team_messages', 'forwarded_from_ticket_message_id', 'Team forwards store Ticket provenance');
 select is((select relrowsecurity from pg_class where oid = 'public.ticket_message_reactions'::regclass), true, 'reaction table has RLS');
 select is((select relforcerowsecurity from pg_class where oid = 'public.ticket_message_reactions'::regclass), true, 'reaction table forces RLS');
-select ok(not has_function_privilege('anon', 'public.app_reply_to_ticket_message(uuid,uuid,text,uuid)', 'execute'), 'anonymous replies denied');
+select ok(not has_function_privilege('anon', 'public.app_reply_to_ticket_message(uuid,uuid,text,uuid,uuid)', 'execute'), 'anonymous replies denied');
 select ok(not has_function_privilege('anon', 'public.app_toggle_ticket_message_reaction(uuid,text)', 'execute'), 'anonymous reactions denied');
 select ok(not has_function_privilege('anon', 'public.app_forward_ticket_message_to_team(uuid,uuid,uuid,text)', 'execute'), 'anonymous forwards denied');
 
@@ -70,6 +79,13 @@ select is((select reply_quote_text from public.ticket_messages where request_id 
 set local role authenticated;
 select pg_temp.become('f0000000-0000-4000-8000-000000000001');
 select is((select message ->> 'reply_source_author_name' from jsonb_array_elements(public.app_get_ticket_detail_with_avatars('f0300000-0000-4000-8000-000000000001')->'messages') message where message ->> 'body' = 'It is scheduled.'), 'QA Order Client', 'reload read model resolves reply author');
+select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000002','f0300000-0000-4000-8000-000000000001','Got it.','f0400000-0000-4000-8000-000000000004')$$, 'reply to an image-only message persists');
+select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000003','f0300000-0000-4000-8000-000000000001','Got it.','f0400000-0000-4000-8000-000000000005')$$, 'reply to a non-image attachment-only message persists');
+reset role;
+select is((select reply_quote_text from public.ticket_messages where request_id = 'f0500000-0000-4000-8000-000000000002'), 'Image', 'image-only reply source gets a truthful media label, not the raw placeholder glyph');
+select is((select reply_quote_text from public.ticket_messages where request_id = 'f0500000-0000-4000-8000-000000000003'), 'Attachment', 'non-image attachment-only reply source gets a truthful media label');
+set local role authenticated;
+select pg_temp.become('f0000000-0000-4000-8000-000000000001');
 select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000001','f0300000-0000-4000-8000-000000000001','It is scheduled.','f0400000-0000-4000-8000-000000000001')$$, 'reply retry is idempotent');
 reset role;
 select is((select count(*) from public.ticket_messages where request_id = 'f0500000-0000-4000-8000-000000000001'), 1::bigint, 'reply retry creates one message');
@@ -79,6 +95,30 @@ select throws_ok($$select public.app_reply_to_ticket_message(gen_random_uuid(),'
 select throws_ok($$select public.app_reply_to_ticket_message(gen_random_uuid(),'f0300000-0000-4000-8000-000000000001','No','f0400000-0000-4000-8000-000000000002')$$, '42501', null, 'internal note reply source rejected');
 select pg_temp.become('f0000000-0000-4000-8000-000000000006');
 select throws_ok($$select public.app_reply_to_ticket_message(gen_random_uuid(),'f0300000-0000-4000-8000-000000000001','No','f0400000-0000-4000-8000-000000000001')$$, 'P0002', null, 'unauthorized actor cannot reply to source');
+
+-- -----------------------------------------------------------------------------
+-- Attachment-level reply targeting: a source message with 2 images must let a
+-- reply pin the exact image it targeted, never silently defaulting to the
+-- first attachment on the message.
+-- -----------------------------------------------------------------------------
+
+select pg_temp.become('f0000000-0000-4000-8000-000000000001');
+select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000004','f0300000-0000-4000-8000-000000000001','Got the first one.','f0400000-0000-4000-8000-000000000006','f0450000-0000-4000-8000-000000000003')$$, 'reply targeting the first image of a 2-image source persists');
+select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000005','f0300000-0000-4000-8000-000000000001','Got the second one.','f0400000-0000-4000-8000-000000000006','f0450000-0000-4000-8000-000000000004')$$, 'reply targeting the second image of the same source persists');
+reset role;
+select is((select reply_to_attachment_id from public.ticket_messages where request_id = 'f0500000-0000-4000-8000-000000000004'), 'f0450000-0000-4000-8000-000000000003'::uuid, 'reply to image #1 persists that exact attachment id');
+select is((select reply_to_attachment_id from public.ticket_messages where request_id = 'f0500000-0000-4000-8000-000000000005'), 'f0450000-0000-4000-8000-000000000004'::uuid, 'reply to image #2 persists that exact attachment id, not the first attachment on the message');
+set local role authenticated;
+select pg_temp.become('f0000000-0000-4000-8000-000000000001');
+select is((select message -> 'reply_source_attachment' ->> 'id' from jsonb_array_elements(public.app_get_ticket_detail_with_avatars('f0300000-0000-4000-8000-000000000001')->'messages') message where message ->> 'body' = 'Got the second one.'), 'f0450000-0000-4000-8000-000000000004', 'reload read model resolves the exact targeted image, not the first one, after refresh');
+select is((select message -> 'reply_source_attachment' ->> 'is_image' from jsonb_array_elements(public.app_get_ticket_detail_with_avatars('f0300000-0000-4000-8000-000000000001')->'messages') message where message ->> 'body' = 'Got the second one.'), 'true', 'targeted image attachment is flagged as an image for thumbnail rendering');
+select throws_ok($$select public.app_reply_to_ticket_message(gen_random_uuid(),'f0300000-0000-4000-8000-000000000001','No','f0400000-0000-4000-8000-000000000006','f0450000-0000-4000-8000-000000000001')$$, '22023', null, 'an attachment that belongs to a different source message is rejected as a reply target');
+select lives_ok($$select public.app_reply_to_ticket_message('f0500000-0000-4000-8000-000000000006','f0300000-0000-4000-8000-000000000001','Filed it.','f0400000-0000-4000-8000-000000000005','f0450000-0000-4000-8000-000000000002')$$, 'reply explicitly targeting a non-image attachment persists');
+reset role;
+set local role authenticated;
+select pg_temp.become('f0000000-0000-4000-8000-000000000001');
+select is((select message -> 'reply_source_attachment' ->> 'is_image' from jsonb_array_elements(public.app_get_ticket_detail_with_avatars('f0300000-0000-4000-8000-000000000001')->'messages') message where message ->> 'body' = 'Filed it.'), 'false', 'non-image reply target is flagged correctly, not shown as an image');
+select is((select message -> 'reply_source_attachment' ->> 'original_name' from jsonb_array_elements(public.app_get_ticket_detail_with_avatars('f0300000-0000-4000-8000-000000000001')->'messages') message where message ->> 'body' = 'Filed it.'), 'invoice.pdf', 'non-image reply target exposes a truthful filename, per the existing safe attachment-card convention');
 
 select pg_temp.become('f0000000-0000-4000-8000-000000000001');
 select lives_ok($$select public.app_toggle_ticket_message_reaction('f0400000-0000-4000-8000-000000000001','heart')$$, 'owner adds reaction');

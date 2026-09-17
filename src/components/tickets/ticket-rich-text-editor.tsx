@@ -234,6 +234,7 @@ export function TicketRichTextEditor({
   placeholder = "Write a reply...",
   initialValue = "",
   onChange,
+  onPasteFile,
 }: {
   disabled?: boolean;
   label?: string;
@@ -249,6 +250,10 @@ export function TicketRichTextEditor({
   onChange: (
     value: string,
   ) => void;
+  /** Fired when the clipboard paste contains an image (e.g. a screenshot).
+   * When set, an image paste attaches the file instead of being inserted as
+   * text — normal text paste is unaffected. */
+  onPasteFile?: (file: File) => void;
 }) {
   const editorRef =
     useRef<HTMLDivElement>(null);
@@ -541,6 +546,19 @@ export function TicketRichTextEditor({
     event:
       ClipboardEvent<HTMLDivElement>,
   ) {
+    if (!disabled && onPasteFile) {
+      const imageItem = Array.from(event.clipboardData.items ?? []).find(
+        (item) => item.kind === "file" && item.type.startsWith("image/"),
+      );
+      const imageFile = imageItem?.getAsFile();
+
+      if (imageFile) {
+        event.preventDefault();
+        onPasteFile(imageFile);
+        return;
+      }
+    }
+
     event.preventDefault();
 
     insertPlainText(
@@ -755,42 +773,37 @@ export function TicketRichTextEditor({
           <ListOrdered aria-hidden="true" />
         </button>
 
-        <span
-          className={
-            styles.ticketRichToolbarDivider
-          }
-          aria-hidden="true"
-        />
+        <div className={styles.ticketRichHistoryGroup}>
+          <button
+            type="button"
+            aria-label="Undo"
+            title="Undo (Ctrl+Z)"
+            disabled={disabled}
+            onMouseDown={(event) =>
+              event.preventDefault()
+            }
+            onClick={() =>
+              runCommand("undo")
+            }
+          >
+            <Undo2 aria-hidden="true" />
+          </button>
 
-        <button
-          type="button"
-          aria-label="Undo"
-          title="Undo (Ctrl+Z)"
-          disabled={disabled}
-          onMouseDown={(event) =>
-            event.preventDefault()
-          }
-          onClick={() =>
-            runCommand("undo")
-          }
-        >
-          <Undo2 aria-hidden="true" />
-        </button>
-
-        <button
-          type="button"
-          aria-label="Redo"
-          title="Redo (Ctrl+Y)"
-          disabled={disabled}
-          onMouseDown={(event) =>
-            event.preventDefault()
-          }
-          onClick={() =>
-            runCommand("redo")
-          }
-        >
-          <Redo2 aria-hidden="true" />
-        </button>
+          <button
+            type="button"
+            aria-label="Redo"
+            title="Redo (Ctrl+Y)"
+            disabled={disabled}
+            onMouseDown={(event) =>
+              event.preventDefault()
+            }
+            onClick={() =>
+              runCommand("redo")
+            }
+          >
+            <Redo2 aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <div

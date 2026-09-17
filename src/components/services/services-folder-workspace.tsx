@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  ChevronDown,
   FolderOpen,
   Package,
   Pencil,
@@ -11,11 +12,16 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
+import { MobilePickerSheet } from "../ui/mobile-filter-sheet";
+import { folderIconFor } from "./service-icons";
 import {
+  createElement,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type AnimationEvent,
   type CSSProperties,
   type KeyboardEvent,
@@ -258,6 +264,23 @@ function FolderArtwork({
   );
 }
 
+/*
+ * Below this width the folder deck is not rendered (see the stylesheet), so the
+ * open/close phase machine has nothing left to drive and the service list is
+ * shown unconditionally instead.
+ */
+const narrowQuery = "(max-width: 767px)";
+
+function subscribeNarrow(onChange: () => void) {
+  const list = window.matchMedia(narrowQuery);
+  list.addEventListener("change", onChange);
+  return () => list.removeEventListener("change", onChange);
+}
+
+function readNarrow() {
+  return window.matchMedia(narrowQuery).matches;
+}
+
 function ServiceDetailModal({
   service,
   closing,
@@ -269,7 +292,15 @@ function ServiceDetailModal({
   onClose: () => void;
   onClosed: () => void;
 }) {
-  return (
+  /*
+   * Portalled to <body> for the same reason the Clients filter sheet is:
+   * inside a route this layer is a `position: fixed` descendant of
+   * `.workspace-route-stage`, which carries a transform for the route
+   * transition and is therefore its containing block. The dialog anchored to
+   * the page column instead of the viewport, sat ~64px low, and its footer
+   * fell off the bottom of the screen at 390x844.
+   */
+  return createPortal(
     <div
       className={[
         styles.modalLayer,
@@ -384,7 +415,8 @@ function ServiceDetailModal({
           </Link>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -426,6 +458,14 @@ export function ServicesFolderWorkspace({
     setPanelPhase,
   ] = useState<PanelPhase>("closed");
 
+  const narrow = useSyncExternalStore(
+    subscribeNarrow,
+    readNarrow,
+    () => false,
+  );
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const [filter, setFilter] =
     useState("");
 
@@ -463,6 +503,16 @@ export function ServicesFolderWorkspace({
 
   const activeFolder =
     folders[activeIndex] ?? null;
+
+  /*
+   * Same mapping the picker rows use, so the trigger and the list agree.
+   * Rendered through createElement: the value is a component *reference*
+   * selected at render time, not one being defined during render, and the
+   * static-components lint rule cannot tell those two apart from a JSX tag.
+   */
+  const activeFolderIcon = activeFolder
+    ? folderIconFor(activeFolder.name)
+    : null;
 
   const opened =
     panelPhase === "opening" ||
@@ -606,6 +656,30 @@ export function ServicesFolderWorkspace({
       ),
     );
 
+    setMoveDirection(null);
+    setPendingDirection(null);
+    setPanelPhase("closed");
+    setFilter("");
+  }
+
+  /*
+   * Switching folder used to be the deck's job: the side hit targets and the
+   * drag both called `requestMove(±1)`, which animated and then landed on
+   * `finishDeckMove`. Below 768px the deck is not rendered, so the picker does
+   * the same thing by folder id -- resolve the index, then run the identical
+   * reset. Same state, same outcome, no second vocabulary, and no URL is
+   * involved because folder switching has never been URL-driven.
+   */
+  function selectFolder(folderId: string) {
+    const next = folders.findIndex(
+      (folder) => folder.id === folderId,
+    );
+
+    if (next < 0) {
+      return;
+    }
+
+    setActiveIndex(next);
     setMoveDirection(null);
     setPendingDirection(null);
     setPanelPhase("closed");
@@ -1076,12 +1150,44 @@ export function ServicesFolderWorkspace({
           aria-label="Service folder contents"
         >
           <header className={styles.servicePanelHeader}>
-            <h2>{activeFolder.name}</h2>
+            {narrow ? (
+              <button
+                type="button"
+                className={styles.folderSelector}
+                aria-haspopup="dialog"
+                aria-expanded={pickerOpen}
+                aria-label={`Select service folder. Current: ${activeFolder.name}`}
+                onClick={() => setPickerOpen(true)}
+              >
+                {activeFolderIcon ? (
+                  <span className={styles.folderSelectorIcon} aria-hidden="true">
+                    {createElement(activeFolderIcon)}
+                  </span>
+                ) : null}
+
+                <span className={styles.folderSelectorName}>
+                  {activeFolder.name}
+                </span>
+
+                <span className={styles.panelCount}>
+                  {countLabel(activeFolder.serviceCount)}
+                </span>
+
+                <ChevronDown
+                  className={styles.folderSelectorChevron}
+                  aria-hidden="true"
+                />
+              </button>
+            ) : (
+              <h2>{activeFolder.name}</h2>
+            )}
 
             <div className={styles.panelActions}>
-              <span className={styles.panelCount}>
-                {countLabel(activeFolder.serviceCount)}
-              </span>
+              {narrow ? null : (
+                <span className={styles.panelCount}>
+                  {countLabel(activeFolder.serviceCount)}
+                </span>
+              )}
 
               <Link
                 className={styles.newServiceLink}
@@ -1096,7 +1202,7 @@ export function ServicesFolderWorkspace({
           </header>
           
 
-          {panelPhase === "closed" ? (
+          {panelPhase === "closed" && !narrow ? (
             <div className={styles.closedContents} aria-hidden="true" />
           ) : (
             <div
@@ -1241,6 +1347,22 @@ export function ServicesFolderWorkspace({
           )}
         </section>
       </div>
+
+      <MobilePickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        label="Select folder"
+        eyebrow="SERVICE FOLDERS"
+        closeLabel="Close folder picker"
+        value={activeFolder.id}
+        options={folders.map((folder) => ({
+          value: folder.id,
+          label: folder.name,
+          count: folder.serviceCount,
+          icon: folderIconFor(folder.name),
+        }))}
+        onSelect={selectFolder}
+      />
 
       {selectedService ? (
         <ServiceDetailModal

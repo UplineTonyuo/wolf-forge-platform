@@ -30,6 +30,12 @@ export const createTicketSchema = z.object({
   request_id: uuidSchema,
   company_id: uuidSchema.optional(),
   client_profile_id: uuidSchema.optional(),
+  /*
+   * Set only when the Ticket IS an Investment Intent conversation. It is the
+   * sole durable discriminator: no source text, no entity string, and no
+   * order_id. Optional, so every existing ordinary Ticket caller is unchanged.
+   */
+  investment_service_id: uuidSchema.optional(),
   subject: nonBlankTextSchema.max(500),
   message: ticketBodySchema,
   priority: z.enum(ticketPriorities).optional(),
@@ -64,6 +70,7 @@ export const ticketAttachmentSubmissionSchema = ticketAttachmentTargetSchema.and
 
 export const ticketReplyToMessageInputSchema = ticketMessageInputSchema.extend({
   reply_to_message_id: uuidSchema,
+  reply_to_attachment_id: uuidSchema.nullable().optional(),
 });
 
 export const ticketReactionInputSchema = z.object({
@@ -76,6 +83,18 @@ export const ticketForwardToTeamInputSchema = z.object({
   source_message_id: uuidSchema,
   destination_conversation_id: uuidSchema,
   comment: z.string().max(1_000).nullable().optional(),
+});
+
+/**
+ * The live lane's request. The browser supplies a Ticket id and the
+ * fingerprint it already holds — never an actor, a company or a role. Who is
+ * asking is derived from the session cookie inside the route, exactly as the
+ * page render derives it.
+ */
+export const ticketLiveRequestSchema = z.object({
+  ticket_id: uuidSchema,
+  /* Bounded: it is a structural signature, never free text. */
+  fingerprint: z.string().max(20_000).nullable(),
 });
 
 export const updateTicketStatusSchema = z.object({
@@ -154,10 +173,16 @@ export type TicketDetailMessage = {
   reply_quote_text?: string | null;
   reply_source_author_name?: string | null;
   reply_source_available?: boolean;
+  reply_to_attachment_id?: string | null;
+  reply_source_attachment?: { id: string; is_image: boolean; original_name: string } | null;
   reactions?: TeamMessageReactionRow[];
   unsent_at?: string | null;
   can_unsend?: boolean;
   attachments: Array<Pick<TicketAttachmentRow, "id" | "original_name" | "mime_type" | "size_bytes" | "scan_status" | "created_at">>;
+  /** Client-only optimistic-send bookkeeping; never present on rows from the server. */
+  requestId?: string | null;
+  pending?: boolean;
+  failed?: boolean;
 };
 
 export type TicketDetailTicket = Pick<

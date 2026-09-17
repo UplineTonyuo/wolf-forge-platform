@@ -2,6 +2,7 @@ import { Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArchiveCouponButton } from "../../../components/coupons/archive-coupon-button";
+import { CouponsFilter } from "../../../components/coupons/coupons-filter";
 import adminList from "../../../components/ui/admin-list.module.css";
 import { FilterInput } from "../../../components/ui/filter-input";
 import { EmptyState } from "../../../components/ui/list-states";
@@ -51,8 +52,34 @@ export default async function CouponsPage({
     </Link>
   );
 
+  /*
+   * The empty state keeps its own copy of the same link -- there it is the
+   * point of the screen, not a duplicate of the title action.
+   */
+  const addCouponToolbar = (
+    <div className={styles.desktopAction}>{addCoupon}</div>
+  );
+
+  const addCouponCompact = (
+    <Link
+      className={styles.compactAction}
+      href="/coupons/new"
+      aria-label="Add coupon"
+      title="Add coupon"
+    >
+      <Plus aria-hidden="true" />
+    </Link>
+  );
+
   return (
-    <PageFrame title="Coupons">
+    <PageFrame
+      title="Coupons"
+      action={
+        <div className="page-action-compact mobile-page-action">
+          {addCouponCompact}
+        </div>
+      }
+    >
       {query.created ? (
         <SuccessToast title="Coupon created" detail="It is now listed under Active." />
       ) : null}
@@ -66,8 +93,10 @@ export default async function CouponsPage({
           { value: "active", label: "Active", href: couponHref("active", search), active: !showingArchived },
           { value: "archived", label: "Archived", href: couponHref("archived", search), active: showingArchived },
         ]}
-        action={addCoupon}
+        action={addCouponToolbar}
         search={<FilterInput label="Search coupons" placeholder="Search coupons" initialValue={search} />}
+        filter={<CouponsFilter initialView={showingArchived ? "archived" : "active"} />}
+        filtersDesktopOnly
       />
 
       {visible.length === 0 ? (

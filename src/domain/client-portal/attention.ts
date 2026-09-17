@@ -117,7 +117,7 @@ export function invoiceAttention(presentationState: string): AttentionState {
     case "draft":
       return { tone: "idle", label: "Draft" };
     default:
-      return { tone: "idle", label: "—" };
+      return { tone: "idle", label: "Unknown" };
   }
 }
 

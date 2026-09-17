@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import {
   forwardTicketMessageToTeamAction,
   toggleTicketMessageReactionAction,
+  type TicketMutationResult,
 } from "../../app/actions/tickets";
 import type { TeamConversationView, TeamReactionView } from "../../domain/team/projections";
 import { randomUuid } from "../../lib/random-uuid";
@@ -27,6 +28,10 @@ import {
 import { TeamReactionChips } from "../team/team-message-reactions";
 import { useAnimatedPopover } from "../ui/use-animated-popover";
 import styles from "./tickets.module.css";
+
+/** The staff acting context. The client portal injects its own. */
+const defaultToggleReaction = (messageId: string, reactionCode: string) =>
+  toggleTicketMessageReactionAction(messageId, reactionCode);
 
 const reactionLabels: Record<TeamReactionCode, string> = {
   like: "Like",
@@ -45,6 +50,13 @@ export type OrderReplyTarget = {
   ticketId: string;
   authorName: string;
   body: string;
+  /** Truthful Reply-banner label: real text, or a media-aware word ("Image"/
+   * "Attachment") instead of the raw body when there is no visible text. */
+  replyPreview: string;
+  /** Set only when the source message has exactly one attachment — lets the
+   * reply banner and persisted quote show a thumbnail of that exact
+   * attachment instead of a generic "Image"/"Attachment" word. */
+  replyAttachment?: { id: string; isImage: boolean; originalName: string } | null;
 };
 
 export function OrderMessageActions({
@@ -54,6 +66,7 @@ export function OrderMessageActions({
   destinations,
   onReply,
   canReact,
+  onToggleReaction = defaultToggleReaction,
 }: {
   message: OrderReplyTarget;
   sourceLabel: string;
@@ -61,6 +74,12 @@ export function OrderMessageActions({
   destinations: TeamConversationView[];
   onReply?: (message: OrderReplyTarget) => void;
   canReact: boolean;
+  /**
+   * Staff and client reach the same RPC through different authorized server
+   * actions, so the acting context is injected rather than assumed. The
+   * default is the staff one, which is what every existing caller gets.
+   */
+  onToggleReaction?: (messageId: string, reactionCode: string) => Promise<TicketMutationResult>;
 }) {
   const router = useRouter();
   const {
@@ -74,6 +93,7 @@ export function OrderMessageActions({
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const firstReactionRef = useRef<HTMLButtonElement>(null);
   const forwardCardRef = useRef<HTMLDivElement>(null);
@@ -114,11 +134,47 @@ export function OrderMessageActions({
   useEffect(() => {
     if (!menuRendered) return;
     (reactionPicker ? firstReactionRef : firstItemRef).current?.focus();
+
+    /*
+     * Vertical placement, measured rather than assumed: below the message when
+     * the viewport has room for it, above when it does not. The horizontal
+     * anchor is CSS -- the menu's containing block is the message box itself,
+     * not the hover target parked beside it.
+     *
+     * Written straight onto the node instead of into React state: placement is
+     * a layout fact, and re-rendering the whole action menu to record it would
+     * cost more than the measurement.
+     */
+    function place() {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const rect = trigger.getBoundingClientRect();
+      /*
+       * Bounded by the transcript, not just by the window: everything below
+       * the thread is the composer, and a menu that opens downward into it
+       * reads as belonging to the composer rather than to the message. The
+       * last message therefore opens upward, like every other message with no
+       * room beneath it.
+       */
+      const thread = trigger.closest("ol");
+      const limit = thread
+        ? Math.min(window.innerHeight, thread.getBoundingClientRect().bottom)
+        : window.innerHeight;
+      const needed = menu.getBoundingClientRect().height + 16;
+      menu.dataset.placement = limit - rect.bottom < needed ? "above" : "below";
+    }
+    place();
+    window.addEventListener("resize", place);
+
     function dismiss(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) closeMenu();
     }
     document.addEventListener("click", dismiss);
-    return () => document.removeEventListener("click", dismiss);
+    return () => {
+      document.removeEventListener("click", dismiss);
+      window.removeEventListener("resize", place);
+    };
   }, [closeMenu, menuRendered, reactionPicker]);
 
   useEffect(() => {
@@ -175,7 +231,7 @@ export function OrderMessageActions({
     setBusy(true);
     setFeedback("");
     try {
-      const result = await toggleTicketMessageReactionAction(message.messageId, code);
+      const result = await onToggleReaction(message.messageId, code);
       if (!result.ok) {
         setFeedback(result.error);
         return;
@@ -288,6 +344,7 @@ export function OrderMessageActions({
 
         {menuRendered ? (
           <div
+            ref={menuRef}
             id={menuId}
             role="menu"
             aria-label={reactionPicker ? "Reactions" : "Message actions"}

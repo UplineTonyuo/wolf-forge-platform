@@ -1334,6 +1334,6 @@
   .launcher { width: auto !important; height: 44px !important; flex: 0 0 auto !important; padding-inline: 10px; white-space: nowrap; }
   .launcher svg { flex-shrink: 0; }
 }
-@media (max-width: 359px) {
+@media (max-width: 767px) {
   .launcher { width: 100% !important; justify-content: center; }
 }

@@ -158,6 +158,7 @@ export function TeamMessagesDrawer({
   initialConversationId,
   onUnreadChange,
   onRequestOpen,
+  onRootElement,
 }: {
   open: boolean;
   onClose: () => void;
@@ -168,6 +169,8 @@ export function TeamMessagesDrawer({
   initialConversationId: string | null;
   onUnreadChange: (unread: number) => void;
   onRequestOpen: () => void;
+  /** The mobile edge lever reads this to drive a live drag reveal. */
+  onRootElement?: (el: HTMLDivElement | null) => void;
 }) {
   const mounted = useClientMounted();
   const { render, phase } = useExitTransition(open, 200);
@@ -286,6 +289,13 @@ export function TeamMessagesDrawer({
 
   const picker = useExitTransition(pickerOpen, 160);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const setDrawerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      drawerRef.current = el;
+      onRootElement?.(el);
+    },
+    [onRootElement],
+  );
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -1465,7 +1475,7 @@ export function TeamMessagesDrawer({
       />
 
       <div
-        ref={drawerRef}
+        ref={setDrawerRef}
         role="dialog"
         aria-modal="true"
         aria-label="Team Messages"

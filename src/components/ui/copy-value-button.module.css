@@ -1,4 +1,5 @@
 .button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -15,4 +16,21 @@
 .button:hover {
   color: #000d51;
   border-color: #c1c8d5;
+}
+
+/*
+ * Coarse pointers get the full recommended ~44px touch target via an
+ * invisible expanded hit area, not a bigger visible button — the
+ * ::before still counts as part of the button for click purposes.
+ */
+.button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+@media (pointer: coarse) {
+  .button::before {
+    inset: -8px;
+  }
 }

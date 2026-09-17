@@ -77,7 +77,6 @@ export function ClientInvoicesView({ invoices }: { invoices: ClientInvoiceSummar
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Billing</span>
         <h1>Invoices</h1>
         <p>Everything Wolf Forge has billed your account, and what remains outstanding.</p>
       </header>

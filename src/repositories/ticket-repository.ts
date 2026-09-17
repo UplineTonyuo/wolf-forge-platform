@@ -29,11 +29,13 @@ export class TicketRepository {
   }
 
   async prepareAttachment(input: TicketAttachmentTarget): Promise<{ storage_key: string }> {
-    const rpc = this.client.rpc as unknown as (
+    // Cast inline at the call site — extracting `this.client.rpc` into a
+    // variable first (the previous shape here) detaches it from `this.client`,
+    // and supabase-js's rpc() needs that binding internally.
+    const result = await (this.client.rpc as unknown as (
       name: string,
       args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: unknown }>;
-    const result = await rpc("app_prepare_ticket_attachment", {
+    ) => Promise<{ data: unknown; error: unknown }>)("app_prepare_ticket_attachment", {
       p_request_id: input.request_id,
       p_ticket_id: input.ticket_id ?? undefined,
       p_order_id: input.order_id ?? undefined,
@@ -43,12 +45,11 @@ export class TicketRepository {
     return result.data as { storage_key: string };
   }
 
-  async sendWithAttachment(input: TicketAttachmentSubmission): Promise<void> {
-    const rpc = this.client.rpc as unknown as (
+  async sendWithAttachment(input: TicketAttachmentSubmission): Promise<{ ticket_id: string; message_id: string; attachment_id: string }> {
+    const result = await (this.client.rpc as unknown as (
       name: string,
       args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: unknown }>;
-    const result = await rpc("app_send_ticket_message_with_attachment", {
+    ) => Promise<{ data: unknown; error: unknown }>)("app_send_ticket_message_with_attachment", {
       p_request_id: input.request_id,
       p_ticket_id: input.ticket_id ?? undefined,
       p_order_id: input.order_id ?? undefined,
@@ -60,16 +61,16 @@ export class TicketRepository {
       p_checksum_sha256: input.attachment.checksum_sha256,
     });
     if (result.error) throw mapDatabaseError(result.error, "Ticket attachment");
+    return result.data as { ticket_id: string; message_id: string; attachment_id: string };
   }
 
-  async attachmentDownload(attachmentId: string): Promise<{ storage_object_key: string }> {
-    const rpc = this.client.rpc as unknown as (
+  async attachmentDownload(attachmentId: string): Promise<{ storage_object_key: string; mime_type: string; original_name: string }> {
+    const result = await (this.client.rpc as unknown as (
       name: string,
       args: Record<string, unknown>,
-    ) => Promise<{ data: unknown; error: unknown }>;
-    const result = await rpc("app_get_ticket_attachment_download", { p_attachment_id: attachmentId });
+    ) => Promise<{ data: unknown; error: unknown }>)("app_get_ticket_attachment_download", { p_attachment_id: attachmentId });
     if (result.error) throw mapDatabaseError(result.error, "Ticket attachment");
-    return result.data as { storage_object_key: string };
+    return result.data as { storage_object_key: string; mime_type: string; original_name: string };
   }
 
   async sendForOrder(orderId: string, input: TicketMessageInput, internalNote: boolean): Promise<string> {
@@ -87,6 +88,7 @@ export class TicketRepository {
         p_ticket_id: id,
         p_body: input.body,
         p_reply_to_message_id: input.reply_to_message_id,
+        p_reply_to_attachment_id: input.reply_to_attachment_id ?? undefined,
       }),
       "Ticket reply",
     ) as TicketMessageRow;

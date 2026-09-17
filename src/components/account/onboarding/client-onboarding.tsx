@@ -52,7 +52,6 @@ export function ClientOnboardingView({ onboarding }: { onboarding: ClientOnboard
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Work</span>
         <h1>Onboarding</h1>
         <p>
           Complete these items so Wolf Forge can begin or continue your work. Everything you send

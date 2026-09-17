@@ -1,9 +1,9 @@
-import { Suspense } from "react";
 import type { ClientNavCounts } from "../../domain/client-portal/summary";
 import type { ServiceChooserCatalog } from "../../domain/client-portal/service-chooser";
 import type { ClientUser } from "../../lib/supabase/next-server";
 import { ClientCommandBar } from "./command/client-command-bar";
 import { ClientPortalSidebar } from "./client-portal-sidebar";
+import { PortalDrawerProvider } from "./command/portal-drawer";
 import { ServiceChooserProvider } from "./services/service-chooser-context";
 import { portalNavigationFor } from "./portal-nav-registry";
 
@@ -43,34 +43,32 @@ export function ClientAccountShell({
 
   return (
     <ServiceChooserProvider catalog={serviceCatalog} available={storeGranted}>
+      <PortalDrawerProvider>
       <div className="client-portal">
         <a className="skip-link" href="#portal-main">
           Skip to content
         </a>
 
         {/* The sidebar reads the pathname to mark the active entry. */}
-        <Suspense fallback={null}>
-          <ClientPortalSidebar
-            categories={categories}
-            companyName={user.companyName}
-            displayName={user.displayName}
-          />
-        </Suspense>
+        <ClientPortalSidebar
+          categories={categories}
+          companyName={user.companyName}
+          displayName={user.displayName}
+        />
 
         <main id="portal-main" className="portal-main">
-          <Suspense fallback={null}>
-            <ClientCommandBar
-              displayName={user.displayName}
-              companyName={user.companyName}
-              avatarUrl={avatarUrl}
-              canMessage={user.modules.portal_tickets === true}
-              notificationSoundEnabled={notificationSoundEnabled}
-            />
-          </Suspense>
+          <ClientCommandBar
+            displayName={user.displayName}
+            companyName={user.companyName}
+            avatarUrl={avatarUrl}
+            canMessage={user.modules.portal_tickets === true}
+            notificationSoundEnabled={notificationSoundEnabled}
+          />
 
           <div className="portal-main-inner">{children}</div>
         </main>
       </div>
+      </PortalDrawerProvider>
     </ServiceChooserProvider>
   );
 }

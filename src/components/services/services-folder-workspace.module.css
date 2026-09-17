@@ -1430,6 +1430,16 @@ serviceDialogOut {
   background: #fff;
 }
 
+/* Below 767px the shared internal shell header (globals.css) is itself
+   `position: sticky; top: 0`, so this filter bar would stick to the exact
+   same edge and sit underneath it. --wf-mobile-header-h is the one shared
+   offset defined at the shell level for exactly this. */
+@media (max-width: 767px) {
+  .serviceFilter {
+    top: var(--wf-mobile-header-h, 64px);
+  }
+}
+
 .serviceList {
   position: relative !important;
   z-index: 40 !important;
@@ -2098,3 +2108,296 @@ serviceDialogOut {
 }
 
 /* WF SERVICE CREATE PROJECT BUTTON END */
+/* ==========================================================
+   WF SERVICES MOBILE INDEX START
+
+   Below 768px the folder deck -- the ~293px 3D folder artwork and the
+   sibling cards stacked behind it -- is replaced by the compact folder
+   summary that already sits above the service list: folder name, service
+   count, New Service. Same information, roughly a quarter of the height.
+
+   The deck was also the only way to open a folder, so at these widths the
+   component shows the contents unconditionally instead of waiting on
+   `panelPhase === "open"`. Desktop is untouched: the deck, the two-column
+   grid and the open/pack animation all still apply above 767px.
+   ========================================================== */
+
+@media (max-width: 767px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .deckColumn {
+    display: none !important;
+  }
+
+  .contentsColumn {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .contentsBody {
+    height: auto !important;
+    overflow: visible !important;
+    padding: 12px 0 8px !important;
+  }
+
+  /* The summary bar IS the folder card at these widths, so it keeps the
+     card's own surface instead of reading as a stray heading. */
+  .servicePanelHeader {
+    min-height: 0 !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+    border: 1px solid #dfe4ed !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+  }
+
+  .servicePanelHeader h2 {
+    font-size: 17px !important;
+  }
+
+  /* Rows get a floor from the padding, not from a border box, so the first
+     row cannot sit any tighter than the rest. */
+  .serviceList {
+    margin-top: 12px !important;
+  }
+
+  .serviceRow {
+    padding: 13px 12px !important;
+  }
+}
+
+/* WF SERVICES MOBILE INDEX END */
+
+
+/* ==========================================================
+   WF SERVICE MODAL MOBILE START
+
+   The dialog is bounded by the viewport, not by its content: the header
+   stays put, the description scrolls, and the footer with Create project /
+   Edit service stays reachable without scrolling the page behind it.
+   ========================================================== */
+
+.serviceDialog {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: min(720px, calc(100dvh - 48px)) !important;
+  overflow: hidden !important;
+}
+
+.dialogHeader {
+  flex: 0 0 auto !important;
+}
+
+.dialogDescription {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+}
+
+.dialogFooter {
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 767px) {
+  .modalLayer {
+    padding: 12px !important;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    align-items: end !important;
+  }
+
+  .serviceDialog {
+    width: 100% !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 16px 16px 12px 12px !important;
+  }
+
+  .dialogHeader,
+  .dialogDescription,
+  .dialogFooter {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+  }
+
+  .dialogFooter {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .dialogCreateProject,
+  .dialogEdit {
+    width: 100% !important;
+  }
+}
+
+/* WF SERVICE MODAL MOBILE END */
+
+
+/* ==========================================================
+   WF SERVICES MOBILE FOLLOW-UP START
+
+   1. The compact folder summary doubles as the folder selector.
+   2. Price / Created / Billing become one dense three-column strip.
+   ========================================================== */
+
+/* ----------------------------------------------------------
+   Folder selector
+
+   Same summary card as before, but the name/count half is a real button
+   with a disclosure chevron, and New Service stays a sibling link so
+   tapping it cannot open the picker.
+   ---------------------------------------------------------- */
+
+.folderSelector {
+  min-width: 0;
+  flex: 1 1 auto;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.folderSelectorName {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--wf-navy);
+  font-family:
+    "Sora Variable",
+    Sora,
+    Inter,
+    sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folderSelectorChevron {
+  width: 18px;
+  height: 18px;
+
+  flex: 0 0 auto;
+
+  color: #8b93a7;
+
+  transition: transform 160ms ease;
+}
+
+.folderSelector[aria-expanded="true"] .folderSelectorChevron {
+  transform: rotate(180deg);
+}
+
+.folderSelector:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (max-width: 767px) {
+  .servicePanelHeader .panelActions {
+    flex: 0 0 auto;
+  }
+}
+
+/* ----------------------------------------------------------
+   Service detail metadata
+
+   The stylesheet used to stack these three into one full-width row each
+   below 620px (`.dialogFacts { grid-template-columns: 1fr }`), which cost
+   ~241px of a 844px viewport before the description even started. Three
+   equal columns are readable at 390px -- the widest value is a date -- so
+   the stacked form is replaced by the dense strip, not merely tightened.
+   ---------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  .dialogFacts {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr)) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .dialogFacts > div {
+    padding: 12px 10px !important;
+
+    border-right:
+      1px solid
+      rgba(17, 26, 62, .08) !important;
+    border-bottom: 0 !important;
+  }
+
+  /* The outer cells carry the sheet's own gutter so the first label lines
+     up with the header and footer text at 18px. */
+  .dialogFacts > div:first-child {
+    padding-left: 18px !important;
+  }
+
+  .dialogFacts > div:last-child {
+    padding-right: 18px !important;
+    border-right: 0 !important;
+  }
+
+  .dialogFacts span {
+    margin-bottom: 4px !important;
+    font-size: 9px !important;
+    letter-spacing: .06em !important;
+  }
+
+  .dialogFacts strong {
+    font-size: 12.5px !important;
+    line-height: 1.25 !important;
+  }
+}
+
+/* WF SERVICES MOBILE FOLLOW-UP END */
+
+/* ----------------------------------------------------------
+   Folder icon
+
+   Same 18px / 1.8 stroke as the picker rows, so the collapsed trigger and
+   the list read as one control.
+   ---------------------------------------------------------- */
+
+.folderSelectorIcon {
+  width: 20px;
+  height: 20px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  color: #000d51;
+}
+
+.folderSelectorIcon svg {
+  width: 18px;
+  height: 18px;
+
+  stroke-width: 1.8;
+}
+

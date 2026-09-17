@@ -222,4 +222,41 @@ describe("Ticket composer rich-text toolbar", () => {
 
     expect(onSubmit).not.toHaveBeenCalled();
   });
+
+  it("pasting an image attaches it via onPasteFile instead of inserting text", () => {
+    const onChange = vi.fn();
+    const onPasteFile = vi.fn();
+    render(<TicketRichTextEditor onChange={onChange} onPasteFile={onPasteFile} />);
+    const editor = screen.getByRole("textbox", { name: "Write a reply" });
+    mockSelectionWithin(editor);
+
+    const file = new File(["fake-bytes"], "screenshot.png", { type: "image/png" });
+    fireEvent.paste(editor, {
+      clipboardData: {
+        items: [{ kind: "file", type: "image/png", getAsFile: () => file }],
+        getData: () => "",
+      },
+    });
+
+    expect(onPasteFile).toHaveBeenCalledWith(file);
+    expect(execCommand).not.toHaveBeenCalledWith("insertText", false, expect.anything());
+  });
+
+  it("pasting plain text still inserts text when onPasteFile is set but clipboard has no image", () => {
+    const onChange = vi.fn();
+    const onPasteFile = vi.fn();
+    render(<TicketRichTextEditor onChange={onChange} onPasteFile={onPasteFile} />);
+    const editor = screen.getByRole("textbox", { name: "Write a reply" });
+    mockSelectionWithin(editor);
+
+    fireEvent.paste(editor, {
+      clipboardData: {
+        items: [],
+        getData: () => "pasted text",
+      },
+    });
+
+    expect(onPasteFile).not.toHaveBeenCalled();
+    expect(execCommand).toHaveBeenCalledWith("insertText", false, "pasted text");
+  });
 });

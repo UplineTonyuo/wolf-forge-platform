@@ -68,7 +68,12 @@ export default async function OrderDetailsPage({
                       ? String(field.value)
                       : field.value == null
                         ? <span className={styles.muted}>Not answered</span>
-                        : JSON.stringify(field.value)}
+                        : Array.isArray(field.value) &&
+                            field.value.every((item) => typeof item === "string" || typeof item === "number")
+                          ? field.value.length > 0
+                            ? field.value.join(` ${String.fromCharCode(183)} `)
+                            : <span className={styles.muted}>Not answered</span>
+                          : JSON.stringify(field.value)}
                   </dd>
                 </Fragment>
               ))}

@@ -20,6 +20,7 @@ import {
 import type {
   InternalUser,
 } from "../../lib/supabase/next-server";
+import { useHeaderOverlay } from "./use-header-overlay";
 import styles from "./workspace-quick-action.module.css";
 
 /**
@@ -131,10 +132,6 @@ export function WorkspaceQuickAction({
     };
   }, [open]);
 
-  if (!authorized) {
-    return null;
-  }
-
   /* Closing always resets the face, so nothing half-filled waits behind the next open. */
   const closePanel = () => {
     setOpen(false);
@@ -142,13 +139,13 @@ export function WorkspaceQuickAction({
     setDirection("forward");
   };
 
-  const openMenu = () => {
-    window.dispatchEvent(
-      new CustomEvent(
-        "wf:quick-action-open",
-      ),
-    );
+  useHeaderOverlay("quick-action", open, closePanel);
 
+  if (!authorized) {
+    return null;
+  }
+
+  const openMenu = () => {
     setView("menu");
     setDirection("forward");
     setOpen(true);

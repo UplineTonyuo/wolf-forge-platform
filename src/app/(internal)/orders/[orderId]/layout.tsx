@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { OrderHeaderControls } from "../../../../components/projects/order-header-controls";
 import { OrderTabs } from "../../../../components/projects/order-tabs";
 import { ProjectBackToOrders } from "../../../../components/projects/project-back-to-orders";
+import { RailDetailsToggle } from "../../../../components/projects/order-details-rail-toggle";
 import styles from "../../../../components/projects/project-detail.module.css";
 import { CopyValueButton } from "../../../../components/ui/copy-value-button";
 import { DataError } from "../../../../components/ui/list-states";
@@ -91,8 +92,7 @@ export default async function OrderDetailLayout({
 
           <aside className={styles.rail} aria-label="Order details">
             <div className={styles.railCard}>
-              <h2>Details</h2>
-
+              <RailDetailsToggle>
               <dl className={styles.railList}>
                 <div className={styles.railRow}>
                   <dt>Number</dt>
@@ -227,6 +227,7 @@ export default async function OrderDetailLayout({
                   </>
                 ) : null}
               </dl>
+              </RailDetailsToggle>
             </div>
           </aside>
         </div>

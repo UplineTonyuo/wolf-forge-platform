@@ -98,4 +98,12 @@ export type InvestmentIntentRow = {
   contacted_by_profile_id: string | null;
   contacted_by_name: string | null;
   updated_at: string;
+  /**
+   * The live investment conversation for this client and investment, if one
+   * exists. Advisory only -- `tickets_active_investment_conversation_unique`
+   * is what actually prevents a second active conversation, so a null here is
+   * a hint that creating one is allowed, never a guarantee that it will win.
+   */
+  active_ticket_id: string | null;
+  active_ticket_status: string | null;
 };
