@@ -35,6 +35,7 @@ beforeEach(() => {
   vi.mocked(actions.submitAssignedFormAction).mockResolvedValue({ ok: true, data: { id: "submission-new" } });
   vi.mocked(actions.submitPublicFormAction).mockResolvedValue({ ok: true, data: { id: "submission-new" } });
   vi.mocked(actions.correctFormSubmissionAction).mockResolvedValue({ ok: true, data: { id: "correction-new" } });
+  vi.mocked(actions.archiveFormAction).mockResolvedValue({ ok: true, data: undefined });
 });
 afterEach(cleanup);
 
@@ -164,6 +165,29 @@ describe("visual builder", () => {
     fireEvent.click(within(screen.getByRole("dialog", { name: "Publish this version?" })).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(actions.publishFormAction).toHaveBeenCalledTimes(1));
     expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("archives through a real pending mutation, and surfaces a failure instead of silently dropping it", async () => {
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+    const dialog = screen.getByRole("dialog", { name: "Archive this Form?" });
+    const confirm = within(dialog).getByRole("button", { name: "Archive Form" });
+    expect(confirm).toBeEnabled();
+
+    fireEvent.click(confirm);
+    await waitFor(() => expect(actions.archiveFormAction).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Archive this Form?" })).not.toBeInTheDocument());
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the archive dialog open and shows the error on failure, instead of failing silently", async () => {
+    vi.mocked(actions.archiveFormAction).mockResolvedValueOnce({ ok: false, error: "Forms with pending submissions cannot be archived." });
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+    const dialog = screen.getByRole("dialog", { name: "Archive this Form?" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Archive Form" }));
+    expect(await within(dialog).findByText("Forms with pending submissions cannot be archived.")).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
   });
 
   it("shows real version history and published read-only links", () => {

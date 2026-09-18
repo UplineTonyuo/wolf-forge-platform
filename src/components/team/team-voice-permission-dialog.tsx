@@ -167,6 +167,7 @@ export function TeamVoicePermissionDialog({
                 ref={primaryRef}
                 type="button"
                 className={styles.primaryButton}
+                aria-busy={busy || undefined}
                 disabled={busy}
                 onClick={onAllow}
               >

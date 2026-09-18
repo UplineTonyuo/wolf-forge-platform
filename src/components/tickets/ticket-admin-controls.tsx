@@ -35,7 +35,7 @@ export function TicketAdminControls({ ticketId, status, priority, assigneeId, as
     });
   }
 
-  return <div className={styles.adminControls}>
+  return <div className={styles.adminControls} aria-busy={pending || undefined}>
     {capabilities.edit ? <div className={styles.quickActions}>{status === "resolved" || status === "closed" ? <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "open"))} disabled={pending}><RotateCcw aria-hidden="true" />Reopen</button> : <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "resolved"))} disabled={pending}><CheckCircle2 aria-hidden="true" />Resolve</button>}{status === "resolved" ? <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "closed"))} disabled={pending}>Close</button> : null}</div> : null}
     <label><span>Status</span><TicketOperationSelect aria-label="Status" value={status} disabled={pending || !capabilities.edit} onChange={(event) => run(() => updateTicketStatusAction(ticketId, event.target.value))}><option value={status}>{ticketStatusLabels[status]}</option>{ticketStatusOptions.filter(([value]) => transitions[status].includes(value)).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</TicketOperationSelect></label>
     <label><span>Priority</span><TicketOperationSelect aria-label="Priority" value={priority} disabled={pending || !capabilities.edit} onChange={(event) => run(() => updateTicketPriorityAction(ticketId, event.target.value))}>{ticketPriorityOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</TicketOperationSelect></label>

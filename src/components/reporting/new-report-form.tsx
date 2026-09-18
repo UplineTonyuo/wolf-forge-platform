@@ -224,19 +224,21 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
           <button
             type="button"
             className={styles.primaryButton}
+            aria-busy={loading || undefined}
             disabled={!companyId || loading}
             onClick={() => void continueToService()}
           >
-            {loading ? <LoaderCircle aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
+            {loading ? <LoaderCircle className="spinner" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
             {loading ? "Loading Services…" : "Continue"}
           </button>
         ) : (
           <button
             type="submit"
             className={styles.primaryButton}
+            aria-busy={loading || undefined}
             disabled={!selectedChoice || !title.trim() || loading}
           >
-            {loading ? <LoaderCircle aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
+            {loading ? <LoaderCircle className="spinner" aria-hidden="true" /> : <ArrowRight aria-hidden="true" />}
             {loading ? "Creating draft…" : "Start guided report"}
           </button>
         )}

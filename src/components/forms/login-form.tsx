@@ -7,7 +7,7 @@ import { signInAction, type LoginState } from "../../app/actions/auth";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
-  return <button className="button-primary login-submit" disabled={pending}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Sign in</button>;
+  return <button className="button-primary login-submit" disabled={pending} aria-busy={pending || undefined}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Sign in</button>;
 }
 
 export function LoginForm({ next = "/", initialError = null }: { next?: string; initialError?: string | null }) {

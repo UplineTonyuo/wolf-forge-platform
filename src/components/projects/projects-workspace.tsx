@@ -725,6 +725,7 @@ export function ProjectsWorkspace({
               <button
                 type="button"
                 className={styles.dialogConfirm}
+                aria-busy={busy || undefined}
                 disabled={busy}
                 ref={dialogConfirmRef}
                 onClick={runDialogAction}

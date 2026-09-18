@@ -215,6 +215,7 @@ export function ClientMessages({
               className="portal-primary-action"
               type="submit"
               form="portal-new-message"
+              aria-busy={pending || undefined}
               disabled={pending || !canSubmit}
             >
               {pending ? (

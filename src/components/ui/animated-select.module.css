@@ -78,6 +78,12 @@
   transform: rotate(180deg);
 }
 
+/* Pins the size deterministically: two-class specificity beats load order between this module and the global .spinner rule. */
+.caret.spinner {
+  width: 15px;
+  height: 15px;
+}
+
 .menu {
   position: absolute;
   z-index: 1200;

@@ -48,7 +48,7 @@ export function NotificationSettingsPanel({ soundEnabled }: { soundEnabled: bool
         <span role={state.error ? "alert" : "status"}>
           {state.error ?? (state.savedAt ? "Notification preference saved." : "Only the sound preference is saved today.")}
         </span>
-        <button type="submit" className={styles.primaryButton} disabled={pending}>
+        <button type="submit" className={styles.primaryButton} style={{ minWidth: 130 }} aria-busy={pending || undefined} disabled={pending}>
           {pending ? <Loader2 aria-hidden="true" /> : null}
           {pending ? "Saving" : "Save preference"}
         </button>

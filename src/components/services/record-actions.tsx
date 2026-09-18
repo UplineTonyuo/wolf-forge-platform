@@ -14,7 +14,7 @@ function ActionButton({ kind }: { kind: "duplicate" | "archive-service" | "archi
   const { pending } = useFormStatus();
   const archive = kind !== "duplicate";
   return (
-    <button className={archive ? "button-danger" : "button-secondary"} disabled={pending} type="submit">
+    <button className={archive ? "button-danger" : "button-secondary"} disabled={pending} aria-busy={pending || undefined} type="submit">
       {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : archive ? <Trash2 aria-hidden="true" /> : <Copy aria-hidden="true" />}
       {kind === "duplicate" ? "Duplicate service" : kind === "archive-folder" ? "Soft delete folder" : "Soft delete service"}
     </button>

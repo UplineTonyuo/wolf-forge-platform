@@ -497,9 +497,10 @@ export function ReportWizard({
             type="button"
             className={styles.secondaryButton}
             onClick={() => void saveDraftAndLeave()}
+            aria-busy={save.kind === "saving" || undefined}
             disabled={save.kind === "saving" || sending || saveNotice || sent}
           >
-            {save.kind === "saving" ? <LoaderCircle aria-hidden="true" /> : <Save aria-hidden="true" />}
+            {save.kind === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Save aria-hidden="true" />}
             Save draft
           </button>
           {step === "one_time_setup" ? (
@@ -568,9 +569,10 @@ export function ReportWizard({
               type="button"
               className={styles.primaryButton}
               onClick={() => void send()}
+              aria-busy={sending || undefined}
               disabled={sending}
             >
-              <Send aria-hidden="true" />
+              {sending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Send aria-hidden="true" />}
               {sending ? "Sending…" : "Send report"}
             </button>
           </div>

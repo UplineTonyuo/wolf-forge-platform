@@ -28,6 +28,7 @@ function SubmitButton() {
     <button
       className={styles.submit}
       disabled={pending}
+      aria-busy={pending || undefined}
       type="submit"
     >
       {pending ? (

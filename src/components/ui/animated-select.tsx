@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, LoaderCircle } from "lucide-react";
 import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./animated-select.module.css";
@@ -29,6 +29,7 @@ export function AnimatedSelect({
   value,
   onChange,
   disabled = false,
+  loading = false,
   required = false,
   menuLabel,
   compact = false,
@@ -39,6 +40,8 @@ export function AnimatedSelect({
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** True while a real async mutation triggered by this select is in flight. Swaps the caret for a spinner and disables the trigger, without hiding the current value. */
+  loading?: boolean;
   required?: boolean;
   menuLabel: string;
   compact?: boolean;
@@ -78,8 +81,10 @@ export function AnimatedSelect({
     setMenuMaxWidth(Math.max(rect.width, Math.min(available, 520)));
   }, [isOpen]);
 
+  const isDisabled = disabled || loading;
+
   function openMenu(animate = true) {
-    if (disabled) return;
+    if (isDisabled) return;
     setActiveIndex(
       selectedIndex >= 0 && !options[selectedIndex]?.disabled
         ? selectedIndex
@@ -100,7 +105,7 @@ export function AnimatedSelect({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (disabled) return;
+    if (isDisabled) return;
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -167,7 +172,8 @@ export function AnimatedSelect({
         aria-activedescendant={
           isOpen && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined
         }
-        disabled={disabled}
+        aria-busy={loading || undefined}
+        disabled={isDisabled}
         onClick={() => (render ? closeMenu() : openMenu(true))}
       >
         <span className={styles.triggerValue}>
@@ -181,7 +187,11 @@ export function AnimatedSelect({
           )}
         </span>
 
-        <ChevronDown className={styles.caret} aria-hidden="true" />
+        {loading ? (
+          <LoaderCircle className={`${styles.caret} spinner`} aria-hidden="true" />
+        ) : (
+          <ChevronDown className={styles.caret} aria-hidden="true" />
+        )}
       </button>
 
       <input type="hidden" name={name} value={value} required={required || undefined} />

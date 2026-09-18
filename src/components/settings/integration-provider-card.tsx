@@ -102,7 +102,7 @@ function ActionForm({ action, label, pendingAction, onSubmit, secondary = false,
   const pending = pendingAction === action;
   return (
     <form method="post" action={action} onSubmit={() => onSubmit(action)}>
-      <button type="submit" disabled={pendingAction !== null} className={danger ? styles.dangerButton : secondary ? styles.secondaryButton : styles.primaryButton}>
+      <button type="submit" aria-busy={pending || undefined} disabled={pendingAction !== null} className={danger ? styles.dangerButton : secondary ? styles.secondaryButton : styles.primaryButton}>
         {pending ? <LoaderCircle aria-hidden="true" /> : null}
         {pending ? `${label}…` : label}
       </button>

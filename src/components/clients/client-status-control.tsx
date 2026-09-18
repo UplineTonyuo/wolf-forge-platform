@@ -193,6 +193,7 @@ export function ClientStatusControl({
         }
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-busy={pending || undefined}
         disabled={pending}
         onClick={() =>
           setOpen((value) => !value)

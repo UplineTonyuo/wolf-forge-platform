@@ -405,6 +405,7 @@ export function ClientsTable({
                 ref={applyRef}
                 type="button"
                 className={action === "delete" ? "clients-bulk-apply is-danger" : "clients-bulk-apply"}
+                aria-busy={busy || undefined}
                 disabled={busy || !action || (action === "status" && !status)}
                 onClick={requestApply}
               >
@@ -571,6 +572,7 @@ export function ClientsTable({
                 ref={confirmDeleteRef}
                 type="button"
                 className="is-danger"
+                aria-busy={busy || undefined}
                 disabled={busy}
                 onClick={() => void runMutation("delete")}
               >

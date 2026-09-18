@@ -125,7 +125,7 @@ export function TeamPinsPanel({ current, previous, canManage, onJump, onUnpin }:
                         <span>{pin.messageDeleted ? "This pinned message is no longer available." : pin.textPreview}</span>
                         <small>Pinned by {pin.pinnedByName} · {new Date(pin.pinnedAt).toLocaleString()}</small>
                       </button>
-                      {canManage && !pin.messageDeleted ? <button type="button" onClick={() => void unpin(pin)} disabled={busyId === pin.id} aria-label="Unpin message">{busyId === pin.id ? <Loader2 className={styles.spin} /> : <PinOff />}</button> : null}
+                      {canManage && !pin.messageDeleted ? <button type="button" onClick={() => void unpin(pin)} disabled={busyId === pin.id} aria-busy={busyId === pin.id || undefined} aria-label="Unpin message">{busyId === pin.id ? <Loader2 className={styles.spin} /> : <PinOff />}</button> : null}
                     </div>
                   ))}</div>
                 )}

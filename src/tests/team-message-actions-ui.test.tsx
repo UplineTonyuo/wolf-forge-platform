@@ -127,6 +127,28 @@ describe("TeamMessageActions", () => {
     ));
   });
 
+  it("disables the whole menu while a Pin mutation is in flight, so a fast second click cannot double-submit", async () => {
+    let resolvePin!: (value: string | null) => void;
+    const onPin = vi.fn().mockReturnValue(
+      new Promise<string | null>((resolve) => {
+        resolvePin = resolve;
+      }),
+    );
+    const props = renderActions({ canManagePins: true, onPin });
+
+    const pinButton = screen.getByRole("button", { name: "Pin" });
+    fireEvent.click(pinButton);
+    fireEvent.click(pinButton);
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+    expect(onPin).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Forward" })).toBeDisabled();
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+
+    resolvePin(null);
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+  });
+
   it("uses the small delete-for-me confirmation and runs only that mutation", async () => {
     const props = renderActions();
     fireEvent.click(screen.getByRole("button", { name: "Delete for me" }));

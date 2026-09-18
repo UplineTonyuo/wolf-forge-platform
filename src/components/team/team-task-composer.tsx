@@ -305,6 +305,7 @@ export function TeamTaskComposer({
           <button
             type="button"
             className={styles.primaryButton}
+            aria-busy={submitting || undefined}
             disabled={!canSubmit}
             onClick={submit}
           >

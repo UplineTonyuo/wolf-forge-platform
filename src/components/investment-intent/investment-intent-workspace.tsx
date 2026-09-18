@@ -98,7 +98,7 @@ function StatusControl({
         menuLabel={`Status for ${view.companyName} and ${view.serviceName}`}
         options={statusOptions}
         value={view.status}
-        disabled={pending}
+        loading={pending}
         onChange={(next) => {
           if (next === view.status) return;
 

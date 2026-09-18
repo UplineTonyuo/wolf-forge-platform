@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const updateInvestmentIntentStatusAction = vi.fn();
@@ -216,6 +216,29 @@ describe("Investment Intent workspace", () => {
       intentId: "newest",
       status: "reviewing",
     });
+  });
+
+  it("shows a real busy state on the status control while the mutation is in flight, never a fixed delay", async () => {
+    let resolveMutation!: (value: { ok: true }) => void;
+    updateInvestmentIntentStatusAction.mockReturnValue(
+      new Promise((resolve) => {
+        resolveMutation = resolve;
+      }),
+    );
+
+    render(<InvestmentIntentWorkspace intents={intents} canManage={true} />);
+
+    const first = tableRows()[0]!;
+    const trigger = within(first).getByRole("button", { name: /^Status:/u });
+    fireEvent.click(trigger);
+    fireEvent.click(await screen.findByRole("option", { name: "Reviewing" }));
+
+    expect(trigger).toHaveAttribute("aria-busy", "true");
+    expect(trigger).toBeDisabled();
+
+    resolveMutation({ ok: true });
+    await waitFor(() => expect(trigger).not.toHaveAttribute("aria-busy"));
+    expect(trigger).toBeEnabled();
   });
 
   it("reports a rejected status change instead of pretending it applied", async () => {

@@ -1051,6 +1051,7 @@ export function ProjectDetailActions({
                         className={
                           styles.archiveButton
                         }
+                        aria-busy={busy || undefined}
                         disabled={busy}
                         onClick={
                           archive

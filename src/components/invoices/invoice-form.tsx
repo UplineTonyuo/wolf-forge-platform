@@ -208,7 +208,7 @@ export function InvoiceForm({
       ) : null}
 
       {state.error ? <p className={styles.formError} role="alert">{state.error}</p> : null}
-      <footer className={styles.formActions}><Link className="button-secondary" href={initial ? `/invoices/${initial.id}` : "/invoices"}>Cancel</Link><button className="button-primary" type="submit" disabled={pending}>{pending ? <><LoaderCircle className="spinner" aria-hidden="true" />Saving…</> : mode === "create" ? "Create Draft" : "Save Changes"}</button></footer>
+      <footer className={styles.formActions}><Link className="button-secondary" href={initial ? `/invoices/${initial.id}` : "/invoices"}>Cancel</Link><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending}>{pending ? <><LoaderCircle className="spinner" aria-hidden="true" />Saving…</> : mode === "create" ? "Create Draft" : "Save Changes"}</button></footer>
     </form>
   );
 }
