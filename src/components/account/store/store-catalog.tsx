@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ChevronDown, Search, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Search, X } from "lucide-react";
 import type { CartItem } from "../../../domain/client-portal/cart";
 import { AddToCartButton } from "../cart/add-to-cart-button";
 import { StoreFolderIcon } from "./store-folder-icon";
@@ -385,6 +385,13 @@ export function StoreCatalogView({
     return () => window.clearTimeout(timer);
   }, [query, resultCount, searching]);
 
+  const deckLabel = deckOpen
+    ? "Close categories"
+    : folderId === null
+      ? "Explore all categories"
+      : "Change category";
+  const deckShortLabel = deckOpen ? "Close" : folderId === null ? "Categories" : "Change";
+
   const heading = folderId === null ? "Store" : active.name;
   const supporting =
     folderId === null
@@ -452,14 +459,19 @@ export function StoreCatalogView({
             className={styles.deckToggle}
             aria-expanded={deckOpen}
             aria-controls="store-category-deck"
+            /*
+             * The control is named by what it does at every width; only the
+             * visible reading shortens on a phone, where "Explore all
+             * categories" would push the row onto a second line.
+             */
+            aria-label={deckLabel}
             onClick={toggleDeck}
           >
-            <span>
-              {deckOpen
-                ? "Close categories"
-                : folderId === null
-                  ? "Explore all categories"
-                  : "Change category"}
+            <span className={styles.deckToggleFull} aria-hidden={true}>
+              {deckLabel}
+            </span>
+            <span className={styles.deckToggleShort} aria-hidden={true}>
+              {deckShortLabel}
             </span>
             <ChevronDown aria-hidden={true} />
           </button>
@@ -497,6 +509,24 @@ export function StoreCatalogView({
       <div id="store-category-deck" className={styles.deck} data-open={deckOpen}>
         <div className={styles.deckBody}>
           <div className={styles.deckInner} inert={!deckOpen}>
+            {/*
+             * Mobile-only picker header: on the phone-width list layout the
+             * sticky chip + toggle row above would otherwise stay visible as a
+             * second, competing "Close" while the deck is open. This is the
+             * deck's own header instead — CSS shows it in place of that row
+             * only at the mobile breakpoint while the deck is open.
+             */}
+            <div className={styles.deckMobileHeader}>
+              <span>Categories</span>
+              <button
+                type="button"
+                className={styles.deckMobileClose}
+                onClick={toggleDeck}
+                aria-label="Close categories"
+              >
+                <X aria-hidden={true} />
+              </button>
+            </div>
             <ul className={styles.deckGrid} aria-label="Store categories" key={deckGeneration}>
               {categories.map((category, index) => (
                 <li key={category.id ?? "all"}>
@@ -516,7 +546,11 @@ export function StoreCatalogView({
                         {category.count} {category.count === 1 ? "investment" : "investments"}
                       </span>
                     </span>
-                    <ArrowRight className={styles.tileArrow} aria-hidden={true} />
+                    {category.id === folderId ? (
+                      <Check className={styles.tileCheck} aria-hidden={true} />
+                    ) : (
+                      <ArrowRight className={styles.tileArrow} aria-hidden={true} />
+                    )}
                   </button>
                 </li>
               ))}

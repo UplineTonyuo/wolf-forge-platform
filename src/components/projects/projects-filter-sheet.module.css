@@ -1,0 +1,45 @@
+.breadcrumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: #7f889a;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.sheetFooter {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  padding: 12px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--wf-border);
+}
+
+.clearButton {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.applyButton {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--wf-navy);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}

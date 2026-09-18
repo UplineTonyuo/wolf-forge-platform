@@ -50,10 +50,19 @@
 }
 
 .triggerValue {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.triggerLabel {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: inherit;
 }
 
 .caret {
@@ -153,6 +162,7 @@
   cursor: not-allowed;
 }
 
+.optionContent { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .optionText { display: grid; gap: 2px; min-width: 0; }
 
 .optionDescription {

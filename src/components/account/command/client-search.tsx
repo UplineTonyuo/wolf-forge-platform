@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderKanban, MessagesSquare, Search, ShoppingCart } from "lucide-react";
+import { ArrowLeft, FolderKanban, MessagesSquare, Search, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clientSearchAction } from "../../../app/actions/client-search";
@@ -77,7 +77,19 @@ function ResultRow({
   );
 }
 
-export function ClientSearch() {
+export function ClientSearch({
+  mobileOpen = false,
+  onMobileOpenChange,
+}: {
+  /**
+   * Below 768px the field is not permanently on screen: the row shows a search
+   * icon and this flips the row into search mode, where the input takes the
+   * whole width and the title and utility icons step aside. Above 768px the
+   * field is always visible and this is ignored.
+   */
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+} = {}) {
   const panels = useHeaderPanels();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -136,6 +148,17 @@ export function ClientSearch() {
   }, [value, searchable, run]);
 
   /*
+   * Entering search mode is a deliberate tap, so the field takes focus
+   * immediately; leaving it drops the query and closes whatever panel was open,
+   * so the row always returns to its resting state.
+   */
+  useEffect(() => {
+    if (mobileOpen) {
+      inputRef.current?.focus();
+    }
+  }, [mobileOpen]);
+
+  /*
    * Results are derived rather than cleared. Below the minimum query length the
    * stored list is ignored entirely, so it can never be rendered stale and no
    * effect has to reach in and empty it.
@@ -186,6 +209,14 @@ export function ClientSearch() {
   const showPanel = open && searchable;
   const activeId = flat[activeIndex] ? `client-search-option-${activeIndex}` : undefined;
 
+  function leaveSearchMode() {
+    panels?.close();
+    setValue("");
+    setResults([]);
+    setStatus("idle");
+    onMobileOpenChange?.(false);
+  }
+
   return (
     <HeaderPanelAnchor className="portal-command-search-anchor">
       <form
@@ -197,7 +228,17 @@ export function ClientSearch() {
           if (target) choose(target);
         }}
       >
+        <button
+          type="button"
+          className="portal-command-search-back"
+          aria-label="Close search"
+          onClick={leaveSearchMode}
+        >
+          <ArrowLeft aria-hidden={true} />
+        </button>
+
         <Search aria-hidden={true} />
+
         <input
           ref={inputRef}
           type="search"
@@ -219,6 +260,18 @@ export function ClientSearch() {
           onKeyDown={onKeyDown}
         />
       </form>
+
+      <button
+        type="button"
+        className="portal-command-button portal-command-search-trigger"
+        aria-label="Search"
+        title="Search"
+        aria-haspopup="dialog"
+        aria-expanded={mobileOpen}
+        onClick={() => onMobileOpenChange?.(true)}
+      >
+        <Search aria-hidden={true} />
+      </button>
 
       <HeaderPanel panel="search" label="Search results" width="wide">
         <div className="search-panel" id="client-search-results">

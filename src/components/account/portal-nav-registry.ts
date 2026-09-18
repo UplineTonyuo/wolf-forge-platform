@@ -98,7 +98,7 @@ export const portalNavigationCategories: PortalNavigationCategory[] = [
     items: [
       { id: "portal_projects", label: "Projects", route: "/account/projects" },
       { id: "portal_forms", label: "Onboarding", route: "/account/onboarding" },
-      { id: "portal_tickets", label: "Messages", route: "/account/messages" },
+      { id: "portal_tickets", label: "Inbox", route: "/account/messages" },
       { id: "portal_reporting", label: "Reporting", route: "/account/reporting" },
     ],
   },

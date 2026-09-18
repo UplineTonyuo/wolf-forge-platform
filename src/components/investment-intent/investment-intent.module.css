@@ -139,7 +139,7 @@
 .clientColumn { width: 190px; }
 .investmentColumn { width: 220px; }
 .statusColumn { width: 170px; }
-.actionsColumn { width: 168px; }
+.actionsColumn { width: 92px; }
 
 .company {
   display: block;
@@ -296,34 +296,86 @@
 
 /* ------------------------------------------------------------- row actions */
 
-.rowActions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+/*
+ * One compact `+` per row. `.client-actions-picker` / `-trigger` / `-menu` /
+ * `-option` are the shared Wolf Forge action-menu primitive (see Clients); only
+ * the trigger's shape is overridden here, and it is scoped under the module
+ * class so the two-class rule beats the global single-class definition instead
+ * of tying with it on specificity.
+ */
+.rowActionPicker {
+  justify-content: flex-end;
 }
 
-.rowActions a {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.rowActionPicker > :global(.client-actions-trigger) {
+  width: 36px;
+  height: 36px;
+
+  gap: 0;
+  padding: 0;
+
+  justify-content: center;
+}
+
+.rowActionPicker > :global(.client-actions-trigger) svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- conversation draft modal ---- */
+
+.draftContext {
+  display: grid;
+  gap: 10px;
+
+  margin: 0;
+
+  padding: 12px 14px;
+
+  border: 1px solid #e4e7ee;
+  border-radius: 9px;
+
+  background: #fafbfd;
+}
+
+.draftContextRow {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+}
+
+.draftContextLabel {
+  color: #7a8190;
+
+  font-family: var(--wf-font-ui);
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.draftContextValue {
+  min-width: 0;
+
+  display: grid;
+  gap: 2px;
+
+  margin: 0;
 
   color: var(--wf-navy);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
+
+  font-size: 12.5px;
 }
 
-.rowActions svg {
-  width: 12px;
-  height: 12px;
+.draftContextMeta {
+  color: #6a7284;
+
+  font-size: 11px;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .rowActions a:hover {
-    text-decoration: underline;
-  }
-
   .search > button:hover {
     color: var(--wf-navy);
     background: var(--wf-navy-wash);
@@ -410,8 +462,20 @@
   }
 }
 
+/*
+ * Mobile: the status pills move into the shared Filter sheet, so the toolbar
+ * collapses to one row -- search flexing, Filter compact on the right. Same
+ * row the Projects, Clients, Coupons and Investment Intent indexes use.
+ */
 @media (max-width: 767px) {
+  .statusFilters {
+    display: none;
+  }
+
   .search {
-    width: 100%;
+    width: auto;
+
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }

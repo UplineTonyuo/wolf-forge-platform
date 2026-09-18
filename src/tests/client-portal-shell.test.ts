@@ -38,7 +38,7 @@ describe("client portal navigation registry", () => {
       "Dashboard",
       "Projects",
       "Onboarding",
-      "Messages",
+      "Inbox",
       "Reporting",
       "Investments",
       "Invoices",
@@ -131,7 +131,7 @@ describe("client portal navigation registry", () => {
     expect(visible.flatMap((category) => category.items.map((item) => item.label))).toEqual([
       "Dashboard",
       "Projects",
-      "Messages",
+      "Inbox",
       "Invoices",
       "Subscriptions",
       "Payment method",
@@ -163,7 +163,7 @@ describe("rail counts", () => {
     ]);
 
     // Zero is not a badge; it is the absence of one.
-    expect(items.find((item) => item.label === "Messages")?.count).toBeUndefined();
+    expect(items.find((item) => item.label === "Inbox")?.count).toBeUndefined();
   });
 
   it("marks only client-blocking counts as actionable", () => {
@@ -182,7 +182,7 @@ describe("rail counts", () => {
     expect(actionable).toEqual({
       Projects: false,
       Onboarding: true,
-      Messages: true,
+      Inbox: true,
     });
   });
 
@@ -248,7 +248,7 @@ describe("portal active-route resolution", () => {
     expect(portalTitleForPath("/account/projects")).toBe("Projects");
     expect(portalTitleForPath("/account/projects/abc")).toBe("Projects");
     expect(portalTitleForPath("/account/onboarding")).toBe("Onboarding");
-    expect(portalTitleForPath("/account/messages/abc")).toBe("Messages");
+    expect(portalTitleForPath("/account/messages/abc")).toBe("Inbox");
     expect(portalTitleForPath("/account/payment-method")).toBe("Payment method");
     expect(portalTitleForPath("/account/store/abc")).toBe("Investments");
     expect(portalTitleForPath("/account/unknown")).toBe("Wolf Forge");

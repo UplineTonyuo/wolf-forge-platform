@@ -63,7 +63,7 @@ const orders: ProjectRelationRow[] = [
     order_number: 101,
     title: "Local SEO Growth Campaign",
     status: "working",
-    profiles: { id: "a0000000-0000-4000-8000-000000000001", display_name: "Anthony Paghubasan" },
+    profiles: { id: "a0000000-0000-4000-8000-000000000001", display_name: "Anthony Paghubasan", avatar_url: null },
     assigned_to_profile_id: "a0000000-0000-4000-8000-000000000001",
   }),
   relationRow({
@@ -252,7 +252,7 @@ describe("Project initials", () => {
   it("derives initials from real display names and degrades safely", () => {
     expect(projectInitials("Anthony Paghubasan")).toBe("AP");
     expect(projectInitials("Isaiah")).toBe("IS");
-    expect(projectInitials(null)).toBe("—");
+    expect(projectInitials(null)).toBe("?");
   });
 });
 

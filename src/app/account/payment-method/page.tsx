@@ -42,7 +42,6 @@ export default async function ClientPaymentMethodPage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Billing</span>
           <h1>Payment method</h1>
         </header>
         <p className="portal-empty">{loadError ?? "Payment settings could not be loaded."}</p>

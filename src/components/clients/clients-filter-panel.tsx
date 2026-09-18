@@ -21,7 +21,9 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   usePathname,
   useRouter,
@@ -65,8 +67,8 @@ const defaults: FilterDraft = {
   rows: "25",
 };
 
-const statusOptions: Option[] = [
-  { value: "", label: "All statuses" },
+const typeOptions: Option[] = [
+  { value: "", label: "All" },
   { value: "contact", label: "Contact" },
   { value: "lead", label: "Lead" },
   { value: "client", label: "Client" },
@@ -269,10 +271,36 @@ function FilterSelect({
   );
 }
 
+/*
+ * The panel is a bottom sheet at <=640px -- the width at which `.panel`
+ * switches to `position: fixed`. Above that it is an absolutely positioned
+ * popover anchored to its own trigger, so it has to stay where it is.
+ *
+ * Below it the panel must LEAVE the route subtree. `.workspace-route-stage`
+ * carries a transform and `will-change: transform` for the route transition,
+ * which makes it the containing block for fixed descendants: the sheet
+ * anchors to the page column rather than the viewport and renders off the
+ * top of the screen. Portalling to <body> is the same fix
+ * ProjectsFilterSheet already uses for its own mobile sheet.
+ */
+const sheetQuery = "(max-width: 640px)";
+
+function subscribeToSheet(onChange: () => void) {
+  const list = window.matchMedia(sheetQuery);
+  list.addEventListener("change", onChange);
+  return () => list.removeEventListener("change", onChange);
+}
+
+function readSheet() {
+  return window.matchMedia(sheetQuery).matches;
+}
+
 export function ClientsFilterPanel({
   initialQuery,
+  initialStatus,
 }: {
   initialQuery: string;
+  initialStatus: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -282,9 +310,23 @@ export function ClientsFilterPanel({
   const rootRef =
     useRef<HTMLDivElement>(null);
 
+  const panelRef =
+    useRef<HTMLDivElement>(null);
+
+  const sheet =
+    useSyncExternalStore(
+      subscribeToSheet,
+      readSheet,
+      () => false,
+    );
+
   const currentQuery =
     searchParams.get("q")?.trim() ??
     initialQuery.trim();
+
+  const currentStatus =
+    searchParams.get("status") ??
+    initialStatus;
 
   const [open, setOpen] =
     useState(false);
@@ -298,12 +340,18 @@ export function ClientsFilterPanel({
     useState<FilterDraft>({
       ...defaults,
       search: currentQuery,
+      status: currentStatus,
     });
 
   const [
     lastCurrentQuery,
     setLastCurrentQuery,
   ] = useState(currentQuery);
+
+  const [
+    lastCurrentStatus,
+    setLastCurrentStatus,
+  ] = useState(currentStatus);
 
   if (
     lastCurrentQuery !==
@@ -315,6 +363,19 @@ export function ClientsFilterPanel({
     setDraft((current) => ({
       ...current,
       search: currentQuery,
+    }));
+  }
+
+  if (
+    lastCurrentStatus !==
+    currentStatus
+  ) {
+    setLastCurrentStatus(
+      currentStatus,
+    );
+    setDraft((current) => ({
+      ...current,
+      status: currentStatus,
     }));
   }
 
@@ -332,10 +393,16 @@ export function ClientsFilterPanel({
     function outside(
       event: MouseEvent,
     ) {
+      const target =
+        event.target as Node;
+
       if (
         rootRef.current &&
         !rootRef.current.contains(
-          event.target as Node,
+          target,
+        ) &&
+        !panelRef.current?.contains(
+          target,
         )
       ) {
         closePanel();
@@ -460,14 +527,19 @@ export function ClientsFilterPanel({
       next.delete("q");
     }
 
+    if (draft.status) {
+      next.set("status", draft.status);
+    } else {
+      next.delete("status");
+    }
+
     /*
-     * Search remains connected to the
-     * existing Clients URL filter.
+     * Search and Type both reuse the Clients page's existing
+     * `status`/`q` URL filters -- the same values and semantics the
+     * status tabs used, not a second filter vocabulary.
      *
-     * Advanced controls are intentionally
-     * frontend-ready only until their
-     * authoritative backend fields are
-     * connected.
+     * The remaining advanced controls are intentionally frontend-ready
+     * only until their authoritative backend fields are connected.
      */
 
     closePanel();
@@ -490,6 +562,13 @@ export function ClientsFilterPanel({
 
     setOpenSelect(null);
   }
+
+  /*
+   * Identity above the sheet breakpoint, a portal to <body> below it. Kept as
+   * a wrapper rather than a branch so the panel markup stays in one place.
+   */
+  const panelLayer = (node: ReactNode) =>
+    sheet ? createPortal(node, document.body) : node;
 
   return (
     <div
@@ -529,16 +608,18 @@ export function ClientsFilterPanel({
         ) : null}
       </button>
 
-      <div
-        className={
-          open
-            ? `${styles.panel} ${styles.panelOpen}`
-            : styles.panel
-        }
-        role="dialog"
-        aria-label="Filter clients"
-        aria-hidden={!open}
-      >
+      {panelLayer(
+        <div
+          ref={panelRef}
+          className={
+            open
+              ? `${styles.panel} ${styles.panelOpen}`
+              : styles.panel
+          }
+          role="dialog"
+          aria-label="Filter clients"
+          aria-hidden={!open}
+        >
         <div
           className={styles.topAccent}
           aria-hidden="true"
@@ -641,10 +722,10 @@ export function ClientsFilterPanel({
                   size={17}
                 />
               }
-              label="Status"
+              label="Type"
               value={draft.status}
-              placeholder="All statuses"
-              options={statusOptions}
+              placeholder="All"
+              options={typeOptions}
               open={
                 openSelect ===
                 "status"
@@ -817,7 +898,8 @@ export function ClientsFilterPanel({
             Apply
           </button>
         </form>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

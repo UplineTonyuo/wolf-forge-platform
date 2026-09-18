@@ -50,9 +50,10 @@ export class FormService {
     return this.dependencies.repository.getAssignedForm(parseInput(uuidSchema, id));
   }
 
-  listSubmissions(formId?: unknown) {
+  listSubmissions(formId?: unknown, orderId?: unknown) {
     return this.dependencies.repository.listSubmissions(
       formId == null ? undefined : parseInput(uuidSchema, formId),
+      orderId == null ? undefined : parseInput(uuidSchema, orderId),
     );
   }
 

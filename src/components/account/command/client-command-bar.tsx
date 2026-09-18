@@ -1,17 +1,21 @@
 "use client";
 
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { AccountAvatar } from "../../ui/account-avatar";
 import { ClientCartPanel } from "../cart/client-cart-panel";
 import { ClientNotificationBell } from "../client-notification-bell";
+import { portalTitleForPath } from "../portal-nav-registry";
 import { ClientCalendarAction } from "./client-calendar-action";
 import { ClientQuickAction, requestNewMessage } from "./client-quick-action";
 import { ClientSearch } from "./client-search";
 import { HeaderPanelsProvider, useHeaderPanels } from "./header-panels";
+import { usePortalDrawer } from "./portal-drawer";
 
 /**
- * The client command bar.
+ * The client command bar — one row at every width.
  *
  * The same family as the internal WorkspaceCommandBar — search, then a row of
  * actions — without inheriting any of its internal-only ones. It is a distinct
@@ -19,15 +23,15 @@ import { HeaderPanelsProvider, useHeaderPanels } from "./header-panels";
  * distinct: nothing internal should be reachable from client code by changing a
  * flag.
  *
- * Reading order, left to right:
+ * Below 768px it is the whole header, and it reads:
  *
- *   search         investments, scoped and labelled as such
- *   calendar-days  opens the Subscription calendar; a modal, not a panel
- *   cart           opens the request cart
- *   bell           opens the notifications panel
- *   plus           opens the quick-action panel, which also carries the
- *                  new-message action ("Message Wolf Forge")
- *   avatar         links to the profile page
+ *   ☰   Dashboard              ⌕  Cart  Calendar  Notifications
+ *
+ * The search control morphs the row in place — the input takes it, the title and
+ * the utility icons step aside — so the header never grows a second line.
+ * Above that the rail is permanent, so the drawer toggle and the page title are
+ * not rendered and the row is the search field plus the utility cluster it has
+ * always been.
  *
  * Every panelled control shares one manager, so exactly one floating surface
  * can be open at a time and none can sit on top of another. The calendar is
@@ -52,15 +56,41 @@ function CommandBarActions({
   onCompose: () => void;
 }) {
   const panels = useHeaderPanels();
+  const drawer = usePortalDrawer();
+  const pathname = usePathname();
+
+  /*
+   * Mobile search mode. Owned here rather than inside ClientSearch because the
+   * whole row changes with it — the title and the utility icons step aside —
+   * and the row is this component's markup.
+   */
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <div className="portal-command-bar" aria-label="Workspace controls">
-      <ClientSearch />
+    <div
+      className="portal-command-bar"
+      aria-label="Workspace controls"
+      data-search-open={searchOpen ? "true" : "false"}
+    >
+      <button
+        type="button"
+        className="portal-drawer-toggle"
+        aria-expanded={drawer?.open ?? false}
+        aria-controls="portal-navigation"
+        onClick={() => drawer?.toggle()}
+      >
+        {drawer?.open ? <X aria-hidden={true} /> : <Menu aria-hidden={true} />}
+        <span className="sr-only">{drawer?.open ? "Close menu" : "Open menu"}</span>
+      </button>
+
+      <span className="portal-command-title">{portalTitleForPath(pathname)}</span>
+
+      <ClientSearch mobileOpen={searchOpen} onMobileOpenChange={setSearchOpen} />
 
       <div className="portal-command-actions">
-        <ClientCalendarAction />
-
         <ClientCartPanel />
+
+        <ClientCalendarAction />
 
         <ClientNotificationBell soundEnabled={notificationSoundEnabled} inCommandBar />
 
@@ -69,6 +99,11 @@ function CommandBarActions({
          * creation and identity controls — separated from the utility icons by
          * a larger gap. The + already carries the new-message action ("Message
          * Wolf Forge"), so there is no standalone compose icon in the header.
+         *
+         * On mobile the pair breaks up: the + leaves the row for a bottom-right
+         * floating trigger (see the stylesheet) rather than crowding an already
+         * dense strip, and the avatar is not rendered at all — Profile is one
+         * tap away in the navigation drawer.
          */}
         <div className="portal-command-trailing">
           <ClientQuickAction canMessage={canMessage} onNavigateToMessages={onCompose} />

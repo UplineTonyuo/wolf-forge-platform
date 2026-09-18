@@ -214,7 +214,18 @@ export default async function ClientsPage({
     };
 
     return (
-      <PageFrame title="Clients">
+      <PageFrame
+        title="Clients"
+        action={
+          <div className="page-action-compact clients-header-action">
+            <ClientsActionMenu
+              displayName={
+                context.user.displayName
+              }
+            />
+          </div>
+        }
+      >
         <div className="clients-status-row">
           <nav
             className="clients-status-tabs"
@@ -259,6 +270,12 @@ export default async function ClientsPage({
             )}
           </nav>
 
+          {/*
+            Desktop keeps the + here, on the status line it has always sat on.
+            .clients-status-row is hidden below 768px, so this copy disappears
+            at mobile widths and .clients-header-action carries the action
+            beside the page title instead -- one visible + at every width.
+          */}
           <div className="clients-status-action">
             <ClientsActionMenu
               displayName={
@@ -271,6 +288,11 @@ export default async function ClientsPage({
         <div className="clients-list-toolbar">
           <ClientsHeaderTools
             initialQuery={q}
+            initialStatus={
+              selectedStatus === "all"
+                ? ""
+                : selectedStatus
+            }
           />
         </div>
 

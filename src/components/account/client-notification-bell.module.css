@@ -310,14 +310,45 @@
 }
 
 @media (max-width: 800px) {
-  .root {
+  /*
+   * Floating bell only. `.inCommandBar` gives up its own placement, so a bare
+   * `.root` here used to win on source order at equal specificity and shove the
+   * in-command-bar bell 11px down and 12px left of the icons beside it.
+   */
+  .root:not(.inCommandBar) {
     top: 11px;
     right: 12px;
   }
 
-  .trigger {
+  .root:not(.inCommandBar) .trigger {
     width: 36px;
     height: 36px;
+  }
+}
+
+/*
+ * In the mobile command bar the bell is one of a row of utility controls, so it
+ * takes the same 44px footprint and 19px icon the rest of that row uses, and
+ * the same white-on-navy treatment `.portal-command-button` gets there —
+ * without this override the bell kept its desktop gray and read as disabled
+ * next to Search/Cart/Calendar.
+ */
+@media (max-width: 900px) {
+  .inCommandBar .trigger {
+    width: 44px;
+    height: 44px;
+    color: #fff;
+  }
+
+  .inCommandBar .trigger > svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .inCommandBar .trigger:hover,
+  .inCommandBar .triggerOpen {
+    color: #fff;
+    background: rgba(255, 255, 255, .12);
   }
 }
 

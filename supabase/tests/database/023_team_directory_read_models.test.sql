@@ -1,6 +1,6 @@
 begin;
 
-select plan(25);
+select plan(26);
 
 -- =============================================================================
 -- STRUCTURE
@@ -32,8 +32,8 @@ select has_function(
 
 select is(
   pg_get_function_result('public.app_list_operational_assignees()'::regprocedure),
-  'TABLE(profile_id uuid, display_name text)',
-  'the operational assignee read model exposes no role, company, archive, or avatar-storage fields'
+  'TABLE(profile_id uuid, display_name text, avatar_url text)',
+  'the operational assignee read model exposes only picker identity fields'
 );
 
 -- =============================================================================
@@ -62,7 +62,10 @@ insert into public.companies (id, name)
 values ('41000000-0000-0000-0000-000000000001', 'Directory Company');
 
 update public.profiles as profile_row
-set role_id = role_row.id, display_name = 'Directory Owner'
+set role_id = role_row.id,
+    display_name = 'Directory Owner',
+    avatar_url = 'https://example.invalid/directory-owner.jpg',
+    avatar_path = 'avatars/directory-owner.jpg'
 from public.roles as role_row
 where role_row.name = 'owner'
   and profile_row.id = '40000000-0000-0000-0000-000000000001';
@@ -138,6 +141,13 @@ select is(
   ),
   4::bigint,
   'operational pickers retain active internal names while excluding clients and archived profiles'
+);
+
+select is(
+  (select avatar_url from public.app_list_operational_assignees()
+   where profile_id = '40000000-0000-0000-0000-000000000001'),
+  'https://example.invalid/directory-owner.jpg',
+  'operational picker returns the stored profile avatar'
 );
 
 select throws_ok(

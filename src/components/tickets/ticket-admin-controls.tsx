@@ -20,7 +20,7 @@ const transitions: Record<TicketStatus, TicketStatus[]> = {
   closed: ["open"],
 };
 
-export function TicketAdminControls({ ticketId, status, priority, assigneeId, assignees, capabilities }: { ticketId: string; status: TicketStatus; priority: TicketPriority; assigneeId: string | null; assignees: ServiceAssigneeOption[]; capabilities: TicketCapabilities }) {
+export function TicketAdminControls({ ticketId, status, priority, assigneeId, assignees, capabilities, onChanged }: { ticketId: string; status: TicketStatus; priority: TicketPriority; assigneeId: string | null; assignees: ServiceAssigneeOption[]; capabilities: TicketCapabilities; onChanged?: () => void }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -31,6 +31,7 @@ export function TicketAdminControls({ ticketId, status, priority, assigneeId, as
       const result = await operation();
       if (!result.ok) { setError(result.error); return; }
       router.refresh();
+      onChanged?.();
     });
   }
 

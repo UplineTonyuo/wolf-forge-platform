@@ -124,8 +124,7 @@ export function ClientMessages({
     <div className="portal-page">
       <header className="portal-page-head portal-page-head-actions">
         <div>
-          <span className="portal-eyebrow">Work</span>
-          <h1>Messages</h1>
+          <h1>Inbox</h1>
           <p>
             {live.length === 0
               ? "Talk to Wolf Forge here. Every reply stays attached to your account."
@@ -156,7 +155,7 @@ export function ClientMessages({
           <MessagesSquare aria-hidden={true} />
           <h2>No conversations yet</h2>
           <p>
-            When you need something — a question, a change, a new idea — start a message and the
+            When you need something (a question, a change, a new idea), start a message and the
             Wolf Forge team picks it up here.
           </p>
           <button

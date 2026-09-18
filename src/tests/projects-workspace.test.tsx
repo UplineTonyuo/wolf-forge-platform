@@ -64,7 +64,7 @@ const rows = composeProjectRows(
       title: "Local SEO Growth Campaign",
       status: "working",
       assigned_to_profile_id: anthony,
-      profiles: { id: anthony, display_name: "Anthony Paghubasan" },
+      profiles: { id: anthony, display_name: "Anthony Paghubasan", avatar_url: null },
     }),
     order("10000000-0000-4000-8000-000000000002", {
       order_number: 102,
@@ -91,7 +91,20 @@ function renderWorkspace(overrides: Partial<Parameters<typeof ProjectsWorkspace>
       rows={rows}
       complete
       people={[{ id: anthony, name: "Anthony Paghubasan" }]}
-      services={[{ id: "50000000-0000-4000-8000-000000000001", name: "SEO Sprint" }]}
+      services={[{ id: "50000000-0000-4000-8000-000000000001", name: "SEO Sprint", folder_id: "seo" }]}
+      serviceFolders={[
+        {
+          id: "seo",
+          name: "SEO Sprints",
+          description: null,
+          image_url: null,
+          parent_id: null,
+          sort_order: 1,
+          archived_at: null,
+          created_at: "2026-01-01",
+          updated_at: "2026-01-01",
+        },
+      ]}
       clients={[
         { id: "c0000000-0000-4000-8000-000000000001", name: "Kraken Junk Removal" },
         { id: "c0000000-0000-4000-8000-000000000002", name: "Junk Buddies" },
@@ -213,18 +226,47 @@ describe("Projects filters and search", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
 
-    fireEvent.change(screen.getByLabelText("Person"), { target: { value: anthony } });
+    fireEvent.click(screen.getByLabelText("Person"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a person" })).getByText("Anthony Paghubasan"));
     expect(rowCount()).toBe(1);
 
-    fireEvent.change(screen.getByLabelText("Person"), { target: { value: "unassigned" } });
+    fireEvent.click(screen.getByLabelText("Person"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a person" })).getByText("Unassigned"));
     expect(rowCount()).toBe(2);
 
-    fireEvent.change(screen.getByLabelText("Person"), { target: { value: "all" } });
-    fireEvent.change(screen.getByLabelText("Client"), {
-      target: { value: "c0000000-0000-4000-8000-000000000002" },
-    });
+    fireEvent.click(screen.getByLabelText("Person"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a person" })).getByText("Everyone"));
+
+    fireEvent.click(screen.getByLabelText("Client"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a client" })).getByText("Junk Buddies"));
     expect(rowCount()).toBe(1);
     expect(screen.getByText("Foundation Build")).toBeTruthy();
+  });
+
+  it("filters by the Status field, wired to the same tab state as the status tabs", () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+
+    fireEvent.click(screen.getByLabelText("Status"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a status" })).getByText("Waiting on client"));
+    expect(rowCount()).toBe(1);
+    expect(screen.getByText("Foundation Build")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Status"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a status" })).getByText("All statuses"));
+    expect(rowCount()).toBe(3);
+  });
+
+  it("clears the Status field along with the rest of the filters", () => {
+    renderWorkspace();
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+
+    fireEvent.click(screen.getByLabelText("Status"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a status" })).getByText("Waiting on client"));
+    expect(rowCount()).toBe(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(rowCount()).toBe(3);
   });
 
   it("keeps counts consistent with an active filter", () => {

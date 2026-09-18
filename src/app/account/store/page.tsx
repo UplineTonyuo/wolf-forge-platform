@@ -41,7 +41,6 @@ export default async function ClientStorePage({
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Store</span>
           <h1>Store</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

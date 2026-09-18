@@ -22,6 +22,8 @@ export function ListToolbar({
   filters,
   action,
   search,
+  filter,
+  filtersDesktopOnly = false,
 }: {
   /** Accessible name for the filter group, e.g. "Invoice status filters". */
   label: string;
@@ -33,10 +35,25 @@ export function ListToolbar({
   action?: ReactNode;
   /** Optional search control, rendered to the right on wide layouts. */
   search?: ReactNode;
+  /**
+   * The mobile filter control, rendered after the search on the trailing edge.
+   * Pages that move their filter states into the shared Filter sheet below
+   * 768px pass one here and set `filtersDesktopOnly`.
+   */
+  filter?: ReactNode;
+  /** Hides the `filters` row below 768px. Pair it with `filter`. */
+  filtersDesktopOnly?: boolean;
 }) {
   return (
     <div className={styles.toolbar}>
-      <nav className={styles.filters} aria-label={label}>
+      <nav
+        className={
+          filtersDesktopOnly
+            ? `${styles.filters} ${styles.filtersDesktopOnly}`
+            : styles.filters
+        }
+        aria-label={label}
+      >
         {filters.map((filter) => (
           <Link
             key={filter.value}
@@ -58,10 +75,11 @@ export function ListToolbar({
         they read as a pair rather than as two unrelated controls, and it moves
         to the next row as a unit when the filters run out of width.
       */}
-      {action || search ? (
+      {action || search || filter ? (
         <div className={styles.trailing}>
           {action ? <div className={styles.action}>{action}</div> : null}
           {search ? <div className={styles.search}>{search}</div> : null}
+          {filter ? <div className={styles.filterSlot}>{filter}</div> : null}
         </div>
       ) : null}
     </div>

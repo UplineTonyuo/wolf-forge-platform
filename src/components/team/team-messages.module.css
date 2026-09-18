@@ -58,6 +58,97 @@
   opacity: 1;
 }
 
+/* ==========================================================================
+   Mobile edge lever
+   ========================================================================== */
+
+/*
+ * Desktop never shows this; only the <=767px block below does. Present at
+ * every width (it always mounts) so its z-index tier sits above .drawer
+ * (11900) / .backdrop (11800). Only a thin edge bar paints inside it -- see
+ * .leverBar -- the button itself is the full invisible hit target, and it
+ * stays live even while the drawer is open (leverOpenState hides the bar,
+ * not the button), doubling as the swipe-right-to-close grip instead of a
+ * second control floating on top of the open sheet.
+ */
+.lever {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .lever {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    position: fixed;
+    top: 58%;
+    right: 0;
+    z-index: 12050;
+
+    /* ~44px effective tap target; only .leverBar below actually paints. */
+    width: 44px;
+    height: 68px;
+    padding: 0;
+    margin: 0;
+
+    border: 0;
+    background: transparent;
+    color: #ffffff;
+
+    cursor: pointer;
+    touch-action: none;
+
+    transform: translateY(-50%);
+    transform-origin: right center;
+    transition: transform 160ms ease;
+  }
+
+  /* The only visible part: a flat ~10px sliver flush with the edge. No
+     icon, no label -- a badge (triggerBadge below) is the only thing ever
+     added to it, and only when there is a real unread count. */
+  .leverBar {
+    width: 10px;
+    height: 100%;
+
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+
+    background: var(--wf-navy, #000d51);
+    box-shadow: -4px 0 14px rgba(0, 13, 81, .22);
+
+    opacity: 1;
+    transition: opacity 160ms ease;
+    pointer-events: none;
+  }
+
+  /*
+   * Per-frame drag tracking: the base class's 160ms transform transition
+   * would smooth/lag behind a pointermove update, so it's switched off here
+   * and only re-enabled (by removing this class on release) for the
+   * snap-back / settle.
+   */
+  .leverDragging {
+    transition: transform 0ms linear;
+  }
+
+  /* No duplicate handle floating on top of the open drawer: the bar (and
+     its badge) hide once Team Messages is open. The button's hit zone stays
+     live at the same edge the whole time. */
+  .leverOpenState .leverBar,
+  .leverOpenState .triggerBadgeVisible {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .lever,
+  .leverBar,
+  .leverDragging {
+    transition: none;
+  }
+}
+
 /* A live message is useful now, not permanent bell history. */
 .messagePeek {
   position: fixed;
@@ -189,10 +280,16 @@
   right: 12px;
   bottom: 12px;
 
-  width: min(760px, calc(100vw - 24px));
+  width: min(900px, calc(100vw - 24px));
 
   display: grid;
-  grid-template-columns: 268px minmax(0, 1fr);
+  /*
+   * The list column has to carry a Ticket subject, its client/company and a
+   * status line, so it holds a 300px floor and only grows past it on a wide
+   * drawer. Below 300px a real Ticket subject truncates in the list output the
+   * pane exists to provide.
+   */
+  grid-template-columns: clamp(300px, 34%, 360px) minmax(0, 1fr);
   /*
    * The row track must be minmax(0, 1fr), not the implicit `auto`.
    *
@@ -217,6 +314,7 @@
   transform-origin: right center;
   transition:
     width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    grid-template-columns 280ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 200ms ease,
     transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -278,10 +376,24 @@
   position: relative;
 }
 
+/*
+ * The right padding is the new-conversation action's slot, held open whether
+ * or not that action renders. Without it the two tabs resize every time the
+ * panes switch.
+ */
 .tabs {
-  padding: 0 12px 10px;
+  padding: 0 46px 10px 12px;
   display: flex;
   gap: 4px;
+}
+
+/* New conversation is a Messages-only affordance: a Team thread cannot be
+ * started from the Tickets pane, so the control does not render there. Anchored
+ * to .tabDock (position: relative) so removing it cannot move the tabs. */
+.tabAction {
+  position: absolute;
+  top: 0;
+  right: 12px;
 }
 
 .tab {
@@ -349,6 +461,105 @@
   min-height: 0;
   overflow-y: auto;
   padding: 0 8px 12px;
+}
+
+/*
+ * Tickets pane list: its own scroll container and its own row, deliberately
+ * not `.conversationRow`.
+ *
+ * `.conversationRow` opens with a 34px avatar track because a Team
+ * conversation always renders one. A Ticket row has no avatar, so reusing that
+ * grid dropped the entire body into the 34px track and every subject collapsed
+ * to "h..". The rule above also never existed in this module -- the Tickets
+ * pane was rendering an unstyled wrapper with no scrolling and no gutter.
+ */
+.ticketList {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 8px 12px;
+
+  display: grid;
+  align-content: start;
+  gap: 2px;
+}
+
+.ticketRow {
+  width: 100%;
+  padding: 9px 10px;
+
+  display: grid;
+  gap: 2px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ticketRow:hover {
+  background: rgba(0, 13, 81, 0.035);
+}
+
+.ticketRow:active {
+  transform: scale(0.99);
+}
+
+.ticketRow:focus-visible {
+  outline: 2px solid #8991b5;
+  outline-offset: -2px;
+}
+
+/* Selected: a quiet navy tint, not a raised card. */
+.ticketRowActive,
+.ticketRowActive:hover {
+  border-color: rgba(0, 13, 81, 0.16);
+  background: rgba(0, 13, 81, 0.06);
+}
+
+.ticketRowSubject {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  color: var(--wf-navy, #000d51);
+  font-size: 12.5px;
+  font-weight: 620;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+.ticketRowClient {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.ticketRowMeta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #a1a7b3;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticketRowStatus {
+  color: var(--wf-navy, #000d51);
+  font-weight: 600;
 }
 
 .conversationRow {
@@ -603,11 +814,92 @@
   display: grid;
 }
 
+/*
+ * The Ticket surface (`.ticketAdminSurface` in tickets.module.css) needs a
+ * real header-row/content-row split to pin its own composer -- the default
+ * implicit `auto` rows above let the whole thread grow past the drawer's
+ * fixed height instead. Scoped to this modifier (only applied on the Tickets
+ * branch) so the Messages pane's own row sizing is untouched.
+ */
+.conversationPaneWrapTicket {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+/*
+ * `TicketAdminConversation` (tickets.module.css) renders its own built-in
+ * header -- an icon plus the Ticket subject -- unconditionally. In the
+ * workspace route that IS the header. Here it stacked underneath this pane's
+ * own hand-built header above (back link / subject+reference / Details
+ * toggle), showing the same subject twice. This pane's own header already
+ * covers everything that inner one would, so it is suppressed only in this
+ * one context.
+ *
+ * `.ticketAdminSurface`/`.conversation` are plain (hashed) local classes in
+ * tickets.module.css, so `:global(.ticketAdminSurface)` here would never
+ * match the real hashed class in the DOM -- CSS Modules only exempts a class
+ * from hashing where it is DEFINED, not wherever it is later referenced.
+ * `ticket-admin-surface-marker` is a literal, unhashed class added directly
+ * in the JSX (ticket-admin-conversation.tsx) purely as this selector's hook.
+ */
+.conversationPaneWrapTicket :global(.ticket-admin-surface-marker) > * > header {
+  display: none;
+}
+
+/*
+ * The Ticket inspector -- a third top-level grid child of `.drawer`, sibling
+ * to the list `<aside>` and `.conversationPaneWrap`, mounted only while a
+ * Ticket is selected. Desktop default (this rule, no media query) makes it an
+ * inline column, matching the true three-region layout item 1 of the pass
+ * asked for. The two breakpoints below turn it into an off-canvas panel for
+ * tablet/mobile instead of squeezing a third column into a narrow drawer.
+ */
+/*
+ * Desktop default is CLOSED even once a Ticket is selected -- `.inspectorPane`
+ * mounts but collapses to a zero-width column and fades out; only
+ * `.inspectorPaneOpen` (the header's explicit Details toggle) reserves real
+ * space and fades it in. This mirrors `.conversationPane`/
+ * `.conversationPaneSettingsOpen` above, which already animates a third
+ * column in for Team's own Settings panel the same way.
+ */
+.inspectorPane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: #ffffff;
+  border-left: 1px solid #e2e5eb;
+
+  opacity: 0;
+  transform: translateX(10px);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.inspectorPaneOpen {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+  transition:
+    opacity 170ms cubic-bezier(0.22, 1, 0.36, 1) 70ms,
+    transform 170ms cubic-bezier(0.22, 1, 0.36, 1) 70ms;
+}
+
+.drawer:has(.inspectorPane) {
+  grid-template-columns: clamp(300px, 34%, 360px) minmax(0, 1fr) 0;
+}
+
+.drawer:has(.inspectorPaneOpen) {
+  width: min(1240px, calc(100vw - 24px));
+  grid-template-columns: clamp(300px, 34%, 360px) minmax(0, 1fr) 340px;
+}
+
 .paneHeader {
   position: relative;
   z-index: 3;
   min-height: 58px;
-  padding: 12px 14px;
+  padding: 16px 20px;
 
   display: flex;
   align-items: center;
@@ -745,6 +1037,47 @@
 
 .conversationThread .paneHeader {
   padding-right: 14px;
+}
+
+/*
+ * The Ticket conversation header's Details toggle sits at the header's own
+ * far right -- the drawer's Close-Inbox X no longer floats there once a
+ * Ticket conversation is open (Back already exits it), so Details takes
+ * that slot instead of sitting small next to the title. Scoped to this
+ * specific header so the inspector's own internal "Close Ticket details"
+ * button (same class combo, different context) is untouched. Sized above
+ * the shared 30px .iconButton base for a more comfortable, noticeable
+ * touch target without becoming oversized.
+ */
+/*
+ * The base `.paneHeader` still reserves 52px of right padding for the
+ * Messages pane's own `.closeButton` (absolutely positioned, `right: 13px`,
+ * ~34px wide) -- a leftover from before the Ticket header's X was removed.
+ * With no X here, that padding just squeezed Details in toward the title
+ * instead of letting `margin-left: auto` push it to the header's true right
+ * edge. Reset to the header's own ordinary 20px side padding so Details lands
+ * at the far right, matching the approved mock spacing.
+ */
+.conversationPaneWrapTicket .paneHeader {
+  padding-right: 20px;
+}
+
+.conversationPaneWrapTicket .paneHeader .detailsButton {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.conversationPaneWrapTicket .paneHeader .detailsButton svg {
+  width: 18px;
+  height: 18px;
+}
+
+.conversationPaneWrapTicket .paneHeader .detailsButton[aria-pressed="true"] {
+  border-color: rgba(0, 13, 81, .18);
+  background: rgba(0, 13, 81, .08);
+  color: var(--wf-navy, #000d51);
 }
 
 /*
@@ -2237,6 +2570,32 @@
   animation: skeletonPulse 1600ms ease-in-out infinite;
 }
 
+/*
+ * The Ticket pane's switch skeleton: text-shaped bars standing in for the
+ * subject and the reference inside the real pane header, so Back stays
+ * reachable and the header does not move when the conversation arrives. Same
+ * fill, radius language and pulse as `.skeletonRow`, and the same
+ * reduced-motion opt-out.
+ */
+.ticketSkeletonTitle,
+.ticketSkeletonRef {
+  display: block;
+  border-radius: 5px;
+  background: #f2f3f6;
+  animation: skeletonPulse 1600ms ease-in-out infinite;
+}
+
+.ticketSkeletonTitle {
+  width: 148px;
+  height: 11px;
+}
+
+.ticketSkeletonRef {
+  width: 96px;
+  height: 8px;
+  margin-top: 3px;
+}
+
 @keyframes skeletonPulse {
   0%, 100% { opacity: 0.58; }
   50% { opacity: 1; }
@@ -2373,17 +2732,28 @@
     border: 0;
     border-radius: 0;
 
-    /* Rises from the bottom edge, which is where a thumb expects it. */
-    transform: translateY(24px) scale(1);
-    transform-origin: bottom center;
+    /* Slides in from the right edge -- where the lever lives (mobile-team-
+       messages-lever.tsx), so the two read as physically connected. */
+    transform: translateX(100%);
+    transform-origin: right center;
   }
 
   .drawerOpen {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 
   .drawerClosing {
-    transform: translateY(20px);
+    transform: translateX(20px);
+  }
+
+  /*
+   * Set imperatively by the lever while a drag is live, so a pointermove-
+   * driven inline `transform` tracks the finger with zero lag instead of
+   * fighting the transition above. Removed before the inline value changes
+   * again on release, so the snap-back / completion still animates.
+   */
+  .drawer[data-drag-active="true"] {
+    transition: none;
   }
 
   /*
@@ -2430,6 +2800,54 @@
 
   .taskCard {
     width: 100%;
+  }
+
+  /*
+   * Mobile-only navy anchor for the Ticket conversation.
+   *
+   * Below this breakpoint the drawer is a single-pane experience, so the
+   * Ticket conversation has no left list column to sit against and needs a
+   * stronger top edge to read as the current screen. Desktop keeps the plain
+   * white header it was approved with.
+   *
+   * Scoped to `.conversationPaneWrapTicket`, so the Messages conversation
+   * header, the drawer's own header and the Ticket inspector are all
+   * untouched. Only colour changes: the header's padding, min-height, gaps
+   * and the 38px Details target are the same rules as above.
+   */
+  .conversationPaneWrapTicket .paneHeader {
+    /* Only the bottom edge softens; the header stays full width and its top
+       corners are the pane's own, exactly as they were. */
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    background: var(--wf-navy, #000d51);
+  }
+
+  .conversationPaneWrapTicket .paneHeaderText strong {
+    color: #ffffff;
+  }
+
+  /* The ~72-78% the brief asks for: clearly secondary, still readable. */
+  .conversationPaneWrapTicket .paneHeaderText span {
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .conversationPaneWrapTicket .paneHeader .iconButton {
+    color: #ffffff;
+  }
+
+  .conversationPaneWrapTicket .paneHeader .iconButton:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+  }
+
+  .conversationPaneWrapTicket .paneHeader .detailsButton[aria-pressed="true"] {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
   }
 }
 
@@ -2491,7 +2909,9 @@
     animation: none;
   }
 
-  .skeletonRow {
+  .skeletonRow,
+  .ticketSkeletonTitle,
+  .ticketSkeletonRef {
     animation: none;
     background: #f2f3f6;
   }
@@ -2511,6 +2931,7 @@
   }
 
   .conversationRow,
+  .ticketRow,
   .iconButton,
   .statusButton,
   .ghostButton,
@@ -2523,6 +2944,7 @@
   }
 
   .conversationRow:active,
+  .ticketRow:active,
   .iconButton:active,
   .statusButton:active,
   .ghostButton:active,
@@ -4591,6 +5013,35 @@
   .settingsPanelInner {
     width: min(420px, 100vw);
   }
+
+  .drawer:has(.inspectorPane) {
+    grid-template-columns: clamp(300px, 34%, 360px) minmax(0, 1fr);
+  }
+
+  .drawer:has(.inspectorPaneOpen) {
+    width: min(760px, calc(100vw - 24px));
+  }
+
+  /* Below 1101px the inspector is an off-canvas overlay, not a grid column --
+     opacity/translateX from the desktop rule above are replaced outright by
+     the slide-in transform here, and the mount-vs-open opacity fade is no
+     longer needed since the panel is fully offscreen either way. */
+  .inspectorPane {
+    position: absolute;
+    z-index: 6;
+    inset: 0 0 0 auto;
+    width: min(420px, 100%);
+    max-width: 100%;
+    border-left-width: 1px;
+    opacity: 1;
+    transform: translateX(100%);
+    pointer-events: auto;
+    transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .inspectorPaneOpen {
+    transform: translateX(0);
+  }
 }
 
 @media (max-width: 860px) {
@@ -4601,6 +5052,19 @@
   .settingsPanel,
   .settingsPanelOpen,
   .settingsPanelInner {
+    width: 100%;
+  }
+
+  .drawer:has(.inspectorPaneOpen) {
+    width: 100%;
+  }
+
+  .drawer:has(.inspectorPane) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .inspectorPane,
+  .inspectorPaneOpen {
     width: 100%;
   }
 
@@ -4616,7 +5080,9 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer,
   .conversationPane,
-  .settingsPanel {
+  .settingsPanel,
+  .inspectorPane,
+  .inspectorPaneOpen {
     transition-duration: 0.01ms;
   }
 }

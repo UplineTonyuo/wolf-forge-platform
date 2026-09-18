@@ -1,11 +1,14 @@
 "use client";
+import { randomUuid } from "../../lib/random-uuid";
 
 import {
   AlertCircle,
+  ArrowLeft,
   Inbox,
-  ListChecks,
+  Info,
   MessageSquare,
   PenLine,
+  Ticket as TicketIcon,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,13 +20,11 @@ import {
   mergeTeamMessageViews,
   stillPendingTeamMessages,
   teamInitials,
-  teamTaskCounts,
   toTeamConversationDetailView,
   toTeamConversationViews,
   toTeamMemberViews,
   toTeamMessageViews,
   toTeamReactionViews,
-  toTeamTaskListViews,
   totalTeamUnread,
   type TeamConversationDetailView,
   type TeamConversationView,
@@ -32,6 +33,16 @@ import {
   type TeamReactionView,
   type TeamSearchResultView,
 } from "../../domain/team/projections";
+import type { TicketCapabilities, TicketDetail } from "../../domain/tickets/schema";
+import type { ServiceAssigneeOption } from "../../repositories/service-repository";
+import {
+  getTicketInboxConversationAction,
+  listTicketAssigneesAction,
+} from "../../app/actions/tickets";
+import { TicketAdminConversation } from "../tickets/ticket-admin-conversation";
+import { TicketInspector } from "../tickets/ticket-inspector";
+import { TeamTicketsPane } from "./team-tickets-pane";
+import { useTicketInboxList } from "./use-ticket-inbox-list";
 import type {
   TeamConversationCapability,
   TeamConversationDetailRow,
@@ -41,7 +52,6 @@ import type {
   TeamReactionCode,
   TeamSlowModeScope,
   TeamTaskCreationPolicy,
-  TeamTaskListRow,
   TeamTaskStatus,
 } from "../../domain/team/schema";
 import {
@@ -71,7 +81,6 @@ import { TeamConversationAvatar } from "./team-conversation-avatar";
 import { TeamConversationCreator } from "./team-conversation-creator";
 import { TeamConversationPane, type TeamReplyDraft } from "./team-conversation-view";
 import { TeamTaskComposer, type TeamTaskDraft } from "./team-task-composer";
-import { TeamTasksPanel, type TeamTaskScope } from "./team-tasks-panel";
 import {
   useTeamPresence,
   type TeamPresenceStatus,
@@ -82,7 +91,7 @@ import { useTeamSyncController } from "./use-team-sync-controller";
 import { teamDetailFingerprint, teamSignalsIndicateChange } from "../../domain/team/live-scheduler";
 import styles from "./team-messages.module.css";
 
-type Pane = "messages" | "tasks";
+type Pane = "messages" | "tickets";
 
 type TeamMessagePeek = {
   conversationId: string;
@@ -149,31 +158,63 @@ const alwaysCurrent: StaleGuard = () => true;
  * focus, on send, and on any task mutation. There is deliberately no second
  * timer anywhere in this tree.
  */
+/**
+ * The Ticket conversation may render only from detail whose own ticket id is
+ * the selected one.
+ *
+ * Switching Tickets deliberately leaves the previous detail in state -- that is
+ * what makes coming back to a Ticket instant, with no refetch flash -- so the
+ * match is enforced here, at the point of use, rather than by clearing state on
+ * every switch. Reading `ticketDetail` directly is what let the previous
+ * Ticket's header and messages paint under the new Ticket's id while the new
+ * response was still in flight.
+ */
+export function matchActiveTicketDetail(
+  detail: TicketDetail | null,
+  activeTicketId: string | null,
+): TicketDetail | null {
+  if (!detail || !activeTicketId) return null;
+  return detail.ticket.id === activeTicketId ? detail : null;
+}
+
+
 export function TeamMessagesDrawer({
   open,
   onClose,
   actorProfileId,
   actorName,
   canManageTasks,
+  canUseTeamMessages,
+  ticketCapabilities,
   initialConversationId,
+  initialTicketId,
   onUnreadChange,
   onRequestOpen,
+  onRootElement,
 }: {
   open: boolean;
   onClose: () => void;
   actorProfileId: string;
   actorName: string | null;
   canManageTasks: boolean;
+  /** Gates the Messages tab. A ticket-only account still opens the Inbox. */
+  canUseTeamMessages: boolean;
+  /** Gates the Tickets tab and every read inside it. */
+  ticketCapabilities: TicketCapabilities;
   /** From ?team-messages=<id>, so a notification can open a specific thread. */
   initialConversationId: string | null;
+  /** From ?inbox=tickets&ticket=<id>, from the Ticket Detail page's "Open in Inbox". */
+  initialTicketId: string | null;
   onUnreadChange: (unread: number) => void;
   onRequestOpen: () => void;
+  /** The mobile edge lever reads this to drive a live drag reveal. */
+  onRootElement?: (el: HTMLDivElement | null) => void;
 }) {
   const mounted = useClientMounted();
   const { render, phase } = useExitTransition(open, 200);
   const { statusFor } = useTeamPresence();
 
-  const [pane, setPane] = useState<Pane>("messages");
+  const [pane, setPane] = useState<Pane>(canUseTeamMessages ? "messages" : "tickets");
   const [conversations, setConversations] = useState<TeamConversationRow[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [conversationsError, setConversationsError] = useState<string | null>(
@@ -232,11 +273,21 @@ export function TeamMessagesDrawer({
   const [creatorBusy, setCreatorBusy] = useState(false);
   const [creatorError, setCreatorError] = useState<string | null>(null);
 
-  const [tasks, setTasks] = useState<TeamTaskListRow[]>([]);
-  const [taskScope, setTaskScope] = useState<TeamTaskScope>("mine");
-  const [tasksLoading, setTasksLoading] = useState(false);
-  const [tasksError, setTasksError] = useState<string | null>(null);
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
+
+  /*
+   * The selected Ticket's full conversation, fetched on demand when a Ticket
+   * row is chosen in the Tickets pane. This drawer is that conversation's one
+   * home: /tickets/[ticketId] is the management surface and renders no
+   * transcript (see ticket-workspace.tsx), so nothing else is running a second
+   * live poller for the same Ticket in the same tab.
+   */
+  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+  const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null);
+  const [ticketDetailError, setTicketDetailError] = useState<string | null>(null);
+  const [ticketInspectorOpen, setTicketInspectorOpen] = useState(false);
+
+  const [ticketAssignees, setTicketAssignees] = useState<ServiceAssigneeOption[]>([]);
 
   const [composer, setComposer] = useState<ComposerSession | null>(null);
   const [composerSubmitting, setComposerSubmitting] = useState(false);
@@ -282,10 +333,30 @@ export function TeamMessagesDrawer({
     setPane("messages");
   }
 
+  const [consumedTicketDeepLink, setConsumedTicketDeepLink] = useState<
+    string | null
+  >(null);
+  if (open && initialTicketId && initialTicketId !== consumedTicketDeepLink) {
+    setConsumedTicketDeepLink(initialTicketId);
+    setActiveTicketId(initialTicketId);
+    setPane("tickets");
+  }
+  /* The drawer rests on the same "once per distinct link" rule as the hook
+     that opens it, so its marker has to clear when the link does -- see the
+     note on the same reset in useTeamMessagesChat. */
+  if (!initialTicketId && consumedTicketDeepLink) setConsumedTicketDeepLink(null);
+
   const detailRow = activeId ? (detailRows[activeId] ?? null) : null;
 
   const picker = useExitTransition(pickerOpen, 160);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const setDrawerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      drawerRef.current = el;
+      onRootElement?.(el);
+    },
+    [onRootElement],
+  );
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -295,7 +366,6 @@ export function TeamMessagesDrawer({
   const activeIdRef = useRef(activeId);
   const openRef = useRef(open);
   const paneRef = useRef(pane);
-  const taskScopeRef = useRef(taskScope);
 
   const conversationsLoadedRef = useRef(conversationsLoaded);
   const detailRowRef = useRef(detailRow);
@@ -309,10 +379,9 @@ export function TeamMessagesDrawer({
     activeIdRef.current = activeId;
     openRef.current = open;
     paneRef.current = pane;
-    taskScopeRef.current = taskScope;
     conversationsLoadedRef.current = conversationsLoaded;
     detailRowRef.current = detailRow;
-  }, [activeId, conversationsLoaded, detailRow, open, pane, taskScope]);
+  }, [activeId, conversationsLoaded, detailRow, open, pane]);
 
   // ---------------------------------------------------------------------------
   // Central synchronization
@@ -521,15 +590,13 @@ export function TeamMessagesDrawer({
     return { ok: true, changed: signalsChanged || detailChanged };
   }, [applyDetail, applySignals]);
 
-  /** The background lane: list, roster, tasks and the offline digest sweep. */
+  /** The background lane: list, roster and the offline digest sweep. */
   const syncBackground = useCallback(
     async ({ materializeDigests }: { materializeDigests: boolean }) => {
-      const wantsTasks = openRef.current && paneRef.current === "tasks";
-
       const result = await fetchTeamSync({
         includeConversations: true,
-        includeTasks: wantsTasks,
-        includeTeamTasks: taskScopeRef.current === "team",
+        includeTasks: false,
+        includeTeamTasks: false,
         includeMembers: openRef.current,
         materializeDigests,
       });
@@ -544,29 +611,99 @@ export function TeamMessagesDrawer({
 
       if (result.data.conversations) applyConversations(result.data.conversations);
       if (result.data.members) setMembers(result.data.members);
-
-      if (result.data.tasks && paneRef.current === "tasks") {
-        setTasks(result.data.tasks);
-        setTasksError(null);
-        setTasksLoading(false);
-      }
       return { ok: true };
     },
     [applyConversations],
   );
 
   /*
-   * Restarting the scheduler on this key is what makes opening a thread, or
-   * switching to Tasks, refresh at once instead of waiting for the next tick.
+   * Restarting the scheduler on this key is what makes opening a thread
+   * refresh at once instead of waiting for the next tick. The Tickets pane's
+   * own list poll (useTicketInboxList) is separate and not part of this key.
    */
-  const syncKey = `${open ? "open" : "closed"}|${activeId ?? "-"}|${pane}|${taskScope}`;
+  const syncKey = `${open ? "open" : "closed"}|${activeId ?? "-"}|${pane}`;
   const { refreshNow } = useTeamSyncController({
     active: mounted,
-    open,
+    /*
+     * The CLOSED/OPEN axis means "a Team conversation is the visible
+     * surface", not "the drawer is mounted". While the drawer sits on the
+     * Tickets pane the Team lanes have nothing on screen to keep fresh --
+     * that pane carries its own Ticket polling -- so they take the
+     * scheduler's existing CLOSED cadence instead of polling Team
+     * conversations at FAST/WARM/QUIET beside it. Switching back to Messages
+     * changes `syncKey` below, which wakes both lanes immediately, and the
+     * tick after that is scheduled from the OPEN cadence again.
+     */
+    open: open && pane === "messages",
     syncKey,
     syncLive,
     syncBackground,
   });
+
+  const ticketInboxList = useTicketInboxList(
+    open && pane === "tickets" && ticketCapabilities.view,
+  );
+
+  const activeTicketIdRef = useRef(activeTicketId);
+  useEffect(() => {
+    activeTicketIdRef.current = activeTicketId;
+  }, [activeTicketId]);
+
+  /*
+   * The one value every Ticket render site reads. Null means "no detail for
+   * the selected Ticket yet", which is what draws the skeleton -- see
+   * `matchActiveTicketDetail`.
+   */
+  const activeTicketDetail = matchActiveTicketDetail(ticketDetail, activeTicketId);
+
+  const loadTicketDetail = useCallback(async (ticketId: string) => {
+    setTicketDetailError(null);
+    const result = await getTicketInboxConversationAction(ticketId);
+    if (activeTicketIdRef.current !== ticketId) return;
+    if (!result.ok) {
+      setTicketDetail(null);
+      setTicketDetailError(result.error);
+      return;
+    }
+    setTicketDetail(result.data);
+  }, []);
+
+  useEffect(() => {
+    if (!open || pane !== "tickets" || !activeTicketId) return;
+    void (async () => {
+      await loadTicketDetail(activeTicketId);
+    })();
+  }, [open, pane, activeTicketId, loadTicketDetail]);
+
+  /*
+   * Closes the inspector on ticket switch or pane switch. Adjusting state
+   * during render (React's documented pattern for this) instead of an effect
+   * -- same shape as the deep-link consumption above -- avoids the extra
+   * commit an effect-driven reset would cost.
+   */
+  const ticketInspectorResetKey = `${pane}:${activeTicketId ?? ""}`;
+  const [seenTicketInspectorResetKey, setSeenTicketInspectorResetKey] =
+    useState(ticketInspectorResetKey);
+  if (seenTicketInspectorResetKey !== ticketInspectorResetKey) {
+    setSeenTicketInspectorResetKey(ticketInspectorResetKey);
+    if (ticketInspectorOpen) setTicketInspectorOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open || pane !== "tickets" || !ticketCapabilities.view) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await listTicketAssigneesAction();
+      if (!cancelled && result.ok) setTicketAssignees(result.data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, pane, ticketCapabilities.view]);
+
+  const selectTicket = useCallback((ticketId: string) => {
+    setActiveTicketId(ticketId);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Interactive loaders. These raise spinners and surface errors, which a
@@ -599,29 +736,6 @@ export function TeamMessagesDrawer({
       }
     },
     [applyDetail],
-  );
-
-  const loadTasks = useCallback(
-    async (scope: TeamTaskScope, isCurrent: StaleGuard = alwaysCurrent) => {
-      setTasksLoading(true);
-      const result = await fetchTeamSync({
-        includeConversations: false,
-        includeTasks: true,
-        includeTeamTasks: scope === "team",
-        includeMembers: false,
-        materializeDigests: false,
-      });
-      if (!isCurrent()) return;
-
-      if (result.ok && result.data.tasks) {
-        setTasks(result.data.tasks);
-        setTasksError(null);
-      } else if (!result.ok) {
-        setTasksError(result.error);
-      }
-      setTasksLoading(false);
-    },
-    [],
   );
 
   /**
@@ -812,7 +926,7 @@ export function TeamMessagesDrawer({
 
   useEffect(() => {
     if (!open) return;
-    typingConnectionRef.current = crypto.randomUUID();
+    typingConnectionRef.current = randomUuid();
 
     return () => {
       const connectionId = typingConnectionRef.current;
@@ -955,7 +1069,7 @@ export function TeamMessagesDrawer({
       const conversationId = retryOf?.conversationId ?? activeIdRef.current;
       if (!conversationId) return;
 
-      const requestId = retryOf?.requestId ?? crypto.randomUUID();
+      const requestId = retryOf?.requestId ?? randomUuid();
       const activeReply = retryOf?.replyToMessageId
         ? {
             sourceMessageId: retryOf.replyToMessageId,
@@ -1082,7 +1196,7 @@ export function TeamMessagesDrawer({
       setComposerError(null);
 
       const result = await createTeamTaskAction({
-        requestId: crypto.randomUUID(),
+        requestId: randomUuid(),
         conversationId,
         title: draft.title,
         assignedToProfileId: draft.assignedToProfileId,
@@ -1112,8 +1226,7 @@ export function TeamMessagesDrawer({
       setBusyTaskId(null);
 
       if (!result.ok) {
-        if (paneRef.current === "tasks") setTasksError(result.error);
-        else setDetailError(result.error);
+        setDetailError(result.error);
         return;
       }
 
@@ -1123,18 +1236,9 @@ export function TeamMessagesDrawer({
     [refreshNow],
   );
 
-  const openConversationFromTask = useCallback(
-    (conversationId: string, sourceMessageId: string | null) => {
-      setPane("messages");
-      setActiveId(conversationId);
-      setHighlightMessageId(sourceMessageId);
-    },
-    [],
-  );
-
   const openComposer = useCallback((sourceMessage: TeamMessageView | null) => {
     setComposerError(null);
-    setComposer({ key: crypto.randomUUID(), sourceMessage });
+    setComposer({ key: randomUuid(), sourceMessage });
   }, []);
 
   const forwardMessage = useCallback(async (
@@ -1142,7 +1246,7 @@ export function TeamMessagesDrawer({
     destinationConversationId: string,
   ): Promise<string | null> => {
     const result = await forwardTeamMessageAction({
-      requestId: crypto.randomUUID(),
+      requestId: randomUuid(),
       sourceMessageId: message.id,
       destinationConversationId,
     });
@@ -1335,16 +1439,6 @@ export function TeamMessagesDrawer({
 
   const memberViews = useMemo(() => toTeamMemberViews(members), [members]);
 
-  const taskViews = useMemo(
-    () => toTeamTaskListViews(tasks, actorProfileId),
-    [actorProfileId, tasks],
-  );
-
-  const openTaskCount = useMemo(
-    () => teamTaskCounts(taskViews).openMine,
-    [taskViews],
-  );
-
   /*
    * Confirmed messages plus anything still in flight, in one transcript.
    *
@@ -1450,7 +1544,9 @@ export function TeamMessagesDrawer({
 
   const closing = phase === "closing";
   /* At mobile width one pane shows at a time; at desktop width both do. */
-  const showListOnMobile = pane === "messages" && !activeId;
+  const showListOnMobile =
+    (pane === "messages" && !activeId) ||
+    (pane === "tickets" && !activeTicketId);
 
   return createPortal(
     <>
@@ -1465,10 +1561,10 @@ export function TeamMessagesDrawer({
       />
 
       <div
-        ref={drawerRef}
+        ref={setDrawerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Team Messages"
+        aria-label="Inbox"
         className={[
           styles.drawer,
           closing ? styles.drawerClosing : styles.drawerOpen,
@@ -1483,69 +1579,74 @@ export function TeamMessagesDrawer({
             .join(" ")}
         >
           <div className={styles.listHeader}>
-            <h2>Team Messages</h2>
-            <p>
-              Internal Wolf Forge conversations. Clients never see these
-              threads.
-            </p>
+            <h2>Inbox</h2>
           </div>
 
           <div className={styles.tabDock}>
             <div className={styles.tabs}>
-              <button
-                type="button"
-                className={[
-                  styles.tab,
-                  pane === "messages" ? styles.tabActive : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-pressed={pane === "messages"}
-                onClick={() => setPane("messages")}
-              >
-                <MessageSquare aria-hidden="true" width={13} height={13} />
-                Messages
-                {unreadTotal > 0 ? (
-                  <span
-                    className={`${styles.tabCount} ${styles.tabCountAccent}`}
-                  >
-                    {unreadTotal}
-                  </span>
-                ) : null}
-              </button>
+              {canUseTeamMessages ? (
+                <button
+                  type="button"
+                  className={[
+                    styles.tab,
+                    pane === "messages" ? styles.tabActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={pane === "messages"}
+                  onClick={() => setPane("messages")}
+                >
+                  <MessageSquare aria-hidden="true" width={13} height={13} />
+                  Messages
+                  {unreadTotal > 0 ? (
+                    <span
+                      className={`${styles.tabCount} ${styles.tabCountAccent}`}
+                    >
+                      {unreadTotal}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
 
-              <button
-                type="button"
-                className={[
-                  styles.tab,
-                  pane === "tasks" ? styles.tabActive : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-pressed={pane === "tasks"}
-                onClick={() => setPane("tasks")}
-              >
-                <ListChecks aria-hidden="true" width={13} height={13} />
-                Tasks
-                {openTaskCount > 0 ? (
-                  <span className={styles.tabCount}>{openTaskCount}</span>
-                ) : null}
-              </button>
+              {ticketCapabilities.view ? (
+                <button
+                  type="button"
+                  className={[
+                    styles.tab,
+                    pane === "tickets" ? styles.tabActive : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  aria-pressed={pane === "tickets"}
+                  onClick={() => {
+                    /* The pencil is a Messages-only affordance and unmounts
+                       with the pane, so an open creator menu would be left
+                       with no anchor. */
+                    setPickerOpen(false);
+                    setPane("tickets");
+                  }}
+                >
+                  <TicketIcon aria-hidden="true" width={13} height={13} />
+                  Tickets
+                </button>
+              ) : null}
 
-              <button
-                type="button"
-                className={styles.iconButton}
-                onClick={() => {
-                  setCreatorError(null);
-                  setPickerOpen((value) => !value);
-                }}
-                aria-label="Start a new conversation or group"
-                aria-expanded={pickerOpen}
-                aria-haspopup="dialog"
-                title="New conversation"
-              >
-                <PenLine aria-hidden="true" />
-              </button>
+              {canUseTeamMessages && pane === "messages" ? (
+                <button
+                  type="button"
+                  className={`${styles.iconButton} ${styles.tabAction}`}
+                  onClick={() => {
+                    setCreatorError(null);
+                    setPickerOpen((value) => !value);
+                  }}
+                  aria-label="Start a new conversation or group"
+                  aria-expanded={pickerOpen}
+                  aria-haspopup="dialog"
+                  title="New conversation"
+                >
+                  <PenLine aria-hidden="true" />
+                </button>
+              ) : null}
             </div>
 
             {picker.render ? (
@@ -1575,87 +1676,195 @@ export function TeamMessagesDrawer({
             ) : null}
           </div>
 
-          <div className={styles.listScroll}>
-            {conversationsError ? (
-              <div
-                className={styles.inlineError}
-                role="alert"
-                style={{ margin: "0 0 8px" }}
-              >
-                <AlertCircle aria-hidden="true" />
-                <span>{conversationsError}</span>
-                <button
-                  type="button"
-                  className={styles.inlineErrorRetry}
-                  onClick={() => void refreshNow()}
+          {pane === "messages" ? (
+            <div className={styles.listScroll}>
+              {conversationsError ? (
+                <div
+                  className={styles.inlineError}
+                  role="alert"
+                  style={{ margin: "0 0 8px" }}
                 >
-                  Retry
-                </button>
-              </div>
-            ) : null}
+                  <AlertCircle aria-hidden="true" />
+                  <span>{conversationsError}</span>
+                  <button
+                    type="button"
+                    className={styles.inlineErrorRetry}
+                    onClick={() => void refreshNow()}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : null}
 
-            {!conversationsLoaded && conversations.length === 0 ? (
-              <div className={styles.skeletonList} aria-busy="true">
-                <div className={styles.skeletonRow} />
-                <div className={styles.skeletonRow} />
-                <div className={styles.skeletonRow} />
-              </div>
-            ) : null}
+              {!conversationsLoaded && conversations.length === 0 ? (
+                <div className={styles.skeletonList} aria-busy="true">
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                </div>
+              ) : null}
 
-            {conversationsLoaded &&
-            conversationViews.length === 0 &&
-            !conversationsError ? (
-              <div className={styles.stateBlock}>
-                <span className={styles.stateIcon}>
-                  <Inbox aria-hidden="true" />
-                </span>
-                <strong>No conversations yet</strong>
-                <p>Start one with a colleague using the pencil above.</p>
-              </div>
-            ) : null}
+              {conversationsLoaded &&
+              conversationViews.length === 0 &&
+              !conversationsError ? (
+                <div className={styles.stateBlock}>
+                  <span className={styles.stateIcon}>
+                    <Inbox aria-hidden="true" />
+                  </span>
+                  <strong>No conversations yet</strong>
+                  <p>Start one with a colleague using the pencil above.</p>
+                </div>
+              ) : null}
 
-            {conversationViews.map((conversation) => (
-              <ConversationRow
-                key={conversation.conversationId}
-                conversation={conversation}
-                active={
-                  conversation.conversationId === activeId &&
-                  pane === "messages"
-                }
-                onSelect={() => {
-                  setPane("messages");
-                  setActiveId(conversation.conversationId);
-                  if (messagePeek?.conversationId === conversation.conversationId) {
-                    setMessagePeekOpen(false);
+              {conversationViews.map((conversation) => (
+                <ConversationRow
+                  key={conversation.conversationId}
+                  conversation={conversation}
+                  active={
+                    conversation.conversationId === activeId &&
+                    pane === "messages"
                   }
-                }}
-                presence={
-                  conversation.otherMember
-                    ? statusFor(conversation.otherMember.profileId)
-                    : "unknown"
-                }
-              />
-            ))}
-          </div>
+                  onSelect={() => {
+                    setPane("messages");
+                    setActiveId(conversation.conversationId);
+                    if (messagePeek?.conversationId === conversation.conversationId) {
+                      setMessagePeekOpen(false);
+                    }
+                  }}
+                  presence={
+                    conversation.otherMember
+                      ? statusFor(conversation.otherMember.profileId)
+                      : "unknown"
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <TeamTicketsPane
+              tickets={ticketInboxList.tickets}
+              loading={!ticketInboxList.loaded && ticketInboxList.tickets.length === 0}
+              error={ticketInboxList.error}
+              activeTicketId={activeTicketId}
+              onSelect={selectTicket}
+              onRetry={ticketInboxList.refreshNow}
+            />
+          )}
         </aside>
 
-        {pane === "tasks" ? (
-          <TeamTasksPanel
-            tasks={taskViews}
-            scope={taskScope}
-            onScopeChange={setTaskScope}
-            canManageTasks={canManageTasks}
-            actorProfileId={actorProfileId}
-            loading={tasksLoading}
-            error={tasksError}
-            onRetry={() => void loadTasks(taskScope)}
-            onBack={() => setPane("messages")}
-            onOpenConversation={openConversationFromTask}
-            onTaskStatusChange={(taskId, status) =>
-              void changeTaskStatus(taskId, status)
-            }
-            busyTaskId={busyTaskId}
-          />
+        {pane === "tickets" ? (
+          <div
+            className={[
+              styles.conversationPaneWrap,
+              styles.conversationPaneWrapTicket,
+              showListOnMobile ? styles.conversationPaneHidden : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {activeTicketId && activeTicketDetail ? (
+              <>
+                <div className={styles.paneHeader}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.backButton}`}
+                    onClick={() => setActiveTicketId(null)}
+                    aria-label="Back to Tickets"
+                  >
+                    <ArrowLeft aria-hidden="true" />
+                  </button>
+                  <div className={styles.paneHeaderText}>
+                    <strong>{activeTicketDetail.ticket.subject}</strong>
+                    <span>Ticket {activeTicketDetail.ticket.public_ref}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.detailsButton}`}
+                    onClick={() => setTicketInspectorOpen((current) => !current)}
+                    aria-label="Ticket details"
+                    aria-pressed={ticketInspectorOpen}
+                  >
+                    <Info aria-hidden="true" />
+                  </button>
+                </div>
+                <TicketAdminConversation
+                  ticketId={activeTicketDetail.ticket.id}
+                  heading={activeTicketDetail.ticket.subject}
+                  contactName={activeTicketDetail.client_name ?? activeTicketDetail.company_name}
+                  messages={activeTicketDetail.messages}
+                  viewerProfileId={actorProfileId}
+                  destinations={
+                    canUseTeamMessages ? toTeamConversationViews(conversations) : []
+                  }
+                  canReply={ticketCapabilities.reply}
+                  canReact={ticketCapabilities.reply}
+                  repliesDisabled={
+                    activeTicketDetail.ticket.status === "closed" ||
+                    Boolean(activeTicketDetail.ticket.archived_at)
+                  }
+                />
+              </>
+            ) : activeTicketId && ticketDetailError ? (
+              <div className={`${styles.stateBlock} ${styles.stateError}`}>
+                <span className={styles.stateIcon}>
+                  <AlertCircle aria-hidden="true" />
+                </span>
+                <strong>Ticket could not be loaded</strong>
+                <p>{ticketDetailError}</p>
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={() => void loadTicketDetail(activeTicketId)}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : activeTicketId ? (
+              /*
+               * A Ticket is selected but its detail has not arrived -- or the
+               * detail in state belongs to the Ticket we just left. Either
+               * way the pane shows the conversation's shape, never the
+               * previous Ticket's content. Back stays live so the viewer is
+               * never trapped in a loading pane.
+               */
+              <>
+                <div className={styles.paneHeader}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.backButton}`}
+                    onClick={() => setActiveTicketId(null)}
+                    aria-label="Back to Tickets"
+                  >
+                    <ArrowLeft aria-hidden="true" />
+                  </button>
+                  <div className={styles.paneHeaderText}>
+                    <span className={styles.ticketSkeletonTitle} />
+                    <span className={styles.ticketSkeletonRef} />
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.detailsButton}`}
+                    aria-label="Ticket details"
+                    disabled
+                  >
+                    <Info aria-hidden="true" />
+                  </button>
+                </div>
+                <div className={styles.skeletonList} aria-busy="true">
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                </div>
+              </>
+            ) : (
+              <div className={styles.stateBlock}>
+                <span className={styles.stateIcon}>
+                  <TicketIcon aria-hidden="true" />
+                </span>
+                <strong>Select a Ticket</strong>
+                <p>Choose a Ticket from the list to open its conversation.</p>
+              </div>
+            )}
+          </div>
         ) : (
           <div
             className={[
@@ -1759,12 +1968,42 @@ export function TeamMessagesDrawer({
           </div>
         )}
 
-        {pane !== "messages" || !detail ? (
+        {pane === "tickets" && activeTicketDetail ? (
+          <aside
+            className={[
+              styles.inspectorPane,
+              ticketInspectorOpen ? styles.inspectorPaneOpen : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-label="Ticket details and controls"
+          >
+            <div className={styles.paneHeader}>
+              <strong>Details</strong>
+              <button
+                type="button"
+                className={`${styles.iconButton} ${styles.detailsButton}`}
+                onClick={() => setTicketInspectorOpen(false)}
+                aria-label="Close Ticket details"
+              >
+                <X aria-hidden="true" />
+              </button>
+            </div>
+            <TicketInspector
+              detail={activeTicketDetail}
+              assignees={ticketAssignees}
+              capabilities={ticketCapabilities}
+              onTicketChanged={() => void loadTicketDetail(activeTicketDetail.ticket.id)}
+            />
+          </aside>
+        ) : null}
+
+        {(pane === "messages" ? !detail : !activeTicketId) ? (
           <button
             type="button"
             className={`${styles.iconButton} ${styles.closeButton}`}
             onClick={onClose}
-            aria-label="Close Team Messages"
+            aria-label="Close Inbox"
           >
             <X aria-hidden="true" />
           </button>

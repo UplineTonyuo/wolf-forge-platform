@@ -249,10 +249,11 @@
 .filterPanel {
   display: grid;
   grid-template-columns:
-    minmax(180px, 1.25fr)
-    minmax(140px, 1fr)
-    minmax(140px, 1fr)
-    minmax(140px, 1fr)
+    minmax(170px, 1.2fr)
+    minmax(120px, 1fr)
+    minmax(120px, 1fr)
+    minmax(120px, 1fr)
+    minmax(120px, 1fr)
     auto
     auto;
   align-items: end;
@@ -323,6 +324,10 @@
   border: 0;
   background: transparent;
   color: #7d8698;
+}
+
+.mobileSearchRow {
+  display: none;
 }
 
 .tableCard {
@@ -1195,7 +1200,7 @@
   }
 
   .statusTabs {
-    gap: 3px !important;
+    gap: 6px !important;
 
     overflow-x: auto !important;
 
@@ -1235,7 +1240,7 @@
   .toolbar {
     width: 100%;
 
-    justify-content: flex-end;
+    justify-content: space-between;
   }
 }
 
@@ -1553,3 +1558,48 @@
 }
 
 /* WF PROJECTS SIZE TUNE END */
+
+/* MOBILE FILTER UX REWORK — permanent search bar, sheet takes over Filter */
+
+@media (max-width: 767px) {
+  .filterPanel {
+    display: none !important;
+  }
+
+  /* Group the Filter/New Project row with the search bar below it into one
+     compact cluster instead of two visually unrelated blocks: drop the
+     control row's own divider/spacing and let the search bar sit close
+     underneath, then breathe before the table starts. */
+  .controlRow {
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .mobileSearchRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 46px;
+    margin: 9px 0 18px;
+    padding: 0 14px;
+    border: 1px solid #dce0e8;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #7f889a;
+  }
+
+  .mobileSearchRow input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 14px;
+    color: #1a1a18;
+  }
+
+  .mobileSearchRow input:focus {
+    outline: none;
+  }
+}

@@ -1,0 +1,36 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--wf-border, #e2dfda);
+  border-radius: 5px;
+  background: #ffffff;
+  color: #7f889a;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+
+.button:hover {
+  color: #000d51;
+  border-color: #c1c8d5;
+}
+
+/*
+ * Coarse pointers get the full recommended ~44px touch target via an
+ * invisible expanded hit area, not a bigger visible button — the
+ * ::before still counts as part of the button for click purposes.
+ */
+.button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+@media (pointer: coarse) {
+  .button::before {
+    inset: -8px;
+  }
+}

@@ -37,7 +37,6 @@ export default async function ClientOnboardingPage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Work</span>
           <h1>Onboarding</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

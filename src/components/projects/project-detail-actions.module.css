@@ -1,36 +1,29 @@
 .launcherRow {
-  width: 100%;
-
-  min-height: 54px;
-
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-
-  padding: 2px 0 8px;
 }
 
 
 /* ==========================================================
-   + TRIGGER
+   ACTIONS TRIGGER
    ========================================================== */
 
 .launcher {
-  width: 46px;
-  height: 46px;
+  height: 34px;
 
   flex: 0 0 auto;
 
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
-  padding: 0;
+  padding: 0 14px;
 
   border:
     1px solid
     rgba(0, 13, 81, 0.18);
 
-  border-radius: 11px;
+  border-radius: 6px;
 
   background:
     linear-gradient(
@@ -40,6 +33,9 @@
     );
 
   color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 650;
 
   cursor: pointer;
 
@@ -1199,94 +1195,6 @@
   }
 }
 
-/* WF PROJECT DETAIL PLUS ALIGNMENT START */
-
-/*
- * 46px button + 10px top + 10px bottom = 66px.
- * Keeps the action launcher centered inside its own strip,
- * not centered in the page.
- */
-
-.launcherRow {
-  width: 100% !important;
-
-  min-height: 66px !important;
-  height: 66px !important;
-
-  box-sizing: border-box;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-
-  padding:
-    10px
-    0 !important;
-
-  margin: 0 !important;
-}
-
-.launcher {
-  width: 46px !important;
-  height: 46px !important;
-
-  flex:
-    0
-    0
-    46px !important;
-
-  align-self: center !important;
-
-  margin: 0 !important;
-}
-
-/* WF PROJECT DETAIL PLUS ALIGNMENT END */
-
-/* WF PROJECT DETAIL INLINE LAUNCHER START */
-
-/*
- * ProjectDetailActions now lives inside the compact toolbar.
- * Do not reserve a full-width row for the + button.
- */
-
-.launcherRow {
-  width: auto !important;
-
-  min-width: 46px !important;
-  min-height: 46px !important;
-
-  height: 46px !important;
-
-  flex:
-    0
-    0
-    auto !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  padding: 0 !important;
-
-  margin: 0 !important;
-}
-
-
-.launcher {
-  width: 46px !important;
-  height: 46px !important;
-
-  flex:
-    0
-    0
-    46px !important;
-
-  margin: 0 !important;
-}
-
-
-/* WF PROJECT DETAIL INLINE LAUNCHER END */
-
 /* WF PROJECT STATUS TONES START */
 
 /*
@@ -1420,3 +1328,12 @@
 
 
 /* WF PROJECT STATUS TONES END */
+/* The labeled mobile action needs its content width, not the old plus-icon width. */
+@media (max-width: 900px) {
+  .launcherRow { min-height: 44px !important; height: 44px !important; }
+  .launcher { width: auto !important; height: 44px !important; flex: 0 0 auto !important; padding-inline: 10px; white-space: nowrap; }
+  .launcher svg { flex-shrink: 0; }
+}
+@media (max-width: 767px) {
+  .launcher { width: 100% !important; justify-content: center; }
+}

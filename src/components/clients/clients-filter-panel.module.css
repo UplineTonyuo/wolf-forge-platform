@@ -936,6 +936,21 @@
 }
 
 
+/*
+ * MOBILE TOOLBAR ROW
+ *
+ * In the Clients toolbar the root is a grid cell rather than a
+ * shrink-wrapped box, so it has to carry the trailing alignment itself --
+ * Companies sits in the left cell, Filter in the right one.
+ */
+@media (max-width: 767px) {
+  .root {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+
 /* MOBILE */
 
 @media (max-width: 640px) {

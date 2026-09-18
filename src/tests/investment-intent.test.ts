@@ -40,6 +40,8 @@ function row(overrides: Partial<InvestmentIntentRow> = {}): InvestmentIntentRow 
     contacted_by_profile_id: null,
     contacted_by_name: null,
     updated_at: "2026-08-01T10:00:00.000Z",
+    active_ticket_id: null,
+    active_ticket_status: null,
     ...overrides,
   };
 }

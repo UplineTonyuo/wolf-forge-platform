@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
+import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
 import { ClientStatusControl } from "../../../../components/clients/client-status-control";
 import { ClientBalanceControl } from "../../../../components/clients/client-balance-control";
 import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
@@ -133,6 +134,36 @@ export default async function ClientDetailPage({
       contacts.find((contact) => contact.is_primary) ??
       contacts[0] ??
       null;
+
+    let onboardingForms: Array<{ id: string; name: string }> = [];
+    let eligibleProfiles: Array<{ id: string; label: string }> = [];
+
+    if (context.user.forms.assign) {
+      const [forms, roleResult] = await Promise.all([
+        context.services.forms.list(),
+        context.client.from("roles").select("id").eq("name", "client").single(),
+      ]);
+
+      onboardingForms = forms
+        .filter((form) => form.form_type === "onboarding" && form.status === "published")
+        .map((form) => ({ id: form.id, name: form.name }));
+
+      if (roleResult.data) {
+        const profilesResult = await context.client
+          .from("profiles")
+          .select("id, display_name")
+          .eq("role_id", roleResult.data.id)
+          .eq("company_id", companyId)
+          .is("archived_at", null)
+          .order("display_name");
+
+        eligibleProfiles = (profilesResult.data ?? []).map((profile) => ({
+          id: profile.id,
+          label: profile.display_name ?? "Client",
+        }));
+      }
+    }
+
     const requestedHistoryLimit = Number(query.historyLimit ?? "20");
 
     const historyLimit =
@@ -183,6 +214,33 @@ export default async function ClientDetailPage({
     return (
       <PageFrame
         title={client.name}
+        action={
+          <ClientDetailActions
+            companyId={client.id}
+            clientName={client.name}
+            clientStatus={client.status}
+            primaryContact={
+              primaryContact
+                ? {
+                    id: primaryContact.id,
+                    name: primaryContact.name,
+                    email: primaryContact.email,
+                    phone: primaryContact.phone,
+                    job_title: primaryContact.job_title,
+                  }
+                : null
+            }
+            permissions={{
+              edit: context.user.clients.edit,
+              privateManage: context.user.clients.privateManage,
+              invoiceManage: context.user.invoices.manage,
+              ticketCreate: context.user.tickets.create,
+              formsAssign: context.user.forms.assign,
+            }}
+            onboardingForms={onboardingForms}
+            eligibleProfiles={eligibleProfiles}
+          />
+        }
       >
         {query.created === "1" ? (
           <div

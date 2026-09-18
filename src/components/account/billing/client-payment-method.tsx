@@ -89,7 +89,6 @@ export function ClientPaymentMethodView({
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Billing</span>
         <h1>Payment method</h1>
         <p>How your account settles invoices with Wolf Forge.</p>
       </header>

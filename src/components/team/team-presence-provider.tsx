@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { touchTeamPresenceAction } from "../../app/actions/team-messages";
+import { randomUuid } from "../../lib/random-uuid";
 
 const HEARTBEAT_INTERVAL_MS = 25_000;
 const DISCONNECT_ENDPOINT = "/api/team-presence/disconnect";
@@ -51,11 +52,18 @@ export function TeamPresenceProvider({
     if (!enabled) return;
 
     let alive = true;
-    const connectionId = crypto.randomUUID();
+    const connectionId = randomUuid();
     activeRef.current = true;
 
     const heartbeat = async () => {
+      /*
+       * A hidden tab still runs this interval (Chrome throttles it to ~once/min
+       * rather than clearing it), so the Server Action call itself must be the
+       * thing that stops — otherwise every open-but-backgrounded tab keeps
+       * POSTing to whatever route it happens to be on, indefinitely.
+       */
       if (!alive || !activeRef.current || inFlightRef.current) return;
+      if (document.visibilityState !== "visible") return;
 
       inFlightRef.current = true;
       try {

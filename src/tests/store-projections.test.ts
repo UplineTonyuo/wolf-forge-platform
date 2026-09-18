@@ -149,7 +149,7 @@ describe("store service view", () => {
     // The card preview does not: it gets the curated one-line summary, never
     // the prose lead, the heading or the inclusion list.
     expect(view.summary).toBe(
-      "Fixes the foundation of your Google Business Profile — categories, services, local keywords, and photos — so you outrank competitors.",
+      "Fixes the foundation of your Google Business Profile (categories, services, local keywords, and photos) so you outrank competitors.",
     );
     expect(view.summary).not.toContain("MAPS SYSTEM");
     expect(view.summary).not.toContain("Category optimization");

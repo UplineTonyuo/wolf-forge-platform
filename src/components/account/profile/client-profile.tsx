@@ -126,7 +126,6 @@ export function ClientProfile({
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Account</span>
         <h1>Profile</h1>
         <p>Your name, photo and sign-in details for the Wolf Forge workspace.</p>
       </header>
@@ -214,7 +213,7 @@ export function ClientProfile({
             {/* Read-only projections. Neither is accepted by the update RPC. */}
             <div className="portal-field">
               <span>Email</span>
-              <output>{profile.email ?? "—"}</output>
+              <output>{profile.email ?? "Not set"}</output>
             </div>
 
             <div className="portal-field">

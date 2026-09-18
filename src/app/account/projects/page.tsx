@@ -38,7 +38,6 @@ export default async function ClientProjectsPage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Work</span>
           <h1>Projects</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

@@ -17,10 +17,11 @@ export default async function ProjectsPage() {
        assignee, plus one batched task query. Filter option lists come from the
        authoritative catalogs rather than from whatever the rows happen to
        contain. Everything stays inside the caller's RLS scope. */
-    const [projects, people, services, clients] = await Promise.all([
+    const [projects, people, services, serviceFolders, clients] = await Promise.all([
       context.services.orders.listProjects(),
       context.services.catalog.listAssignees(),
       context.services.catalog.listActive(),
+      context.services.catalog.listFolders(),
       context.services.companies.listActive(),
     ]);
 
@@ -32,8 +33,9 @@ export default async function ProjectsPage() {
         <ProjectsWorkspace
           rows={projects.rows}
           complete={projects.complete}
-          people={people.map((person) => ({ id: person.id, name: person.displayName }))}
-          services={services.map((service) => ({ id: service.id, name: service.name }))}
+          people={people.map((person) => ({ id: person.id, name: person.displayName, avatarUrl: person.avatarUrl }))}
+          services={services.map((service) => ({ id: service.id, name: service.name, folder_id: service.folder_id }))}
+          serviceFolders={serviceFolders}
           clients={clients.map((client) => ({ id: client.id, name: client.name }))}
           capabilities={context.user.projects}
         />

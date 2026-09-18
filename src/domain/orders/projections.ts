@@ -30,7 +30,7 @@ const openTaskStatuses = new Set(["todo", "in_progress", "blocked"]);
 export type ProjectRelationRow = OrderRow & {
   companies: { id: string; name: string } | null;
   services: { id: string; name: string } | null;
-  profiles: { id: string; display_name: string | null } | null;
+  profiles: { id: string; display_name: string | null; avatar_url: string | null } | null;
 };
 
 /** Minimal task facts required for attention and the Info column. */
@@ -310,9 +310,9 @@ export function countProjectsNeedingAttention(rows: ProjectListRow[]): number {
 }
 
 export function projectInitials(name: string | null): string {
-  if (!name) return "—";
+  if (!name) return "?";
   const parts = name.split(/\s+/u).filter(Boolean);
-  if (parts.length === 0) return "—";
+  if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toLocaleUpperCase();
   return `${parts[0]![0]!}${parts[parts.length - 1]![0]!}`.toLocaleUpperCase();
 }

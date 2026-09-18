@@ -27,7 +27,7 @@ export function DashboardDateTrigger() {
     <>
       <button
         type="button"
-        className={styles.trigger}
+        className={`${styles.trigger} workspace-command-calendar`}
         aria-label="Open subscription calendar"
         aria-haspopup="dialog"
         aria-expanded={open}

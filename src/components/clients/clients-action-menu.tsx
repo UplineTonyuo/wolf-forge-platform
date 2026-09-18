@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 import {
   useEffect,
+  useId,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -51,6 +52,15 @@ export function ClientsActionMenu({
 
   const firstName =
     getFirstName(displayName);
+
+  /*
+   * The menu is mounted more than once per page (page header, status row,
+   * empty state) and each instance portals its own dialog into the body, so
+   * the title id has to be per-instance or the aria-labelledby lookups all
+   * resolve to whichever one rendered first.
+   */
+  const titleId =
+    useId();
 
   useEffect(() => {
     if (!open) {
@@ -118,7 +128,7 @@ export function ClientsActionMenu({
         className={styles.panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="clients-create-title"
+        aria-labelledby={titleId}
       >
         <header
           className={styles.header}
@@ -130,7 +140,7 @@ export function ClientsActionMenu({
               CLIENTS
             </span>
 
-            <h2 id="clients-create-title">
+            <h2 id={titleId}>
               Add
             </h2>
 

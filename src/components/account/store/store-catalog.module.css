@@ -256,6 +256,14 @@
 
 .deckToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 
+/*
+ * Two labels, one control. The full wording is the control's real name; the
+ * short one exists so the toolbar still fits one row on a phone. Only one is
+ * ever rendered — the other is display:none, so neither is a second control.
+ */
+.deckToggleFull { display: inline; }
+.deckToggleShort { display: none; }
+
 .search {
   position: relative;
   display: flex;
@@ -491,6 +499,25 @@
   color: var(--wf-navy);
   transform: translateX(3px);
 }
+
+/* The selected row's affordance: a checkmark instead of an arrow, since there
+   is nowhere further to go. Desktop never renders it (JSX only swaps in a
+   checkmark past the mobile list breakpoint's own selected styling applies),
+   but the color/size lives here rather than duplicated per breakpoint. */
+.tileCheck {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--wf-navy);
+}
+
+/*
+ * Mobile-only picker header (see the deck's JSX comment). Hidden everywhere
+ * except the mobile list layout below, where it stands in for the sticky
+ * chip + toggle row while the deck is open.
+ */
+.deckMobileHeader { display: none; }
 
 /* --- Flagship spotlight --------------------------------------------------- */
 
@@ -1006,30 +1033,150 @@
 /* Below this the portal rail becomes a drawer behind a 56px sticky top bar. */
 @media (max-width: 900px) {
   .controls { top: 56px; margin: 0 -18px; padding: 10px 18px; }
+
+  /*
+   * Under 16px, focusing the filter zooms the layout viewport on iOS Safari.
+   * Scoped to the portal's own mobile breakpoint rather than the tighter
+   * 720px one, because 721-900 is still the mobile layout.
+   */
+  .search input { font-size: 16px; }
 }
 
 @media (max-width: 720px) {
-  .store { gap: 20px; }
-  .masthead { padding: 26px 22px; border-radius: 14px; }
-  .mastheadCopy h1 { font-size: 28px; }
-  .mastheadCopy p { font-size: 13px; }
-  .index dd { font-size: 22px; }
-  /* The chip and its trigger wrap beneath the label rather than overrunning. */
-  .controlRow { flex-wrap: wrap; gap: 8px; }
-  /* Two tiles across on a phone, one on the narrowest; never a scroll rail. */
-  .deckGrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
-  .tile { padding: 12px; }
-  /* Under 16px, focusing the filter zooms the viewport on iOS. */
-  .search input { font-size: 16px; }
+  /* Bottom spacing keeps the last card clear of the fixed portal + trigger. */
+  .store { gap: 20px; padding-bottom: 14px; }
+
+  /*
+   * Denser hero. Same content and the same hierarchy, read in roughly 190px
+   * instead of 250 — the label, the title, a shorter description block and the
+   * two real counts, with the gaps between them doing the compressing.
+   */
+  .masthead { gap: 14px; padding: 18px 18px 16px; border-radius: 14px; }
+  .mastheadCopy { gap: 7px; }
+  .mastheadCopy h1 { font-size: 25px; }
+  .mastheadCopy p { font-size: 12.5px; line-height: 1.5; }
+  .index { gap: 18px; }
+  .index > div { gap: 2px; }
+  .index dt { font-size: 9px; letter-spacing: .14em; }
+  .index dd { font-size: 19px; }
+
+  /*
+   * The chip and the category trigger are one toolbar row, not two entries
+   * that wrap apart. The trigger takes whatever the chip leaves and centres
+   * its shorter label, so the pair reads as one control strip.
+   */
+  .controlRow { flex-wrap: nowrap; gap: 8px; }
+  .deckToggle { margin-left: 0; flex: 1 1 auto; justify-content: center; }
+  .deckToggleFull { display: none; }
+  .deckToggleShort { display: inline; }
+
+  /*
+   * A single-column list, not a card grid: two-across tiles at this width
+   * left names truncating and squeezed the count/arrow against the edge.
+   * Rows are divided by a hairline instead of each being its own bordered
+   * card, and the deck gets its own compact header (title + close) in place
+   * of the sticky chip + toggle row, which otherwise reads as a second,
+   * competing "Close" while the deck is open.
+   */
+  .controls:has(+ #store-category-deck[data-open="true"]) .controlRow { display: none; }
+
+  .deckMobileHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 6px;
+    color: var(--wf-navy);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .deckMobileClose {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 999px;
+    color: var(--wf-text-muted);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .deckMobileClose:hover,
+  .deckMobileClose:focus-visible { color: var(--wf-navy); background: var(--wf-navy-wash); }
+
+  .deckMobileClose svg { width: 16px; height: 16px; }
+
+  .deckGrid { grid-template-columns: 1fr; gap: 0; margin-top: 16px; }
+
+  .tile {
+    min-height: 56px;
+    padding: 0 4px;
+    gap: 8px;
+    border: 0;
+    border-bottom: 1px solid var(--wf-border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .tileMark { width: 30px; height: 30px; }
+  .tileMark svg { width: 15px; height: 15px; }
+
+  .tile:last-child { border-bottom: 0; }
+
+  /* A list row, not a floating card: no lift, no shadow, no gold underline. */
+  .tile:hover,
+  .tile:focus-visible,
+  .tile:active {
+    box-shadow: none;
+    transform: none;
+  }
+
+  .tile::after { display: none; }
+
+  .tile[aria-pressed="true"] {
+    border-bottom-color: var(--wf-border);
+    background: var(--wf-navy-wash);
+  }
+
+  .tileCopy {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    gap: 6px;
+  }
+
+  .tileCopy strong { flex: 1 1 auto; }
+  .tileCount { flex: 0 0 auto; }
+
   .grid { grid-template-columns: minmax(0, 1fr); }
-  .spotlight { padding: 22px 20px; }
-  .spotlight::before { left: 20px; }
-  .spotlightCopy h2 { font-size: 19px; }
-  .spotlightAside { flex-wrap: wrap; gap: 12px; }
-  .spotlightActions { flex-wrap: wrap; gap: 10px; }
+
+  /*
+   * The flagship reads as one compact block: price on its own line, the two
+   * real actions beneath it on one row, and the preview line clipped to three
+   * lines — the complete description is on the investment's own page.
+   */
+  .spotlight { gap: 12px; padding: 16px 16px 14px; border-radius: 14px; }
+  .spotlight::before { left: 16px; width: 64px; }
+  .spotlightCopy { gap: 6px; }
+  .spotlightCopy h2 { font-size: 19px; line-height: 1.22; }
+  .spotlightCopy p {
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .spotlightMeta { gap: 7px; font-size: 11px; }
+  .spotlightAside { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; }
+  .spotlightPrice { font-size: 24px; }
+  .spotlightActions { flex-wrap: nowrap; gap: 10px; }
   .spotlightAddSlot { width: auto; }
-  .spotlightActions { flex: 1 1 auto; }
-  .spotlightCta { flex: 1 1 auto; justify-content: center; }
+  .spotlightCta { flex: 1 1 auto; justify-content: space-between; height: 44px; padding: 0 16px; }
 }
 
 /* Touch surfaces never get a hover, so the card CTA is simply always legible. */

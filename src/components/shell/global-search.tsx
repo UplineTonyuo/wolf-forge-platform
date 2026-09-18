@@ -7,6 +7,7 @@ import {
   Hash,
   LoaderCircle,
   Search,
+  TicketIcon,
   X,
 } from "lucide-react";
 
@@ -62,6 +63,19 @@ function resultIcon(
   }
 
 
+  if (
+    kind === "ticket"
+  ) {
+
+    return (
+      <TicketIcon
+        size={16}
+        aria-hidden="true"
+      />
+    );
+  }
+
+
   return (
     <Hash
       size={16}
@@ -86,6 +100,13 @@ function resultTypeLabel(
     kind === "service"
   ) {
     return "SERVICE";
+  }
+
+
+  if (
+    kind === "ticket"
+  ) {
+    return "TICKET";
   }
 
 
@@ -405,12 +426,18 @@ export function GlobalSearch() {
       const typed =
         query.trim();
 
-      const title =
+      /*
+       * The server marks the field the result should complete to; without
+       * one, the result's own title is the only candidate. Either way the
+       * prediction is the remainder of a real search result, never a guess.
+       */
+      const target =
+        firstResult.predict ??
         firstResult.title;
 
 
       if (
-        !title
+        !target
           .toLocaleLowerCase()
           .startsWith(
             typed.toLocaleLowerCase(),
@@ -422,13 +449,13 @@ export function GlobalSearch() {
 
       if (
         typed.length >=
-        title.length
+        target.length
       ) {
         return "";
       }
 
 
-      return title.slice(
+      return target.slice(
         typed.length,
       );
 
@@ -532,8 +559,14 @@ export function GlobalSearch() {
 
       event.preventDefault();
 
+      /*
+       * Tab accepts what the ghost text was previewing -- the result's own
+       * prediction when it has one, otherwise its title -- so accepting and
+       * predicting can never disagree.
+       */
       setQuery(
-        firstResult.title,
+        firstResult.predict ??
+          firstResult.title,
       );
 
       return;
@@ -774,8 +807,8 @@ export function GlobalSearch() {
 
               <span>
                 Looking across clients,
-                projects, numbers and
-                services.
+                projects, tickets,
+                numbers and services.
               </span>
             </div>
           ) : error ? (
@@ -809,9 +842,9 @@ export function GlobalSearch() {
               </strong>
 
               <span>
-                Try a client name,
-                project title, service,
-                or project number.
+                Try a client, project,
+                service, or ticket
+                number.
               </span>
             </div>
           ) : (

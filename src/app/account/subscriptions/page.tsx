@@ -29,7 +29,6 @@ export default async function ClientSubscriptionsPage() {
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <span className="portal-eyebrow">Billing</span>
           <h1>Subscriptions</h1>
         </header>
         <p className="portal-empty">{loadError}</p>

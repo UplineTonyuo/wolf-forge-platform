@@ -13,8 +13,10 @@ import {
 
 export function ClientsHeaderTools({
   initialQuery,
+  initialStatus,
 }: {
   initialQuery: string;
+  initialStatus: string;
 }) {
   const searchParams =
     useSearchParams();
@@ -50,6 +52,7 @@ export function ClientsHeaderTools({
 
       <ClientsFilterPanel
         initialQuery={initialQuery}
+        initialStatus={initialStatus}
       />
     </div>
   );

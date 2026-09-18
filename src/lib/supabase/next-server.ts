@@ -33,6 +33,7 @@ import { StoreInterestRepository } from "../../repositories/store-interest-repos
 import { SubscriptionRepository } from "../../repositories/subscription-repository";
 import { FormRepository } from "../../repositories/form-repository";
 import { TicketRepository } from "../../repositories/ticket-repository";
+import { ProjectConversationRepository } from "../../repositories/project-conversation-repository";
 import { PermissionRepository } from "../../repositories/permission-repository";
 import { ProfileRepository } from "../../repositories/profile-repository";
 import { IntegrationRepository } from "../../repositories/integration-repository";
@@ -57,6 +58,7 @@ import { SubscriptionService } from "../../services/subscription-service";
 import { SubscriptionCalendarService } from "../../services/subscription-calendar-service";
 import { FormService } from "../../services/form-service";
 import { TicketService } from "../../services/ticket-service";
+import { ProjectConversationService } from "../../services/project-conversation-service";
 import { WfCardService } from "../../services/wf-card-service";
 import { ReportingService } from "../../services/reporting-service";
 import { StoreInterestService } from "../../services/store-interest-service";
@@ -474,6 +476,15 @@ export const getInternalContext = cache(async () => {
       }),
       forms: new FormService({ repository: new FormRepository(client) }),
       tickets: new TicketService({ repository: new TicketRepository(client) }),
+      /**
+       * Phase 2 native Project conversation read model (project_messages).
+       * Constructed so it is reachable through the canonical services
+       * container, but not called from any page or component yet -- the
+       * Ticket-backed `tickets.getForOrder` above remains the live path.
+       */
+      projectConversation: new ProjectConversationService({
+        repository: new ProjectConversationRepository(client),
+      }),
       orders: new OrderService({ repository: new OrderRepository(client) }),
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
@@ -542,6 +553,42 @@ export const getTeamActorContext = cache(async () => {
   return {
     actor,
     team: new TeamService({ repository: new TeamRepository(client) }),
+  };
+});
+
+/**
+ * The Ticket live-lane context — a verified actor and the Ticket service, and
+ * deliberately nothing else.
+ *
+ * One context serves BOTH surfaces, because a Ticket conversation is opened by
+ * staff and by the client who owns it, and the page render for each already
+ * reaches the same `TicketService.get()` -> `app_get_ticket_detail_with_avatars`
+ * call through whichever context that route resolved. Resolving the caller's
+ * role here would add a query that decides nothing: the RPC re-derives the
+ * subject from `auth.uid()` and refuses a Ticket the actor cannot see, and
+ * `app_get_ticket_detail` filters internal notes out for a client actor inside
+ * Postgres (`actor.role_name <> 'client' or message.visibility = 'client'`).
+ * A client therefore cannot receive an internal note through this route even
+ * if it asked for one by id.
+ *
+ * Returns null instead of redirecting: a poll that has lost its session should
+ * receive 401, not a redirect to a login page it cannot render.
+ */
+export const getTicketActorContext = cache(async () => {
+  const supabase = await createNextServerSupabaseClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return null;
+
+  const client = createUserSupabaseClient(
+    readLocalFrontendEnvironment(),
+    data.session.access_token,
+  );
+  const actor = await verifyActor(client).catch(() => null);
+  if (!actor) return null;
+
+  return {
+    actor,
+    tickets: new TicketService({ repository: new TicketRepository(client) }),
   };
 });
 
@@ -693,6 +740,14 @@ export const getClientContext = cache(async () => {
       }),
       forms: new FormService({ repository: new FormRepository(client) }),
       tickets: new TicketService({ repository: new TicketRepository(client) }),
+      /**
+       * Phase 2 native Project conversation read model, same authorization
+       * boundary as `tickets.getForOrder` above (require_order_conversation_access
+       * already supports the client role). Not called from any client page yet.
+       */
+      projectConversation: new ProjectConversationService({
+        repository: new ProjectConversationRepository(client),
+      }),
       wallets: new CompanyWalletService({ repository: new CompanyWalletRepository(client) }),
       wfCard: new WfCardService({ repository: new WfCardRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),

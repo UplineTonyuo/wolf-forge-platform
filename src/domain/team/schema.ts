@@ -483,6 +483,7 @@ export type TeamMessageRow = {
   reply_source_author_name?: string | null;
   reply_source_deleted?: boolean;
   forwarded_from_message_id?: string | null;
+  forwarded_from_ticket_message_id?: string | null;
   forwarded_from_author_name?: string | null;
   deleted_for_everyone?: boolean;
   voice_storage_path?: string | null;

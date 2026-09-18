@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { signOutAction } from "../../app/actions/auth";
 import type { InternalUser } from "../../lib/supabase/next-server";
 import { AccountAvatar } from "../ui/account-avatar";
+import { useHeaderOverlay } from "./use-header-overlay";
 
 function SignOutButton() {
   const { pending } = useFormStatus();
@@ -108,6 +109,14 @@ export function AccountMenu({ user, mobile = false, sidebar = false }: { user: I
   useEffect(() => {
     if (open) menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [open]);
+
+  /*
+   * The sidebar rail and the command bar each mount one of these; only the
+   * command bar instance needs to close when another header surface (Chat,
+   * Notifications, Quick Action) opens, so the sidebar one gets its own id
+   * and never actually coordinates with anything.
+   */
+  useHeaderOverlay(sidebar ? "profile-sidebar" : "profile", open, close);
 
   const roleLabel = `${user.role[0]?.toUpperCase() ?? ""}${user.role.slice(1)}`;
 

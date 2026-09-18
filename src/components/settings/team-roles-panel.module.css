@@ -995,6 +995,23 @@
   }
 }
 
+/*
+ * This panel owns its own page shell instead of rendering through
+ * `PageFrame`, so it also has to own the page gutter PageFrame would have
+ * given it. `.page` is `width: min(1180px, 100%)` with no horizontal padding,
+ * which at mobile widths put the title, the summary line, the segmented
+ * control and every card flush against both viewport edges -- the only route
+ * in the internal app without the shared 16px gutter. Matching `.page-frame`
+ * here rather than inventing a Team-only inset keeps the whole workspace on
+ * one boundary.
+ */
+@media (max-width: 767px) {
+  .page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
 @media (max-width: 650px) {
   .pageHeader {
     align-items: stretch;

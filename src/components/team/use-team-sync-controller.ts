@@ -30,7 +30,12 @@ const TEAM_DIGEST_SYNC_MS = 60_000;
 
 type TeamSyncControllerOptions = {
   active: boolean;
-  /** Whether the Team drawer is currently open — the CLOSED/OPEN axis. */
+  /**
+   * The CLOSED/OPEN cadence axis: whether a Team conversation is the visible
+   * surface right now. False whenever the drawer is closed, and also while
+   * the drawer shows the Tickets pane, whose own Ticket polling covers that
+   * view — the lanes then take TEAM_LIVE_CLOSED_MS / TEAM_BACKGROUND_CLOSED_MS.
+   */
   open: boolean;
   /** Changing this forces an immediate wake: conversation switch, pane change, task-scope change. */
   syncKey: string;

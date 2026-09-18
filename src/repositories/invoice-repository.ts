@@ -98,6 +98,13 @@ export class InvoiceRepository {
     }));
   }
 
+  /** invoice_items_order_unique guarantees at most one row per order. */
+  async findItemByOrderId(orderId: string): Promise<InvoiceItemRow | null> {
+    const result = await this.client.from("invoice_items").select().eq("order_id", orderId).maybeSingle();
+    if (result.error) throw mapDatabaseError(result.error, "Invoice item");
+    return (result.data as InvoiceItemRow | null) ?? null;
+  }
+
   async getById(id: string): Promise<InvoiceDetail> {
     const [invoiceResult, companyResult, itemResult, paymentResult, refundResult, activityResult, financials] = await Promise.all([
       this.client.from("invoices").select().eq("id", id).is("archived_at", null).single(),

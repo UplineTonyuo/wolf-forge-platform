@@ -141,9 +141,16 @@ function renderCatalog() {
   return render(<StoreCatalogView catalog={catalog} />);
 }
 
-/** The single control that opens and closes the deck, by whichever label it wears. */
+/**
+ * The primary control that opens and closes the deck, by whichever label it
+ * wears. The mobile-only header close button inside the deck shares the
+ * "Close categories" label by design (only one is ever visible at a time via
+ * CSS, which jsdom does not apply), so this is scoped to exclude it.
+ */
 function deckToggle() {
-  return screen.getByRole("button", { name: /Close categories|Change category|Explore all categories/ });
+  const matches = screen.getAllByRole("button", { name: /Close categories|Change category|Explore all categories/ });
+  const deck = document.getElementById("store-category-deck");
+  return matches.find((button) => !deck?.contains(button)) ?? matches[0]!;
 }
 
 function openDeck() {

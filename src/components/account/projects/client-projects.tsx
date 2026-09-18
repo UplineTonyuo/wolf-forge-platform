@@ -3,6 +3,8 @@ import Link from "next/link";
 import { projectAttention } from "../../../domain/client-portal/attention";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
 import { clientProjectIsOpen } from "../../../domain/orders/client-projections";
+import type { TicketDetail } from "../../../domain/tickets/schema";
+import { ProjectConversation } from "../../tickets/project-conversation";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
 
@@ -68,7 +70,6 @@ export function ClientProjectsList({ projects }: { projects: ClientProjectView[]
   return (
     <div className="portal-page">
       <header className="portal-page-head">
-        <span className="portal-eyebrow">Work</span>
         <h1>Projects</h1>
         <p>
           {projects.length === 0
@@ -117,8 +118,18 @@ export function ClientProjectsList({ projects }: { projects: ClientProjectView[]
   );
 }
 
-export function ClientProjectDetail({ project }: { project: ClientProjectView }) {
+export function ClientProjectDetail({
+  project,
+  conversation,
+}: {
+  project: ClientProjectView;
+  conversation: TicketDetail | null;
+}) {
   const attention = projectAttention(project.status);
+  const conversationTicket = conversation?.ticket ?? null;
+  const repliesDisabled = conversationTicket
+    ? conversationTicket.status === "closed" || Boolean(conversationTicket.archived_at)
+    : false;
 
   /*
    * Only facts the read model actually carries. A field with no value is shown
@@ -127,11 +138,11 @@ export function ClientProjectDetail({ project }: { project: ClientProjectView })
    */
   const facts: Array<{ label: string; value: string }> = [
     { label: "Reference", value: project.reference },
-    { label: "Service", value: project.serviceName ?? "—" },
+    { label: "Service", value: project.serviceName ?? "Not set" },
     { label: "Opened", value: project.createdLabel },
     { label: "Started", value: project.startedLabel ?? "Not started yet" },
     { label: "Due", value: project.dueLabel ?? "No due date" },
-    { label: "Completed", value: project.completedLabel ?? "—" },
+    { label: "Completed", value: project.completedLabel ?? "Not completed yet" },
   ];
 
   return (
@@ -200,10 +211,17 @@ export function ClientProjectDetail({ project }: { project: ClientProjectView })
         </dl>
       </section>
 
-      <p className="portal-note">
-        Questions about this project? <Link href="/account/messages">Send us a message</Link> and
-        our team will pick it up.
-      </p>
+      <section className="portal-section" aria-labelledby="portal-project-conversation">
+        <h2 id="portal-project-conversation" className="sr-only">
+          Conversation
+        </h2>
+        <ProjectConversation
+          orderId={project.id}
+          heading={project.reference}
+          messages={conversation?.messages ?? []}
+          repliesDisabled={repliesDisabled}
+        />
+      </section>
     </div>
   );
 }

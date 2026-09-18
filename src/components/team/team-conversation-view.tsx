@@ -936,7 +936,8 @@ export function TeamConversationPane({
                           }}
                           data-team-message-body={message.id}
                         >
-                          {message.forwardedFromMessageId && !message.deletedForEveryone ? (
+                          {(message.forwardedFromMessageId || message.forwardedFromTicketMessageId)
+                            && !message.deletedForEveryone ? (
                             <span className={styles.forwardedLabel}>
                               Forwarded{message.forwardedFromAuthorName
                                 ? ` from ${message.forwardedFromAuthorName}`

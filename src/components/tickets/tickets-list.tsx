@@ -2,14 +2,15 @@
 
 import { createInternalTicketAction } from "../../app/actions/tickets";
 
-import { Bold, Heading1, Italic, Link2, Plus, Redo2, Search, Undo2, X } from "lucide-react";
+import { Bold, Filter, Heading1, Italic, Link2, Plus, Redo2, Search, TicketIcon, Undo2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatDateTime } from "../../lib/format";
-import { ticketPriorityOptions, ticketStatusOptions } from "../../lib/tickets/presentation";
+import { ticketPriorityOptions } from "../../lib/tickets/presentation";
 import { TicketPriorityBadge, TicketStatusBadge } from "./ticket-badges";
+import { TicketsFilterPanel, TicketsFilterSheet, type InboxFilter } from "./tickets-filter-panel";
 import styles from "./tickets.module.css";
 
 export function TicketsList({
@@ -28,7 +29,9 @@ export function TicketsList({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
     const [priority, setPriority] = useState("all");
-  const [openFilter, setOpenFilter] = useState<"status" | "priority" | null>(null);
+  const [inbox, setInbox] = useState<InboxFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [mobileFilters, setMobileFilters] = useState(false);
   const filterAreaRef = useRef<HTMLDivElement>(null);
 
   const ticketDialogRef =
@@ -77,18 +80,22 @@ export function TicketsList({
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
 
+      /* The mobile sheet portals to `document.body`, outside the toolbar, so
+         its own clicks would otherwise read as "outside" and close it. */
+      if (mobileFilters) return;
+
       if (
         target instanceof Node &&
         filterAreaRef.current &&
         !filterAreaRef.current.contains(target)
       ) {
-        setOpenFilter(null);
+        setFilterOpen(false);
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setOpenFilter(null);
+        setFilterOpen(false);
       }
     }
 
@@ -99,14 +106,39 @@ export function TicketsList({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
+  }, [mobileFilters]);
+
+  /* The list already switches to its mobile toolbar at 800px, so the Filter
+     button opens the same sheet the rest of Wolf Forge uses below that. */
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+
+    const mobile = window.matchMedia("(max-width: 800px)");
+    const sync = () => setMobileFilters(mobile.matches);
+
+    sync();
+    mobile.addEventListener("change", sync);
+    return () => mobile.removeEventListener("change", sync);
   }, []);
   const visible = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
     return summaries.filter((ticket) => {
       const searchable = [ticket.public_ref, ticket.subject, ticket.company_name, ticket.client_name, ticket.assigned_to_name].filter(Boolean).join(" ").toLocaleLowerCase();
-      return (!term || searchable.includes(term)) && (status === "all" || ticket.status === status) && (priority === "all" || ticket.priority === priority);
+      return (!term || searchable.includes(term)) && (status === "all" || ticket.status === status) && (priority === "all" || ticket.priority === priority) && (inbox === "all" || (inbox === "in" ? Boolean(ticket.inbox_added_at) : !ticket.inbox_added_at));
     });
-  }, [priority, query, status, summaries]);
+  }, [inbox, priority, query, status, summaries]);
+
+  const activeFilterCount =
+    Number(status !== "all") +
+    Number(priority !== "all") +
+    Number(inbox !== "all");
+
+  /* Filters only -- the Ticket search is deliberately left standing. */
+  function clearTicketFilters() {
+    setStatus("all");
+    setPriority("all");
+    setInbox("all");
+  }
 
   // WF TICKET WYSIWYG START
 
@@ -471,7 +503,7 @@ export function TicketsList({
     .slice(0, 8);
 
   function openTicketDialog() {
-    setOpenFilter(null);
+    setFilterOpen(false);
     setCreateTicketError(null);
     ticketDialogRef.current?.showModal();
   }
@@ -549,133 +581,29 @@ export function TicketsList({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search reference, subject, client..."
+            placeholder="Search ticket ID or person..."
           />
         </label>
-        <div
-          className={styles.filterDropdown}
-          data-open={openFilter === "status"}
+        <button
+          type="button"
+          className={
+            filterOpen && !mobileFilters
+              ? styles.filterButtonActive
+              : styles.filterButton
+          }
+          aria-expanded={filterOpen}
+          onClick={() =>
+            setFilterOpen((current) => !current)
+          }
         >
-          <button
-            className={styles.filterTrigger}
-            type="button"
-            aria-expanded={openFilter === "status"}
-            onClick={() =>
-              setOpenFilter((current) =>
-                current === "status" ? null : "status"
-              )
-            }
-          >
-            <span>
-              {status === "all"
-                ? "All statuses"
-                : ticketStatusOptions.find(
-                    ([value]) => value === status,
-                  )?.[1] ?? "All statuses"}
+          <Filter size={15} aria-hidden="true" />
+          Filter
+          {activeFilterCount > 0 ? (
+            <span className={styles.filterCount}>
+              {activeFilterCount}
             </span>
-
-            <span
-              className={styles.filterChevron}
-              aria-hidden="true"
-            />
-          </button>
-
-          <div
-            className={styles.filterMenu}
-            aria-hidden={openFilter !== "status"}
-          >
-            <button
-              type="button"
-              className={styles.filterOption}
-              data-active={status === "all"}
-              tabIndex={openFilter === "status" ? 0 : -1}
-              onClick={() => {
-                setStatus("all");
-                setOpenFilter(null);
-              }}
-            >
-              All statuses
-            </button>
-
-            {ticketStatusOptions.map(([value, label]) => (
-              <button
-                type="button"
-                className={styles.filterOption}
-                data-active={status === value}
-                tabIndex={openFilter === "status" ? 0 : -1}
-                key={value}
-                onClick={() => {
-                  setStatus(value);
-                  setOpenFilter(null);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div
-          className={styles.filterDropdown}
-          data-open={openFilter === "priority"}
-        >
-          <button
-            className={styles.filterTrigger}
-            type="button"
-            aria-expanded={openFilter === "priority"}
-            onClick={() =>
-              setOpenFilter((current) =>
-                current === "priority" ? null : "priority"
-              )
-            }
-          >
-            <span>
-              {priority === "all"
-                ? "All priorities"
-                : ticketPriorityOptions.find(
-                    ([value]) => value === priority,
-                  )?.[1] ?? "All priorities"}
-            </span>
-
-            <span
-              className={styles.filterChevron}
-              aria-hidden="true"
-            />
-          </button>
-
-          <div
-            className={styles.filterMenu}
-            aria-hidden={openFilter !== "priority"}
-          >
-            <button
-              type="button"
-              className={styles.filterOption}
-              data-active={priority === "all"}
-              tabIndex={openFilter === "priority" ? 0 : -1}
-              onClick={() => {
-                setPriority("all");
-                setOpenFilter(null);
-              }}
-            >
-              All priorities
-            </button>
-
-            {ticketPriorityOptions.map(([value, label]) => (
-              <button
-                type="button"
-                className={styles.filterOption}
-                data-active={priority === value}
-                tabIndex={openFilter === "priority" ? 0 : -1}
-                key={value}
-                onClick={() => {
-                  setPriority(value);
-                  setOpenFilter(null);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+          ) : null}
+        </button>
         {canCreate ? (
           <button
             type="button"
@@ -686,7 +614,32 @@ export function TicketsList({
             Add ticket
           </button>
         ) : null}
+
+        {filterOpen && !mobileFilters ? (
+          <TicketsFilterPanel
+            status={status}
+            priority={priority}
+            inbox={inbox}
+            onStatusChange={setStatus}
+            onPriorityChange={setPriority}
+            onInboxChange={setInbox}
+            onClear={clearTicketFilters}
+            onApply={() => setFilterOpen(false)}
+          />
+        ) : null}
       </div>
+
+      <TicketsFilterSheet
+        open={filterOpen && mobileFilters}
+        onClose={() => setFilterOpen(false)}
+        status={status}
+        priority={priority}
+        inbox={inbox}
+        onStatusChange={setStatus}
+        onPriorityChange={setPriority}
+        onInboxChange={setInbox}
+        onClear={clearTicketFilters}
+      />
 
       <div className={styles.tableWrap}>
         <table>
@@ -711,6 +664,9 @@ export function TicketsList({
                   >
                     <strong>{ticket.public_ref}</strong>
                     <span>{ticket.subject}</span>
+                    {ticket.inbox_added_at ? (
+                      <span className={styles.inboxTag}>In Inbox</span>
+                    ) : null}
                   </Link>
                 </td>
 
@@ -776,28 +732,42 @@ export function TicketsList({
               href={`/tickets/${ticket.ticket_id}`}
               key={ticket.ticket_id}
             >
-              <header>
-                <strong>{ticket.public_ref}</strong>
-                <TicketStatusBadge status={ticket.status} />
-              </header>
+              <TicketIcon aria-hidden="true" className={styles.mobileTicketIcon} />
+              <span className={styles.mobileTicketBody}>
+                <header>
+                  <strong>{ticket.public_ref}</strong>
+                  <TicketStatusBadge status={ticket.status} />
+                </header>
 
-              <h2>{ticket.subject}</h2>
+                <h2>{ticket.subject}</h2>
 
-              <p>
-                {ticket.company_name ??
-                  ticket.client_name ??
-                  "Contact Form guest"}
-              </p>
+                <p>
+                  {ticket.company_name ??
+                    ticket.client_name ??
+                    "Contact Form guest"}
+                </p>
 
-              <footer>
-                <TicketPriorityBadge priority={ticket.priority} />
+                {/*
+                 * State and metadata share the footer row: the In Inbox
+                 * label sits with the priority badge on the left, and the
+                 * timestamp is pushed to the right edge by CSS. Keeping it
+                 * here rather than between the subject and client is what
+                 * makes the card scan as identity, then state.
+                 */}
+                <footer>
+                  {ticket.inbox_added_at ? (
+                    <span className={styles.inboxTag}>In Inbox</span>
+                  ) : null}
 
-                <span>
-                  {formatDateTime(
-                    ticket.last_message_at ?? ticket.updated_at,
-                  )}
-                </span>
-              </footer>
+                  <TicketPriorityBadge priority={ticket.priority} />
+
+                  <span>
+                    {formatDateTime(
+                      ticket.last_message_at ?? ticket.updated_at,
+                    )}
+                  </span>
+                </footer>
+              </span>
             </Link>
           ))}
         </div>

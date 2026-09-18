@@ -4,6 +4,7 @@
 
 import { useMemo, useState } from "react";
 import { PersonSilhouette } from "../ui/person-silhouette";
+import { projectInitials } from "../../domain/orders/projections";
 import styles from "./tickets.module.css";
 
 function safeAvatarSource(
@@ -40,8 +41,15 @@ function safeAvatarSource(
 
 export function TicketMessageAvatar({
   src,
+  name,
 }: {
   src?: string | null;
+  /**
+   * Real display name to derive initials from when there is no stored
+   * avatar. Omit to keep the generic person-silhouette fallback (used where
+   * no reliable display name is guaranteed, e.g. internal notes).
+   */
+  name?: string;
 }) {
   const safeSource =
     useMemo(
@@ -80,12 +88,18 @@ export function TicketMessageAvatar({
       aria-hidden="true"
       data-testid="ticket-avatar-fallback"
     >
-      {/*
-        * A person, not the Wolf Forge mark. A message author is a human, and
-        * the brand in that slot read as though Wolf Forge itself had written
-        * the message rather than a member of the team.
-        */}
-      <PersonSilhouette />
+      {name ? (
+        projectInitials(name)
+      ) : (
+        <>
+          {/*
+            * A person, not the Wolf Forge mark. A message author is a human,
+            * and the brand in that slot read as though Wolf Forge itself had
+            * written the message rather than a member of the team.
+            */}
+          <PersonSilhouette />
+        </>
+      )}
     </span>
   );
 }

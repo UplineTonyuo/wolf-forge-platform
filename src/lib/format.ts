@@ -1,16 +1,16 @@
 export function formatDate(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
 }
 
 /** Compact "Aug 12" label used by dense operational tables. */
 export function formatShortDate(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
 export function formatDateTime(value: string | null): string {
-  if (!value) return "—";
+  if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
     month: "short",

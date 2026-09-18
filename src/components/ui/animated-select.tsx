@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, LoaderCircle } from "lucide-react";
-import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useAnimatedPopover } from "./use-animated-popover";
 import styles from "./animated-select.module.css";
 
@@ -11,6 +11,7 @@ export type AnimatedSelectOption = {
   count?: number;
   description?: string;
   disabled?: boolean;
+  leading?: ReactNode;
 };
 
 const VIEWPORT_MARGIN = 12;
@@ -176,7 +177,14 @@ export function AnimatedSelect({
         onClick={() => (render ? closeMenu() : openMenu(true))}
       >
         <span className={styles.triggerValue}>
-          {selected?.label ?? "Select"}{selected?.count !== undefined && value !== "all" ? ` \u00b7 ${selected.count}` : ""}
+          {selected?.leading ? (
+            <>
+              {selected.leading}
+              <span className={styles.triggerLabel}>{selected.label}</span>
+            </>
+          ) : (
+            <>{selected?.label ?? "Select"}{selected?.count !== undefined && value !== "all" ? ` \u00b7 ${selected.count}` : ""}</>
+          )}
         </span>
 
         {loading ? (
@@ -221,12 +229,24 @@ export function AnimatedSelect({
               onClick={() => chooseOption(option)}
               title={option.label}
             >
-              <span className={styles.optionText}>
-                <span className={styles.optionLabel}>{option.label}</span>
-                {option.description ? (
-                  <span className={styles.optionDescription}>{option.description}</span>
-                ) : null}
-              </span>
+              {option.leading ? (
+                <span className={styles.optionContent}>
+                  {option.leading}
+                  <span className={styles.optionText}>
+                    <span className={styles.optionLabel}>{option.label}</span>
+                    {option.description ? (
+                      <span className={styles.optionDescription}>{option.description}</span>
+                    ) : null}
+                  </span>
+                </span>
+              ) : (
+                <span className={styles.optionText}>
+                  <span className={styles.optionLabel}>{option.label}</span>
+                  {option.description ? (
+                    <span className={styles.optionDescription}>{option.description}</span>
+                  ) : null}
+                </span>
+              )}
 
               {option.count !== undefined ? <span className={styles.optionCount}>{option.count}</span> : null}
               {option.value === value ? (

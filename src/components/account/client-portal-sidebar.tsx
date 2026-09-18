@@ -8,21 +8,19 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
-  Menu,
   MessagesSquare,
   ReceiptText,
   ShoppingCart,
   Wallet,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import { signOutAction } from "../../app/actions/auth";
 import { WolfForgeMark } from "../shell/wolf-forge-mark";
+import { usePortalDrawer } from "./command/portal-drawer";
 import {
   portalRouteIsCurrent,
-  portalTitleForPath,
   type PortalNavigationCategory,
   type PortalNavigationItem,
 } from "./portal-nav-registry";
@@ -68,29 +66,16 @@ export function ClientPortalSidebar({
   displayName: string | null;
 }) {
   const pathname = usePathname();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawer = usePortalDrawer();
+  const drawerOpen = drawer?.open ?? false;
 
   // Choosing a destination closes the mobile drawer. Handled on the event
   // rather than in an effect on pathname, so re-selecting the current route
   // still dismisses it and no cascading render is triggered.
-  const closeDrawer = () => setDrawerOpen(false);
+  const closeDrawer = () => drawer?.setOpen(false);
 
   return (
     <>
-      <div className="portal-topbar">
-        <button
-          type="button"
-          className="portal-drawer-toggle"
-          aria-expanded={drawerOpen}
-          aria-controls="portal-navigation"
-          onClick={() => setDrawerOpen((open) => !open)}
-        >
-          {drawerOpen ? <X aria-hidden={true} /> : <Menu aria-hidden={true} />}
-          <span className="sr-only">{drawerOpen ? "Close menu" : "Open menu"}</span>
-        </button>
-        <span className="portal-topbar-title">{portalTitleForPath(pathname)}</span>
-      </div>
-
       {drawerOpen ? (
         <button
           type="button"

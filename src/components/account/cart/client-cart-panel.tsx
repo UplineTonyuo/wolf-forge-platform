@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ShoppingCart, Trash2 } from "lucide-react";
+import { ArrowRight, Info, ShoppingCart, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -279,8 +279,11 @@ export function ClientCartPanel() {
                   * would be both alarming and out of proportion.
                   */}
                 <p className={styles.note}>
-                  Nothing is ordered or charged. Adding an investment lets your Wolf Forge team know
-                  you are interested, so they can help you explore it.
+                  <Info aria-hidden={true} />
+                  <span>
+                    Nothing is ordered or charged. Adding an investment lets your Wolf Forge team
+                    know you are interested, so they can help you explore it.
+                  </span>
                 </p>
               </div>
             </div>
@@ -289,17 +292,21 @@ export function ClientCartPanel() {
       >
         {count === 0 ? (
           <div className={styles.empty}>
-            <ShoppingCart aria-hidden={true} />
-            {/* The disclosure lives in both states, so it is present before anything is added. */}
-            <p>
-              Your cart is empty. Browse the Store and add investments you would like to explore —
-              adding one lets your Wolf Forge team know you are interested. Nothing is ordered or
-              charged.
-            </p>
-            <Link className={styles.emptyAction} href="/account/store" onClick={close}>
-              Browse investments
-              <ArrowRight aria-hidden={true} />
-            </Link>
+            <span className={styles.emptyIcon}>
+              <ShoppingCart aria-hidden={true} />
+            </span>
+            <div className={styles.emptyCopy}>
+              <h3>Your cart is empty</h3>
+              {/* The disclosure lives in both states, so it is present before anything is added. */}
+              <p>
+                Browse the Store and add investments you would like to explore. Adding one lets
+                your Wolf Forge team know you are interested. Nothing is ordered or charged.
+              </p>
+              <Link className={styles.emptyAction} href="/account/store" onClick={close}>
+                Browse investments
+                <ArrowRight aria-hidden={true} />
+              </Link>
+            </div>
           </div>
         ) : (
           <ul className={styles.list} data-clearing={clearing || undefined}>

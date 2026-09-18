@@ -192,8 +192,8 @@ describe("the request cart", () => {
 
     const body = cartDraftBody(items);
     // Every selected investment reaches the draft, with the price the cart showed.
-    expect(body).toContain("- Local SEO (Local SEO) — $500 / month");
-    expect(body).toContain("- GMB Optimization (GBP Only SEO) — $297");
+    expect(body).toContain("- Local SEO (Local SEO): $500 / month");
+    expect(body).toContain("- GMB Optimization (GBP Only SEO): $297");
     // Nothing is committed to or priced differently in the handoff.
     expect(body).not.toMatch(/total|order|pay|invoice/i);
 

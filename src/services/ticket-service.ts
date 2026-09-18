@@ -1,7 +1,12 @@
 import {
   assignTicketSchema,
   createTicketSchema,
+  ticketAttachmentSubmissionSchema,
+  ticketAttachmentTargetSchema,
+  ticketForwardToTeamInputSchema,
   ticketMessageInputSchema,
+  ticketReactionInputSchema,
+  ticketReplyToMessageInputSchema,
   updateTicketPrioritySchema,
   updateTicketStatusSchema,
 } from "../domain/tickets/schema";
@@ -12,8 +17,61 @@ import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor 
 export class TicketService {
   constructor(private readonly dependencies: ServiceDependencies<TicketRepository>) {}
 
+  getForOrder(orderId: unknown) {
+    return this.dependencies.repository.getForOrder(parseInput(uuidSchema, orderId));
+  }
+
+  prepareAttachment(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.prepareAttachment(parseInput(ticketAttachmentTargetSchema, input));
+  }
+
+  sendWithAttachment(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.sendWithAttachment(parseInput(ticketAttachmentSubmissionSchema, input));
+  }
+
+  attachmentDownload(attachmentId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.attachmentDownload(parseInput(uuidSchema, attachmentId));
+  }
+
+  sendForOrder(orderId: unknown, input: unknown, internalNote: boolean, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.sendForOrder(
+      parseInput(uuidSchema, orderId), parseInput(ticketMessageInputSchema, input), internalNote,
+    );
+  }
+
+  replyToMessage(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.replyToMessage(
+      parseInput(uuidSchema, id),
+      parseInput(ticketReplyToMessageInputSchema, input),
+    );
+  }
+
+  toggleReaction(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.toggleReaction(
+      parseInput(ticketReactionInputSchema, input),
+    );
+  }
+
+  forwardToTeam(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.forwardToTeam(
+      parseInput(ticketForwardToTeamInputSchema, input),
+    );
+  }
+
   list(includeArchived = false) {
     return this.dependencies.repository.list(includeArchived);
+  }
+
+  /** Inbox-only Ticket list. See TicketRepository.listInbox. */
+  listInbox() {
+    return this.dependencies.repository.listInbox();
   }
 
   get(id: unknown) {
@@ -39,6 +97,11 @@ export class TicketService {
       parseInput(uuidSchema, id),
       parseInput(ticketMessageInputSchema, input),
     );
+  }
+
+  unsendInternalNote(messageId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.unsendInternalNote(parseInput(uuidSchema, messageId));
   }
 
   updateStatus(id: unknown, input: unknown, actor: UserMutationActor) {
@@ -68,5 +131,10 @@ export class TicketService {
   archive(id: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.archive(parseInput(uuidSchema, id));
+  }
+
+  addToInbox(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.addToInbox(parseInput(uuidSchema, id));
   }
 }

@@ -11,6 +11,21 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   /**
+   * Next blocks cross-origin requests to dev-only assets/endpoints (JS
+   * chunks, HMR websocket, Server Actions) by default — only the server's own
+   * detected hostname is allowed. `--hostname 0.0.0.0` makes the dev server
+   * reachable over LAN, but without this the browser never gets a working
+   * client bundle from that origin: it hydrates never, so contenteditable
+   * still takes typing (a native browser feature) while every click handler
+   * (send, reply, toolbar, attach) is dead. Dev-only mechanism per Next's own
+   * docs — inert in a production build regardless, but scoped explicitly so
+   * that stays true on a framework upgrade too.
+   */
+  ...(process.env.NODE_ENV !== "production"
+    ? { allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.95"] }
+    : {}),
+
+  /**
    * Browser production source maps stay OFF (D-110).
    *
    * This is already Next's default — the point of pinning it is auditability.
@@ -26,9 +41,10 @@ const nextConfig: NextConfig = {
 
   experimental: {
     authInterrupts: true,
-    // Pin Next's existing default so a framework upgrade cannot silently make
-    // every Server Action accept an unbounded or unexpectedly larger body.
-    serverActions: { bodySizeLimit: "1mb" },
+    // Ticket attachments allow up to TICKET_ATTACHMENT_MAX_BYTES (5 MiB); this
+    // must exceed that to leave room for multipart/FormData overhead, or valid
+    // attachments get rejected by Next before the app's own 5 MiB check runs.
+    serverActions: { bodySizeLimit: "6mb" },
   },
 
   /**

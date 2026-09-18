@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowUpRight, RotateCcw, Search, X } from "lucide-react";
-import Link from "next/link";
+import { RotateCcw, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { updateInvestmentIntentStatusAction } from "../../app/actions/store-interest";
 import {
@@ -17,8 +16,13 @@ import {
   type InvestmentIntentStatus,
 } from "../../domain/store-interest/schema";
 import { formatDate, formatDateTime } from "../../lib/format";
+import { InvestmentIntentActions } from "./investment-intent-actions";
 import { AnimatedSelect } from "../ui/animated-select";
 import { EmptyState } from "../ui/list-states";
+import {
+  FilterOptionGroup,
+  MobileFilterSheet,
+} from "../ui/mobile-filter-sheet";
 import adminList from "../ui/admin-list.module.css";
 import styles from "./investment-intent.module.css";
 
@@ -137,18 +141,40 @@ export function InvestmentIntentWorkspace({
   const [statusOverrides, setStatusOverrides] = useState<
     Record<string, InvestmentIntentStatus>
   >({});
+  /*
+   * The same shape, for the same reason: creating a conversation is revalidated
+   * on the server, and the override only keeps the row's own menu from offering
+   * "Create" again during the round trip. It is never the source of truth --
+   * the row's authoritative active ticket id replaces it on the next render.
+   */
+  const [conversationOverrides, setConversationOverrides] = useState<
+    Record<string, string>
+  >({});
   const [status, setStatus] = useState<StatusFilter>("all");
   const [inCartOnly, setInCartOnly] = useState(false);
   const [query, setQuery] = useState("");
 
+  /*
+   * The mobile Filter sheet edits a draft and commits it on Apply, the same
+   * contract the Clients filter panel uses. Draft and applied state are seeded
+   * from each other at the two points that matter: on open, and on commit.
+   */
+  const [draftStatus, setDraftStatus] = useState<StatusFilter>("all");
+  const [draftInCartOnly, setDraftInCartOnly] = useState(false);
+
   const resolved = useMemo(
     () =>
-      intents.map((intent) =>
-        statusOverrides[intent.id]
-          ? { ...intent, status: statusOverrides[intent.id]! }
-          : intent,
-      ),
-    [intents, statusOverrides],
+      intents.map((intent) => {
+        const status = statusOverrides[intent.id];
+        const activeTicketId = conversationOverrides[intent.id];
+        if (!status && !activeTicketId) return intent;
+        return {
+          ...intent,
+          status: status ?? intent.status,
+          activeTicketId: activeTicketId ?? intent.activeTicketId,
+        };
+      }),
+    [conversationOverrides, intents, statusOverrides],
   );
 
   const counts = useMemo(() => investmentIntentCounts(resolved), [resolved]);
@@ -162,6 +188,9 @@ export function InvestmentIntentWorkspace({
   function countFor(filter: StatusFilter): number {
     return filter === "all" ? counts.total : statusCounts[filter];
   }
+
+  const activeFilterCount =
+    (status === "all" ? 0 : 1) + (inCartOnly ? 1 : 0);
 
   return (
     <>
@@ -190,7 +219,15 @@ export function InvestmentIntentWorkspace({
       </dl>
 
       <div className={adminList.toolbar}>
-        <div className={adminList.filters} role="group" aria-label="Investment intent filters">
+        {/*
+          * Desktop only. At mobile widths this whole group moves into the
+          * Filter sheet below -- same statuses, same counts, same state.
+          */}
+        <div
+          className={`${adminList.filters} ${styles.statusFilters}`}
+          role="group"
+          aria-label="Investment intent filters"
+        >
           {statusFilters.map((filter) => (
             <button
               key={filter}
@@ -232,6 +269,53 @@ export function InvestmentIntentWorkspace({
               </button>
             ) : null}
           </label>
+
+          <MobileFilterSheet
+            label="Filter investment intent"
+            activeCount={activeFilterCount}
+            onOpen={() => {
+              setDraftStatus(status);
+              setDraftInCartOnly(inCartOnly);
+            }}
+            onClear={() => {
+              setStatus("all");
+              setInCartOnly(false);
+              setDraftStatus("all");
+              setDraftInCartOnly(false);
+            }}
+            onApply={() => {
+              setStatus(draftStatus);
+              setInCartOnly(draftInCartOnly);
+            }}
+          >
+            <FilterOptionGroup
+              label="Status"
+              value={draftStatus}
+              onChange={(next) => setDraftStatus(next as StatusFilter)}
+              options={[
+                { value: "all", label: "All", count: counts.total },
+                ...investmentIntentStatuses.map((entry) => ({
+                  value: entry,
+                  label: investmentIntentStatusLabels[entry],
+                  count: statusCounts[entry],
+                })),
+              ]}
+            />
+
+            {/*
+              * Cart state is a separate axis, not a seventh status, so it stays
+              * a separate group rather than being folded into the six above.
+              */}
+            <FilterOptionGroup
+              label="Cart"
+              value={draftInCartOnly ? "in_cart" : "any"}
+              onChange={(next) => setDraftInCartOnly(next === "in_cart")}
+              options={[
+                { value: "any", label: "Any cart state" },
+                { value: "in_cart", label: "In cart", count: counts.inCart },
+              ]}
+            />
+          </MobileFilterSheet>
         </div>
       </div>
 
@@ -317,16 +401,15 @@ export function InvestmentIntentWorkspace({
                       />
                     </td>
                     <td>
-                      <div className={styles.rowActions}>
-                        <Link href={`/clients/${view.companyId}`}>
-                          Open client
-                          <ArrowUpRight aria-hidden={true} />
-                        </Link>
-                        <Link href={`/services/${view.serviceId}`}>
-                          Open investment
-                          <ArrowUpRight aria-hidden={true} />
-                        </Link>
-                      </div>
+                      <InvestmentIntentActions
+                        view={view}
+                        onConversationCreated={(intentId, ticketId) =>
+                          setConversationOverrides((current) => ({
+                            ...current,
+                            [intentId]: ticketId,
+                          }))
+                        }
+                      />
                     </td>
                   </tr>
                 ))}
@@ -380,9 +463,15 @@ export function InvestmentIntentWorkspace({
                       setStatusOverrides((current) => ({ ...current, [view.id]: next }))
                     }
                   />
-                  <Link className="button-secondary" href={`/clients/${view.companyId}`}>
-                    Open client
-                  </Link>
+                  <InvestmentIntentActions
+                    view={view}
+                    onConversationCreated={(intentId, ticketId) =>
+                      setConversationOverrides((current) => ({
+                        ...current,
+                        [intentId]: ticketId,
+                      }))
+                    }
+                  />
                 </div>
               </article>
             ))}

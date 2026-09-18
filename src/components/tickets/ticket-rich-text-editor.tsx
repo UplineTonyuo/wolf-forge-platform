@@ -11,6 +11,7 @@ import {
   Undo2,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -18,6 +19,14 @@ import {
   type DragEvent,
 } from "react";
 import styles from "./tickets.module.css";
+
+const emptyActiveFormats = {
+  bold: false,
+  italic: false,
+  heading: false,
+  bulletedList: false,
+  numberedList: false,
+};
 
 const allowedProtocols =
   new Set([
@@ -225,6 +234,7 @@ export function TicketRichTextEditor({
   placeholder = "Write a reply...",
   initialValue = "",
   onChange,
+  onPasteFile,
 }: {
   disabled?: boolean;
   label?: string;
@@ -240,6 +250,10 @@ export function TicketRichTextEditor({
   onChange: (
     value: string,
   ) => void;
+  /** Fired when the clipboard paste contains an image (e.g. a screenshot).
+   * When set, an image paste attaches the file instead of being inserted as
+   * text — normal text paste is unaffected. */
+  onPasteFile?: (file: File) => void;
 }) {
   const editorRef =
     useRef<HTMLDivElement>(null);
@@ -259,6 +273,62 @@ export function TicketRichTextEditor({
 
   const savedLinkRangeRef =
     useRef<Range | null>(null);
+
+  const [
+    activeFormats,
+    setActiveFormats,
+  ] = useState(emptyActiveFormats);
+
+  /**
+   * Reads the real editor/selection state via the same execCommand family the
+   * toolbar already mutates through — never a separately tracked flag that
+   * could drift from what is actually applied at the caret.
+   */
+  const refreshActiveFormats =
+    useCallback(() => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+
+      const withinEditor =
+        !!editor &&
+        !!selection &&
+        selection.rangeCount > 0 &&
+        editor.contains(
+          selection.anchorNode,
+        );
+
+      if (!withinEditor) {
+        setActiveFormats(
+          emptyActiveFormats,
+        );
+
+        return;
+      }
+
+      setActiveFormats({
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        heading:
+          document
+            .queryCommandValue("formatBlock")
+            .toLowerCase() === "h1",
+        bulletedList: document.queryCommandState("insertUnorderedList"),
+        numberedList: document.queryCommandState("insertOrderedList"),
+      });
+    }, []);
+
+  useEffect(() => {
+    document.addEventListener(
+      "selectionchange",
+      refreshActiveFormats,
+    );
+
+    return () =>
+      document.removeEventListener(
+        "selectionchange",
+        refreshActiveFormats,
+      );
+  }, [refreshActiveFormats]);
 
   const [
     linkOpen,
@@ -323,6 +393,8 @@ export function TicketRichTextEditor({
       false,
       value,
     );
+
+    refreshActiveFormats();
 
     requestAnimationFrame(
       syncValue,
@@ -474,6 +546,19 @@ export function TicketRichTextEditor({
     event:
       ClipboardEvent<HTMLDivElement>,
   ) {
+    if (!disabled && onPasteFile) {
+      const imageItem = Array.from(event.clipboardData.items ?? []).find(
+        (item) => item.kind === "file" && item.type.startsWith("image/"),
+      );
+      const imageFile = imageItem?.getAsFile();
+
+      if (imageFile) {
+        event.preventDefault();
+        onPasteFile(imageFile);
+        return;
+      }
+    }
+
     event.preventDefault();
 
     insertPlainText(
@@ -514,8 +599,9 @@ export function TicketRichTextEditor({
         <button
           type="button"
           aria-label="Bold"
-          title="Bold"
+          title="Bold (Ctrl+B)"
           disabled={disabled}
+          aria-pressed={activeFormats.bold}
           onMouseDown={(event) =>
             event.preventDefault()
           }
@@ -529,8 +615,9 @@ export function TicketRichTextEditor({
         <button
           type="button"
           aria-label="Italic"
-          title="Italic"
+          title="Italic (Ctrl+I)"
           disabled={disabled}
+          aria-pressed={activeFormats.italic}
           onMouseDown={(event) =>
             event.preventDefault()
           }
@@ -551,7 +638,7 @@ export function TicketRichTextEditor({
           <button
             type="button"
             aria-label="Add link"
-            title="Add link"
+            title="Add link (Ctrl+K)"
             disabled={disabled}
             aria-expanded={linkOpen}
             onMouseDown={(event) =>
@@ -630,15 +717,23 @@ export function TicketRichTextEditor({
           aria-label="Heading"
           title="Heading"
           disabled={disabled}
+          aria-pressed={activeFormats.heading}
           onMouseDown={(event) =>
             event.preventDefault()
           }
-          onClick={() =>
+          onClick={() => {
+            // Read live DOM state rather than the (async-updated) React
+            // state: a fast double click must not race a stale toggle.
+            const isHeading =
+              document
+                .queryCommandValue("formatBlock")
+                .toLowerCase() === "h1";
+
             runCommand(
               "formatBlock",
-              "h1",
-            )
-          }
+              isHeading ? "p" : "h1",
+            );
+          }}
         >
           <Heading1 aria-hidden="true" />
         </button>
@@ -647,6 +742,7 @@ export function TicketRichTextEditor({
           aria-label="Bulleted list"
           title="Bulleted list"
           disabled={disabled}
+          aria-pressed={activeFormats.bulletedList}
           onMouseDown={(event) =>
             event.preventDefault()
           }
@@ -664,6 +760,7 @@ export function TicketRichTextEditor({
           aria-label="Numbered list"
           title="Numbered list"
           disabled={disabled}
+          aria-pressed={activeFormats.numberedList}
           onMouseDown={(event) =>
             event.preventDefault()
           }
@@ -676,42 +773,37 @@ export function TicketRichTextEditor({
           <ListOrdered aria-hidden="true" />
         </button>
 
-        <span
-          className={
-            styles.ticketRichToolbarDivider
-          }
-          aria-hidden="true"
-        />
+        <div className={styles.ticketRichHistoryGroup}>
+          <button
+            type="button"
+            aria-label="Undo"
+            title="Undo (Ctrl+Z)"
+            disabled={disabled}
+            onMouseDown={(event) =>
+              event.preventDefault()
+            }
+            onClick={() =>
+              runCommand("undo")
+            }
+          >
+            <Undo2 aria-hidden="true" />
+          </button>
 
-        <button
-          type="button"
-          aria-label="Undo"
-          title="Undo"
-          disabled={disabled}
-          onMouseDown={(event) =>
-            event.preventDefault()
-          }
-          onClick={() =>
-            runCommand("undo")
-          }
-        >
-          <Undo2 aria-hidden="true" />
-        </button>
-
-        <button
-          type="button"
-          aria-label="Redo"
-          title="Redo"
-          disabled={disabled}
-          onMouseDown={(event) =>
-            event.preventDefault()
-          }
-          onClick={() =>
-            runCommand("redo")
-          }
-        >
-          <Redo2 aria-hidden="true" />
-        </button>
+          <button
+            type="button"
+            aria-label="Redo"
+            title="Redo (Ctrl+Y)"
+            disabled={disabled}
+            onMouseDown={(event) =>
+              event.preventDefault()
+            }
+            onClick={() =>
+              runCommand("redo")
+            }
+          >
+            <Redo2 aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       <div
@@ -729,7 +821,29 @@ export function TicketRichTextEditor({
         suppressContentEditableWarning
         data-placeholder={placeholder}
         onInput={syncValue}
-        onBlur={syncValue}
+        onFocus={refreshActiveFormats}
+        onBlur={() => {
+          syncValue();
+          setActiveFormats(emptyActiveFormats);
+        }}
+        onKeyUp={refreshActiveFormats}
+        onKeyDown={(event) => {
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+            event.preventDefault();
+            openLink();
+            return;
+          }
+
+          // Same canonical submit path as clicking Send — requestSubmit()
+          // fires the form's real onSubmit, which still guards busy/empty.
+          // Ctrl+Shift+Enter is kept working as a compatibility alias
+          // alongside the primary Ctrl+Enter shortcut; plain Enter and
+          // Shift+Enter are left untouched (default contentEditable newline).
+          if (event.key === "Enter" && event.ctrlKey) {
+            event.preventDefault();
+            editorRef.current?.closest("form")?.requestSubmit();
+          }
+        }}
         onPaste={handlePaste}
         onDrop={handleDrop}
       />
