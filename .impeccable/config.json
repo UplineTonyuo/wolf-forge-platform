@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/tickets/tickets.module.css"
+        ],
+        "createdAt": "2026-09-18T11:57:07.788Z",
+        "reason": "Quoted-reply markers, not card accents: the two left rules are .composerReplyContext (the composer's quoted-reply strip) and .messageReplyPreview (the in-transcript quote block). A left rule is the blockquote convention for a quotation and is the quote indicator itself, not decoration on a card. Both rules are committed in HEAD, predate this work, and sit on approved quoted-reply UI the brief pins as a regression requirement. Scoped to this file so the rule stays live everywhere else."
+      }
+    ]
+  }
+}

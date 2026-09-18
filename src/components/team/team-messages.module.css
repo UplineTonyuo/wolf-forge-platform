@@ -2570,6 +2570,32 @@
   animation: skeletonPulse 1600ms ease-in-out infinite;
 }
 
+/*
+ * The Ticket pane's switch skeleton: text-shaped bars standing in for the
+ * subject and the reference inside the real pane header, so Back stays
+ * reachable and the header does not move when the conversation arrives. Same
+ * fill, radius language and pulse as `.skeletonRow`, and the same
+ * reduced-motion opt-out.
+ */
+.ticketSkeletonTitle,
+.ticketSkeletonRef {
+  display: block;
+  border-radius: 5px;
+  background: #f2f3f6;
+  animation: skeletonPulse 1600ms ease-in-out infinite;
+}
+
+.ticketSkeletonTitle {
+  width: 148px;
+  height: 11px;
+}
+
+.ticketSkeletonRef {
+  width: 96px;
+  height: 8px;
+  margin-top: 3px;
+}
+
 @keyframes skeletonPulse {
   0%, 100% { opacity: 0.58; }
   50% { opacity: 1; }
@@ -2883,7 +2909,9 @@
     animation: none;
   }
 
-  .skeletonRow {
+  .skeletonRow,
+  .ticketSkeletonTitle,
+  .ticketSkeletonRef {
     animation: none;
     background: #f2f3f6;
   }

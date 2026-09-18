@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
    * that stays true on a framework upgrade too.
    */
   ...(process.env.NODE_ENV !== "production"
-    ? { allowedDevOrigins: ["192.168.1.95"] }
+    ? { allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.95"] }
     : {}),
 
   /**

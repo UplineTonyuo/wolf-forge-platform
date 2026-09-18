@@ -4454,24 +4454,12 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 
 @media (max-width: 767px) {
   /*
-   * The workspace command bar is `position: sticky; top: 0` at this width
-   * (globals.css, <=1023px block), so a page header in normal flow scrolls
-   * underneath it. Pinning the header below the bar uses the shared
-   * `--wf-mobile-header-h` offset the shell already defines for exactly this
-   * (see the same variable's note in globals.css), rather than a per-page
-   * magic number. The negative inline margins let it cover the page frame's
-   * 16px gutters so content cannot scroll past in the margin beside it.
+   * The Ticket subject and reference are page content, not navigation. They
+   * scroll away with the Ticket Details / Operations / Internal notes sections
+   * beneath them; only the shell's own mobile command bar stays pinned. Pinning
+   * this header too left a second, floating title (and a duplicate of the
+   * reference) over the sections it was supposed to introduce.
    */
-  .ticketDetailPage :global(.page-header) {
-    position: sticky;
-    top: var(--wf-mobile-header-h);
-    z-index: 5;
-
-    margin-inline: -16px;
-    padding: 10px 16px 16px;
-
-    background: var(--wf-white, #fff);
-  }
 
   /* An image sized for a ~420px desktop bubble would overflow a phone
      viewport outright; never scale past the available width there. */

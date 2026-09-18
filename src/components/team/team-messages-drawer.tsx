@@ -158,6 +158,26 @@ const alwaysCurrent: StaleGuard = () => true;
  * focus, on send, and on any task mutation. There is deliberately no second
  * timer anywhere in this tree.
  */
+/**
+ * The Ticket conversation may render only from detail whose own ticket id is
+ * the selected one.
+ *
+ * Switching Tickets deliberately leaves the previous detail in state -- that is
+ * what makes coming back to a Ticket instant, with no refetch flash -- so the
+ * match is enforced here, at the point of use, rather than by clearing state on
+ * every switch. Reading `ticketDetail` directly is what let the previous
+ * Ticket's header and messages paint under the new Ticket's id while the new
+ * response was still in flight.
+ */
+export function matchActiveTicketDetail(
+  detail: TicketDetail | null,
+  activeTicketId: string | null,
+): TicketDetail | null {
+  if (!detail || !activeTicketId) return null;
+  return detail.ticket.id === activeTicketId ? detail : null;
+}
+
+
 export function TeamMessagesDrawer({
   open,
   onClose,
@@ -264,7 +284,6 @@ export function TeamMessagesDrawer({
    */
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null);
-  const [ticketDetailLoading, setTicketDetailLoading] = useState(false);
   const [ticketDetailError, setTicketDetailError] = useState<string | null>(null);
   const [ticketInspectorOpen, setTicketInspectorOpen] = useState(false);
 
@@ -630,12 +649,17 @@ export function TeamMessagesDrawer({
     activeTicketIdRef.current = activeTicketId;
   }, [activeTicketId]);
 
+  /*
+   * The one value every Ticket render site reads. Null means "no detail for
+   * the selected Ticket yet", which is what draws the skeleton -- see
+   * `matchActiveTicketDetail`.
+   */
+  const activeTicketDetail = matchActiveTicketDetail(ticketDetail, activeTicketId);
+
   const loadTicketDetail = useCallback(async (ticketId: string) => {
-    setTicketDetailLoading(true);
     setTicketDetailError(null);
     const result = await getTicketInboxConversationAction(ticketId);
     if (activeTicketIdRef.current !== ticketId) return;
-    setTicketDetailLoading(false);
     if (!result.ok) {
       setTicketDetail(null);
       setTicketDetailError(result.error);
@@ -1737,7 +1761,7 @@ export function TeamMessagesDrawer({
               .filter(Boolean)
               .join(" ")}
           >
-            {activeTicketId && ticketDetail ? (
+            {activeTicketId && activeTicketDetail ? (
               <>
                 <div className={styles.paneHeader}>
                   <button
@@ -1749,8 +1773,8 @@ export function TeamMessagesDrawer({
                     <ArrowLeft aria-hidden="true" />
                   </button>
                   <div className={styles.paneHeaderText}>
-                    <strong>{ticketDetail.ticket.subject}</strong>
-                    <span>Ticket {ticketDetail.ticket.public_ref}</span>
+                    <strong>{activeTicketDetail.ticket.subject}</strong>
+                    <span>Ticket {activeTicketDetail.ticket.public_ref}</span>
                   </div>
                   <button
                     type="button"
@@ -1763,10 +1787,10 @@ export function TeamMessagesDrawer({
                   </button>
                 </div>
                 <TicketAdminConversation
-                  ticketId={ticketDetail.ticket.id}
-                  heading={ticketDetail.ticket.subject}
-                  contactName={ticketDetail.client_name ?? ticketDetail.company_name}
-                  messages={ticketDetail.messages}
+                  ticketId={activeTicketDetail.ticket.id}
+                  heading={activeTicketDetail.ticket.subject}
+                  contactName={activeTicketDetail.client_name ?? activeTicketDetail.company_name}
+                  messages={activeTicketDetail.messages}
                   viewerProfileId={actorProfileId}
                   destinations={
                     canUseTeamMessages ? toTeamConversationViews(conversations) : []
@@ -1774,17 +1798,11 @@ export function TeamMessagesDrawer({
                   canReply={ticketCapabilities.reply}
                   canReact={ticketCapabilities.reply}
                   repliesDisabled={
-                    ticketDetail.ticket.status === "closed" ||
-                    Boolean(ticketDetail.ticket.archived_at)
+                    activeTicketDetail.ticket.status === "closed" ||
+                    Boolean(activeTicketDetail.ticket.archived_at)
                   }
                 />
               </>
-            ) : activeTicketId && ticketDetailLoading ? (
-              <div className={styles.skeletonList} aria-busy="true">
-                <div className={styles.skeletonRow} />
-                <div className={styles.skeletonRow} />
-                <div className={styles.skeletonRow} />
-              </div>
             ) : activeTicketId && ticketDetailError ? (
               <div className={`${styles.stateBlock} ${styles.stateError}`}>
                 <span className={styles.stateIcon}>
@@ -1800,6 +1818,43 @@ export function TeamMessagesDrawer({
                   Try again
                 </button>
               </div>
+            ) : activeTicketId ? (
+              /*
+               * A Ticket is selected but its detail has not arrived -- or the
+               * detail in state belongs to the Ticket we just left. Either
+               * way the pane shows the conversation's shape, never the
+               * previous Ticket's content. Back stays live so the viewer is
+               * never trapped in a loading pane.
+               */
+              <>
+                <div className={styles.paneHeader}>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.backButton}`}
+                    onClick={() => setActiveTicketId(null)}
+                    aria-label="Back to Tickets"
+                  >
+                    <ArrowLeft aria-hidden="true" />
+                  </button>
+                  <div className={styles.paneHeaderText}>
+                    <span className={styles.ticketSkeletonTitle} />
+                    <span className={styles.ticketSkeletonRef} />
+                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.detailsButton}`}
+                    aria-label="Ticket details"
+                    disabled
+                  >
+                    <Info aria-hidden="true" />
+                  </button>
+                </div>
+                <div className={styles.skeletonList} aria-busy="true">
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                </div>
+              </>
             ) : (
               <div className={styles.stateBlock}>
                 <span className={styles.stateIcon}>
@@ -1913,7 +1968,7 @@ export function TeamMessagesDrawer({
           </div>
         )}
 
-        {pane === "tickets" && activeTicketId && ticketDetail ? (
+        {pane === "tickets" && activeTicketDetail ? (
           <aside
             className={[
               styles.inspectorPane,
@@ -1935,15 +1990,15 @@ export function TeamMessagesDrawer({
               </button>
             </div>
             <TicketInspector
-              detail={ticketDetail}
+              detail={activeTicketDetail}
               assignees={ticketAssignees}
               capabilities={ticketCapabilities}
-              onTicketChanged={() => void loadTicketDetail(ticketDetail.ticket.id)}
+              onTicketChanged={() => void loadTicketDetail(activeTicketDetail.ticket.id)}
             />
           </aside>
         ) : null}
 
-        {(pane === "messages" ? !detail : !(activeTicketId && ticketDetail)) ? (
+        {(pane === "messages" ? !detail : !activeTicketId) ? (
           <button
             type="button"
             className={`${styles.iconButton} ${styles.closeButton}`}
