@@ -141,6 +141,8 @@ export type TicketSummary = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
+  /** Durable Inbox conversation membership; null means the Ticket is managed from /tickets only. */
+  inbox_added_at: string | null;
 };
 
 export type ClientTicketSummary = Pick<
@@ -188,7 +190,7 @@ export type TicketDetailMessage = {
 export type TicketDetailTicket = Pick<
   TicketRow,
   "id" | "public_ref" | "subject" | "status" | "priority" | "requester_name" | "created_at" | "updated_at" | "resolved_at" | "closed_at" | "archived_at"
-> & Partial<Pick<TicketRow, "company_id" | "client_profile_id" | "assigned_to_profile_id" | "created_by_profile_id" | "source_form_submission_id" | "source_form_version_id" | "requester_email">>;
+> & Partial<Pick<TicketRow, "company_id" | "client_profile_id" | "assigned_to_profile_id" | "created_by_profile_id" | "source_form_submission_id" | "source_form_version_id" | "requester_email" | "inbox_added_at">>;
 
 export type TicketDetail = {
   ticket: TicketDetailTicket;

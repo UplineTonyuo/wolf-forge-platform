@@ -162,7 +162,7 @@ export function rankResults(
 /** Group order in the panel. Sections with no matches are not rendered at all. */
 export const clientSearchGroups: Array<{ kind: ClientSearchKind; label: string }> = [
   { kind: "project", label: "Projects" },
-  { kind: "message", label: "Messages" },
+  { kind: "message", label: "Inbox" },
   { kind: "service", label: "Services" },
 ];
 

@@ -433,6 +433,16 @@ export function replyAttachmentTarget(
 /** In-app viewer for a tapped attachment image — keeps the user on the
  * current page instead of navigating to the authenticated download route
  * or the signed Storage URL it redirects to. */
+const focusableSelector =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * A real application-level modal: the rest of the page is marked `inert`
+ * (unreachable by pointer, keyboard, or screen reader) and body scroll is
+ * locked for as long as the lightbox is mounted, so the conversation, Ticket
+ * selection and Details cannot be operated underneath it -- restored exactly
+ * once, on unmount, regardless of which of those state changes fired first.
+ */
 function ImageLightbox({
   src,
   alt,
@@ -443,22 +453,61 @@ function ImageLightbox({
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const inertedSiblings: Element[] = [];
+    for (const child of Array.from(document.body.children)) {
+      if (child.contains(cardRef.current) || child === cardRef.current) continue;
+      if (!child.hasAttribute("inert")) {
+        child.setAttribute("inert", "");
+        inertedSiblings.push(child);
+      }
+    }
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        cardRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
+
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      for (const sibling of inertedSiblings) sibling.removeAttribute("inert");
+    };
   }, [onClose]);
 
   return createPortal(
     <div className={styles.imageLightboxBackdrop} onClick={onClose}>
       <div
+        ref={cardRef}
         role="dialog"
         aria-modal="true"
         aria-label={alt}

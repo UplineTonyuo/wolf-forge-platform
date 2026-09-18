@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { TicketDetail, TicketSummary } from "../../domain/tickets/schema";
+import type { ServiceAssigneeOption } from "../../repositories/service-repository";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { TICKET_ATTACHMENT_MAX_BYTES, validateTicketAttachment } from "../../lib/tickets/ticket-attachment-file";
 import { readServerEnvironment } from "../../lib/env/server-env";
@@ -422,6 +424,73 @@ export async function assignTicketAction(ticketId: string, profileId: string | n
   const context = await getInternalContext();
   if (!context.user.tickets.assign) return { ok: false, error: "You do not have permission to assign Tickets." };
   try { await context.services.tickets.assign(ticketId, { assigned_to_profile_id: profileId }, context.actor); }
+  catch (error) { return failure(error); }
+  refreshTicket(ticketId);
+  return { ok: true };
+}
+
+export type TicketSummariesResult = { ok: true; data: TicketSummary[] } | { ok: false; error: string };
+
+/**
+ * Backs the Inbox drawer's Tickets pane list: the accessible Tickets whose
+ * conversation is durably in the Inbox (tickets.inbox_added_at is not null),
+ * never Tickets that are only managed from /tickets.
+ */
+export async function listTicketSummariesAction(): Promise<TicketSummariesResult> {
+  const context = await getInternalContext();
+  if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view Tickets." };
+  try {
+    return { ok: true, data: await context.services.tickets.listInbox() };
+  } catch (error) {
+    return failure(error) as TicketSummariesResult;
+  }
+}
+
+export type TicketInboxConversationResult = { ok: true; data: TicketDetail } | { ok: false; error: string };
+
+/**
+ * Backs a selected Ticket row inside the Inbox drawer. Same read as
+ * /tickets/[ticketId]'s own `context.services.tickets.get(id)` call, just
+ * reachable from a client component instead of a server render.
+ */
+export async function getTicketInboxConversationAction(ticketId: string): Promise<TicketInboxConversationResult> {
+  const context = await getInternalContext();
+  if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view this Ticket." };
+  try {
+    return { ok: true, data: await context.services.tickets.get(ticketId) };
+  } catch (error) {
+    return failure(error) as TicketInboxConversationResult;
+  }
+}
+
+export type TicketAssigneesResult = { ok: true; data: ServiceAssigneeOption[] } | { ok: false; error: string };
+
+/**
+ * Backs the Inbox drawer's Ticket inspector, which is a client component and
+ * so cannot call `context.services.catalog.listAssignees()` directly the way
+ * /tickets/[ticketId]'s server render does.
+ */
+export async function listTicketAssigneesAction(): Promise<TicketAssigneesResult> {
+  const context = await getInternalContext();
+  if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view Tickets." };
+  try {
+    return { ok: true, data: await context.services.catalog.listAssignees() };
+  } catch (error) {
+    return failure(error) as TicketAssigneesResult;
+  }
+}
+
+/**
+ * Makes an existing Ticket's one canonical conversation available in the Inbox
+ * Tickets pane. Copies nothing: the Ticket, its messages, attachments and
+ * reactions are the same rows Inbox reads afterwards. Idempotent in the
+ * database, so a double submit settles on one membership and one activity
+ * record rather than two.
+ */
+export async function addTicketToInboxAction(ticketId: string): Promise<TicketMutationResult> {
+  const context = await getInternalContext();
+  if (!context.user.tickets.edit) return { ok: false, error: "You do not have permission to manage Ticket conversations." };
+  try { await context.services.tickets.addToInbox(ticketId, context.actor); }
   catch (error) { return failure(error); }
   refreshTicket(ticketId);
   return { ok: true };

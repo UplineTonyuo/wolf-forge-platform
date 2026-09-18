@@ -121,6 +121,21 @@ export class TicketRepository {
     return (result.data ?? []) as TicketSummary[];
   }
 
+  /**
+   * The Inbox Tickets pane's own read. Same row shape as list(), narrowed
+   * server-side to Tickets whose conversation is durably in the Inbox
+   * (inbox_added_at is not null), so the pane never fetches Tickets it can
+   * never render.
+   */
+  async listInbox(): Promise<TicketSummary[]> {
+    const result = await this.client.rpc("app_list_ticket_summaries", {
+      p_include_archived: false,
+      p_inbox_only: true,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Tickets");
+    return (result.data ?? []) as TicketSummary[];
+  }
+
   async getById(id: string): Promise<TicketDetail> {
     const result = await this.client.rpc("app_get_ticket_detail_with_avatars", { p_ticket_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Ticket");
@@ -200,6 +215,13 @@ export class TicketRepository {
   async archive(id: string): Promise<TicketRow> {
     return unwrapOne(
       await this.client.rpc("app_archive_ticket", { p_ticket_id: id }),
+      "Ticket",
+    ) as TicketRow;
+  }
+
+  async addToInbox(id: string): Promise<TicketRow> {
+    return unwrapOne(
+      await this.client.rpc("app_add_ticket_to_inbox", { p_ticket_id: id }),
       "Ticket",
     ) as TicketRow;
   }

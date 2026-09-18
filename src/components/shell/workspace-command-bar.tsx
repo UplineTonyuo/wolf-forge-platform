@@ -108,9 +108,15 @@ type NotificationPosition = {
 
 export function WorkspaceCommandBar({
   user,
+  notificationSoundEnabled = true,
   mobileNavigation,
 }: {
   user: InternalUser;
+  /**
+   * The profile's stored chime preference. Defaults to on, matching the
+   * column default, so a missing prop is never a silent behaviour change.
+   */
+  notificationSoundEnabled?: boolean;
   mobileNavigation?: ReactNode;
 }) {
   /*
@@ -176,6 +182,24 @@ export function WorkspaceCommandBar({
     useRef<Set<string>>(
       new Set(),
     );
+
+  /*
+   * The profile's chime preference, read at fire time rather than at schedule
+   * time. Same shape as `ClientNotificationBell`'s ref, and synced in an
+   * effect because a render must not write it.
+   */
+  const soundEnabledRef =
+    useRef(
+      notificationSoundEnabled,
+    );
+
+  useEffect(
+    () => {
+      soundEnabledRef.current =
+        notificationSoundEnabled;
+    },
+    [notificationSoundEnabled],
+  );
 
   const notificationFeedInitializedRef =
     useRef(false);
@@ -281,7 +305,17 @@ export function WorkspaceCommandBar({
             const startTimer =
               window.setTimeout(
                 () => {
-                  playNotificationChime();
+                  /*
+                   * Read at fire time, not schedule time: up to 680ms per
+                   * item passes between a notification arriving and its
+                   * staggered chime, and the timer must see the current
+                   * value rather than the one captured when it was set.
+                   */
+                  if (
+                    soundEnabledRef.current
+                  ) {
+                    playNotificationChime();
+                  }
                 },
                 index * 680,
               );

@@ -1,5 +1,9 @@
 "use server";
 
+import type {
+  TicketSummary,
+} from "../../domain/tickets/schema";
+
 import {
   getInternalContext,
 } from "../../lib/supabase/next-server";
@@ -9,7 +13,8 @@ import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 export type GlobalSearchKind =
   | "client"
   | "project"
-  | "service";
+  | "service"
+  | "ticket";
 
 
 export type GlobalSearchItem = {
@@ -18,6 +23,13 @@ export type GlobalSearchItem = {
   title: string;
   subtitle: string;
   href: string;
+  /**
+   * What this result would complete to, for the search input's ghost text.
+   * Only ever a genuine prefix match of what was typed -- see
+   * `prefixField` -- so the input never offers a completion the user did
+   * not start typing. Absent when nothing in the result completes it.
+   */
+  predict?: string;
 };
 
 
@@ -107,6 +119,46 @@ function textScore(
 }
 
 
+/**
+ * The value this result should complete to, or null when the result does not
+ * start with what was typed. A result that merely contains the query scores
+ * as a match but earns no prediction -- that is what keeps the ghost text
+ * from proposing a completion the user is not on the way to writing.
+ */
+function prefixField(
+  value: string | null | undefined,
+  query: string,
+): string | null {
+
+  if (!value) {
+    return null;
+  }
+
+
+  const target =
+    normalize(value);
+
+  const wanted =
+    normalize(query);
+
+
+  if (
+    !wanted ||
+    target.length <=
+      wanted.length ||
+    !target.startsWith(
+      wanted,
+    )
+  ) {
+
+    return null;
+  }
+
+
+  return value;
+}
+
+
 function relationName(
   value: unknown,
 ): string | null {
@@ -158,6 +210,87 @@ function relationName(
 
 
   return null;
+}
+
+
+function ticketCandidate(
+  ticket: TicketSummary,
+  query: string,
+): Candidate {
+
+  const companyName =
+    ticket.company_name;
+
+  const clientName =
+    ticket.client_name;
+
+  const reference =
+    ticket.public_ref;
+
+  /*
+   * The same fallback the Tickets list itself renders: company, then the
+   * contact, then a guest. A Ticket with neither is a contact-form Ticket.
+   */
+  const contact =
+    companyName ??
+    clientName ??
+    "Contact Form guest";
+
+
+  const score =
+    Math.min(
+      textScore(
+        reference,
+        query,
+      ),
+
+      textScore(
+        ticket.subject,
+        query,
+      ) + 2,
+
+      textScore(
+        companyName ?? "",
+        query,
+      ) + 4,
+
+      textScore(
+        clientName ?? "",
+        query,
+      ) + 5,
+    );
+
+
+  return {
+    kind: "ticket",
+    id: ticket.ticket_id,
+    title: reference,
+    subtitle:
+      [ticket.subject, contact]
+        .filter(Boolean)
+        .join(" · "),
+    href:
+      `/tickets/${ticket.ticket_id}`,
+    predict:
+      prefixField(
+        reference,
+        query,
+      ) ??
+      prefixField(
+        ticket.subject,
+        query,
+      ) ??
+      prefixField(
+        companyName,
+        query,
+      ) ??
+      prefixField(
+        clientName,
+        query,
+      ) ??
+      undefined,
+    score,
+  };
 }
 
 
@@ -377,6 +510,7 @@ export async function globalSearchAction(
       companiesResult,
       servicesResult,
       titleProjectsResult,
+      ticketsResult,
     ] =
       await Promise.all([
 
@@ -442,6 +576,27 @@ export async function globalSearchAction(
             },
           )
           .limit(6),
+
+
+        /*
+         * Tickets come from the canonical RPC-backed list, not the table:
+         * `public.tickets` is deliberately revoked for `authenticated` and
+         * every Ticket read goes through a security-definer RPC, so Global
+         * search adds a result type without adding a way to reach Tickets.
+         * A failed Ticket read degrades to "no Ticket results" rather than
+         * taking the whole panel down with it.
+         *
+         * ponytail: that list is unbounded, so the ceiling here is Ticket
+         * volume -- it is now the heaviest read in this panel. The
+         * `search.global` cost limiter is the guard; if the Ticket table
+         * grows, the upgrade is an `app_search_ticket_summaries(p_query,
+         * p_limit)` RPC that filters in the database instead.
+         */
+        context.services.tickets
+          .list()
+          .catch(
+            (): TicketSummary[] => [],
+          ),
       ]);
 
 
@@ -472,6 +627,10 @@ export async function globalSearchAction(
         []
       ) as unknown as
         SearchProjectRow[];
+
+    const tickets:
+      TicketSummary[] =
+      ticketsResult;
 
 
     /*
@@ -787,6 +946,20 @@ export async function globalSearchAction(
     }
 
 
+    for (
+      const ticket
+      of tickets
+    ) {
+
+      candidates.push(
+        ticketCandidate(
+          ticket,
+          textQuery,
+        ),
+      );
+    }
+
+
     const results =
       uniqueCandidates(
         candidates,
@@ -824,6 +997,7 @@ export async function globalSearchAction(
             title: candidate.title,
             subtitle: candidate.subtitle,
             href: candidate.href,
+            predict: candidate.predict,
           }),
         );
 

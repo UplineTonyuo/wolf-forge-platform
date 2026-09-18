@@ -222,11 +222,7 @@ export function MobileTeamMessagesLever({ chat }: { chat: TeamMessagesChat }) {
       className={[styles.lever, chat.isOpen ? styles.leverOpenState : ""]
         .filter(Boolean)
         .join(" ")}
-      aria-label={
-        chat.unread > 0
-          ? `Team Messages, ${chat.unread} unread`
-          : "Team Messages"
-      }
+      aria-label={chat.unread > 0 ? `Inbox, ${chat.unread} unread` : "Inbox"}
       aria-haspopup="dialog"
       aria-expanded={chat.isOpen}
       onPointerDown={handlePointerDown}

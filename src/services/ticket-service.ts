@@ -69,6 +69,11 @@ export class TicketService {
     return this.dependencies.repository.list(includeArchived);
   }
 
+  /** Inbox-only Ticket list. See TicketRepository.listInbox. */
+  listInbox() {
+    return this.dependencies.repository.listInbox();
+  }
+
   get(id: unknown) {
     return this.dependencies.repository.getById(parseInput(uuidSchema, id));
   }
@@ -126,5 +131,10 @@ export class TicketService {
   archive(id: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.archive(parseInput(uuidSchema, id));
+  }
+
+  addToInbox(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.addToInbox(parseInput(uuidSchema, id));
   }
 }

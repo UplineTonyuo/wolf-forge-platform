@@ -8,18 +8,19 @@ import type { TeamMessagesChat } from "./use-team-messages-chat";
 import styles from "./team-messages.module.css";
 
 /**
- * The Team Messages control in the workspace command bar, between Search and
+ * The Inbox control in the workspace command bar, between Search and
  * Notifications on desktop. Hidden on mobile (<=767px, see globals.css),
  * where the mobile edge lever (mobile-team-messages-lever.tsx) is the entry
  * point instead — both share the one `chat` state from useTeamMessagesChat,
  * lifted up to and mounted once by the workspace command bar, so there is
  * still only ever one `<TeamMessagesDrawer>` (and its one Team
- * synchronization controller) regardless of breakpoint.
+ * synchronization controller, and its one selected-Ticket live mount)
+ * regardless of breakpoint.
  *
- * Renders nothing at all without team_messages.use. That is presentation, not
- * protection — every RPC behind the drawer refuses the same account
- * independently — but an icon that opens an empty, permanently failing panel
- * would be worse than no icon.
+ * Renders nothing at all without team_messages.use or tickets.view. That is
+ * presentation, not protection — every RPC behind the drawer refuses the same
+ * account independently — but an icon that opens an empty, permanently
+ * failing panel would be worse than no icon.
  */
 export function TeamMessagesTrigger({
   user,
@@ -38,12 +39,8 @@ export function TeamMessagesTrigger({
         type="button"
         className="workspace-command-button"
         style={{ position: "relative" }}
-        aria-label={
-          chat.unread > 0
-            ? `Team Messages, ${chat.unread} unread`
-            : "Team Messages"
-        }
-        title="Team Messages"
+        aria-label={chat.unread > 0 ? `Inbox, ${chat.unread} unread` : "Inbox"}
+        title="Inbox"
         aria-expanded={chat.isOpen}
         aria-haspopup="dialog"
         onClick={chat.toggle}
@@ -69,7 +66,10 @@ export function TeamMessagesTrigger({
         actorProfileId={user.id}
         actorName={user.displayName}
         canManageTasks={user.teamMessaging.manageTasks}
+        canUseTeamMessages={chat.teamEnabled}
+        ticketCapabilities={user.tickets}
         initialConversationId={chat.isOpen ? chat.deepLinkId : null}
+        initialTicketId={chat.isOpen ? chat.ticketDeepLinkId : null}
         onUnreadChange={chat.setUnread}
         onRequestOpen={chat.openChat}
         onRootElement={chat.setDrawerEl}

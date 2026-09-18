@@ -67,6 +67,8 @@ export function TicketComposer({
   onCancelReply,
   hideSubmitIcon = false,
   optimistic,
+  compact = false,
+  contactName = null,
 }: {
   target: TicketComposerTarget;
   mode: TicketComposerMode;
@@ -76,6 +78,9 @@ export function TicketComposer({
   onCancelReply?: () => void;
   hideSubmitIcon?: boolean;
   optimistic?: TicketComposerOptimistic;
+  /** Compact icon-only footer + real-name placeholder, used only by the staff Ticket surfaces. */
+  compact?: boolean;
+  contactName?: string | null;
 }) {
   const router =
     useRouter();
@@ -153,6 +158,13 @@ export function TicketComposer({
 
   const isNote =
     mode === "note";
+
+  /* Real client/contact name when this is the compact staff reply composer;
+     falls back to a neutral phrase rather than a hardcoded name. */
+  const composerPlaceholder =
+    compact && !isNote
+      ? `Message ${contactName?.trim() || "client"}...`
+      : undefined;
 
   /* Under optimistic sends the draft is already cleared and in the thread as
    * a pending bubble, so an in-flight request must not block typing the next
@@ -278,6 +290,7 @@ export function TicketComposer({
       }
       onSubmit={submit}
       data-sending={attached && pending && !disabled || undefined}
+      data-compact={compact || undefined}
     >
       {!isNote && !attached ? (
         <header>
@@ -329,7 +342,8 @@ export function TicketComposer({
         <TicketRichTextEditor
           key={resetKey}
           disabled={busy}
-          label="Write a reply"
+          label={composerPlaceholder ?? "Write a reply"}
+          placeholder={composerPlaceholder}
           onChange={setBody}
           onPasteFile={pickAttachment}
         />
@@ -373,14 +387,16 @@ export function TicketComposer({
 
       <footer>
         <div className={styles.composerMeta}>
-          <span>
-            {body.length.toLocaleString()}
-            {" / 50,000"}
-          </span>
+          {!compact ? (
+            <span>
+              {body.length.toLocaleString()}
+              {" / 50,000"}
+            </span>
+          ) : null}
 
           {!isNote ? (
             <span className={styles.composerShortcutHint}>
-              Ctrl+Shift+Enter to send
+              {compact ? "Ctrl+Enter" : "Ctrl+Shift+Enter to send"}
             </span>
           ) : null}
         </div>
@@ -403,23 +419,27 @@ export function TicketComposer({
                 type="button"
                 className={styles.addFileButton}
                 disabled={busy}
+                aria-label="Add file"
+                title="Add file"
                 onClick={() => {
                   fileInputRef.current?.click();
                 }}
               >
                 <Paperclip aria-hidden="true" />
-                Add file
+                {!compact ? "Add file" : null}
               </button>
             </>
           ) : null}
           <button
             type="submit"
             aria-busy={!optimistic && pending}
+            aria-label={compact && !isNote ? (!optimistic && pending ? "Sending..." : "Send reply") : undefined}
+            title={compact && !isNote ? "Send reply" : undefined}
             className="button-primary"
             disabled={busy || (!body.trim() && !attachment)}
           >
             {!hideSubmitIcon ? <Send aria-hidden="true" /> : null}
-            {!optimistic && pending ? "Sending..." : isNote ? "Add note" : "Send reply"}
+            {!compact || isNote ? (!optimistic && pending ? "Sending..." : isNote ? "Add note" : "Send reply") : null}
           </button>
         </div>
       </footer>

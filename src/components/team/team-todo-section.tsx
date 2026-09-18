@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ListChecks, Users } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import {
   groupTeamTasksByStatus,
@@ -48,8 +49,11 @@ export function TeamTodoSection({
   canManageTasks: boolean;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [scope, setScope] = useState<"mine" | "team">("mine");
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
 
   /*
    * A fresh server render wins over whatever this component last fetched for
@@ -74,11 +78,33 @@ export function TeamTodoSection({
         return;
       }
 
-      const refreshed = await listTeamTasksAction(false);
+      const refreshed = await listTeamTasksAction(scope === "team");
       setBusyTaskId(null);
       if (refreshed.ok) setTasks(refreshed.data);
     },
-    [],
+    [scope],
+  );
+
+  const changeScope = useCallback(async (nextScope: "mine" | "team") => {
+    setScope(nextScope);
+    setError(null);
+    const refreshed = await listTeamTasksAction(nextScope === "team");
+    if (refreshed.ok) setTasks(refreshed.data);
+    else setError(refreshed.error);
+  }, []);
+
+  /*
+   * Jump to source reuses the drawer's own one-shot deep-link pattern
+   * (?team-messages=<id>): the Inbox is globally mounted in the internal
+   * shell, so updating this page's own query string is enough to open the
+   * originating Team conversation from here -- no drawer instance to reach
+   * into directly from a different page.
+   */
+  const openConversation = useCallback(
+    (conversationId: string) => {
+      router.push(`${pathname}?team-messages=${conversationId}`);
+    },
+    [pathname, router],
   );
 
   const views = toTeamTaskListViews(tasks, actorProfileId);
@@ -87,8 +113,36 @@ export function TeamTodoSection({
   return (
     <section className="attention-section">
       <div className="section-heading">
-        <h2>Assigned to me</h2>
+        <h2>{scope === "team" ? "Team tasks" : "Assigned to me"}</h2>
         <span>{views.filter((task) => task.status !== "done").length}</span>
+        {canManageTasks ? (
+          <div className={styles.segmented} role="tablist" aria-label="Task scope">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={scope === "mine"}
+              className={[styles.segment, scope === "mine" ? styles.segmentActive : ""]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => void changeScope("mine")}
+            >
+              <ListChecks aria-hidden="true" />
+              Mine
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={scope === "team"}
+              className={[styles.segment, scope === "team" ? styles.segmentActive : ""]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() => void changeScope("team")}
+            >
+              <Users aria-hidden="true" />
+              Team
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -100,7 +154,9 @@ export function TeamTodoSection({
 
       {views.length === 0 ? (
         <p className="compact-empty">
-          No teammate has assigned you a task right now.
+          {scope === "team"
+            ? "No task exists in your conversations yet."
+            : "No teammate has assigned you a task right now."}
         </p>
       ) : (
         <div className={styles.todoTaskBoard}>
@@ -123,6 +179,8 @@ export function TeamTodoSection({
                     onStatusChange={(status) =>
                       void changeStatus(task.id, status)
                     }
+                    onNavigateToSource={() => openConversation(task.conversationId)}
+                    onOpenConversation={() => openConversation(task.conversationId)}
                     contextLabel={
                       task.conversationKind === "group"
                         ? `in ${task.conversationName ?? "a group"}`

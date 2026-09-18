@@ -836,7 +836,10 @@ export function TicketRichTextEditor({
 
           // Same canonical submit path as clicking Send — requestSubmit()
           // fires the form's real onSubmit, which still guards busy/empty.
-          if (event.key === "Enter" && event.ctrlKey && event.shiftKey) {
+          // Ctrl+Shift+Enter is kept working as a compatibility alias
+          // alongside the primary Ctrl+Enter shortcut; plain Enter and
+          // Shift+Enter are left untouched (default contentEditable newline).
+          if (event.key === "Enter" && event.ctrlKey) {
             event.preventDefault();
             editorRef.current?.closest("form")?.requestSubmit();
           }

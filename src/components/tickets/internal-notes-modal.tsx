@@ -159,7 +159,10 @@ export function InternalNotesModal({
   return (
     <>
       <button type="button" className={styles.internalNotesButton} onClick={openModal}>
-        View note for this project
+        {/* Only an order IS a project (`Project #<order_number>` heading on
+            the Order page). A Ticket may have no project behind it at all, so
+            it gets the Ticket-neutral wording. */}
+        {target.kind === "order" ? "View note for this project" : "View internal note"}
       </button>
 
       <dialog

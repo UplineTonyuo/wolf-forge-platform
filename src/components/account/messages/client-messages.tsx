@@ -124,7 +124,7 @@ export function ClientMessages({
     <div className="portal-page">
       <header className="portal-page-head portal-page-head-actions">
         <div>
-          <h1>Messages</h1>
+          <h1>Inbox</h1>
           <p>
             {live.length === 0
               ? "Talk to Wolf Forge here. Every reply stays attached to your account."

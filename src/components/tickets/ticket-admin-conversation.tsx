@@ -40,9 +40,10 @@ export function TicketAdminConversation({
   canReact,
   repliesDisabled,
   headerActions,
+  contactName = null,
 }: {
   ticketId: string;
-  heading: string;
+  heading: ReactNode;
   messages: TicketDetailMessage[];
   viewerProfileId: string;
   destinations: TeamConversationView[];
@@ -50,6 +51,8 @@ export function TicketAdminConversation({
   canReact: boolean;
   repliesDisabled: boolean;
   headerActions?: ReactNode;
+  /** Ticket's client/contact display name, for the composer's placeholder. */
+  contactName?: string | null;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
   const conversation = useTicketConversationMessages({
@@ -68,7 +71,7 @@ export function TicketAdminConversation({
   };
 
   return (
-    <div className={styles.orderConversationSurface}>
+    <div className={`${styles.orderConversationSurface} ${styles.ticketAdminSurface} ticket-admin-surface-marker`}>
       <TicketConversation
         orderChat
         viewerProfileId={viewerProfileId}
@@ -89,6 +92,8 @@ export function TicketAdminConversation({
           mode="admin"
           disabled={repliesDisabled}
           attached
+          compact
+          contactName={contactName}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           optimistic={{

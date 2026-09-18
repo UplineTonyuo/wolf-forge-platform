@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { InternalUser } from "../../lib/supabase/next-server";
 import { useHeaderOverlay } from "../shell/use-header-overlay";
 
@@ -16,24 +16,73 @@ export function useTeamMessagesChat(user: InternalUser) {
   const [isOpen, setIsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const enabled = user.teamMessaging.use;
+  const teamEnabled = user.teamMessaging.use;
+  const ticketsEnabled = user.tickets.view;
+  /* The Inbox trigger must render for ticket-only staff too: the Ticket
+   * Detail page no longer mounts a live conversation, so the drawer is the
+   * only remaining place to read/reply to a Ticket. */
+  const enabled = teamEnabled || ticketsEnabled;
   const deepLinkId = searchParams.get("team-messages");
+  const ticketDeepLinkId =
+    searchParams.get("inbox") === "tickets" ? searchParams.get("ticket") : null;
 
   /*
-   * A team notification links to ?team-messages=<id>. Honoured once per
-   * distinct link, adjusted during render rather than in an effect so the
-   * drawer opens on the same paint the URL arrives on.
+   * A team notification links to ?team-messages=<id>; a Ticket Detail page
+   * links to ?inbox=tickets&ticket=<id>. Each is honoured once per distinct
+   * link, adjusted during render rather than in an effect so the drawer
+   * opens on the same paint the URL arrives on.
    */
   const [consumedDeepLink, setConsumedDeepLink] = useState<string | null>(
     null,
   );
-  if (enabled && deepLinkId && deepLinkId !== consumedDeepLink) {
+  if (teamEnabled && deepLinkId && deepLinkId !== consumedDeepLink) {
     setConsumedDeepLink(deepLinkId);
     setIsOpen(true);
   }
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const [consumedTicketDeepLink, setConsumedTicketDeepLink] = useState<
+    string | null
+  >(null);
+  if (
+    ticketsEnabled &&
+    ticketDeepLinkId &&
+    ticketDeepLinkId !== consumedTicketDeepLink
+  ) {
+    setConsumedTicketDeepLink(ticketDeepLinkId);
+    setIsOpen(true);
+  }
+
+  /*
+   * Each deep link is honoured once per distinct value, so the marker has to be
+   * cleared when the link leaves the URL -- otherwise the second time someone
+   * follows the same link it is already "consumed" and nothing happens. That is
+   * the ordinary case for a Ticket's "View in Inbox": the control lives on the
+   * management page, which the reader never navigates away from, so they close
+   * the Inbox and click it again. Adjusted during render, like the open above:
+   * the URL is the input, this is the response to it.
+   */
+  if (!deepLinkId && consumedDeepLink) setConsumedDeepLink(null);
+  if (!ticketDeepLinkId && consumedTicketDeepLink) {
+    setConsumedTicketDeepLink(null);
+  }
+
+  const hasDeepLink = Boolean(deepLinkId || ticketDeepLinkId);
+
+  /*
+   * Closing drops any deep link from the URL. Each link is honoured once per
+   * distinct value (see the render-time adjustments above), so a link that
+   * stayed in the address bar would be inert the second time it is followed
+   * -- which is exactly the repeat case for a Ticket's "View in Inbox", a
+   * control that lives on a page you never navigate away from.
+   */
+  const close = useCallback(() => {
+    setIsOpen(false);
+    if (hasDeepLink) router.replace(pathname, { scroll: false });
+  }, [hasDeepLink, pathname, router]);
+
   const openChat = useCallback(() => setIsOpen(true), []);
   const toggle = useCallback(() => setIsOpen((value) => !value), []);
 
@@ -63,7 +112,10 @@ export function useTeamMessagesChat(user: InternalUser) {
     close,
     openChat,
     toggle,
-    deepLinkId: enabled ? deepLinkId : null,
+    deepLinkId: teamEnabled ? deepLinkId : null,
+    ticketDeepLinkId: ticketsEnabled ? ticketDeepLinkId : null,
+    teamEnabled,
+    ticketsEnabled,
     setDrawerEl,
     getDrawerEl,
   };

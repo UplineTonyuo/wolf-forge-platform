@@ -104,9 +104,12 @@ function SidebarLink({
 
 export function InternalShell({
   user,
+  notificationSoundEnabled = true,
   children,
 }: {
   user: InternalUser;
+  /** The profile's stored chime preference, passed through to the bell. */
+  notificationSoundEnabled?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -460,6 +463,9 @@ export function InternalShell({
       >
         <WorkspaceCommandBar
           user={user}
+          notificationSoundEnabled={
+            notificationSoundEnabled
+          }
           mobileNavigation={
             <button
               type="button"

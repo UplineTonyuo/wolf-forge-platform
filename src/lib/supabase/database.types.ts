@@ -3801,6 +3801,7 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -3823,6 +3824,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           id?: string
+          inbox_added_at?: string | null
           order_id?: string | null
           priority?: string
           public_ref?: string | null
@@ -3845,6 +3847,7 @@ export type Database = {
           created_at?: string
           created_by_profile_id?: string | null
           id?: string
+          inbox_added_at?: string | null
           order_id?: string | null
           priority?: string
           public_ref?: string | null
@@ -4021,6 +4024,38 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "ticket_messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_add_ticket_to_inbox: {
+        Args: { p_ticket_id: string }
+        Returns: {
+          archived_at: string | null
+          assigned_to_profile_id: string | null
+          client_profile_id: string | null
+          closed_at: string | null
+          company_id: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          inbox_added_at: string | null
+          order_id: string | null
+          priority: string
+          public_ref: string | null
+          requester_email: string | null
+          requester_name: string | null
+          resolved_at: string | null
+          source_form_submission_id: string | null
+          source_form_version_id: string | null
+          status: string
+          subject: string
+          ticket_number: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5598,7 +5633,7 @@ export type Database = {
         }[]
       }
       app_list_ticket_summaries: {
-        Args: { p_include_archived?: boolean }
+        Args: { p_inbox_only?: boolean; p_include_archived?: boolean }
         Returns: {
           archived_at: string
           assigned_to_name: string
@@ -5607,6 +5642,7 @@ export type Database = {
           client_profile_id: string
           company_id: string
           company_name: string
+          inbox_added_at: string
           created_at: string
           last_message_at: string
           message_count: number
