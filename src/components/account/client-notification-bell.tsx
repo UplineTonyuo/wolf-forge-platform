@@ -134,6 +134,8 @@ export function ClientNotificationBell({
 
   const feedbackTimersRef =
     useRef<number[]>([]);
+  const loadInFlightRef = useRef(false);
+  const refreshPendingRef = useRef(false);
 
   /*
    * Inside the command bar the header panel manager owns which panel is open,
@@ -312,49 +314,69 @@ export function ClientNotificationBell({
 
   const load =
     useCallback(
-      async (
+      async function load(
         silent = false,
         isActive?: () => boolean,
-      ) => {
+        queueIfBusy = false,
+      ) {
         if (
           isActive &&
           !isActive()
         ) {
           return;
         }
+
+        if (loadInFlightRef.current) {
+          if (!silent || queueIfBusy) refreshPendingRef.current = true;
+          return;
+        }
+        loadInFlightRef.current = true;
 
         if (!silent) {
           setLoading(true);
         }
 
-        const result =
-          await getClientNotificationsAction();
+        try {
+          const result =
+            await getClientNotificationsAction();
 
-        if (
-          isActive &&
-          !isActive()
-        ) {
-          return;
-        }
+          if (
+            isActive &&
+            !isActive()
+          ) {
+            return;
+          }
 
-        if (result.ok) {
-          noteIncoming(
-            result.notifications,
-          );
+          if (result.ok) {
+            noteIncoming(
+              result.notifications,
+            );
 
-          setNotifications(
-            result.notifications,
-          );
+            setNotifications(
+              result.notifications,
+            );
 
-          setError(null);
-        } else if (!silent) {
-          setError(
-            result.error,
-          );
-        }
+            setError(null);
+          } else if (!silent) {
+            setError(
+              result.error,
+            );
+          }
 
-        if (!silent) {
-          setLoading(false);
+        } catch {
+          if (!silent && (!isActive || isActive())) {
+            setError("Unable to load notifications.");
+          }
+        } finally {
+          if (!silent && (!isActive || isActive())) {
+            setLoading(false);
+          }
+          loadInFlightRef.current = false;
+          const refreshPending = refreshPendingRef.current;
+          refreshPendingRef.current = false;
+          if (refreshPending && !document.hidden) {
+            void load(true);
+          }
         }
       },
       [noteIncoming],
@@ -424,6 +446,9 @@ export function ClientNotificationBell({
           void load(true);
         }
       };
+      const refreshOnReturn = () => {
+        if (!document.hidden) void load(true, undefined, true);
+      };
 
       const interval =
         window.setInterval(
@@ -433,12 +458,12 @@ export function ClientNotificationBell({
 
       window.addEventListener(
         "focus",
-        refresh,
+        refreshOnReturn,
       );
 
       document.addEventListener(
         "visibilitychange",
-        refresh,
+        refreshOnReturn,
       );
 
       return () => {
@@ -448,13 +473,14 @@ export function ClientNotificationBell({
 
         window.removeEventListener(
           "focus",
-          refresh,
+          refreshOnReturn,
         );
 
         document.removeEventListener(
           "visibilitychange",
-          refresh,
+          refreshOnReturn,
         );
+        refreshPendingRef.current = false;
       };
     },
     [load],
