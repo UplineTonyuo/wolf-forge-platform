@@ -990,6 +990,11 @@ describe("console / raw request logging audit", () => {
     }
   });
 
+  it("flushes Sentry before Next sends a server error response", () => {
+    // Without the flush, Vercel's Node runtime can suspend with the event queued.
+    expect(read("src/instrumentation.ts")).toContain("await Sentry.flush(");
+  });
+
   it("keeps the external sink a seam rather than a dependency", () => {
     const source = read("src/lib/security/security-log.ts");
     expect(source).toContain("setSecurityLogSink");

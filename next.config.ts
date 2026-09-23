@@ -70,7 +70,8 @@ export default withSentryConfig(withBotId(nextConfig), {
   org: "wolf-forge",
   project: "javascript-nextjs",
   silent: !process.env.CI,
-  widenClientFileUpload: true,
+  // Server maps only: browser maps stay off (D-110), so client chunks have none.
+  sourcemaps: { assets: [".next/server"] },
   webpack: {
     treeshake: {
       removeDebugLogging: true,

@@ -10,4 +10,14 @@ export async function register() {
   }
 }
 
-export const onRequestError = Sentry.captureRequestError;
+/**
+ * Next awaits this before sending the error response. Sentry only registers
+ * `waitUntil` on Edge, so on Vercel's Node runtime the instance can suspend
+ * with the event still queued; flushing here sends it first.
+ */
+export async function onRequestError(
+  ...args: Parameters<typeof Sentry.captureRequestError>
+) {
+  Sentry.captureRequestError(...args);
+  await Sentry.flush(2000);
+}
