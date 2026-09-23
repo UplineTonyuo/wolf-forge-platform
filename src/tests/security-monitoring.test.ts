@@ -974,18 +974,25 @@ describe("console / raw request logging audit", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("introduces no third-party monitoring vendor", () => {
+  it("allows only the approved Sentry monitoring vendor", () => {
     const manifest = JSON.parse(read("package.json")) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
     const installed = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
 
-    for (const vendor of ["sentry", "datadog", "dd-trace", "newrelic", "logrocket", "posthog"]) {
+    expect(installed).toContain("@sentry/nextjs");
+
+    for (const vendor of ["datadog", "dd-trace", "newrelic", "logrocket", "posthog"]) {
       expect(
         `${vendor}: ${installed.some((name) => name.toLowerCase().includes(vendor))}`,
       ).toBe(`${vendor}: false`);
     }
+  });
+
+  it("flushes Sentry before Next sends a server error response", () => {
+    // Without the flush, Vercel's Node runtime can suspend with the event queued.
+    expect(read("src/instrumentation.ts")).toContain("await Sentry.flush(");
   });
 
   it("keeps the external sink a seam rather than a dependency", () => {

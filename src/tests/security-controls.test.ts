@@ -296,8 +296,10 @@ describe("production environment hardening (C2-1)", () => {
   it("pins the config flags that keep internals out of the browser", () => {
     expect(nextConfig.poweredByHeader).toBe(false);
     expect(nextConfig.devIndicators).toBe(false);
-    // Default already, pinned so it is auditable and cannot drift (D-110).
-    expect(nextConfig.productionBrowserSourceMaps).toBe(false);
+    // Browser maps exist only for the Sentry upload and are deleted inside
+    // `next build`, so they are never served (D-110, amended 2026-09-24).
+    expect(nextConfig.productionBrowserSourceMaps).toBe(true);
+    expect(read("next.config.ts")).toContain("deleteSourcemapsAfterUpload: true");
   });
 
   it("has a root error boundary covering the segments without their own", () => {

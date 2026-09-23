@@ -213,6 +213,8 @@ export function WorkspaceCommandBar({
 
   const notificationFeedbackTimersRef =
     useRef<number[]>([]);
+  const notificationLoadInFlightRef = useRef(false);
+  const notificationRefreshPendingRef = useRef(false);
 
   const noteIncomingNotifications =
     useCallback(
@@ -331,16 +333,23 @@ export function WorkspaceCommandBar({
 
   const loadNotifications =
     useCallback(
-      async (
+      async function loadNotifications(
         silent = false,
         isActive?: () => boolean,
-      ) => {
+        queueIfBusy = false,
+      ) {
         if (
           isActive &&
           !isActive()
         ) {
           return;
         }
+
+        if (notificationLoadInFlightRef.current) {
+          if (!silent || queueIfBusy) notificationRefreshPendingRef.current = true;
+          return;
+        }
+        notificationLoadInFlightRef.current = true;
 
         if (!silent) {
           setNotificationsLoading(
@@ -348,38 +357,49 @@ export function WorkspaceCommandBar({
           );
         }
 
-        const result =
-          await getWalletNotificationsAction();
+        try {
+          const result =
+            await getWalletNotificationsAction();
 
-        if (
-          isActive &&
-          !isActive()
-        ) {
-          return;
-        }
+          if (
+            isActive &&
+            !isActive()
+          ) {
+            return;
+          }
 
-        if (result.ok) {
-          noteIncomingNotifications(
-            result.notifications,
-          );
+          if (result.ok) {
+            noteIncomingNotifications(
+              result.notifications,
+            );
 
-          setNotifications(
-            result.notifications,
-          );
+            setNotifications(
+              result.notifications,
+            );
 
-          setNotificationsError(
-            null,
-          );
-        } else if (!silent) {
-          setNotificationsError(
-            result.error,
-          );
-        }
+            setNotificationsError(
+              null,
+            );
+          } else if (!silent) {
+            setNotificationsError(
+              result.error,
+            );
+          }
 
-        if (!silent) {
-          setNotificationsLoading(
-            false,
-          );
+        } catch {
+          if (!silent && (!isActive || isActive())) {
+            setNotificationsError("Unable to load notifications.");
+          }
+        } finally {
+          if (!silent && (!isActive || isActive())) {
+            setNotificationsLoading(false);
+          }
+          notificationLoadInFlightRef.current = false;
+          const refreshPending = notificationRefreshPendingRef.current;
+          notificationRefreshPendingRef.current = false;
+          if (refreshPending && !document.hidden) {
+            void loadNotifications(true);
+          }
         }
       },
       [
@@ -471,6 +491,9 @@ export function WorkspaceCommandBar({
         );
       }
     };
+    const refreshOnReturn = () => {
+      if (!document.hidden) void loadNotifications(true, undefined, true);
+    };
 
     const interval =
       window.setInterval(
@@ -480,12 +503,12 @@ export function WorkspaceCommandBar({
 
     window.addEventListener(
       "focus",
-      refresh,
+      refreshOnReturn,
     );
 
     document.addEventListener(
       "visibilitychange",
-      refresh,
+      refreshOnReturn,
     );
 
     return () => {
@@ -495,13 +518,14 @@ export function WorkspaceCommandBar({
 
       window.removeEventListener(
         "focus",
-        refresh,
+        refreshOnReturn,
       );
 
       document.removeEventListener(
         "visibilitychange",
-        refresh,
+        refreshOnReturn,
       );
+      notificationRefreshPendingRef.current = false;
     };
   }, [loadNotifications]);
 
