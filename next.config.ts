@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { withBotId } from "botid/next/config";
 import {
@@ -39,6 +40,15 @@ const nextConfig: NextConfig = {
    */
   productionBrowserSourceMaps: false,
 
+  env: {
+    NEXT_PUBLIC_SENTRY_ENABLED:
+      process.env.VERCEL === "1" || process.env.SENTRY_ENABLE_DEV === "1"
+        ? "1"
+        : "0",
+    NEXT_PUBLIC_SENTRY_ENVIRONMENT:
+      process.env.VERCEL_ENV ?? "development",
+  },
+
   experimental: {
     authInterrupts: true,
     // Ticket attachments allow up to TICKET_ATTACHMENT_MAX_BYTES (5 MiB); this
@@ -56,4 +66,14 @@ const nextConfig: NextConfig = {
   headers: async () => securityHeaderRules(readSecurityHeaderEnvironment()),
 };
 
-export default withBotId(nextConfig);
+export default withSentryConfig(withBotId(nextConfig), {
+  org: "wolf-forge",
+  project: "javascript-nextjs",
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

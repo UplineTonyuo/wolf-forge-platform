@@ -10,7 +10,6 @@ coverage/
 *.tsbuildinfo
 
 .vercel
-.env*
 
 # Shared Obsidian project memory, symlinked outside the repo.
 # Tailwind follows unignored paths when scanning sources, and this one leaves
@@ -19,3 +18,6 @@ coverage/
 
 # Generated local-only QA login credential (scripts/qa-local-login.ts). Never commit.
 .qa-local-credentials*.json
+
+# Local Sentry source-map upload credential. Never commit.
+.env.sentry-build-plugin
