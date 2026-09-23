@@ -27,18 +27,18 @@ const nextConfig: NextConfig = {
     : {}),
 
   /**
-   * Browser production source maps stay OFF (D-110).
+   * Browser production source maps are generated for Sentry only and are
+   * never served (D-110, amended 2026-09-24).
    *
-   * This is already Next's default — the point of pinning it is auditability.
-   * With maps served, the production bundle hands anyone the original module
-   * names, comments and control flow of the entire client tree. Written
-   * explicitly so the posture is visible in the one config file D-101 makes
-   * authoritative, and so turning it on has to be a deliberate edit rather
-   * than a default that drifted.
-   *
-   * Server-side maps still exist inside `.next/server` and are never served.
+   * Served maps would hand anyone the original module names, comments and
+   * control flow of the entire client tree. They exist only so Sentry can
+   * symbolicate browser errors: `deleteSourcemapsAfterUpload` below removes
+   * every `.next/static/**` map inside `next build` — whether or not the
+   * upload succeeded — and strips the `sourceMappingURL` comments, so nothing
+   * reaches the deployment. Pinned explicitly so the posture stays a
+   * deliberate, auditable edit under D-101.
    */
-  productionBrowserSourceMaps: false,
+  productionBrowserSourceMaps: true,
 
   env: {
     NEXT_PUBLIC_SENTRY_ENABLED:
@@ -70,8 +70,8 @@ export default withSentryConfig(withBotId(nextConfig), {
   org: "wolf-forge",
   project: "javascript-nextjs",
   silent: !process.env.CI,
-  // Server maps only: browser maps stay off (D-110), so client chunks have none.
-  sourcemaps: { assets: [".next/server"] },
+  // Load-bearing for D-110: browser maps must never ship with the deployment.
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
   webpack: {
     treeshake: {
       removeDebugLogging: true,
