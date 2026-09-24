@@ -15,136 +15,117 @@ vi.mock("next/navigation", () => ({
 
 const { ClientsFilterPanel } = await import("../components/clients/clients-filter-panel");
 
-function stubViewport(matches: boolean) {
-  vi.stubGlobal("matchMedia", () => ({
-    matches,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }));
-}
+const counts = { "": 12, contact: 5, lead: 3, client: 4, client_team: 0 };
 
-function openPanel(status: string) {
-  const view = render(<ClientsFilterPanel initialQuery="" initialStatus={status} />);
-  fireEvent.click(screen.getByRole("button", { name: /^Filter/ }));
+function openPanel(status = "", query = "") {
+  const view = render(<ClientsFilterPanel query={query} status={status} counts={counts} />);
+  fireEvent.click(screen.getByRole("button", { name: "Filter clients" }));
   return { view, dialog: screen.getByRole("dialog", { name: "Filter clients" }) };
 }
 
-function openType(dialog: HTMLElement) {
-  fireEvent.click(within(dialog).getByRole("button", { name: /Type/ }));
+function apply(dialog: HTMLElement) {
+  fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
 }
 
 beforeEach(() => {
   push.mockReset();
   params = new URLSearchParams();
-  stubViewport(false);
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
 
-describe("Clients filter Type", () => {
-  it("shows the current canonical status as Type when the panel opens", () => {
-    const { dialog } = openPanel("client_team");
+describe("Clients filter", () => {
+  it("offers only the filters the server applies: search and Type", () => {
+    const { dialog } = openPanel();
 
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("Client Team");
-  });
-
-  it("defaults Type to All when no status is active", () => {
-    const { dialog } = openPanel("");
-
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("All");
-  });
-
-  it("offers the full canonical vocabulary including Client Team", () => {
-    const { dialog } = openPanel("");
-    openType(dialog);
-
-    for (const label of ["All", "Contact", "Lead", "Client", "Client Team"]) {
-      expect(within(dialog).getByRole("button", { name: label })).toBeTruthy();
+    expect(within(dialog).getByRole("searchbox", { name: "Search" })).toBeTruthy();
+    expect(within(dialog).getByRole("group", { name: "Type" })).toBeTruthy();
+    for (const unwired of [/Assigned manager/, /Pipeline stage/, /Created date/, /Updated date/, /Rows per page/]) {
+      expect(within(dialog).queryByText(unwired)).toBeNull();
     }
   });
 
+  it("opens on the applied Type, with the page's own counts", () => {
+    const { dialog } = openPanel("client_team");
+
+    expect(within(dialog).getByRole("button", { name: /^Client Team/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(dialog).getByRole("button", { name: /^All/ }).getAttribute("aria-pressed")).toBe("false");
+    expect(within(dialog).getByRole("button", { name: /^Lead/ }).textContent).toContain("3");
+    expect(within(dialog).getByRole("button", { name: /^All/ }).textContent).toContain("12");
+  });
+
   it("writes the selected type to the existing `status` param on Apply", () => {
-    const { dialog } = openPanel("");
-    openType(dialog);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Client Team" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filter" }));
+    const { dialog } = openPanel();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Client Team/ }));
+    apply(dialog);
 
     expect(push).toHaveBeenCalledWith("/clients?status=client_team");
   });
 
   it("removes the status param when All is applied", () => {
+    params = new URLSearchParams("status=lead");
     const { dialog } = openPanel("lead");
-    openType(dialog);
-    fireEvent.click(within(dialog).getByRole("button", { name: "All" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filter" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^All/ }));
+    apply(dialog);
 
     expect(push).toHaveBeenCalledWith("/clients");
   });
 
-  it("keeps the search param intact while changing the type", () => {
-    params = new URLSearchParams("q=acme");
+  it("applies the search on Enter", () => {
+    const { dialog } = openPanel();
+    const search = within(dialog).getByRole("searchbox", { name: "Search" });
+    fireEvent.change(search, { target: { value: "  acme  " } });
+    fireEvent.submit(search.closest("form")!);
+
+    expect(push).toHaveBeenCalledWith("/clients?q=acme");
+  });
+
+  it("carries unrelated params such as `view` through untouched", () => {
+    params = new URLSearchParams("view=companies");
+    const { dialog } = openPanel();
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Lead/ }));
+    apply(dialog);
+
+    expect(push).toHaveBeenCalledWith("/clients?view=companies&status=lead");
+  });
+
+  it("clears search and Type together", () => {
+    params = new URLSearchParams("q=acme&status=lead");
+    const { dialog } = openPanel("lead", "acme");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Clear" }));
+
+    expect(push).toHaveBeenCalledWith("/clients");
+  });
+
+  it("does not navigate when nothing changed", () => {
+    params = new URLSearchParams("status=lead");
     const { dialog } = openPanel("lead");
-    openType(dialog);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Client" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply filter" }));
+    apply(dialog);
 
-    const target = push.mock.calls.at(-1)?.[0] as string;
-    expect(new URLSearchParams(target.split("?")[1]).get("q")).toBe("acme");
-    expect(new URLSearchParams(target.split("?")[1]).get("status")).toBe("client");
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it("follows the URL when it changes underneath the panel", () => {
-    const { view, dialog } = openPanel("lead");
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("Lead");
+  it("badges the trigger with the applied filters, not an unapplied draft", () => {
+    render(<ClientsFilterPanel query="acme" status="lead" counts={counts} />);
+    const trigger = screen.getByRole("button", { name: "Filter clients" });
+    expect(trigger.textContent).toContain("2");
 
-    params = new URLSearchParams("status=contact");
-    view.rerender(<ClientsFilterPanel initialQuery="" initialStatus="contact" />);
-
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("Contact");
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Filter clients" });
+    fireEvent.click(within(dialog).getByRole("button", { name: /^All/ }));
+    expect(trigger.textContent).toContain("2");
   });
 
-  it("restores All on reset", () => {
-    const { dialog } = openPanel("client");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Reset" }));
-
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("All");
-  });
-});
-
-describe("Clients filter sheet containment", () => {
-  it("leaves the panel inside the toolbar above the sheet breakpoint", () => {
-    const { view, dialog } = openPanel("");
-
-    expect(view.container.contains(dialog)).toBe(true);
-    expect(document.body.contains(dialog)).toBe(true);
-  });
-
-  it("portals the panel out of the route subtree at the sheet breakpoint", () => {
-    stubViewport(true);
-    const { view, dialog } = openPanel("");
+  it("portals the modal out of the route subtree at every width", () => {
+    const { view, dialog } = openPanel();
 
     /*
-     * .workspace-route-stage carries a transform, so a fixed-position sheet
-     * left inside it anchors to the route stage instead of the viewport and
-     * renders off the top of the screen. Asserting it is outside the rendered
-     * root is what proves the portal is doing its job.
+     * .workspace-route-stage carries a transform, so a fixed-position modal
+     * left inside it anchors to the route stage instead of the viewport.
      */
     expect(view.container.contains(dialog)).toBe(false);
-    expect(dialog.parentElement).toBe(document.body);
-  });
-
-  it("keeps the panel open while its own controls are clicked", () => {
-    stubViewport(true);
-    const { dialog } = openPanel("");
-    openType(dialog);
-
-    fireEvent.mouseDown(within(dialog).getByRole("button", { name: "Lead" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Lead" }));
-
-    expect(screen.getByRole("dialog", { name: "Filter clients" })).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: /Type/ }).textContent).toContain("Lead");
+    expect(dialog.parentElement?.parentElement).toBe(document.body);
   });
 });

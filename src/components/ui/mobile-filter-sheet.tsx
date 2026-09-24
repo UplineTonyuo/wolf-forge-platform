@@ -1,25 +1,22 @@
 "use client";
 
 import { Check, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
-import {
-  ReactNode,
-  useEffect,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useClientMounted, useExitTransition } from "../team/use-exit-transition";
 import styles from "./mobile-filter-sheet.module.css";
 
 /**
- * The shared mobile sheet: the filtered index pages' `Filter` control, and the
+ * The shared filter sheet: the filtered index pages' `Filter` control, and the
  * folder/service picker the Services page uses, are the same surface.
  *
- * Pages that already carry a filter affordance in their own toolbar (the
- * Active/Archived tabs, the Investment Intent status pills) render a
- * `MobileFilterSheet` next to their search box at mobile widths and keep their
- * richer desktop controls hidden at those widths. A control that selects one
- * value immediately (Services' folder switcher) uses `MobilePickerSheet`
- * instead -- same chrome, same option rows, no Clear/Apply.
+ * Pages whose toolbar already carries a desktop filter affordance (Coupons'
+ * Active/Archived tabs) render a `MobileFilterSheet` next to their search box
+ * that only appears at mobile widths. Pages whose only filter entry point is
+ * this sheet (Clients, Investment Intent) pass `alwaysVisible`: a centered
+ * modal on desktop, a bottom sheet on phones. A control that selects one value
+ * immediately (Services' folder switcher) uses `MobilePickerSheet` instead --
+ * same chrome, same option rows, no Clear/Apply.
  *
  * Both are portalled to <body> on purpose. Inside a route the sheet would be a
  * `position: fixed` descendant of `.workspace-route-stage`, which carries a
@@ -113,20 +110,38 @@ export function FilterOptionGroup({
   );
 }
 
+/** The longest exit transition in the module CSS (the backdrop fade), plus a frame. */
+const EXIT_MS = 150;
+
+const FOCUSABLE = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
 /**
- * The sheet chrome itself: backdrop, panel, header, optional footer, and the
- * open/close behaviour both callers share (body scroll lock, Escape, click
- * outside). Rendered through a portal, and always mounted so it can transition
- * out -- `aria-hidden` is what takes it out of the accessibility tree when it
- * is closed.
+ * The modal chrome every sheet and picker shares: backdrop, panel, header,
+ * optional footer, and the behaviour a dialog owes its user -- body scroll
+ * lock, Escape, click outside, focus moved in on open, Tab kept inside, focus
+ * returned to whatever opened it. Reuse this for any new dialog rather than
+ * growing another backdrop.
+ *
+ * Portalled to <body>, mounted only while open or leaving: `useExitTransition`
+ * keeps it in the DOM until the exit transition has played, then removes it.
+ * Pass `onSubmit` and the body plus footer become one form, so Enter in a text
+ * field applies the same way the footer's submit button does.
  */
-function SheetFrame({
+export function SheetFrame({
   open,
   onClose,
   label,
   eyebrow,
   closeLabel,
   footer,
+  onSubmit,
   children,
 }: {
   open: boolean;
@@ -135,25 +150,71 @@ function SheetFrame({
   eyebrow: string;
   closeLabel: string;
   footer?: ReactNode;
+  onSubmit?: () => void;
   children: ReactNode;
 }) {
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  const mounted = useClientMounted();
+  const { render, phase } = useExitTransition(open, EXIT_MS);
+  const panelRef = useRef<HTMLElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * Callers pass a fresh closure every render. Reading it through a ref keeps
+   * the effect below keyed on `open` alone -- re-running it on every draft
+   * change would pull focus back to the first control mid-selection.
+   */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
+    const panel = panelRef.current;
+    const returnFocusTo =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    /*
+     * Keyboard and mouse users land on the first useful control. A touch user
+     * lands on the panel itself, so opening a filter does not also summon the
+     * on-screen keyboard over half of it.
+     */
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+    const firstControl = coarsePointer
+      ? null
+      : (panel?.querySelector<HTMLElement>("[data-autofocus]") ??
+        bodyRef.current?.querySelector<HTMLElement>(FOCUSABLE));
+    (firstControl ?? panel)?.focus({ preventScroll: true });
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !panel) {
+        return;
+      }
+
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const outside = !panel.contains(active);
+
+      if (!first || !last) {
+        event.preventDefault();
+      } else if (event.shiftKey && (active === first || outside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || outside)) {
+        event.preventDefault();
+        first.focus();
       }
     }
 
@@ -162,14 +223,34 @@ function SheetFrame({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
+      returnFocusTo?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
-  const sheet = (
+  if (!mounted || !render) {
+    return null;
+  }
+
+  /* Pre-entry keeps the base classes; leaving takes the faster exit classes. */
+  const stateClass = (openClass?: string, closingClass?: string) =>
+    (phase === "open" ? openClass : open ? "" : closingClass) ?? "";
+
+  const content = (
+    <>
+      <div className={styles.panelBody} ref={bodyRef}>
+        {children}
+      </div>
+
+      {footer ? <footer className={styles.panelFooter}>{footer}</footer> : null}
+    </>
+  );
+
+  return createPortal(
     <div
-      className={open ? `${styles.backdrop} ${styles.backdropOpen}` : styles.backdrop}
+      className={`${styles.backdrop} ${stateClass(styles.backdropOpen, styles.backdropClosing)}`}
       role="presentation"
-      aria-hidden={!open}
+      aria-hidden={open ? undefined : true}
+      inert={!open}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -177,7 +258,9 @@ function SheetFrame({
       }}
     >
       <section
-        className={open ? `${styles.panel} ${styles.panelOpen}` : styles.panel}
+        ref={panelRef}
+        tabIndex={-1}
+        className={`${styles.panel} ${stateClass(styles.panelOpen, styles.panelClosing)}`}
         role="dialog"
         aria-modal="true"
         aria-label={label}
@@ -200,19 +283,29 @@ function SheetFrame({
           </button>
         </header>
 
-        <div className={styles.panelBody}>{children}</div>
-
-        {footer ? <footer className={styles.panelFooter}>{footer}</footer> : null}
+        {onSubmit ? (
+          <form
+            className={styles.panelForm}
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
+            {content}
+          </form>
+        ) : (
+          content
+        )}
       </section>
-    </div>
+    </div>,
+    document.body,
   );
-
-  return mounted ? createPortal(sheet, document.body) : null;
 }
 
 export function MobileFilterSheet({
   label,
   activeCount = 0,
+  alwaysVisible = false,
   onOpen,
   onClear,
   onApply,
@@ -222,6 +315,11 @@ export function MobileFilterSheet({
   label: string;
   /** Drives the badge. Pages pass their own count, or 0 for none. */
   activeCount?: number;
+  /**
+   * Show the trigger at every width. For pages where this sheet is the only
+   * filter entry point; without it the trigger is mobile-only.
+   */
+  alwaysVisible?: boolean;
   /**
    * Fired as the sheet opens. Pages that edit a draft-selection hold their
    * option rows in local state, and this is where that draft is reseeded from
@@ -245,9 +343,11 @@ export function MobileFilterSheet({
     <>
       <button
         type="button"
-        className={
-          open ? `${styles.trigger} ${styles.triggerOpen}` : styles.trigger
-        }
+        className={[
+          styles.trigger,
+          alwaysVisible ? styles.triggerAlways : "",
+          open ? styles.triggerOpen : "",
+        ].join(" ")}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={label}
@@ -273,6 +373,10 @@ export function MobileFilterSheet({
         label={label}
         eyebrow="FILTERS"
         closeLabel="Close filters"
+        onSubmit={() => {
+          onApply();
+          close();
+        }}
         footer={
           <>
             <button
@@ -286,14 +390,7 @@ export function MobileFilterSheet({
               Clear
             </button>
 
-            <button
-              type="button"
-              className={styles.apply}
-              onClick={() => {
-                onApply();
-                close();
-              }}
-            >
+            <button type="submit" className={styles.apply}>
               Apply
             </button>
           </>

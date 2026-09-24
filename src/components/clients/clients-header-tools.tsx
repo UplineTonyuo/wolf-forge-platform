@@ -9,14 +9,17 @@ import {
 } from "next/navigation";
 import {
   ClientsFilterPanel,
+  type ClientTypeCounts,
 } from "./clients-filter-panel";
 
 export function ClientsHeaderTools({
-  initialQuery,
-  initialStatus,
+  query,
+  status,
+  counts,
 }: {
-  initialQuery: string;
-  initialStatus: string;
+  query: string;
+  status: string;
+  counts: ClientTypeCounts;
 }) {
   const searchParams =
     useSearchParams();
@@ -51,8 +54,9 @@ export function ClientsHeaderTools({
       </Link>
 
       <ClientsFilterPanel
-        initialQuery={initialQuery}
-        initialStatus={initialStatus}
+        query={query}
+        status={status}
+        counts={counts}
       />
     </div>
   );
