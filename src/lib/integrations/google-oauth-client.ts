@@ -167,8 +167,14 @@ export class GoogleOAuthClient {
   }
 }
 
+/** Google reports the `email` and `profile` grants under their long names. */
+const GOOGLE_SCOPE_ALIASES = new Map([
+  ["https://www.googleapis.com/auth/userinfo.email", "email"],
+  ["https://www.googleapis.com/auth/userinfo.profile", "profile"],
+]);
+
 function parseScopes(value: string | undefined): string[] {
-  return value?.split(/\s+/u).filter(Boolean) ?? [];
+  return value?.split(/\s+/u).filter(Boolean).map((scope) => GOOGLE_SCOPE_ALIASES.get(scope) ?? scope) ?? [];
 }
 
 function toTokenSet(parsed: z.infer<typeof tokenResponseSchema>, scopes: readonly string[]): GmailTokenSet {

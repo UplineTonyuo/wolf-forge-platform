@@ -120,6 +120,19 @@ describe("Gmail OAuth boundary", () => {
     expect(String(input)).not.toContain(environment.GOOGLE_CLIENT_SECRET);
     expect(String(init?.body)).toContain("client_secret=google-client-secret");
   });
+
+  it("accepts Google's long names for the email and profile grants on exchange and refresh", async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      access_token: "server-access-token",
+      refresh_token: "server-refresh-token",
+      expires_in: 3600,
+      scope: "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/gmail.send",
+      token_type: "Bearer",
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    const client = new GoogleOAuthClient(environment, fetcher as typeof fetch);
+    expect((await client.exchangeCode("authorization-code", "pkce-verifier")).scopes).toEqual([...GMAIL_OAUTH_SCOPES]);
+    expect((await client.refresh("server-refresh-token", [...GMAIL_OAUTH_SCOPES])).scopes).toEqual([...GMAIL_OAUTH_SCOPES]);
+  });
 });
 
 describe("Gmail connection lifecycle", () => {
