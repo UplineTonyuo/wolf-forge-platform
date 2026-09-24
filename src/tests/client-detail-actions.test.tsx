@@ -10,6 +10,7 @@ const push = vi.fn();
 const updateClientDetailsAction = vi.fn();
 const createInternalTicketAction = vi.fn();
 const assignFormAction = vi.fn();
+const sendClientWelcomeEmailAction = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh, push }),
@@ -25,6 +26,10 @@ vi.mock("../app/actions/tickets", () => ({
 
 vi.mock("../app/actions/forms", () => ({
   assignFormAction: (...args: unknown[]) => assignFormAction(...args),
+}));
+
+vi.mock("../app/actions/client-welcome-email", () => ({
+  sendClientWelcomeEmailAction: (...args: unknown[]) => sendClientWelcomeEmailAction(...args),
 }));
 
 const { ClientDetailActions } = await import("../components/clients/client-detail-actions");
@@ -60,6 +65,7 @@ function renderActions(overrides: Partial<Parameters<typeof ClientDetailActions>
       permissions={allPermissions}
       onboardingForms={onboardingForms}
       eligibleProfiles={[]}
+      welcomeEmailProfileId={null}
       {...overrides}
     />,
   );
@@ -71,9 +77,42 @@ beforeEach(() => {
   updateClientDetailsAction.mockReset();
   createInternalTicketAction.mockReset();
   assignFormAction.mockReset();
+  sendClientWelcomeEmailAction.mockReset();
 });
 
 afterEach(cleanup);
+
+describe("Send welcome email", () => {
+  it("appears only for a sendable portal login", () => {
+    renderActions();
+    fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+
+    expect(screen.queryByRole("menuitem", { name: /welcome email/i })).not.toBeInTheDocument();
+  });
+
+  it("sends once per confirmation and treats a later click as a new request", async () => {
+    const profileId = "30000000-0000-4000-8000-000000000001";
+    sendClientWelcomeEmailAction.mockResolvedValue({ ok: false, message: "The welcome email was not sent." });
+    renderActions({ welcomeEmailProfileId: profileId });
+
+    fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /send welcome email/i }));
+    expect(screen.getByText(/no password is emailed/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /send email/i }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/was not sent/i));
+
+    sendClientWelcomeEmailAction.mockResolvedValue({ ok: true, message: "Welcome email sent." });
+    fireEvent.click(await screen.findByRole("button", { name: /send email/i }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(/welcome email sent/i));
+
+    expect(sendClientWelcomeEmailAction).toHaveBeenCalledTimes(2);
+    const [first, second] = sendClientWelcomeEmailAction.mock.calls;
+    expect(first?.[0]).toBe(profileId);
+    expect(first?.[1]).not.toBe(second?.[1]);
+    expect(screen.queryByRole("button", { name: /send email/i })).not.toBeInTheDocument();
+  });
+});
 
 describe("Client Detail actions menu", () => {
   it("hides the trigger entirely when no action is permitted", () => {

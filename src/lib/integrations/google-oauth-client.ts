@@ -10,6 +10,9 @@ const REVOCATION_ENDPOINT = "https://oauth2.googleapis.com/revoke";
 const USERINFO_ENDPOINT = "https://openidconnect.googleapis.com/v1/userinfo";
 const GMAIL_SEND_ENDPOINT = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 
+/** Bounds a welcome-email send, so a stuck send reports a failure promptly instead of holding its claim lease. */
+const SEND_PATH_TIMEOUT_MILLISECONDS = 30_000;
+
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   expires_in: z.number().int().positive(),
@@ -32,6 +35,9 @@ export type GmailTokenSet = {
   accessTokenExpiresAt: string;
   scopes: readonly string[];
 };
+
+/** `html` present sends multipart/alternative with `text` as the plain part. */
+export type GmailMessage = { to: string; subject: string; text: string; html?: string };
 
 export class GmailReauthorizationRequiredError extends Error {
   constructor() { super("Gmail authorization must be renewed."); }
@@ -93,6 +99,7 @@ export class GoogleOAuthClient {
         grant_type: "refresh_token",
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(SEND_PATH_TIMEOUT_MILLISECONDS),
     });
     if (!response.ok) {
       const errorBody = await response.json().catch(() => null) as { error?: unknown } | null;
@@ -127,24 +134,31 @@ export class GoogleOAuthClient {
     if (!response.ok && response.status !== 400) throw new Error("Google credential revocation failed.");
   }
 
-  async send(accessToken: string, message: { to: string; subject: string; text: string }): Promise<string> {
+  async send(accessToken: string, message: GmailMessage): Promise<string> {
     z.string().email().parse(message.to);
     assertMailHeader(message.to);
     assertMailHeader(message.subject);
+    const body = message.html === undefined
+      ? ["Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: 8bit", "", message.text]
+      : [
+        `Content-Type: multipart/alternative; boundary="${MIME_BOUNDARY}"`,
+        "",
+        ...mimePart("text/plain", message.text),
+        ...mimePart("text/html", message.html),
+        `--${MIME_BOUNDARY}--`,
+      ];
     const raw = Buffer.from([
       `To: ${message.to}`,
       `Subject: ${message.subject}`,
       "MIME-Version: 1.0",
-      "Content-Type: text/plain; charset=UTF-8",
-      "Content-Transfer-Encoding: 8bit",
-      "",
-      message.text,
+      ...body,
     ].join("\r\n"), "utf8").toString("base64url");
     const response = await this.fetcher(GMAIL_SEND_ENDPOINT, {
       method: "POST",
       headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
       body: JSON.stringify({ raw }),
       cache: "no-store",
+      signal: AbortSignal.timeout(SEND_PATH_TIMEOUT_MILLISECONDS),
     });
     if (response.status === 401 || response.status === 403) throw new GmailReauthorizationRequiredError();
     if (!response.ok) throw new Error("Gmail message delivery failed.");
@@ -164,6 +178,23 @@ function toTokenSet(parsed: z.infer<typeof tokenResponseSchema>, scopes: readonl
     accessTokenExpiresAt: new Date(Date.now() + parsed.expires_in * 1000).toISOString(),
     scopes,
   };
+}
+
+/*
+ * Parts are base64-encoded, and '-' and '_' are outside the base64 alphabet,
+ * so no body line can ever collide with this fixed boundary.
+ */
+const MIME_BOUNDARY = "wf_alternative_part";
+
+function mimePart(contentType: string, content: string): string[] {
+  const encoded = Buffer.from(content, "utf8").toString("base64");
+  return [
+    `--${MIME_BOUNDARY}`,
+    `Content-Type: ${contentType}; charset=UTF-8`,
+    "Content-Transfer-Encoding: base64",
+    "",
+    ...(encoded.match(/.{1,76}/gu) ?? []),
+  ];
 }
 
 function assertMailHeader(value: string): void {

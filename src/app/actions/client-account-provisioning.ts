@@ -3,6 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  canSendClientWelcomeEmail,
+  createClientWelcomeEmailDependencies,
+  sendClientWelcomeEmail,
+  type ClientWelcomeEmailOutcome,
+} from "../../lib/email/client-welcome-email-server";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { AuthAdminError } from "../../lib/supabase/auth-admin";
@@ -127,6 +133,12 @@ export async function provisionClientAccountAction(
       ) ?? "",
     );
 
+  // Checked: no password here; the client sets one from the welcome email (KI-091).
+  const sendWelcomeEmail =
+    formData.get(
+      "send_welcome_email",
+    ) === "on";
+
   const fieldErrors:
     ProvisionClientAccountState["fieldErrors"] =
       {};
@@ -184,26 +196,28 @@ export async function provisionClientAccountAction(
       "Job title must be 120 characters or fewer.";
   }
 
-  if (!password) {
-    fieldErrors.password =
-      "Create a temporary password.";
-  } else if (
-    password.length < 8
-  ) {
-    fieldErrors.password =
-      "Use at least 8 characters.";
-  } else if (
-    password.length > 72
-  ) {
-    fieldErrors.password =
-      "Use 72 characters or fewer.";
-  }
+  if (!sendWelcomeEmail) {
+    if (!password) {
+      fieldErrors.password =
+        "Create a temporary password.";
+    } else if (
+      password.length < 8
+    ) {
+      fieldErrors.password =
+        "Use at least 8 characters.";
+    } else if (
+      password.length > 72
+    ) {
+      fieldErrors.password =
+        "Use 72 characters or fewer.";
+    }
 
-  if (
-    confirmPassword !== password
-  ) {
-    fieldErrors.confirmPassword =
-      "Passwords do not match.";
+    if (
+      confirmPassword !== password
+    ) {
+      fieldErrors.confirmPassword =
+        "Passwords do not match.";
+    }
   }
 
   if (
@@ -262,7 +276,22 @@ export async function provisionClientAccountAction(
     };
   }
 
+  // Checked before provisioning, so a password-less login is never created without its email.
+  if (
+    sendWelcomeEmail &&
+    !(await canSendClientWelcomeEmail(context))
+  ) {
+    return {
+      error:
+        "Welcome emails need a connected Gmail account and integrations access. Untick the option to set a temporary password instead.",
+      fieldErrors: {},
+    };
+  }
+
   let companyId:
+    string | null = null;
+
+  let profileId:
     string | null = null;
 
   try {
@@ -276,7 +305,10 @@ export async function provisionClientAccountAction(
           email,
           first_name: firstName,
           last_name: lastName,
-          temporary_password: password,
+          temporary_password:
+            sendWelcomeEmail
+              ? undefined
+              : password,
           company_name: companyName,
           phone,
           job_title: jobTitle,
@@ -298,6 +330,9 @@ export async function provisionClientAccountAction(
 
     companyId =
       account.companyId;
+
+    profileId =
+      account.profile.id;
   } catch (error) {
     if (
       error instanceof AuthAdminError &&
@@ -347,6 +382,28 @@ export async function provisionClientAccountAction(
     };
   }
 
+  let welcome:
+    ClientWelcomeEmailOutcome | null = null;
+
+  if (
+    sendWelcomeEmail &&
+    profileId
+  ) {
+    try {
+      welcome =
+        await sendClientWelcomeEmail(
+          profileId,
+          randomUUID(),
+          createClientWelcomeEmailDependencies(
+            context.actor,
+          ),
+        );
+    } catch {
+      // The account exists either way; the client page offers a resend.
+      welcome = "failed";
+    }
+  }
+
   revalidatePath(
     "/clients",
   );
@@ -356,6 +413,10 @@ export async function provisionClientAccountAction(
   );
 
   redirect(
-    `/clients/${companyId}?created=1&portal=1`,
+    `/clients/${companyId}?created=1&portal=1${
+      welcome
+        ? `&welcome=${welcome === "sent" ? "sent" : "failed"}`
+        : ""
+    }`,
   );
 }

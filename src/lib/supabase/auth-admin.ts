@@ -6,7 +6,7 @@ import { createTrustedServerSupabaseClient, type TrustedServerClient } from "./t
  *
  * Creating auth.users cannot happen inside Postgres, so this is the one place
  * the service-role key is used for account provisioning. The adapter exposes
- * only the two operations provisioning needs, never returns or logs the
+ * only the operations provisioning and client activation need, never returns or logs the
  * password or the key, and refuses to construct itself in a browser bundle.
  * Everything that decides *access* stays in the database.
  */
@@ -16,7 +16,7 @@ export type CreatedAuthUser = {
 };
 
 export type AuthAdminFailure = {
-  reason: "already_exists" | "rejected";
+  reason: "already_exists" | "weak_password" | "rejected";
   message: string;
 };
 
@@ -47,9 +47,10 @@ export class AuthAdminAdapter {
     return new AuthAdminAdapter(createTrustedServerSupabaseClient(readServerEnvironment()));
   }
 
+  /** No password creates a login that can sign in only after the client sets one. */
   async createUser(input: {
     email: string;
-    password: string;
+    password?: string;
     displayName: string | null;
   }): Promise<CreatedAuthUser> {
     const { data, error } = await this.trusted.auth.admin.createUser({
@@ -73,5 +74,16 @@ export class AuthAdminAdapter {
   /** Best-effort compensation when the database half of provisioning fails. */
   async deleteUser(userId: string): Promise<void> {
     await this.trusted.auth.admin.deleteUser(userId);
+  }
+
+  /** Client activation only: the caller has already verified a set-password link for this user. */
+  async setPassword(userId: string, password: string): Promise<void> {
+    const { error } = await this.trusted.auth.admin.updateUserById(userId, { password });
+    if (error) {
+      throw new AuthAdminError({
+        reason: error.code === "weak_password" ? "weak_password" : "rejected",
+        message: error.message,
+      });
+    }
   }
 }

@@ -18,6 +18,7 @@ import {
   provisionClientAccountAction,
   type ProvisionClientAccountState,
 } from "../../app/actions/client-account-provisioning";
+import { ACTIVATION_LINK_DAYS } from "../../lib/email/client-welcome-email";
 import styles from "./create-client-account-form.module.css";
 
 function SubmitButton() {
@@ -68,7 +69,18 @@ function FieldError({
   );
 }
 
-export function CreateClientAccountForm() {
+export function CreateClientAccountForm({
+  welcomeEmailAvailable,
+}: {
+  welcomeEmailAvailable: boolean;
+}) {
+  const [
+    sendWelcomeEmail,
+    setSendWelcomeEmail,
+  ] = useState(
+    welcomeEmailAvailable,
+  );
+
   const [
     companyRequestId,
   ] = useState(
@@ -324,6 +336,35 @@ export function CreateClientAccountForm() {
           </div>
         </div>
 
+        <label
+          className={styles.welcomeOption}
+        >
+          <input
+            type="checkbox"
+            name="send_welcome_email"
+            checked={sendWelcomeEmail}
+            disabled={!welcomeEmailAvailable}
+            onChange={(event) =>
+              setSendWelcomeEmail(
+                event.target.checked,
+              )
+            }
+          />
+
+          <span>
+            <strong>
+              Email a secure set-password link
+            </strong>
+
+            <span>
+              {welcomeEmailAvailable
+                ? `The client chooses their own password from a single-use link that expires in ${ACTIVATION_LINK_DAYS} days. No password is emailed.`
+                : "Needs a connected Gmail account (Settings > Integrations) and integrations access."}
+            </span>
+          </span>
+        </label>
+
+        {sendWelcomeEmail ? null : (
         <div
           className={styles.passwordSection}
         >
@@ -402,6 +443,7 @@ export function CreateClientAccountForm() {
             </div>
           </div>
         </div>
+        )}
 
         <div
           className={styles.actions}

@@ -36,6 +36,7 @@ describe("authenticated high-cost application boundaries", () => {
       ["app/actions/reporting.ts", "context.services.reporting.send("],
       ["app/actions/billing.ts", "billing.ensureStripeCustomer("],
       ["app/actions/client-account-provisioning.ts", "provisioning.provisionClientAccount("],
+      ["app/actions/client-welcome-email.ts", "sendClientWelcomeEmail("],
       ["app/actions/member-account-provisioning.ts", "provisioning.provisionInternalMember("],
       ["app/(internal)/settings/integrations/gmail/verify/route.ts", ".verify()"],
     ];

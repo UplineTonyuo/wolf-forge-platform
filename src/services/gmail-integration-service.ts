@@ -5,7 +5,7 @@ import {
   gmailCredentialEnvelope,
   type GmailCredentialEnvelope,
 } from "../lib/integrations/gmail-credential-store";
-import type { GmailIdentity, GmailTokenSet } from "../lib/integrations/google-oauth-client";
+import type { GmailIdentity, GmailMessage, GmailTokenSet } from "../lib/integrations/google-oauth-client";
 
 const REFRESH_EARLY_MILLISECONDS = 60_000;
 
@@ -15,7 +15,7 @@ export interface GmailProviderPort {
   refresh(refreshToken: string, existingScopes: readonly string[]): Promise<GmailTokenSet>;
   readIdentity(accessToken: string): Promise<GmailIdentity>;
   revoke(token: string): Promise<void>;
-  send(accessToken: string, message: { to: string; subject: string; text: string }): Promise<string>;
+  send(accessToken: string, message: GmailMessage): Promise<string>;
 }
 
 export interface GmailCredentialPersistence {
@@ -76,7 +76,7 @@ export class GmailIntegrationService {
     await this.credentials.delete();
   }
 
-  async send(message: { to: string; subject: string; text: string }): Promise<string> {
+  async send(message: GmailMessage): Promise<string> {
     const credential = await this.validCredential();
     try {
       return await this.google.send(credential.payload.accessToken, message);

@@ -2,6 +2,7 @@
 
 import {
   FilePlus2,
+  MailPlus,
   Pencil,
   ReceiptText,
   TicketPlus,
@@ -22,6 +23,10 @@ import {
   updateClientDetailsAction,
 } from "../../app/actions/clients";
 import { createInternalTicketAction } from "../../app/actions/tickets";
+import {
+  sendClientWelcomeEmailAction,
+  type SendClientWelcomeEmailResult,
+} from "../../app/actions/client-welcome-email";
 import { companyStatuses } from "../../domain/companies/schema";
 import { ticketPriorityOptions } from "../../lib/tickets/presentation";
 
@@ -44,7 +49,7 @@ type ClientDetailActionsPermissions = {
 type OnboardingFormOption = { id: string; name: string };
 type EligibleProfile = { id: string; label: string };
 
-type ActiveModal = "edit" | "ticket" | "onboarding" | null;
+type ActiveModal = "edit" | "ticket" | "onboarding" | "welcome" | null;
 
 const companyStatusLabels: Record<(typeof companyStatuses)[number], string> = {
   contact: "Contact",
@@ -61,6 +66,7 @@ export function ClientDetailActions({
   permissions,
   onboardingForms,
   eligibleProfiles,
+  welcomeEmailProfileId,
 }: {
   companyId: string;
   clientName: string;
@@ -69,6 +75,8 @@ export function ClientDetailActions({
   permissions: ClientDetailActionsPermissions;
   onboardingForms: OnboardingFormOption[];
   eligibleProfiles: EligibleProfile[];
+  /** The primary contact's portal login, set only when the viewer may send it a welcome email. */
+  welcomeEmailProfileId: string | null;
 }) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,7 +109,8 @@ export function ClientDetailActions({
     permissions.edit ||
     permissions.invoiceManage ||
     permissions.ticketCreate ||
-    permissions.formsAssign;
+    permissions.formsAssign ||
+    welcomeEmailProfileId !== null;
 
   if (!hasAnyAction) {
     return null;
@@ -184,6 +193,19 @@ export function ClientDetailActions({
             Add onboarding form
           </button>
         ) : null}
+
+        {welcomeEmailProfileId ? (
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={menuOpen ? 0 : -1}
+            className="client-actions-option"
+            onClick={() => openModal("welcome")}
+          >
+            <MailPlus aria-hidden="true" />
+            Send welcome email
+          </button>
+        ) : null}
       </div>
 
       {activeModal === "edit" ? (
@@ -220,7 +242,71 @@ export function ClientDetailActions({
           }}
         />
       ) : null}
+
+      {activeModal === "welcome" && welcomeEmailProfileId ? (
+        <WelcomeEmailModal
+          profileId={welcomeEmailProfileId}
+          contactName={primaryContact?.name ?? clientName}
+          onClose={closeModal}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function WelcomeEmailModal({
+  profileId,
+  contactName,
+  onClose,
+}: {
+  profileId: string;
+  contactName: string;
+  onClose: () => void;
+}) {
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const [result, setResult] = useState<SendClientWelcomeEmailResult | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const send = () => {
+    if (pending) return;
+
+    startTransition(async () => {
+      setResult(await sendClientWelcomeEmailAction(profileId, requestId));
+      // Any later click is a new, deliberate request, not a retry of this one.
+      setRequestId(crypto.randomUUID());
+    });
+  };
+
+  return (
+    <ModalShell eyebrow="CLIENT PORTAL" title="Send welcome email" onClose={onClose} pending={pending}>
+      <div className="client-balance-form">
+        <p>
+          {contactName} gets a single-use link to set their own password. A new link replaces any
+          earlier one. No password is emailed.
+        </p>
+
+        {result ? (
+          <p
+            className={result.ok ? "client-balance-success" : "client-balance-error"}
+            role={result.ok ? "status" : "alert"}
+          >
+            {result.message}
+          </p>
+        ) : null}
+
+        <footer className="client-balance-actions">
+          <button type="button" onClick={onClose} disabled={pending}>
+            {result?.ok ? "Done" : "Cancel"}
+          </button>
+
+          {result?.ok ? null : (
+            <button type="button" onClick={send} disabled={pending}>
+              {pending ? "Sending..." : "Send email"}
+            </button>
+          )}
+        </footer>
+      </div>
+    </ModalShell>
   );
 }
 

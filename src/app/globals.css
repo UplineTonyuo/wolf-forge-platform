@@ -5211,6 +5211,20 @@ td {
   font-size: 10px;
 }
 
+.client-balance-success {
+  margin: 0;
+
+  padding: 9px 11px;
+
+  border: 1px solid #b9c8b7;
+  border-radius: 8px;
+
+  background: #f7fbf6;
+  color: #2f5a2c;
+
+  font-size: 10px;
+}
+
 
 .client-balance-actions {
   display: flex;
