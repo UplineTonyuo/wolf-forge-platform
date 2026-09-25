@@ -12,9 +12,9 @@ import {
   ReceiptText,
   Settings,
   ShieldCheck,
-  Sparkles,
   Tags,
   TicketCheck,
+  TrendingUp,
   UsersRound,
   Wrench,
 } from "lucide-react";
@@ -42,7 +42,8 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   invoices: ReceiptText,
   subscriptions: HandCoins,
   coupons: Tags,
-  investment_intent: Sparkles,
+  /* Buying interest is an opportunity on the way up; Sparkles read as an AI feature. */
+  investment_intent: TrendingUp,
   services: Wrench,
   forms: FormInput,
   team: ShieldCheck,

@@ -76,14 +76,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("Investment Intent mobile filter", () => {
-  it("keeps the status pills out of the mobile layout without deleting them", () => {
+describe("Investment Intent filter", () => {
+  it("has no status pill row: search leads and the Filter modal is the one entry point", () => {
     render(<InvestmentIntentWorkspace intents={intents} canManage />);
 
-    const group = document.querySelector("[aria-label='Investment intent filters']");
-    expect(group).toBeTruthy();
-    /* The pills stay in the DOM; a module class hides them below 768px. */
-    expect(group?.className).toMatch(/statusFilters/);
+    expect(document.querySelector("[aria-label='Investment intent filters']")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^All/ })).toBeNull();
+
+    const search = screen.getByRole("searchbox", { name: "Search investment intent" });
+    const trigger = screen.getByRole("button", { name: "Filter investment intent" });
+    /* Visible at every width, not only on phones. */
+    expect(trigger.className).toMatch(/triggerAlways/);
+    /* Search first in the row, Filter after it. */
+    expect(search.compareDocumentPosition(trigger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("offers every canonical status plus the cart axis, with the page's own counts", () => {

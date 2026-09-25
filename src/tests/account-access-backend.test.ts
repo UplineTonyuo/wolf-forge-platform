@@ -72,6 +72,10 @@ describe("permission preset and override validation", () => {
 
     const parsed = provisionClientAccountSchema.parse({ ...base, company_name: "Acme" });
     expect(parsed.email).toBe("client@example.invalid");
+
+    // The welcome-email path creates the login with no password (KI-091); members still need one.
+    expect(provisionClientAccountSchema.safeParse({ email: base.email, company_name: "Acme" }).success).toBe(true);
+    expect(provisionInternalMemberSchema.safeParse({ email: base.email, preset_key: "staff" }).success).toBe(false);
   });
 
   it("derives module visibility from real capabilities", () => {

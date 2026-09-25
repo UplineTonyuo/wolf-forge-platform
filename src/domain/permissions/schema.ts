@@ -103,6 +103,8 @@ export const provisionInternalMemberSchema = provisioningIdentitySchema.extend({
 });
 
 export const provisionClientAccountSchema = provisioningIdentitySchema.extend({
+  // Omitted when the client sets their own password from the welcome email (KI-091).
+  temporary_password: temporaryPasswordSchema.optional(),
   preset_key: clientPresetKeySchema.optional(),
   company_id: uuidSchema.optional(),
   company_name: nonBlankTextSchema.max(200).optional(),

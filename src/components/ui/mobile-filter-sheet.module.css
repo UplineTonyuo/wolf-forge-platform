@@ -63,6 +63,15 @@
   transform: scale(0.975);
 }
 
+.trigger svg {
+  stroke-width: 1.8;
+}
+
+/* The page's only filter entry point: visible at every width. */
+.triggerAlways {
+  display: inline-flex;
+}
+
 .triggerOpen {
   border-color:
     rgba(0, 13, 81, 0.30);
@@ -118,28 +127,30 @@
 
   padding: 28px;
 
-  background: rgba(10, 18, 48, 0.18);
+  /* The one blurred surface in the modal: it pushes the page back, nothing else. */
+  background: rgba(0, 0, 0, 0.32);
 
-  backdrop-filter: blur(11px) saturate(0.92);
-  -webkit-backdrop-filter: blur(11px) saturate(0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 
+  /*
+   * Mounted only while open or leaving (SheetFrame), so there is no hidden
+   * resting state to park. Before entry and while leaving it ignores the
+   * pointer, so a click during the exit lands on the page.
+   */
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
 
-  transition:
-    opacity 190ms ease,
-    visibility 0s linear 240ms;
+  transition: opacity 160ms ease-out;
 }
 
 .backdropOpen {
   opacity: 1;
-  visibility: visible;
   pointer-events: auto;
+}
 
-  transition:
-    opacity 190ms ease,
-    visibility 0s linear 0s;
+.backdropClosing {
+  transition: opacity 140ms ease-in;
 }
 
 .panel {
@@ -163,18 +174,45 @@
     0 30px 70px rgba(0, 13, 81, 0.20),
     0 8px 22px rgba(0, 13, 81, 0.08);
 
+  /*
+   * A short rise into place and a shorter drop on the way out: enough travel
+   * to read as the panel arriving, never enough to bounce or draw the eye.
+   */
   opacity: 0;
-  transform: translateY(14px) scale(0.985);
+  transform: translateY(8px) scale(0.98);
   transform-origin: bottom center;
 
   transition:
-    opacity 190ms ease,
-    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .panelOpen {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: none;
+}
+
+.panelClosing {
+  transform: translateY(6px) scale(0.985);
+
+  transition:
+    opacity 120ms ease-in,
+    transform 120ms ease-in;
+}
+
+/* Focused programmatically for touch users; it is not a control. */
+.panel:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* The form SheetFrame wraps body + footer in, laid out as the panel would. */
+.panelForm {
+  min-height: 0;
+
+  flex: 1 1 auto;
+
+  display: flex;
+  flex-direction: column;
 }
 
 .goldLine {
@@ -218,8 +256,9 @@
   gap: 5px;
 }
 
+/* #6b7385: the palette's cool grey at a readable 4.8:1 on white. */
 .eyebrow {
-  color: #929bad;
+  color: #6b7385;
 
   font-size: 9px;
   line-height: 1;
@@ -377,7 +416,7 @@
 }
 
 .groupLabel {
-  color: #929bad;
+  color: #6b7385;
 
   font-size: 10px;
   line-height: 1;
@@ -482,7 +521,7 @@
 }
 
 .optionCount {
-  color: #929bad;
+  color: #6b7385;
 
   font-size: 12px;
   font-weight: 650;
@@ -530,8 +569,30 @@
 
 
 /* ==========================================================
-   MOBILE
+   DESKTOP, TABLET, MOBILE
    ========================================================== */
+
+/* Rows sized for a thumb read as padding under a mouse. */
+@media (pointer: fine) {
+  .optionRow {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .panelHeader {
+    padding: 18px 18px 14px;
+  }
+
+  .panelBody {
+    gap: 18px;
+    padding: 16px 18px 18px;
+  }
+
+  .panelFooter {
+    padding: 12px 18px;
+  }
+}
 
 @media (max-width: 640px) {
   .backdrop {
@@ -559,5 +620,10 @@
   .apply,
   .optionRow {
     transition: none !important;
+  }
+
+  .panel,
+  .panelClosing {
+    transform: none;
   }
 }

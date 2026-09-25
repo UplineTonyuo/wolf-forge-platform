@@ -1,10 +1,11 @@
 /*
  * Investment Intent workspace.
  *
- * Deliberately thin. The toolbar, filter pills and table chrome come from the
- * shared admin list system, so this file only adds what the surface genuinely
- * needs: a counts strip, the cart/renewed chips, and the column rhythm. Navy
- * carries state, gold stays a hairline accent.
+ * Deliberately thin. The table chrome comes from the shared admin list system
+ * and the Filter modal from the shared filter sheet, so this file only adds
+ * what the surface genuinely needs: a counts strip, the search + Filter row,
+ * the cart/renewed chips, and the column rhythm. Navy carries state, gold
+ * stays a hairline accent.
  */
 
 /* ------------------------------------------------------------------ summary */
@@ -45,24 +46,27 @@
   line-height: 1;
 }
 
-/* ------------------------------------------------------------------ filters */
+/* ------------------------------------------------------------------ toolbar */
 
 /*
- * The count rides inside the pill rather than beside it, so a filter row of
- * eight items still reads as eight controls and not sixteen.
+ * One row at every width: search on the left, where scanning starts, and the
+ * Filter trigger closing the row on the right. Status and cart filters live
+ * in the Filter modal, so nothing else competes for the line.
  */
-.filterCount {
-  margin-left: 7px;
-  padding-left: 7px;
-  border-left: 1px solid currentColor;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.6;
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin: 14px 0 16px;
 }
 
 /* Local, not URL-driven: this workspace filters in the browser. */
 .search {
   position: relative;
-  width: min(100%, 300px);
+  flex: 0 1 360px;
+  min-width: 0;
   display: flex;
   align-items: center;
 }
@@ -127,19 +131,65 @@
 
 /* -------------------------------------------------------------------- table */
 
+/*
+ * The table is wider than narrower desktop columns, so it keeps its horizontal
+ * scroll, but the bar itself only shows while the pointer is over the table
+ * or focus is inside it. Wheel, trackpad and keyboard scrolling never change,
+ * and the track keeps its thin gutter so revealing it shifts nothing.
+ */
 .tableWrap {
   margin-top: 0;
+
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
+.tableWrap:hover,
+.tableWrap:focus-within {
+  scrollbar-color: rgba(0, 13, 81, 0.22) transparent;
+}
+
+/* Safari reads only the prefixed form. */
+.tableWrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.tableWrap:hover::-webkit-scrollbar-thumb,
+.tableWrap:focus-within::-webkit-scrollbar-thumb {
+  background: rgba(0, 13, 81, 0.22);
+}
+
+/*
+ * 1120px is the widest the table can be and still fit the content column at
+ * a 1440px viewport, so the common desktop needs no horizontal scroll at all.
+ * The fixed columns give up the width; the four date/price/cart columns keep
+ * the 127px that holds "Latest activity" on one line.
+ */
 .table {
-  min-width: 1180px;
+  min-width: 1120px;
   table-layout: fixed;
 }
 
-.clientColumn { width: 190px; }
-.investmentColumn { width: 220px; }
-.statusColumn { width: 170px; }
-.actionsColumn { width: 92px; }
+.clientColumn { width: 176px; }
+.investmentColumn { width: 196px; }
+.statusColumn { width: 160px; }
+.actionsColumn { width: 80px; }
+
+/*
+ * The global tablet rule hides every table's third cell (Price, here) from
+ * 768px to 1023px. Its <col> has to go too, or every later cell slides into
+ * its neighbour's width and an empty column trails the row.
+ */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .table col:nth-child(3) {
+    display: none;
+  }
+}
 
 .company {
   display: block;
@@ -462,20 +512,13 @@
   }
 }
 
-/*
- * Mobile: the status pills move into the shared Filter sheet, so the toolbar
- * collapses to one row -- search flexing, Filter compact on the right. Same
- * row the Projects, Clients, Coupons and Investment Intent indexes use.
- */
+/* Mobile: search takes the row, Filter stays compact beside it. */
 @media (max-width: 767px) {
-  .statusFilters {
-    display: none;
+  .toolbar {
+    margin-top: 4px;
   }
 
   .search {
-    width: auto;
-
     flex: 1 1 auto;
-    min-width: 0;
   }
 }

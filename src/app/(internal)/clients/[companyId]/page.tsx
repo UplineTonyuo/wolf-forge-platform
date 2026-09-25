@@ -22,6 +22,7 @@ import { ClientBalanceControl } from "../../../../components/clients/client-bala
 import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { StatusBadge } from "../../../../components/ui/status-badge";
+import { canSendClientWelcomeEmail } from "../../../../lib/email/client-welcome-email-server";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatDate } from "../../../../lib/format";
 import type { ActivityEventRow } from "../../../../lib/supabase/database-rows";
@@ -105,6 +106,7 @@ export default async function ClientDetailPage({
   params: Promise<{ companyId: string }>;
   searchParams: Promise<{
     created?: string;
+    welcome?: string;
     tab?: string;
     historyLimit?: string;
   }>;
@@ -134,6 +136,12 @@ export default async function ClientDetailPage({
       contacts.find((contact) => contact.is_primary) ??
       contacts[0] ??
       null;
+
+    // The primary contact's portal login, when this viewer may email it a set-password link.
+    const welcomeEmailProfileId =
+      primaryContact?.profile_id && (await canSendClientWelcomeEmail(context))
+        ? primaryContact.profile_id
+        : null;
 
     let onboardingForms: Array<{ id: string; name: string }> = [];
     let eligibleProfiles: Array<{ id: string; label: string }> = [];
@@ -239,6 +247,7 @@ export default async function ClientDetailPage({
             }}
             onboardingForms={onboardingForms}
             eligibleProfiles={eligibleProfiles}
+            welcomeEmailProfileId={welcomeEmailProfileId}
           />
         }
       >
@@ -248,6 +257,16 @@ export default async function ClientDetailPage({
             role="status"
           >
             {client.name} created.
+            {query.welcome === "sent" ? " Welcome email sent with a secure set-password link." : null}
+          </div>
+        ) : null}
+
+        {query.welcome === "failed" ? (
+          <div
+            className="form-banner"
+            role="alert"
+          >
+            The welcome email was not sent. Check the Gmail connection in Settings &gt; Integrations, then use Actions &gt; Send welcome email.
           </div>
         ) : null}
 

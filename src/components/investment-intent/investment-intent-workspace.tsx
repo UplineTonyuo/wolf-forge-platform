@@ -43,13 +43,6 @@ import styles from "./investment-intent.module.css";
 
 type StatusFilter = InvestmentIntentStatus | "all";
 
-const statusFilters: StatusFilter[] = ["all", ...investmentIntentStatuses];
-
-const statusFilterLabels: Record<StatusFilter, string> = {
-  all: "All",
-  ...investmentIntentStatusLabels,
-};
-
 const statusOptions = investmentIntentStatuses.map((status) => ({
   value: status,
   label: investmentIntentStatusLabels[status],
@@ -155,9 +148,9 @@ export function InvestmentIntentWorkspace({
   const [query, setQuery] = useState("");
 
   /*
-   * The mobile Filter sheet edits a draft and commits it on Apply, the same
-   * contract the Clients filter panel uses. Draft and applied state are seeded
-   * from each other at the two points that matter: on open, and on commit.
+   * The Filter modal edits a draft and commits it on Apply, the same contract
+   * the Clients filter uses. Draft and applied state are seeded from each
+   * other at the two points that matter: on open, and on commit.
    */
   const [draftStatus, setDraftStatus] = useState<StatusFilter>("all");
   const [draftInCartOnly, setDraftInCartOnly] = useState(false);
@@ -184,10 +177,6 @@ export function InvestmentIntentWorkspace({
     () => filterInvestmentIntents(resolved, { status, inCartOnly, query }),
     [inCartOnly, query, resolved, status],
   );
-
-  function countFor(filter: StatusFilter): number {
-    return filter === "all" ? counts.total : statusCounts[filter];
-  }
 
   const activeFilterCount =
     (status === "all" ? 0 : 1) + (inCartOnly ? 1 : 0);
@@ -218,105 +207,75 @@ export function InvestmentIntentWorkspace({
         </div>
       </dl>
 
-      <div className={adminList.toolbar}>
-        {/*
-          * Desktop only. At mobile widths this whole group moves into the
-          * Filter sheet below -- same statuses, same counts, same state.
-          */}
-        <div
-          className={`${adminList.filters} ${styles.statusFilters}`}
-          role="group"
-          aria-label="Investment intent filters"
-        >
-          {statusFilters.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`${adminList.filter} ${status === filter ? adminList.filterActive : ""}`}
-              aria-pressed={status === filter}
-              onClick={() => setStatus(filter)}
-            >
-              {statusFilterLabels[filter]}
-              <span className={styles.filterCount}>{countFor(filter)}</span>
+      {/*
+        * Search leads, where the eye starts; Filter closes the row on the right.
+        * Status and cart state live only in the Filter modal, with All as its
+        * default -- the badge on the trigger is what says a filter is applied.
+        */}
+      <div className={styles.toolbar}>
+        <label className={styles.search}>
+          <Search aria-hidden={true} />
+          <span>Search investment intent</span>
+          <input
+            type="search"
+            value={query}
+            placeholder="Search client or investment"
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          {query ? (
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
+              <X aria-hidden={true} />
             </button>
-          ))}
+          ) : null}
+        </label>
 
-          <button
-            type="button"
-            className={`${adminList.filter} ${inCartOnly ? adminList.filterActive : ""}`}
-            aria-pressed={inCartOnly}
-            title={cartStateHint}
-            onClick={() => setInCartOnly((current) => !current)}
-          >
-            In cart
-            <span className={styles.filterCount}>{counts.inCart}</span>
-          </button>
-        </div>
+        <MobileFilterSheet
+          label="Filter investment intent"
+          alwaysVisible
+          activeCount={activeFilterCount}
+          onOpen={() => {
+            setDraftStatus(status);
+            setDraftInCartOnly(inCartOnly);
+          }}
+          onClear={() => {
+            setStatus("all");
+            setInCartOnly(false);
+            setDraftStatus("all");
+            setDraftInCartOnly(false);
+          }}
+          onApply={() => {
+            setStatus(draftStatus);
+            setInCartOnly(draftInCartOnly);
+          }}
+        >
+          <FilterOptionGroup
+            label="Status"
+            value={draftStatus}
+            onChange={(next) => setDraftStatus(next as StatusFilter)}
+            options={[
+              { value: "all", label: "All", count: counts.total },
+              ...investmentIntentStatuses.map((entry) => ({
+                value: entry,
+                label: investmentIntentStatusLabels[entry],
+                count: statusCounts[entry],
+              })),
+            ]}
+          />
 
-        <div className={adminList.trailing}>
-          <label className={styles.search}>
-            <Search aria-hidden={true} />
-            <span>Search investment intent</span>
-            <input
-              type="search"
-              value={query}
-              placeholder="Search client or investment"
-              onChange={(event) => setQuery(event.target.value)}
-            />
-            {query ? (
-              <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
-                <X aria-hidden={true} />
-              </button>
-            ) : null}
-          </label>
-
-          <MobileFilterSheet
-            label="Filter investment intent"
-            activeCount={activeFilterCount}
-            onOpen={() => {
-              setDraftStatus(status);
-              setDraftInCartOnly(inCartOnly);
-            }}
-            onClear={() => {
-              setStatus("all");
-              setInCartOnly(false);
-              setDraftStatus("all");
-              setDraftInCartOnly(false);
-            }}
-            onApply={() => {
-              setStatus(draftStatus);
-              setInCartOnly(draftInCartOnly);
-            }}
-          >
-            <FilterOptionGroup
-              label="Status"
-              value={draftStatus}
-              onChange={(next) => setDraftStatus(next as StatusFilter)}
-              options={[
-                { value: "all", label: "All", count: counts.total },
-                ...investmentIntentStatuses.map((entry) => ({
-                  value: entry,
-                  label: investmentIntentStatusLabels[entry],
-                  count: statusCounts[entry],
-                })),
-              ]}
-            />
-
-            {/*
-              * Cart state is a separate axis, not a seventh status, so it stays
-              * a separate group rather than being folded into the six above.
-              */}
-            <FilterOptionGroup
-              label="Cart"
-              value={draftInCartOnly ? "in_cart" : "any"}
-              onChange={(next) => setDraftInCartOnly(next === "in_cart")}
-              options={[
-                { value: "any", label: "Any cart state" },
-                { value: "in_cart", label: "In cart", count: counts.inCart },
-              ]}
-            />
-          </MobileFilterSheet>
-        </div>
+          {/*
+            * Cart state is a separate axis, not a seventh status, so it stays
+            * a separate group rather than being folded into the six above.
+            */}
+          <FilterOptionGroup
+            label="Cart"
+            value={draftInCartOnly ? "in_cart" : "any"}
+            onChange={(next) => setDraftInCartOnly(next === "in_cart")}
+            options={[
+              { value: "any", label: "Any cart state" },
+              { value: "in_cart", label: "In cart", count: counts.inCart },
+            ]}
+          />
+        </MobileFilterSheet>
       </div>
 
       {visible.length === 0 ? (

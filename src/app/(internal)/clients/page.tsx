@@ -287,12 +287,19 @@ export default async function ClientsPage({
 
         <div className="clients-list-toolbar">
           <ClientsHeaderTools
-            initialQuery={q}
-            initialStatus={
+            query={q}
+            status={
               selectedStatus === "all"
                 ? ""
                 : selectedStatus
             }
+            counts={{
+              "": countFor("all"),
+              contact: countFor("contact"),
+              lead: countFor("lead"),
+              client: countFor("client"),
+              client_team: countFor("client_team"),
+            }}
           />
         </div>
 

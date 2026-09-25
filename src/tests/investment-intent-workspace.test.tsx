@@ -144,10 +144,18 @@ describe("Investment Intent workspace", () => {
     expect(summary.textContent).not.toMatch(/\$/u);
   });
 
+  /* Status and cart filters live in the Filter modal; there is no chip row. */
+  function applyFilter(option: RegExp) {
+    fireEvent.click(screen.getByRole("button", { name: "Filter investment intent" }));
+    const dialog = screen.getByRole("dialog", { name: "Filter investment intent" });
+    fireEvent.click(within(dialog).getByRole("button", { name: option }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply" }));
+  }
+
   it("filters by workflow status", () => {
     render(<InvestmentIntentWorkspace intents={intents} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^Contacted/u }));
+    applyFilter(/^Contacted/u);
 
     const rows = tableRows();
     expect(rows).toHaveLength(1);
@@ -157,7 +165,7 @@ describe("Investment Intent workspace", () => {
   it("narrows to interests still in a cart", () => {
     render(<InvestmentIntentWorkspace intents={intents} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /^In cart/u }));
+    applyFilter(/^In cart/u);
 
     expect(tableRows()).toHaveLength(2);
     expect(screen.queryByText("Westgate Auto")).not.toBeInTheDocument();

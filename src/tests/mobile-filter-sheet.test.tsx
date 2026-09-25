@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
@@ -32,25 +32,88 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function renderSheet(props: { alwaysVisible?: boolean } = {}) {
+  return render(
+    <MobileFilterSheet label="Filter things" onClear={() => {}} onApply={() => {}} {...props}>
+      <input aria-label="Name" type="search" />
+      <FilterOptionGroup
+        label="Status"
+        value="a"
+        onChange={() => {}}
+        options={[{ value: "a", label: "Alpha" }]}
+      />
+    </MobileFilterSheet>,
+  );
+}
+
 describe("MobileFilterSheet", () => {
-  it("is present in the DOM but keeps the sheet closed until the trigger is used", () => {
+  it("renders no sheet until the trigger is used", () => {
+    renderSheet();
+
+    expect(screen.getByRole("button", { name: "Filter things" }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("dialog", { name: "Filter things", hidden: true })).toBeNull();
+  });
+
+  it("stays mounted through its exit, out of the accessibility tree, then leaves the DOM", async () => {
+    renderSheet();
+    openTrigger("Filter things");
+    fireEvent.click(screen.getByRole("button", { name: "Close filters" }));
+
+    /* Mid-exit: still in the DOM so the transition can play, but hidden and inert. */
+    const leaving = screen.getByRole("dialog", { name: "Filter things", hidden: true });
+    expect(leaving.parentElement?.getAttribute("aria-hidden")).toBe("true");
+    expect(leaving.parentElement?.hasAttribute("inert")).toBe(true);
+    expect(screen.queryByRole("dialog", { name: "Filter things" })).toBeNull();
+
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Filter things", hidden: true })).toBeNull(),
+    );
+  });
+
+  it("moves focus to the first control, keeps Tab inside, and returns focus to the trigger", () => {
+    renderSheet();
+    const trigger = screen.getByRole("button", { name: "Filter things" });
+    trigger.focus();
+    openTrigger("Filter things");
+
+    const dialog = screen.getByRole("dialog", { name: "Filter things" });
+    const first = within(dialog).getByRole("button", { name: "Close filters" });
+    const last = within(dialog).getByRole("button", { name: "Apply" });
+    expect(document.activeElement).toBe(within(dialog).getByRole("searchbox", { name: "Name" }));
+
+    last.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(first);
+
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("applies on Enter from a field inside the sheet", () => {
+    const onApply = vi.fn();
     render(
-      <MobileFilterSheet label="Filter things" onClear={() => {}} onApply={() => {}}>
-        <FilterOptionGroup
-          label="Status"
-          value="a"
-          onChange={() => {}}
-          options={[{ value: "a", label: "Alpha" }]}
-        />
+      <MobileFilterSheet label="Filter things" onClear={() => {}} onApply={onApply}>
+        <input aria-label="Name" type="search" />
       </MobileFilterSheet>,
     );
+    openTrigger("Filter things");
 
-    /*
-     * The sheet stays mounted so it can transition out; aria-hidden is what
-     * takes it out of the accessibility tree, and role queries respect that.
-     */
+    fireEvent.submit(screen.getByRole("searchbox", { name: "Name" }).closest("form")!);
+
+    expect(onApply).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Filter things" }).getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByRole("dialog", { name: "Filter things" })).toBeNull();
+  });
+
+  it("is mobile-only unless the page says it is the only filter entry point", () => {
+    const view = renderSheet();
+    expect(screen.getByRole("button", { name: "Filter things" }).className).not.toMatch(/triggerAlways/);
+
+    view.unmount();
+    renderSheet({ alwaysVisible: true });
+    expect(screen.getByRole("button", { name: "Filter things" }).className).toMatch(/triggerAlways/);
   });
 
   it("portals the open sheet out of the rendered tree so route transforms cannot clip it", () => {

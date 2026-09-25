@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { CreateClientAccountForm } from "../../../../../components/accounts/create-client-account-form";
+import { canSendClientWelcomeEmail } from "../../../../../lib/email/client-welcome-email-server";
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
 export default async function AddClientAccountPage() {
@@ -15,6 +16,8 @@ export default async function AddClientAccountPage() {
   }
 
   return (
-    <CreateClientAccountForm />
+    <CreateClientAccountForm
+      welcomeEmailAvailable={await canSendClientWelcomeEmail(context)}
+    />
   );
 }

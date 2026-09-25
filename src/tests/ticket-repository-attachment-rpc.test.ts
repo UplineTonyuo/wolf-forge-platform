@@ -17,7 +17,7 @@ import type { UserMutationClient } from "../repositories/types";
 function fakeClient(data: unknown) {
   return {
     marker: "client" as const,
-    rpc(this: { marker: string } | undefined, _name: string, _args: Record<string, unknown>) {
+    rpc(this: { marker: string } | undefined) {
       if (this?.marker !== "client") {
         throw new TypeError("Cannot read properties of undefined (reading 'rest')");
       }
