@@ -17,8 +17,16 @@ export function useAnimatedPopover(closeMs = 150) {
   const [phase, setPhase] = useState<PopoverPhase>("open");
   const [animateOpen, setAnimateOpen] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameRef = useRef<number | null>(null);
+  /*
+   * A click handler or a blur raised while the tree is being torn down can
+   * still call in after unmount; the callbacks check this before writing state
+   * so none of them runs against a destroyed environment.
+   */
+  const mountedRef = useRef(true);
 
   const open = useCallback((animate: boolean) => {
+    if (!mountedRef.current) return;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -30,8 +38,12 @@ export function useAnimatedPopover(closeMs = 150) {
       return;
     }
     setPhase("closing");
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setPhase("open"));
+    frameRef.current = requestAnimationFrame(() => {
+      if (!mountedRef.current) return;
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = null;
+        if (mountedRef.current) setPhase("open");
+      });
     });
   }, []);
 
@@ -39,17 +51,21 @@ export function useAnimatedPopover(closeMs = 150) {
   const showWithoutMotion = useCallback(() => open(false), [open]);
 
   const hide = useCallback(() => {
-    if (!render) return;
+    if (!mountedRef.current || !render) return;
     setPhase("closing");
     timerRef.current = setTimeout(() => {
-      setRender(false);
       timerRef.current = null;
+      if (!mountedRef.current) return;
+      setRender(false);
     }, closeMs);
   }, [closeMs, render]);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     };
   }, []);
 
