@@ -29,7 +29,8 @@ export default async function NewInvoicePage({
     description: serviceDescriptionToPlainText(service.description),
     priceCents: parseMoneyToCents(String(service.price), true) ?? 0,
     currency: service.currency,
+    folderId: service.folder_id,
     folderName: service.folder_id ? folderNames.get(service.folder_id) ?? null : null,
   }));
-  return <PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} defaultCompanyId={companyId} /></PageFrame>;
+  return <PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} defaultCompanyId={companyId} /></PageFrame>;
 }

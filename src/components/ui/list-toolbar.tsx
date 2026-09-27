@@ -24,6 +24,7 @@ export function ListToolbar({
   search,
   filter,
   filtersDesktopOnly = false,
+  mobileSearchPosition = "before",
 }: {
   /** Accessible name for the filter group, e.g. "Invoice status filters". */
   label: string;
@@ -43,10 +44,11 @@ export function ListToolbar({
   filter?: ReactNode;
   /** Hides the `filters` row below 768px. Pair it with `filter`. */
   filtersDesktopOnly?: boolean;
+  mobileSearchPosition?: "before" | "after";
 }) {
   return (
     <div className={styles.toolbar}>
-      <nav
+      {filters.length ? <nav
         className={
           filtersDesktopOnly
             ? `${styles.filters} ${styles.filtersDesktopOnly}`
@@ -68,7 +70,7 @@ export function ListToolbar({
             {filter.label}
           </Link>
         ))}
-      </nav>
+      </nav> : null}
 
       {/*
         The trailing group keeps the action and the search on one baseline so
@@ -76,7 +78,7 @@ export function ListToolbar({
         to the next row as a unit when the filters run out of width.
       */}
       {action || search || filter ? (
-        <div className={styles.trailing}>
+        <div className={`${styles.trailing} ${filter && action ? styles.balancedActions : ""}`} data-search-position={mobileSearchPosition}>
           {action ? <div className={styles.action}>{action}</div> : null}
           {search ? <div className={styles.search}>{search}</div> : null}
           {filter ? <div className={styles.filterSlot}>{filter}</div> : null}

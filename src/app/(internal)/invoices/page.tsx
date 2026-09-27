@@ -2,6 +2,7 @@ import { Eye, Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InvoiceStatusBadge } from "../../../components/invoices/invoice-status-badge";
+import { InvoicesFilter } from "../../../components/invoices/invoices-filter";
 import styles from "../../../components/invoices/invoice-admin.module.css";
 import adminList from "../../../components/ui/admin-list.module.css";
 import { FilterInput } from "../../../components/ui/filter-input";
@@ -25,15 +26,6 @@ const filters = [
 
 function numberLabel(value: number | null) {
   return value == null ? "Pending" : `WF-${String(value).padStart(4, "0")}`;
-}
-
-/** Preserves the active search while switching the status filter. */
-function invoiceHref(state: string, search: string) {
-  const params = new URLSearchParams();
-  if (state !== "all") params.set("state", state);
-  if (search) params.set("q", search);
-  const query = params.toString();
-  return query ? `/invoices?${query}` : "/invoices";
 }
 
 export default async function InvoicesPage({
@@ -74,12 +66,9 @@ export default async function InvoicesPage({
       <div className={styles.pageEnter}>
         <ListToolbar
           label="Invoice status filters"
-          filters={filters.map(([value, label]) => ({
-            value,
-            label,
-            href: invoiceHref(value, search),
-            active: activeFilter === value,
-          }))}
+          filters={[]}
+          filter={<InvoicesFilter value={activeFilter} />}
+          mobileSearchPosition="after"
           action={addInvoice}
           search={<FilterInput label="Search invoices" placeholder="Search invoices" initialValue={search} />}
         />

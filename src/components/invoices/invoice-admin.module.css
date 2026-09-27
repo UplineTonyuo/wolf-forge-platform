@@ -87,9 +87,19 @@
 .itemRow > header strong { color: var(--wf-navy); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
 .itemRow > header > div { display: flex; align-items: center; gap: 12px; }
 .itemRow > header select { width: 126px; height: 32px; }
-.itemRow > header button { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; color: #8d3333; background: transparent; font-size: 10px; font-weight: 600; cursor: pointer; }
+.itemRow > header .removeItem { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0; border: 0; color: #8d3333; background: transparent; font-size: 10px; font-weight: 600; cursor: pointer; }
 .itemRow > header svg { width: 13px; height: 13px; }
-.itemFields { display: grid; grid-template-columns: minmax(190px, 1.35fr) minmax(180px, 1.2fr) 84px 110px 110px 78px; align-items: start; gap: 14px; padding: 16px; }
+.itemFields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 14px; padding: 16px; }
+.serviceField { min-width: 0; grid-column: 1 / -1; }
+.field small { color: var(--wf-text-muted); }
+.detailPage :global(.page-header) > div:first-child { min-width: 0; }
+.detailPage :global(.page-header) p { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; overflow-wrap: anywhere; }
+.detailPage :global(.page-actions) { flex: 0 0 auto; }
+.detailPage .detailActions { flex-wrap: nowrap; }
+.detailPage .detailActions > :global(.button-primary) { width: auto; min-height: 44px; }
+.detailActions summary { min-height: 44px; }
+.detailGrid .lineHeader, .detailGrid .lineRow { grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, .65fr)); }
+.lineRow { overflow-wrap: anywhere; }
 .descriptionField textarea { min-height: 74px; }
 .taxable { min-height: 40px; display: flex; align-items: center; gap: 7px; padding-top: 21px; color: #505868; font-size: 11px; font-weight: 650; }
 .taxable input { width: 16px; height: 16px; margin: 0; accent-color: var(--wf-navy); }
@@ -191,6 +201,9 @@
 }
 
 @media (max-width: 767px) {
+  .detailGrid .lineRow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .detailPage :global(.page-actions) { width: 100%; }
+  .detailPage .detailActions { justify-content: flex-start; }
   .form { margin-top: 0; }
   .formSection { grid-template-columns: 1fr; gap: 16px; padding: 22px 0 24px; }
   .basicFields { grid-template-columns: 1fr; }

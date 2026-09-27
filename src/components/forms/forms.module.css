@@ -20,3 +20,5 @@
 .logicCondition{display:grid;gap:5px;padding-bottom:6px;border-bottom:1px solid #eceef2}.logicCondition>span{color:#7a8190;font-size:8px;font-weight:700;text-transform:uppercase}.logicButtons{display:flex;justify-content:space-between;gap:8px}.logicButtons button:first-child{color:#214699}
 @media(min-width:1351px){.builderActions{margin-right:528px}}
 @media(min-width:1024px) and (max-width:1350px){.builderTop{align-items:flex-start;flex-direction:column;padding-top:62px}.builderActions{margin-right:0}}
+.customField { min-width: 0; display: grid; align-content: start; gap: 7px; color: #656c7c; font-size: 10px; font-weight: 650; }
+@media (max-width: 1100px) { .formSettingsBar > .customField:last-child { grid-column: 1 / -1; } }

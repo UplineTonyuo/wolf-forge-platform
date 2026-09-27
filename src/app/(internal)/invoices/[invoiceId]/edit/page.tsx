@@ -28,6 +28,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ in
       description: serviceDescriptionToPlainText(service.description),
       priceCents: parseMoneyToCents(String(service.price), true) ?? 0,
       currency: service.currency,
+      folderId: service.folder_id,
       folderName: service.folder_id ? folderNames.get(service.folder_id) ?? null : null,
     }));
     const initial: InvoiceFormInitial = {
@@ -40,7 +41,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ in
       taxTotalCents: detail.invoice.tax_total_cents,
       items: detail.items.map((item) => ({ id: item.id, serviceId: item.service_id, name: item.name, description: serviceDescriptionToPlainText(item.description), quantity: item.quantity, unitPriceCents: item.unit_price_cents, unitDiscountCents: item.unit_discount_cents, taxable: item.is_taxable })),
     };
-    return <PageFrame title={detail.invoice.status === "draft" ? "Edit Invoice Draft" : `Edit Invoice #WF-${String(detail.invoice.invoice_number).padStart(4, "0")}`}><InvoiceForm mode="edit" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} initial={initial} /></PageFrame>;
+    return <PageFrame title={detail.invoice.status === "draft" ? "Edit Invoice Draft" : `Edit Invoice #WF-${String(detail.invoice.invoice_number).padStart(4, "0")}`}><InvoiceForm mode="edit" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} initial={initial} /></PageFrame>;
   } catch (error) {
     if (toClientSafeError(error).code === "NOT_FOUND") notFound();
     throw error;

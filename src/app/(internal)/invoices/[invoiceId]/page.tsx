@@ -5,6 +5,7 @@ import { InvoiceDetailActions } from "../../../../components/invoices/invoice-de
 import styles from "../../../../components/invoices/invoice-admin.module.css";
 import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-status-badge";
 import { PageFrame } from "../../../../components/ui/page-frame";
+import { SuccessToast } from "../../../../components/ui/success-toast";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatCurrencyCents, formatDate, formatDateTime } from "../../../../lib/format";
 /*
@@ -47,13 +48,14 @@ export default async function InvoiceDetailPage({
     const refundable = Math.max(detail.financials.gross_paid_cents - detail.financials.successful_refunds_cents, 0);
     return (
       <PageFrame
+        className={styles.detailPage}
         title={invoiceLabel(detail.invoice.invoice_number)}
-        description={detail.clientName}
+        description={<><span>{detail.clientName}</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></>}
         action={<InvoiceDetailActions invoiceId={detail.invoice.id} status={detail.invoice.status} currency={detail.invoice.currency} totalCents={detail.invoice.total_cents} grossPaidCents={detail.financials.gross_paid_cents} refundedCents={detail.financials.successful_refunds_cents} balanceDueCents={detail.financials.balance_due_cents} hasPendingPayment={detail.payments.some((payment) => payment.status === "pending")} capabilities={context.user.invoices} />}
       >
         <div className={styles.pageEnter}>
-          {query.created ? <div className="success-banner">Invoice draft created.</div> : null}
-          {query.saved ? <div className="success-banner">Invoice changes saved.</div> : null}
+          {query.created ? <SuccessToast title="Invoice draft created." /> : null}
+          {query.saved ? <SuccessToast title="Invoice changes saved." /> : null}
           <section className={styles.metadata} aria-label="Invoice information">
             <div><span>Status</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></div>
             <div><span>Created</span><strong>{formatDate(detail.invoice.created_at)}</strong></div>

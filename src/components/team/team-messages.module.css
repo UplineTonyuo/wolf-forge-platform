@@ -483,6 +483,20 @@
   gap: 2px;
 }
 
+.ticketSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px;
+  padding: 0 10px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+}
+.ticketSearch input { min-width: 0; width: 100%; min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 13px; }
+.ticketSearch input::-webkit-search-cancel-button { appearance: none; }
+.ticketSearch button { display: grid; place-items: center; flex: 0 0 32px; min-height: 44px; border: 0; background: transparent; color: var(--wf-navy); cursor: pointer; }
+.ticketSearch:focus-within { outline: 2px solid var(--wf-navy); outline-offset: 2px; }
+
 .ticketRow {
   width: 100%;
   padding: 9px 10px;

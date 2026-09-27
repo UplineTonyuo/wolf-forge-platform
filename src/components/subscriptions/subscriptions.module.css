@@ -499,6 +499,14 @@
 
 /* WF SUBSCRIPTIONS PROJECT STYLE END */
 
+.controlsRow { border-bottom: 0; }
+.listTools { width: 100%; justify-content: flex-end; }
+.listTools > button { min-height: 44px; }
+@media (max-width: 560px) {
+  .listTools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .listTools > button { width: 100%; justify-content: center; }
+}
+
 /* WF SUBSCRIPTION REFERENCE START */
 
 /*

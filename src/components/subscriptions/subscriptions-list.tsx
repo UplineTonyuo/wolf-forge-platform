@@ -1,12 +1,12 @@
 "use client";
 
-import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { SubscriptionSummary } from "../../domain/subscriptions/schema";
 import { formatCurrencyCents, formatDate } from "../../lib/format";
 import { formatSubscriptionInterval, subscriptionStatusLabels } from "../../lib/subscriptions/presentation";
-import { AnimatedSelect } from "../ui/animated-select";
+import { FilterOptionGroup, MobileFilterSheet } from "../ui/mobile-filter-sheet";
 import { SubscriptionHealthBadge, SubscriptionStatusBadge } from "./subscription-status-badge";
 import styles from "./subscriptions.module.css";
 
@@ -39,6 +39,7 @@ export function SubscriptionsList({
   const [query, setQuery] = useState("");
   const [health, setHealth] = useState("all");
   const [interval, setInterval] = useState("all");
+  const [draft, setDraft] = useState({ status: tab, health, interval });
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase());
   const counts = useMemo(() => subscriptionCounts(summaries), [summaries]);
   const visible = useMemo(() => summaries.filter((summary) => {
@@ -58,20 +59,6 @@ export function SubscriptionsList({
   return (
     <div className={styles.listRoot}>
       <div className={styles.controlsRow}>
-        <nav className={styles.statusTabs} aria-label="Subscription status">
-          {tabs.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-current={tab === value ? "page" : undefined}
-              onClick={() => setTab(value)}
-            >
-              <span>{tabLabel(value)}</span>
-              <b>{counts[value]}</b>
-            </button>
-          ))}
-        </nav>
-
         <div className={styles.listTools}>
           <label className={styles.searchField}>
             <Search aria-hidden="true" />
@@ -84,58 +71,18 @@ export function SubscriptionsList({
             />
           </label>
 
-          <details className={styles.filters}>
-            <summary>
-              <SlidersHorizontal aria-hidden="true" />
-              Filters
-            </summary>
-
-            <div>
-              <label>
-                <span>Health</span>
-                <AnimatedSelect
-                  name="health"
-                  label="Health"
-                  value={health}
-                  onChange={setHealth}
-                  menuLabel="Health"
-                  options={[
-                    { value: "all", label: "All health states" },
-                    { value: "requires_attention", label: "Requires attention" },
-                    { value: "stalled", label: "Stalled" },
-                  ]}
-                />
-              </label>
-
-              <label>
-                <span>Interval</span>
-                <AnimatedSelect
-                  name="interval"
-                  label="Interval"
-                  value={interval}
-                  onChange={setInterval}
-                  menuLabel="Interval"
-                  options={[
-                    { value: "all", label: "All intervals" },
-                    { value: "day", label: "Daily" },
-                    { value: "week", label: "Weekly" },
-                    { value: "month", label: "Monthly" },
-                    { value: "year", label: "Yearly" },
-                  ]}
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setHealth("all");
-                  setInterval("all");
-                }}
-              >
-                Reset
-              </button>
-            </div>
-          </details>
+          <MobileFilterSheet label="Filter subscriptions" alwaysVisible
+            activeCount={Number(tab !== "active") + Number(health !== "all") + Number(interval !== "all")}
+            onOpen={() => setDraft({ status: tab, health, interval })}
+            onClear={() => { setTab("active"); setHealth("all"); setInterval("all"); }}
+            onApply={() => { setTab(draft.status); setHealth(draft.health); setInterval(draft.interval); }}>
+            <FilterOptionGroup label="Status" value={draft.status} onChange={(status) => setDraft({ ...draft, status: status as Tab })}
+              options={tabs.map((value) => ({ value, label: tabLabel(value), count: counts[value] }))} />
+            <FilterOptionGroup label="Health" value={draft.health} onChange={(health) => setDraft({ ...draft, health })}
+              options={[{ value: "all", label: "All health states" }, { value: "requires_attention", label: "Requires attention" }, { value: "stalled", label: "Stalled" }]} />
+            <FilterOptionGroup label="Interval" value={draft.interval} onChange={(interval) => setDraft({ ...draft, interval })}
+              options={[{ value: "all", label: "All intervals" }, { value: "day", label: "Daily" }, { value: "week", label: "Weekly" }, { value: "month", label: "Monthly" }, { value: "year", label: "Yearly" }]} />
+          </MobileFilterSheet>
 
           {canManage ? (
             <Link

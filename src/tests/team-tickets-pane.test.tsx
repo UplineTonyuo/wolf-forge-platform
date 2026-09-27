@@ -32,6 +32,28 @@ function ticket(overrides: Partial<TicketSummary> = {}): TicketSummary {
 }
 
 describe("TeamTicketsPane", () => {
+  it("searches full and partial references, all tickets for a client, and clears an empty result", () => {
+    render(<TeamTicketsPane tickets={[
+      ticket({ public_ref: "WF-TKT-000006" }),
+      ticket({ ticket_id: "t2", public_ref: "WF-TKT-000007", subject: "Another question" }),
+      ticket({ ticket_id: "t3", public_ref: "WF-TKT-000008", company_name: "Other company", client_name: "Other person" }),
+    ]} loading={false} error={null} activeTicketId={null} onSelect={vi.fn()} onRetry={vi.fn()} />);
+    const search = screen.getByRole("searchbox", { name: "Search tickets" });
+    for (const query of ["WF-TKT-000006", "000006"]) {
+      fireEvent.change(search, { target: { value: query } });
+      expect(screen.getAllByRole("listitem")).toHaveLength(1);
+      expect(screen.getByText("WF-TKT-000006")).toBeInTheDocument();
+    }
+    for (const query of ["Acme", "Client Person"]) {
+      fireEvent.change(search, { target: { value: query } });
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    }
+    fireEvent.change(search, { target: { value: "not found" } });
+    expect(screen.getByText("No tickets found")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear ticket search" }));
+    expect(search).toHaveValue("");
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
   it("renders a lightweight row per Ticket — subject, status, company — with no unread affordance", () => {
     render(
       <TeamTicketsPane

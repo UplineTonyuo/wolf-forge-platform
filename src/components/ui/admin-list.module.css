@@ -277,6 +277,26 @@
   }
 }
 
+/*
+ * Pages with both a Filter control and a primary action turn the trailing
+ * group into the two-row mobile hierarchy (search, then Filter beside the
+ * action). Above 767px they keep the ordinary trailing-edge rhythm.
+ */
+@media (max-width: 767px) {
+  .trailing.balancedActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .balancedActions .search { grid-column: 1 / -1; grid-row: 1; width: 100%; }
+  .balancedActions[data-search-position="after"] .search { grid-row: 2; }
+  .balancedActions .filterSlot { grid-column: 1; grid-row: 2; }
+  .balancedActions .action { grid-column: 2; grid-row: 2; }
+  .balancedActions[data-search-position="after"] .action { grid-column: 1; grid-row: 1; }
+  .balancedActions[data-search-position="after"] .filterSlot { grid-column: 2; grid-row: 1; }
+  .balancedActions .action > *, .balancedActions .filterSlot > button { width: 100%; min-height: 44px; justify-content: center; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .filter,
   .table tbody tr,

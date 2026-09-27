@@ -52,33 +52,10 @@ export default async function CouponsPage({
     </Link>
   );
 
-  /*
-   * The empty state keeps its own copy of the same link -- there it is the
-   * point of the screen, not a duplicate of the title action.
-   */
-  const addCouponToolbar = (
-    <div className={styles.desktopAction}>{addCoupon}</div>
-  );
-
-  const addCouponCompact = (
-    <Link
-      className={styles.compactAction}
-      href="/coupons/new"
-      aria-label="Add coupon"
-      title="Add coupon"
-    >
-      <Plus aria-hidden="true" />
-    </Link>
-  );
-
   return (
     <PageFrame
       title="Coupons"
-      action={
-        <div className="page-action-compact mobile-page-action">
-          {addCouponCompact}
-        </div>
-      }
+      className={styles.listPage}
     >
       {query.created ? (
         <SuccessToast title="Coupon created" detail="It is now listed under Active." />
@@ -93,7 +70,7 @@ export default async function CouponsPage({
           { value: "active", label: "Active", href: couponHref("active", search), active: !showingArchived },
           { value: "archived", label: "Archived", href: couponHref("archived", search), active: showingArchived },
         ]}
-        action={addCouponToolbar}
+        action={addCoupon}
         search={<FilterInput label="Search coupons" placeholder="Search coupons" initialValue={search} />}
         filter={<CouponsFilter initialView={showingArchived ? "archived" : "active"} />}
         filtersDesktopOnly
