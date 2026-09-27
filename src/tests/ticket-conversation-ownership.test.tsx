@@ -23,6 +23,8 @@ import type { TeamConversationView } from "../domain/team/projections";
 
 const STAFF_PROFILE = "70000000-0000-4000-8000-000000000020";
 const CLIENT_PROFILE = "70000000-0000-4000-8000-000000000021";
+const STAFF_PROFILE_OTHER = "70000000-0000-4000-8000-000000000022";
+const CLIENT_PROFILE_OTHER = "70000000-0000-4000-8000-000000000023";
 
 function message(overrides: Partial<TicketDetailMessage> = {}): TicketDetailMessage {
   return {
@@ -426,6 +428,140 @@ describe("Ticket conversation attachments", () => {
     expect(other).toHaveAttribute("data-side", "client");
     expect(other).not.toHaveAttribute("data-own");
     expect(within(other).getByRole("img")).toBeInTheDocument();
+  });
+});
+
+describe("Ticket conversation sender-side determination", () => {
+  const otherStaffMessage = message({
+    id: "70000000-0000-4000-8000-0000000000a2",
+    author_profile_id: STAFF_PROFILE_OTHER,
+    author_name: "WF William",
+    author_type: "internal",
+    body: "William wrote this",
+    created_at: "2026-08-15T10:06:30Z",
+  });
+
+  it("renders another staff member's message on the other side, not as the viewer's own", () => {
+    render(
+      <TicketConversation
+        orderChat
+        viewerProfileId={STAFF_PROFILE}
+        messages={[staffMessage, otherStaffMessage]}
+      />,
+    );
+
+    const own = rowFor("awesome");
+    expect(own).toHaveAttribute("data-side", "internal");
+    expect(own).toHaveAttribute("data-own", "true");
+    expect(within(own).queryByText("QA Local")).toBeNull();
+
+    const other = rowFor("William wrote this");
+    expect(other).toHaveAttribute("data-side", "client");
+    expect(other).not.toHaveAttribute("data-own");
+    expect(within(other).getByText("WF William")).toBeInTheDocument();
+    expect(other.querySelector("[class*='messageAvatar']")).not.toBeNull();
+  });
+
+  it("treats a colleague on the client side as other, resolved by profile id rather than role", () => {
+    const ownClientMessage = message({
+      id: "70000000-0000-4000-8000-0000000000b2",
+      author_profile_id: CLIENT_PROFILE,
+      body: "client wrote this",
+      created_at: "2026-08-15T10:06:40Z",
+    });
+    const colleagueMessage = message({
+      id: "70000000-0000-4000-8000-0000000000b3",
+      author_profile_id: CLIENT_PROFILE_OTHER,
+      author_name: "Second Contact",
+      body: "colleague wrote this",
+      created_at: "2026-08-15T10:06:50Z",
+    });
+
+    render(
+      <TicketConversation
+        orderChat
+        clientView
+        viewerProfileId={CLIENT_PROFILE}
+        messages={[staffMessage, ownClientMessage, colleagueMessage]}
+      />,
+    );
+
+    const own = rowFor("client wrote this");
+    expect(own).toHaveAttribute("data-side", "client");
+    expect(own).toHaveAttribute("data-own", "true");
+
+    const colleague = rowFor("colleague wrote this");
+    expect(colleague).toHaveAttribute("data-side", "internal");
+    expect(colleague).not.toHaveAttribute("data-own");
+    expect(within(colleague).getByText("Second Contact")).toBeInTheDocument();
+
+    const staff = rowFor("awesome");
+    expect(staff).toHaveAttribute("data-side", "internal");
+    expect(staff).not.toHaveAttribute("data-own");
+  });
+
+  it("reverses the rendered perspective for the same thread between viewers", () => {
+    const { unmount } = render(
+      <TicketConversation
+        orderChat
+        viewerProfileId={STAFF_PROFILE}
+        messages={[staffMessage, clientMessage]}
+      />,
+    );
+    expect(rowFor("awesome")).toHaveAttribute("data-own", "true");
+    expect(rowFor("awesome")).toHaveAttribute("data-side", "internal");
+    expect(rowFor("heyyyyyy")).toHaveAttribute("data-side", "client");
+    unmount();
+
+    render(
+      <TicketConversation
+        orderChat
+        clientView
+        viewerProfileId={CLIENT_PROFILE}
+        messages={[staffMessage, clientMessage]}
+      />,
+    );
+    expect(rowFor("heyyyyyy")).toHaveAttribute("data-own", "true");
+    expect(rowFor("heyyyyyy")).toHaveAttribute("data-side", "client");
+    expect(rowFor("awesome")).toHaveAttribute("data-side", "internal");
+    expect(rowFor("awesome")).not.toHaveAttribute("data-own");
+  });
+
+  it("keeps a system message on the other side for both viewers, never the viewer's own", () => {
+    const systemMessage = message({
+      id: "70000000-0000-4000-8000-0000000000f2",
+      author_profile_id: null,
+      author_name: null,
+      author_type: "system",
+      message_kind: "initial_request",
+      body: "Purchase receipt",
+      created_at: "2026-08-15T10:00:30Z",
+    });
+
+    const { unmount } = render(
+      <TicketConversation
+        orderChat
+        viewerProfileId={STAFF_PROFILE}
+        messages={[systemMessage]}
+      />,
+    );
+    const staffRow = rowFor("Purchase receipt");
+    expect(staffRow).not.toHaveAttribute("data-own");
+    expect(staffRow).toHaveAttribute("data-side", "client");
+    expect(within(staffRow).getByText("Wolf Forge system")).toBeInTheDocument();
+    unmount();
+
+    render(
+      <TicketConversation
+        orderChat
+        clientView
+        viewerProfileId={CLIENT_PROFILE}
+        messages={[systemMessage]}
+      />,
+    );
+    const clientRow = rowFor("Purchase receipt");
+    expect(clientRow).not.toHaveAttribute("data-own");
+    expect(clientRow).toHaveAttribute("data-side", "internal");
   });
 });
 

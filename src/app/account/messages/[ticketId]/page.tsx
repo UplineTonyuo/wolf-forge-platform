@@ -68,6 +68,7 @@ export default async function ClientMessageDetailPage({
             <TicketClientConversation
               ticketId={ticket.id}
               messages={detail.messages}
+              viewerProfileId={context.user.id}
               repliesDisabled={repliesDisabled}
             />
           </main>

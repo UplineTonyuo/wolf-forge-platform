@@ -654,24 +654,44 @@ export function TicketConversation({
                   message.author_name,
                 );
 
-              const side =
+              const authorSide =
                 isInternalActorSide(
                   message.author_type,
                 )
                   ? "internal"
                   : "client";
               /*
-               * A client viewer is always the Ticket's one client party, so
-               * every "client"-side message is their own — the same "own
-               * message" concept OrderConversation already tracks for a
-               * staff viewer via viewerProfileId, just resolved from the
-               * viewer's role instead of a profile id (a Ticket has exactly
-               * one client, never several to disambiguate between).
+               * Ownership is the authenticated profile id, never the author's
+               * role: the signed-in user's messages sit right, everyone
+               * else's left, in both POVs. Another staff member is not "me"
+               * even though they write on the same internal side.
+               *
+               * The legacy Ticket read model deliberately withholds every
+               * author_profile_id from a client actor (see
+               * app_get_ticket_detail), and a legacy Ticket has exactly one
+               * client party -- so when no id is present, a client viewer's
+               * own messages are exactly author_type "client" (never
+               * "guest"/"system"). Native Project conversations and every
+               * staff POV carry the ids and take the id comparison.
                */
-              const ownMessage =
-                (!clientView && side === "internal" &&
-                  Boolean(viewerProfileId) && message.author_profile_id === viewerProfileId) ||
-                (clientView && side === "client");
+              const ownMessage = viewerProfileId && message.author_profile_id
+                ? message.author_profile_id === viewerProfileId
+                : clientView && message.author_type === "client";
+              /*
+               * `data-side` is the RENDERED side, not the author's role:
+               * "internal" always selects the right-hand own-message skin and
+               * "client" the left-hand other-party one, for staff and client
+               * viewers alike. The client-view rules mirror the pair, so
+               * every side-keyed style (bubble, avatar column, sender
+               * direction, action-menu anchor) follows the viewer's
+               * perspective for free. `data-own` keeps the raw ownership
+               * fact for tests and future callers. A caller that supplies
+               * neither a viewer id nor `clientView` keeps the legacy
+               * author-side attribute (the plain non-chat feed).
+               */
+              const renderedSide = viewerProfileId || clientView
+                ? ownMessage === clientView ? "client" : "internal"
+                : authorSide;
               const previous = visibleMessages[index - 1];
               const grouped = Boolean(previous && message.author_profile_id &&
                 previous.author_profile_id === message.author_profile_id &&
@@ -683,20 +703,17 @@ export function TicketConversation({
                * viewer needs it to see that the message came from Wolf Forge.
                * Either way it is never rendered above a viewer's own bubble --
                * repeating your own name and avatar above every message you
-               * send costs height and says nothing.
-               *
-               * Resolved from the viewer's side rather than from a hardcoded
-               * role, so both POVs run the same rule and neither can drift.
+               * send costs height and says nothing. System messages are never
+               * own, so they keep the other-party identity and stay neutral.
                */
-              const showOtherIdentity =
-                orderChat && (clientView ? side === "internal" : side === "client");
+              const showOtherIdentity = orderChat && !ownMessage;
               const showIdentityTime = showOtherIdentity && !grouped;
               const bareImageMessage = isBareImageMessage(message);
 
               return (
                 <li
                   key={message.id}
-                  data-side={side}
+                  data-side={renderedSide}
                   data-grouped={orderChat && grouped ? "true" : undefined}
                   data-own={orderChat && ownMessage ? "true" : undefined}
                   className={

@@ -584,13 +584,19 @@ describe("Order chat final polish", () => {
     ...own, id: "staff", author_profile_id: "other", author_name: "William", body: "Staff reply",
   };
 
-  it("uses actor sides, hides own identity/avatar, groups the same actor and excludes private messages", () => {
+  it("uses the viewer's perspective, hides own identity/avatar, groups the same actor and excludes private messages", () => {
     render(<TicketConversation orderChat viewerProfileId="me" messages={[
       ...messages, own, { ...own, id: "own2", body: "Another reply" }, staff,
     ]} />);
     expect(screen.getByText("Can you help with the brief?").closest("li")).toHaveAttribute("data-side", "client");
+    /* The viewer's own message is the right-hand side... */
     expect(screen.getByText("Hey").closest("li")).toHaveAttribute("data-side", "internal");
-    expect(screen.getByText("Staff reply").closest("li")).toHaveAttribute("data-side", "internal");
+    expect(screen.getByText("Hey").closest("li")).toHaveAttribute("data-own", "true");
+    /* ...and another staff member is not the viewer: left-hand side, identified. */
+    const otherStaffRow = screen.getByText("Staff reply").closest("li")!;
+    expect(otherStaffRow).toHaveAttribute("data-side", "client");
+    expect(otherStaffRow).not.toHaveAttribute("data-own");
+    expect(within(otherStaffRow).getByText("William")).toBeInTheDocument();
     expect(screen.getByText("Another reply").closest("li")).toHaveAttribute("data-grouped", "true");
     expect(screen.queryByText("QA Local")).not.toBeInTheDocument();
     const ownRow = screen.getByText("Hey").closest("li")!;
