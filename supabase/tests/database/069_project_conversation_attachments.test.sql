@@ -103,31 +103,31 @@ select ok(
   (select payload ->> 'ticket_id' from attach_result) is not null
   and (select payload ->> 'message_id' from attach_result) is not null
   and (select payload ->> 'attachment_id' from attach_result) is not null,
-  'authorized attachment-only/text+file send succeeds and creates the Order Ticket atomically'
+  'authorized attachment send succeeds in the native Project conversation'
 );
 select is(
-  (select count(*) from public.ticket_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
+  (select count(*) from public.project_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
   1::bigint,
   'exactly one canonical attachment row is written, no duplicate'
 );
 select is(
-  (select att.ticket_message_id::text from public.ticket_attachments att
+  (select att.project_message_id::text from public.project_attachments att
    where att.storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
   (select payload ->> 'message_id' from attach_result),
   'attachment links to the exact message it was sent with'
 );
 select is(
-  (select att.ticket_id::text from public.ticket_attachments att where att.storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
+  (select att.order_id::text from public.project_attachments att where att.storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
   (select payload ->> 'ticket_id' from attach_result),
-  'attachment links to the Ticket created for the Order, the canonical Order/Ticket model'
+  'attachment links directly to the canonical Project conversation'
 );
 select is(
-  (select original_name from public.ticket_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
+  (select original_name from public.project_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
   'brief.pdf',
   'original filename is preserved'
 );
 select is(
-  (select uploaded_by_profile_id from public.ticket_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
+  (select uploaded_by_profile_id from public.project_attachments where storage_object_key = 'fb000000-0000-4000-8000-000000000001/fc000000-0000-4000-8000-000000000001'),
   'fb000000-0000-4000-8000-000000000001'::uuid,
   'uploader is the real authenticated actor, never client-supplied'
 );
@@ -164,7 +164,7 @@ select throws_ok(
 );
 reset role;
 select is(
-  (select count(*) from public.ticket_attachments where original_name in ('malware.zip', 'huge.pdf', 'no-upload.pdf')),
+  (select count(*) from public.project_attachments where original_name in ('malware.zip', 'huge.pdf', 'no-upload.pdf')),
   0::bigint,
   'none of the rejected drafts leaked an attachment or orphan message row'
 );
@@ -197,8 +197,8 @@ select throws_ok(
     $fmt$select public.app_get_ticket_attachment_download('%s'::uuid)$fmt$,
     (select payload ->> 'attachment_id' from attach_result)
   ),
-  '42501', null,
-  'a client outside the owning company cannot download the attachment (cross-Ticket access denied)'
+  'P0002', null,
+  'a client outside the owning company cannot download the Project attachment'
 );
 reset role;
 
@@ -234,7 +234,8 @@ reset role;
 -- -----------------------------------------------------------------------------
 
 select is(
-  (select count(*) from public.ticket_attachments),
+  (select count(*) from public.project_attachments
+   where order_id = 'fb200000-0000-4000-8000-000000000001'),
   1::bigint,
   'no duplicate attachment rows were created anywhere in this flow'
 );

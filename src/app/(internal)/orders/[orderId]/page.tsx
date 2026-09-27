@@ -38,6 +38,7 @@ export default async function OrderDetailsPage({
     const nameById = new Map(people.map((person) => [person.id, person.displayName]));
     const { views: taskViews, counts: taskCounts } = composeProjectTaskViews(tasks);
     const conversationTicket = conversation?.ticket ?? null;
+    const legacyTicket = conversationTicket?.id !== orderId ? conversationTicket : null;
     const repliesDisabled = conversationTicket
       ? conversationTicket.status === "closed" || Boolean(conversationTicket.archived_at)
       : false;
@@ -97,15 +98,15 @@ export default async function OrderDetailsPage({
             viewerProfileId={context.user.id}
             messages={conversationMessages}
             heading={`Project #${order.order_number}`}
-            destinations={toTeamConversationViews(teamConversations)}
+            destinations={legacyTicket ? toTeamConversationViews(teamConversations) : []}
             canReply={context.user.tickets.reply}
             repliesDisabled={repliesDisabled}
             headerActions={
-              context.user.tickets.internalNotes ? (
+              context.user.tickets.internalNotes && legacyTicket ? (
                 <InternalNotesModal
                   target={{ kind: "order", orderId }}
                   notes={internalNotes}
-                  disabled={Boolean(conversationTicket?.archived_at)}
+                  disabled={Boolean(legacyTicket.archived_at)}
                 />
               ) : null
             }

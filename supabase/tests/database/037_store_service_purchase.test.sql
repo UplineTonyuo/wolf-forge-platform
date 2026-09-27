@@ -1,6 +1,6 @@
 begin;
 
-select plan(60);
+select plan(61);
 
 -- =============================================================================
 -- Store service purchase → paid order → fulfillment Ticket → internal notice.
@@ -94,14 +94,14 @@ grant select, insert on purchase_result to authenticated;
 -- Structure and boundary
 -- =============================================================================
 
-select has_column('public', 'tickets', 'order_id',
-  'tickets carries the durable fulfillment Order reference');
+select has_column('public', 'project_messages', 'order_id',
+  'Project messages carry the durable fulfillment Order reference');
 
-select col_is_fk('public', 'tickets', array['order_id'],
-  'the fulfillment reference is a real foreign key, not a loose uuid');
+select col_is_fk('public', 'project_messages', array['order_id'],
+  'the Project conversation reference is a real foreign key, not a loose uuid');
 
-select has_index('public', 'tickets', 'tickets_order_fulfillment_unique',
-  'one purchased Order can carry only one fulfillment Ticket');
+select has_index('public', 'project_messages', 'project_messages_request_identity_unique',
+  'Project conversation writes are idempotent per Order and request');
 
 select is(
   (select count(*)::int from pg_proc p
@@ -378,8 +378,8 @@ select is(
 select is(
   (select count(*)::int from public.tickets
    where company_id = 'd3000000-0000-0000-0000-00000000000a'),
-  1,
-  'exactly one fulfillment Ticket'
+  0,
+  'a successful purchase creates no Ticket'
 );
 
 select is(
@@ -403,54 +403,45 @@ select is(
   'the invoice line records the Order it provisioned'
 );
 
-select is(
-  (select t.status from public.tickets t where t.id = (select ticket_id from purchase_result)),
-  'waiting_on_team',
-  'the Ticket status is the stored enum behind the "Waiting on team" label'
-);
+select is((select ticket_id from purchase_result), null::uuid,
+  'the purchase result carries no Ticket id');
 
-select is(
-  (select t.priority from public.tickets t where t.id = (select ticket_id from purchase_result)),
-  'normal',
-  'the Ticket priority is Normal'
-);
+select is((select ticket_public_ref from purchase_result), null::text,
+  'the purchase result carries no Ticket reference');
 
-select ok(
-  (select assigned_to_profile_id is null from public.tickets
-   where id = (select ticket_id from purchase_result)),
-  'the Ticket is Unassigned — fulfillment ownership stays a human decision'
-);
+select is((select count(*)::int from public.project_messages
+  where order_id = (select order_id from purchase_result)), 1,
+  'the Project starts with one canonical conversation message');
 
-select is(
-  (select t.subject from public.tickets t where t.id = (select ticket_id from purchase_result)),
-  'New Service Purchase — Purchasable Growth System',
-  'the Ticket subject names the purchased Service'
-);
+select is((select count(distinct order_id)::int from public.project_messages
+  where order_id = (select order_id from purchase_result)), 1,
+  'the conversation is keyed directly to exactly one Project');
 
-select is(
-  (select t.order_id from public.tickets t where t.id = (select ticket_id from purchase_result)),
+select is((select order_id from public.project_messages
+  where order_id = (select order_id from purchase_result)),
   (select order_id from purchase_result),
-  'the Ticket is durably linked to the Order, not merely described in prose'
-);
+  'the conversation is durably linked to the Project');
 
-select is(
-  (select m.author_type || '/' || m.message_kind || '/' || m.visibility
-     || '/' || (m.author_profile_id is null)::text
-   from public.ticket_messages m
-   where m.ticket_id = (select ticket_id from purchase_result)),
-  'system/initial_request/client/true',
-  'the opening message is authored by the system and does not impersonate the client'
-);
+select is((select author_type || '/' || (author_profile_id is null)::text
+  from public.project_messages where order_id = (select order_id from purchase_result)),
+  'system/true',
+  'the opening Project message is authored by the system');
 
-select ok(
-  (select m.body like '%Purchasable Growth System%'
-      and m.body like '%USD 1495.00%'
-      and m.body like '%Wolf Forge Balance%'
-      and m.body like '%waiting for the Wolf Forge team%'
-   from public.ticket_messages m
-   where m.ticket_id = (select ticket_id from purchase_result)),
-  'the opening message carries the real purchase context'
-);
+select ok((select body like '%Purchasable Growth System%'
+    and body like '%USD 1495.00%'
+    and body like '%Wolf Forge Balance%'
+    and body like '%ready for the Wolf Forge team%'
+  from public.project_messages where order_id = (select order_id from purchase_result)),
+  'the opening Project message carries the real purchase context');
+
+set local role authenticated;
+set local "request.jwt.claim.role" = 'authenticated';
+set local "request.jwt.claim.sub" = 'd2000000-0000-0000-0000-000000000001';
+select is(jsonb_array_length(public.app_get_order_conversation(
+  (select order_id from purchase_result limit 1)
+) -> 'messages'), 1, 'the purchased Project conversation is available to its client');
+reset role;
+set local "request.jwt.claim.sub" = '';
 
 select is(
   (select count(*)::int from public.activity_events
@@ -464,24 +455,14 @@ select is(
 -- Notification
 -- =============================================================================
 
-select is(
-  (select n.title || '|' || n.body || '|' || n.href
-   from public.notifications n
-   where n.recipient_profile_id = 'd1000000-0000-0000-0000-000000000001'
-     and n.event_key = 'ticket-created:' || (select ticket_id from purchase_result)::text),
-  'New service purchase|Purchase Client A purchased Purchasable Growth System.|/tickets/'
-    || (select ticket_id from purchase_result)::text,
-  'the authorized internal recipient is told what was bought and sent to the exact Ticket'
-);
+select is((select count(*)::int from public.notifications
+  where event_key like 'ticket-created:%'
+    and company_id = 'd3000000-0000-0000-0000-00000000000a'), 0,
+  'a purchase emits no Ticket-created notification');
 
-select is(
-  (select n.audience || '/' || n.category || '/' || n.company_id::text
-   from public.notifications n
-   where n.recipient_profile_id = 'd1000000-0000-0000-0000-000000000001'
-     and n.event_key = 'ticket-created:' || (select ticket_id from purchase_result)::text),
-  'internal/ticket/d3000000-0000-0000-0000-00000000000a',
-  'it is an internal ticket-category row tagged with the purchasing company'
-);
+select is((select count(*)::int from public.notifications
+  where category = 'ticket' and company_id = 'd3000000-0000-0000-0000-00000000000a'), 0,
+  'a purchase emits no internal Ticket-category row');
 
 select is(
   (select count(*)::int from public.notifications n
@@ -567,15 +548,15 @@ select is(
 select is(
   (select count(*)::int from public.tickets
    where company_id = 'd3000000-0000-0000-0000-00000000000a'),
-  1,
-  'the replay created no second Ticket'
+  0,
+  'the replay still creates no Ticket'
 );
 
 select is(
-  (select count(*)::int from public.notifications
-   where event_key = 'ticket-created:' || (select ticket_id from purchase_result limit 1)::text),
+  (select count(*)::int from public.project_messages
+   where order_id = (select order_id from purchase_result limit 1)),
   1,
-  'the replay created no second notification — one row per authorized recipient, ever'
+  'the replay created no duplicate Project conversation message'
 );
 
 -- =============================================================================

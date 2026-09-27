@@ -43,6 +43,22 @@ export class TicketService {
     );
   }
 
+  replyToOrderMessage(orderId: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.replyToOrderMessage(
+      parseInput(uuidSchema, orderId),
+      parseInput(ticketReplyToMessageInputSchema, input),
+    );
+  }
+
+  toggleOrderReaction(orderId: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.toggleOrderReaction(
+      parseInput(uuidSchema, orderId),
+      parseInput(ticketReactionInputSchema, input),
+    );
+  }
+
   replyToMessage(id: unknown, input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.replyToMessage(

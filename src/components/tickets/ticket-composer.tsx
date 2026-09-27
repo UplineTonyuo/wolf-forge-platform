@@ -31,10 +31,7 @@ type TicketComposerMode =
   | "note";
 
 /**
- * A composer either replies to an existing Ticket, or — for an Order with no
- * Ticket yet — targets the Order directly. The first real order message then
- * creates and links the canonical Ticket atomically (Slice 1's
- * app_send_order_message), so this component never creates a Ticket itself.
+ * A composer targets either an explicit Ticket or a Project's own conversation.
  */
 type TicketComposerTarget =
   | { kind: "ticket"; ticketId: string }

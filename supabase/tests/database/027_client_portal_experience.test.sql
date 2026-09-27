@@ -186,7 +186,7 @@ select is(
   (
     select count(*)
     from public.notifications
-    where event_key = 'client-ticket-response:6a000000-0000-0000-0000-000000000001'
+    where event_key = 'client-conversation:ticket:66000000-0000-0000-0000-00000000000a'
       and recipient_profile_id = '60000000-0000-0000-0000-000000000001'
       and audience = 'client'
   ),
@@ -198,7 +198,8 @@ select is(
   (
     select count(*)
     from public.notifications
-    where event_key = 'client-ticket-response:6a000000-0000-0000-0000-000000000002'
+    where event_key = 'client-conversation:ticket:66000000-0000-0000-0000-00000000000a'
+      and message_count > 1
   ),
   0::bigint,
   'an internal note never produces a client notification'
@@ -208,7 +209,8 @@ select is(
   (
     select count(*)
     from public.notifications
-    where event_key = 'client-ticket-response:6a000000-0000-0000-0000-000000000003'
+    where event_key = 'client-conversation:ticket:66000000-0000-0000-0000-00000000000a'
+      and actor_profile_id = '60000000-0000-0000-0000-000000000001'
   ),
   0::bigint,
   'a client replying to their own conversation does not notify themselves'
@@ -218,7 +220,7 @@ select is(
   (
     select href
     from public.notifications
-    where event_key = 'client-ticket-response:6a000000-0000-0000-0000-000000000001'
+    where event_key = 'client-conversation:ticket:66000000-0000-0000-0000-00000000000a'
   ),
   '/account/messages/66000000-0000-0000-0000-00000000000a',
   'the reply notification links to the client Messages route'

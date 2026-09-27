@@ -81,6 +81,34 @@ export class TicketRepository {
     return result.data as string;
   }
 
+  async replyToOrderMessage(orderId: string, input: TicketReplyToMessageInput): Promise<string> {
+    const result = await (this.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>)("app_reply_to_order_message", {
+      p_order_id: orderId,
+      p_request_id: input.request_id,
+      p_body: input.body,
+      p_reply_to_message_id: input.reply_to_message_id,
+      p_reply_to_attachment_id: input.reply_to_attachment_id ?? undefined,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Project reply");
+    return result.data as string;
+  }
+
+  async toggleOrderReaction(orderId: string, input: TicketReactionInput): Promise<TicketReactionToggle> {
+    const result = await (this.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>)("app_toggle_order_message_reaction", {
+      p_order_id: orderId,
+      p_message_id: input.message_id,
+      p_reaction_code: input.reaction_code,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Project reaction");
+    return result.data as TicketReactionToggle;
+  }
+
   async replyToMessage(id: string, input: TicketReplyToMessageInput): Promise<TicketMessageRow> {
     return unwrapOne(
       await this.client.rpc("app_reply_to_ticket_message", {

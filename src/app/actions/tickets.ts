@@ -199,11 +199,11 @@ export async function sendTicketComposerAction(
   }
   const context = internalContext ?? await getClientContext();
 
-  const target = input.replyTo
-    ? { ticket_id: input.replyTo.ticketId, order_id: null }
-    : input.target.kind === "ticket"
-      ? { ticket_id: input.target.ticketId, order_id: null }
-      : { ticket_id: null, order_id: input.target.orderId };
+  const target = input.target.kind === "order"
+    ? { ticket_id: null, order_id: input.target.orderId }
+    : input.replyTo
+      ? { ticket_id: input.replyTo.ticketId, order_id: null }
+      : { ticket_id: input.target.ticketId, order_id: null };
 
   try {
     if (file) {
@@ -240,6 +240,13 @@ export async function sendTicketComposerAction(
         if (stored) await storage.remove(claim.storage_key).catch(() => undefined);
         throw error;
       }
+    } else if (input.replyTo && input.target.kind === "order") {
+      await context.services.tickets.replyToOrderMessage(input.target.orderId, {
+        request_id: input.requestId,
+        body,
+        reply_to_message_id: input.replyTo.messageId,
+        reply_to_attachment_id: input.replyTo.attachmentId ?? null,
+      }, context.actor);
     } else if (input.replyTo) {
       await context.services.tickets.replyToMessage(input.replyTo.ticketId, {
         request_id: input.requestId,
@@ -370,6 +377,43 @@ export async function toggleClientTicketMessageReactionAction(
   const context = await getClientContext();
   try {
     await context.services.tickets.toggleReaction({
+      message_id: messageId,
+      reaction_code: reactionCode,
+    }, context.actor);
+  } catch (error) {
+    return failure(error);
+  }
+  return { ok: true };
+}
+
+export async function toggleOrderMessageReactionAction(
+  orderId: string,
+  messageId: string,
+  reactionCode: string,
+): Promise<TicketMutationResult> {
+  const context = await getInternalContext();
+  if (!context.user.tickets.reply) {
+    return { ok: false, error: "You do not have permission to react to Project messages." };
+  }
+  try {
+    await context.services.tickets.toggleOrderReaction(orderId, {
+      message_id: messageId,
+      reaction_code: reactionCode,
+    }, context.actor);
+  } catch (error) {
+    return failure(error);
+  }
+  return { ok: true };
+}
+
+export async function toggleClientOrderMessageReactionAction(
+  orderId: string,
+  messageId: string,
+  reactionCode: string,
+): Promise<TicketMutationResult> {
+  const context = await getClientContext();
+  try {
+    await context.services.tickets.toggleOrderReaction(orderId, {
       message_id: messageId,
       reaction_code: reactionCode,
     }, context.actor);

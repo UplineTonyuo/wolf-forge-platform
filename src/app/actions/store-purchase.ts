@@ -10,10 +10,8 @@ import { getClientContext, getInternalContext } from "../../lib/supabase/next-se
  * The Store purchase boundary.
  *
  * This action forwards two stable identifiers and reads a result. It does not
- * price anything, does not touch a wallet, and does not create an Order or a
- * Ticket — all of that happens inside one database transaction, which is the
- * only place it can happen atomically. If this file ever grows a "then create
- * the ticket" step, the Golden Rule has been broken.
+ * price anything, touch a wallet, or create the Project and its conversation.
+ * Those operations happen atomically inside the database.
  */
 
 export type StorePurchaseActionResult =
@@ -21,8 +19,6 @@ export type StorePurchaseActionResult =
       ok: true;
       orderId: string;
       orderNumber: number;
-      ticketId: string;
-      ticketPublicRef: string;
       amountCents: number;
       currency: string;
       walletBalanceCents: number;
@@ -65,7 +61,6 @@ export async function purchaseServiceWithBalanceAction(input: {
     revalidatePath("/account");
     revalidatePath("/account/projects");
     revalidatePath("/account/invoices");
-    revalidatePath("/account/messages");
     revalidatePath("/account/store");
     revalidatePath(`/account/store/${input.serviceId}`);
 
@@ -73,8 +68,6 @@ export async function purchaseServiceWithBalanceAction(input: {
       ok: true,
       orderId: purchase.orderId,
       orderNumber: purchase.orderNumber,
-      ticketId: purchase.ticketId,
-      ticketPublicRef: purchase.ticketPublicRef,
       amountCents: purchase.amountCents,
       currency: purchase.currency,
       walletBalanceCents: purchase.walletBalanceCents,

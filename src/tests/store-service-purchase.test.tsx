@@ -61,8 +61,6 @@ beforeEach(() => {
     ok: true,
     orderId: "o-1",
     orderNumber: 123,
-    ticketId: "t-1",
-    ticketPublicRef: "WF-TKT-000005",
     amountCents: 149500,
     currency: "USD",
     walletBalanceCents: 60500,
@@ -278,7 +276,7 @@ describe("PurchaseWithBalance", () => {
 
     release({
       ok: true,
-      orderId: "o-1", orderNumber: 1, ticketId: "t-1", ticketPublicRef: "WF-TKT-000005",
+      orderId: "o-1", orderNumber: 1,
       amountCents: 149500, currency: "USD", walletBalanceCents: 60500,
       serviceName: "Platinum SEO Success Blueprint", replayed: false,
     });
