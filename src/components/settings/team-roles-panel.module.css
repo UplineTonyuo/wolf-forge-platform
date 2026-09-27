@@ -10,7 +10,7 @@
 .page {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 6px 0 48px;
+  padding: 6px 24px 48px;
   color: #1b2337;
 }
 

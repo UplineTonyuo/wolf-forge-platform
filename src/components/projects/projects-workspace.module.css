@@ -404,6 +404,7 @@
 
 .checkbox,
 .checkboxActive {
+  position: relative;
   width: 16px;
   height: 16px;
   display: grid;
@@ -414,6 +415,14 @@
   color: #ffffff;
   padding: 0;
   cursor: pointer;
+}
+
+/* The box stays 16px; the expanded hit area keeps touch taps on target. */
+.checkbox::after,
+.checkboxActive::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
 }
 
 .checkboxActive {

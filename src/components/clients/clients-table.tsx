@@ -56,7 +56,7 @@ function ClientCheckbox({
   ariaLabel: string;
 }) {
   return (
-    <span className="clients-checkbox-wrap">
+    <label className="clients-checkbox-wrap">
       <input
         ref={inputRef}
         className="clients-checkbox"
@@ -67,7 +67,7 @@ function ClientCheckbox({
       />
       <Check className="clients-checkbox-icon clients-checkbox-icon-check" aria-hidden="true" />
       <Minus className="clients-checkbox-icon clients-checkbox-icon-indeterminate" aria-hidden="true" />
-    </span>
+    </label>
   );
 }
 

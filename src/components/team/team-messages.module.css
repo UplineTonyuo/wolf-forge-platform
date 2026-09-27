@@ -5107,6 +5107,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-height: 24px;
 
   padding: 2px 7px;
 
