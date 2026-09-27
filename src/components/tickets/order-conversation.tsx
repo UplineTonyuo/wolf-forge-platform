@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { toggleOrderMessageReactionAction } from "../../app/actions/tickets";
 import type { TeamConversationView } from "../../domain/team/projections";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
@@ -44,6 +45,9 @@ export function OrderConversation({
         forwardDestinations={destinations}
         onReply={canReply && !repliesDisabled ? setReplyTo : undefined}
         canReact={canReply}
+        onToggleReaction={(messageId, reactionCode) =>
+          toggleOrderMessageReactionAction(orderId, messageId, reactionCode)
+        }
         onRetryMessage={(message) => void optimistic.retry(message.requestId ?? "")}
       />
       {canReply ? (

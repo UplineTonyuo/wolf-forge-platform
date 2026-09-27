@@ -29,7 +29,8 @@ vi.mock("../app/actions/tickets", () => ({
   adminReplyTicketAction: vi.fn(), clientReplyTicketAction: vi.fn(), addTicketInternalNoteAction: vi.fn(),
   adminSendOrderMessageAction: vi.fn(), clientSendOrderMessageAction: vi.fn(),
   adminReplyToTicketMessageAction: vi.fn(), clientReplyToTicketMessageAction: vi.fn(),
-  toggleTicketMessageReactionAction: vi.fn(), forwardTicketMessageToTeamAction: vi.fn(),
+  toggleTicketMessageReactionAction: vi.fn(), toggleOrderMessageReactionAction: vi.fn(),
+  forwardTicketMessageToTeamAction: vi.fn(),
   unsendTicketInternalNoteAction: vi.fn(),
   createClientTicketAction: vi.fn(), createInternalTicketAction: vi.fn(), updateTicketStatusAction: vi.fn(), updateTicketPriorityAction: vi.fn(), assignTicketAction: vi.fn(),
 }));
@@ -826,7 +827,7 @@ describe("Order persisted message actions", () => {
     expect(screen.getByText(source.body)).toBeInTheDocument();
   });
 
-  it("renders persisted reactions outside the bubble on both actor sides and keeps toggling through the Ticket RPC", async () => {
+  it("renders persisted reactions outside the bubble on both actor sides and uses the Project reaction boundary", async () => {
     renderActions({
       ...source,
       reactions: [{ reaction_code: "heart", reaction_count: 2, reacted_by_me: true, reactor_names: ["William", "Avery"] }],
@@ -841,7 +842,7 @@ describe("Order persisted message actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Message actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "React" }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Heart" }));
-    await waitFor(() => expect(actions.toggleTicketMessageReactionAction).toHaveBeenCalledExactlyOnceWith(source.id, "heart"));
+    await waitFor(() => expect(actions.toggleOrderMessageReactionAction).toHaveBeenCalledExactlyOnceWith("order-1", source.id, "heart"));
     expect(refresh).toHaveBeenCalled();
 
     cleanup();

@@ -4,6 +4,7 @@ import {
   getClientContext,
   getInternalContext,
 } from "../../lib/supabase/next-server";
+import { uuidSchema } from "../../domain/shared";
 
 export type NotificationCategory =
   | "project"
@@ -225,5 +226,27 @@ export async function markAllClientNotificationsReadAction(): Promise<void> {
     );
   } catch {
     // Best effort.
+  }
+}
+
+export async function setClientConversationPresenceAction(
+  conversationType: "ticket" | "project",
+  conversationId: string,
+  active: boolean,
+): Promise<void> {
+  try {
+    const context = await getClientContext();
+    const rpc = context.client.rpc as unknown as (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: unknown }>;
+    await rpc("app_set_client_conversation_presence", {
+      p_conversation_type: conversationType,
+      p_conversation_id: uuidSchema.parse(conversationId),
+      p_active: active,
+    });
+  } catch {
+    // Presence only suppresses notification noise. Conversation access and
+    // ownership are re-authorized by the database on every heartbeat.
   }
 }

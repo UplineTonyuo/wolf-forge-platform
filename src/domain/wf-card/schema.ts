@@ -50,8 +50,6 @@ export type PurchaseServiceWithBalanceInput = z.infer<
 export type StorePurchaseResult = {
   orderId: string;
   orderNumber: number;
-  ticketId: string;
-  ticketPublicRef: string;
   invoiceId: string;
   invoiceNumber: number | null;
   paymentId: string;

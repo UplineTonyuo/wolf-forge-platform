@@ -8,6 +8,7 @@ import { TicketComposer } from "./ticket-composer";
 import { TicketConversation } from "./ticket-conversation";
 import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
+import { useClientConversationPresence } from "./use-client-conversation-presence";
 
 /**
  * The client Ticket conversation — the same chat surface as the staff one
@@ -39,6 +40,7 @@ export function TicketClientConversation({
   messages: TicketDetailMessage[];
   repliesDisabled: boolean;
 }) {
+  useClientConversationPresence("ticket", ticketId);
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
   const conversation = useTicketConversationMessages({
     ticketId,

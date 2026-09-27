@@ -77,8 +77,6 @@ export class WfCardRepository {
     return {
       orderId: purchase.order_id,
       orderNumber: purchase.order_number,
-      ticketId: purchase.ticket_id,
-      ticketPublicRef: purchase.ticket_public_ref,
       invoiceId: purchase.invoice_id,
       invoiceNumber: purchase.invoice_number,
       paymentId: purchase.payment_id,
