@@ -13,6 +13,9 @@ import { orderPriorities } from "../../domain/orders/schema";
 import { projectPriorityLabels } from "../../domain/orders/projections";
 import type { CompanyRow, OrderRow, ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
+import { AnimatedSelect } from "../ui/animated-select";
+import { DatePicker } from "../ui/date-picker";
+import { SearchableSelect } from "../ui/searchable-select";
 import { ProjectClientPicker, ProjectServicePicker } from "./project-pickers";
 import styles from "./project-form.module.css";
 
@@ -68,6 +71,18 @@ export function ProjectForm({
     initialProjectFormState,
   );
 
+  /*
+   * The custom controls carry the same hidden-input names as the native
+   * controls they replace (`priority`, `assigned_to_profile_id`, `due_at`,
+   * `started_at`), so the server action contract is unchanged: due/start
+   * still submit `YYYY-MM-DD`, an empty teammate value still means
+   * "Unassigned", and the database keeps generating the project number.
+   */
+  const [priority, setPriority] = useState<string>(project?.priority ?? "normal");
+  const [assigneeId, setAssigneeId] = useState(project?.assigned_to_profile_id ?? "");
+  const [dueDate, setDueDate] = useState(() => dateInputValue(project?.due_at));
+  const [startedDate, setStartedDate] = useState(() => dateInputValue(project?.started_at));
+
   const fieldError = (key: string) => state?.fieldErrors?.[key];
 
   return (
@@ -120,37 +135,43 @@ export function ProjectForm({
           {fieldError("title") ? <p className="field-error">{fieldError("title")}</p> : null}
         </label>
 
-        <label className={styles.field} htmlFor="project-priority">
+        <div className={styles.field}>
           <span>Priority</span>
-          <select id="project-priority" name="priority" defaultValue={project?.priority ?? "normal"}>
-            {orderPriorities.map((priority) => (
-              <option key={priority} value={priority}>
-                {projectPriorityLabels[priority]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <AnimatedSelect
+            name="priority"
+            label="Priority"
+            menuLabel="Project priority"
+            value={priority}
+            onChange={setPriority}
+            options={orderPriorities.map((value) => ({
+              value,
+              label: projectPriorityLabels[value],
+            }))}
+          />
+        </div>
 
-        <label className={styles.field} htmlFor="project-assignee">
+        <div className={styles.field}>
           <span>
             Assigned teammate <small>optional</small>
           </span>
-          <select
-            id="project-assignee"
+          <SearchableSelect
             name="assigned_to_profile_id"
-            defaultValue={project?.assigned_to_profile_id ?? ""}
+            label="Assigned teammate"
+            menuLabel="Assignees"
+            value={assigneeId}
+            onChange={setAssigneeId}
+            placeholder="Search teammates"
             disabled={!canAssign || mode === "edit"}
-            aria-describedby={mode === "edit" ? "project-assignee-help" : undefined}
-          >
-            <option value="">Unassigned</option>
-            {assignees.map((assignee) => (
-              <option key={assignee.id} value={assignee.id}>
-                {assignee.displayName}
-              </option>
-            ))}
-          </select>
+            options={[
+              { id: "", label: "Unassigned" },
+              ...assignees.map((assignee) => ({
+                id: assignee.id,
+                label: assignee.displayName,
+              })),
+            ]}
+          />
           {mode === "edit" ? (
-            <small className={styles.help} id="project-assignee-help">
+            <small className={styles.help}>
               Change the assignee from the project actions menu.
             </small>
           ) : null}
@@ -159,26 +180,35 @@ export function ProjectForm({
               You do not have permission to assign projects, so this project starts unassigned.
             </small>
           ) : null}
-        </label>
+        </div>
 
-        <label className={styles.field} htmlFor="project-due">
+        <div className={styles.field}>
           <span>
             Due date <small>optional</small>
           </span>
-          <input id="project-due" name="due_at" type="date" defaultValue={dateInputValue(project?.due_at)} />
-        </label>
+          <DatePicker
+            name="due_at"
+            label="Due date"
+            menuLabel="Project due date"
+            value={dueDate}
+            onChange={setDueDate}
+            clearable
+          />
+        </div>
 
-        <label className={styles.field} htmlFor="project-started">
+        <div className={styles.field}>
           <span>
             Start date <small>optional</small>
           </span>
-          <input
-            id="project-started"
+          <DatePicker
             name="started_at"
-            type="date"
-            defaultValue={dateInputValue(project?.started_at)}
+            label="Start date"
+            menuLabel="Project start date"
+            value={startedDate}
+            onChange={setStartedDate}
+            clearable
           />
-        </label>
+        </div>
 
         <label className={`${styles.field} ${styles.wide}`} htmlFor="project-notes">
           <span>
