@@ -13,7 +13,7 @@
 .filters[open] > summary { border-color: #52629a; }
 .filters > div { position: absolute; z-index: 12; top: 47px; right: 0; width: 280px; display: grid; gap: 14px; padding: 16px; border: 1px solid var(--wf-border); border-radius: 6px; background: #fff; box-shadow: 0 14px 34px rgba(0, 13, 81, .12); }
 .filters label { display: grid; gap: 6px; color: var(--wf-text-muted); font-size: 11px; font-weight: 650; }
-.filters > div > button { justify-self: start; padding: 0; border: 0; color: #294a9f; background: transparent; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.filters > div > button { justify-self: start; min-height: 24px; display: inline-flex; align-items: center; padding: 0; border: 0; color: #294a9f; background: transparent; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
 
 .statusTabs { display: flex; gap: 23px; margin-top: 4px; padding: 0 2px; border-bottom: 1px solid var(--wf-border); overflow-x: auto; scrollbar-width: none; }
 .statusTabs button { min-height: 48px; display: inline-flex; align-items: center; gap: 7px; position: relative; padding: 0; border: 0; color: #5d6476; background: transparent; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }

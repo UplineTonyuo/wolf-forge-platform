@@ -19,7 +19,7 @@
 
 * { box-sizing: border-box; }
 html { background: var(--wf-warm-50); color: var(--wf-text); font-family: "Inter Variable", Inter, system-ui, sans-serif; }
-body { margin: 0; min-width: 360px; background: var(--wf-white); }
+body { margin: 0; min-width: 320px; background: var(--wf-white); }
 /* The Subscription calendar portals above the app; the page behind it must not scroll. */
 body.wf-subscription-calendar-open { overflow: hidden; }
 button, input, textarea, select { font: inherit; }
@@ -328,10 +328,16 @@ tbody tr:hover { background: #fbfbfc; }
   .skip-link { left: 248px; }
   .sidebar-brand { padding-left: 20px; padding-right: 20px; }
   .page-frame { padding-left: 24px; padding-right: 24px; }
-  th:nth-child(3), td:nth-child(3) { display: none; }
+  /*
+   * Every table drops its third column at tablet. A <colgroup> column must be
+   * dropped with its cells, or the remaining cells slide one column left and
+   * the table trails an empty column of the old third width (KI-090).
+   */
+  th:nth-child(3), td:nth-child(3), col:nth-child(3) { display: none; }
   .dept-col-hide-tablet { display: none; }
   .gmb-workflow .dept-table th:nth-child(3),
   .gmb-workflow .dept-table td:nth-child(3) { display: table-cell; }
+  .gmb-workflow .dept-table col:nth-child(3) { display: table-column; }
   .detail-grid { grid-template-columns: 1fr; }
 }
 
@@ -2840,6 +2846,22 @@ td {
   width: 17px;
   height: 17px;
   display: inline-flex;
+  cursor: pointer;
+}
+
+/*
+ * The visible box stays 17px, but the label carries a 33px hit area so a
+ * touch tap does not have to land on the glyph (WCAG 2.5.8).
+ */
+.clients-checkbox-wrap::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  cursor: pointer;
+}
+
+.clients-checkbox-wrap:hover .clients-checkbox {
+  border-color: #000d51;
 }
 
 .clients-checkbox {
@@ -14574,6 +14596,8 @@ td {
   .portal-command-avatar { width: 42px; height: 42px; flex-basis: 42px; }
   .portal-command-search { height: 44px; }
   .portal-menu-item { padding: 13px 12px; }
+  .portal-secondary-action { min-height: 24px; }
+  .portal-signout { width: 36px; height: 36px; }
 }
 
 /* WF CLIENT PORTAL COMMAND + OVERLAYS END */
