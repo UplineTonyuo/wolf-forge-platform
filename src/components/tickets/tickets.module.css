@@ -1,4 +1,5 @@
 .listSurface,.conversation,.composer,.noteComposer,.ticketSidebar section,.clientTicketList,.clientEmpty { border: 1px solid var(--wf-border); border-radius: 6px; background: #fff; }
+.listSurface { border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .listToolbar { position: relative; display: flex; gap: 9px; padding: 13px; border-bottom: 1px solid var(--wf-border); background: #fafbfc; }
 .listToolbar label { display: flex; }
 .listToolbar select,.searchField { min-height: 38px; border: 1px solid var(--wf-border); border-radius: 4px; background: #fff; }

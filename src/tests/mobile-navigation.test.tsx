@@ -40,6 +40,12 @@ it("opens the native modal, preserves permitted navigation and closes on destina
     return screen.getByRole("dialog", { name: "Wolf Forge navigation" });
   };
   let dialog = open();
+  const header = dialog.querySelector(".mobile-nav-header");
+  expect(header).toHaveTextContent("WOLF FORGE");
+  expect(header?.querySelector(":scope > svg, :scope > img")).toBeNull();
+  const account = within(dialog).getByRole("button", { name: "Account" });
+  expect(within(account).getByText("Test User")).toBeInTheDocument();
+  expect(within(account).getByText("staff")).toBeInTheDocument();
   expect(within(dialog).getAllByRole("link").map((link) => link.textContent)).toEqual(["Projects", "Tickets"]);
   const destination = within(dialog).getByRole("link", { name: "Projects" });
   destination.addEventListener("click", (event) => event.preventDefault());
