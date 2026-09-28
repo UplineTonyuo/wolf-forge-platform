@@ -448,8 +448,7 @@ export function InternalShell({
         }}
       >
         <div className="mobile-nav-header">
-          <WolfForgeMark />
-          <strong>Wolf Forge</strong>
+          <strong>WOLF FORGE</strong>
           <button type="button" aria-label="Close navigation" onClick={() => mobileDrawerRef.current?.close()}>
             <X aria-hidden="true" />
           </button>
