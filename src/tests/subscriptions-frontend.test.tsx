@@ -229,13 +229,55 @@ describe("Subscriptions admin list", () => {
 });
 
 describe("Subscription admin detail", () => {
-  it("renders current versioned terms, cycles, explicit Invoice links, and events", () => {
+  it("shows summary and snapshot terms with clean punctuation and readable captured HTML", () => {
+    const htmlDetail = {
+      ...detail,
+      plan_items: [{ ...detail.plan_items[0]!, service_description_snapshot: "<div>✅ Google My Business optimization&nbsp;</div><div>GMB Photos<br>GBP Posts</div><script>alert(1)</script>" }],
+    };
+    const { container } = render(<SubscriptionDetailView detail={htmlDetail} summary={pastDueSummary} invoices={[invoice]} />);
+    expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Subscription summary" })).toBeInTheDocument();
+    expect(screen.getByText("Summit Financial Group")).toBeInTheDocument();
+    expect(screen.getByText("Sep 20, 2026")).toBeInTheDocument();
+    expect(screen.getAllByText("$807.30").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Current plan · Version 2" })).toBeInTheDocument();
+    expect(screen.getByText("5 days")).toBeInTheDocument();
+    expect(screen.getByText("15 days")).toBeInTheDocument();
+    expect(screen.getByText("None")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("$897.00")).toBeInTheDocument();
+    expect(screen.getByText("$89.70")).toBeInTheDocument();
+    expect(screen.getByText("✅ Google My Business optimization")).toBeInTheDocument();
+    expect(screen.getByText("GMB Photos")).toBeInTheDocument();
+    expect(screen.getByText("GBP Posts")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/Â|â€“|â€”|Ã|�|<div|&nbsp;|<br|alert\(1\)/u);
+  });
+
+  it("switches through billing, invoices, and history with real values and links", () => {
     render(<SubscriptionDetailView detail={detail} summary={pastDueSummary} invoices={[invoice]} />);
-    expect(screen.getByRole("heading", { name: /Current plan .* Version 2/u })).toBeInTheDocument();
-    expect(screen.getByText("Billing cycles")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "WF-1260" })[0]).toHaveAttribute("href", `/invoices/${invoice.id}`);
+    fireEvent.click(screen.getByRole("tab", { name: "Billing" }));
+    expect(screen.getByRole("heading", { name: "Billing cycle 2" })).toBeInTheDocument();
+    expect(screen.getByText("Aug 20, 2026 – Sep 20, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Aug 15, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Not set")).toBeInTheDocument();
+    expect(screen.getByText("Not Ready")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "WF-1260" })).toHaveAttribute("href", `/invoices/${invoice.id}`);
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Billing" }), { key: "ArrowRight" });
+    expect(screen.getByRole("tab", { name: "Invoices" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Due Aug 20, 2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /WF-1260/ })).toHaveAttribute("href", `/invoices/${invoice.id}`);
+    fireEvent.click(screen.getByRole("tab", { name: "History" }));
     expect(screen.getByText("Invoice generated")).toBeInTheDocument();
-    expect(screen.getByText("Requires Attention")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "WF-1260" })).toBeInTheDocument();
+    expect(screen.getByText(/Billing cycle event/)).toBeInTheDocument();
+  });
+
+  it("shows empty invoice and event states", () => {
+    render(<SubscriptionDetailView detail={{ ...detail, events: [] }} summary={baseSummary} invoices={[]} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Invoices" }));
+    expect(screen.getByText("No invoices generated yet.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "History" }));
+    expect(screen.getByText("No internal events are available.")).toBeInTheDocument();
   });
 
   it("offers only lifecycle actions valid for the current status", () => {
