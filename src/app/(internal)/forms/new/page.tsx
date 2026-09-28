@@ -6,6 +6,6 @@ export const metadata: Metadata = { title: "New Form" };
 
 export default async function NewFormPage() {
   const context = await getInternalContext();
-  const services = await context.services.catalog.listActive();
-  return <CreateForm services={services} />;
+  const [services, folders] = await Promise.all([context.services.catalog.listActive(), context.services.catalog.listFolders()]);
+  return <CreateForm services={services} folders={folders} />;
 }

@@ -74,22 +74,28 @@ describe("Ticket message-action menu anchoring", () => {
     expect(css).toContain(".orderMessageActions[data-open] .orderMessageMenu { pointer-events: auto; }");
   });
 
-  it("anchors the menu on which side the bubble sits, not on who wrote it", () => {
+  it("anchors the menu on the side the bubble renders on, per viewer", () => {
     /*
-     * Which side a bubble sits on depends on WHO is looking, so keying the
-     * anchor on `data-side` (the author) put the menu on the wrong edge for
-     * half the viewers. `data-own` is the alignment fact.
+     * Which side a bubble sits on depends on WHO is looking. The anchor is
+     * keyed to the rendered side for each viewer: in the staff view a staff
+     * message is right-aligned, and in the client view the client's own
+     * message is. `data-own` cannot express that -- another staff member's
+     * message is right-aligned too even though it is not the viewer's own.
      */
     const base = blockFor(".orderMessageMenu");
     expect(base).toMatch(/left:\s*0\s*;/);
     expect(base).toMatch(/right:\s*auto\s*;/);
 
-    const own = blockFor('.orderChat .thread > li[data-own="true"] .orderMessageMenu');
-    expect(own).toMatch(/right:\s*0\s*;/);
-    expect(own).toMatch(/left:\s*auto\s*;/);
+    const staffOwnAnchor = '.orderChat:not([data-client-view="true"]) .thread > li[data-side="internal"] .orderMessageMenu';
+    const clientOwnAnchor = '.orderChat[data-client-view="true"] .thread > li[data-side="client"] .orderMessageMenu';
+    const anchorBlock = css.slice(css.indexOf(staffOwnAnchor));
+    expect(anchorBlock).toContain(clientOwnAnchor);
+    const anchorDeclarations = anchorBlock.slice(0, anchorBlock.indexOf("}"));
+    expect(anchorDeclarations).toMatch(/right:\s*0\s*;/);
+    expect(anchorDeclarations).toMatch(/left:\s*auto\s*;/);
 
     /* The author-keyed anchor must be gone. */
-    expect(css).not.toContain('.orderChat [data-side="internal"] .orderMessageMenu');
+    expect(css).not.toContain('[data-own="true"] .orderMessageMenu');
   });
 
   it("can open upward, for a message with no room beneath it", () => {

@@ -441,7 +441,9 @@
 .mobileCard {
   min-width: 0;
   padding: 17px 16px;
-  border-bottom: 1px solid var(--wf-border);
+  margin-bottom: 12px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
 }
 
 /* Same treatment as the focused table row, on the card's existing rule. */
@@ -502,9 +504,13 @@
 
 .mobileActions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
   gap: 8px;
   margin-top: 16px;
 }
+.mobileActions .rowActionPicker > :global(.client-actions-trigger) { width: 44px; height: 44px; }
+.mobileActions .statusControl > div > button { min-height: 44px; }
 
 @media (max-width: 1023px) {
   .summary {

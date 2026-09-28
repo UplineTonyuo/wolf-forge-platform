@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertCircle, Loader2, TicketIcon } from "lucide-react";
+import { AlertCircle, Loader2, Search, TicketIcon, X } from "lucide-react";
+import { useDeferredValue, useState } from "react";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatTeamRelativeTime } from "../../domain/team/projections";
 import { ticketStatusLabels } from "../../lib/tickets/presentation";
@@ -36,10 +37,21 @@ export function TeamTicketsPane({
   onSelect: (ticketId: string) => void;
   onRetry: () => void;
 }) {
-  const isEmpty = !loading && !error && tickets.length === 0;
+  const [query, setQuery] = useState("");
+  const needle = useDeferredValue(query.trim().toLocaleLowerCase());
+  const visible = tickets.filter((ticket) =>
+    [ticket.public_ref, ticket.company_name, ticket.client_name, ticket.subject]
+      .some((value) => value?.toLocaleLowerCase().includes(needle)),
+  );
+  const isEmpty = !loading && !error && visible.length === 0;
 
   return (
-    <div className={styles.ticketList} aria-label="Tickets" role="list">
+    <div className={styles.ticketList}>
+      <div className={styles.ticketSearch}>
+        <Search aria-hidden="true" size={16} />
+        <input type="search" aria-label="Search tickets" placeholder="Search reference, client, or title" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
+        {query ? <button type="button" aria-label="Clear ticket search" onClick={() => setQuery("")}><X aria-hidden="true" size={16} /></button> : null}
+      </div>
       {loading ? (
         <div className={styles.paneHeaderActions} style={{ padding: "8px 12px" }}>
           <Loader2 aria-label="Refreshing" className={styles.spin} />
@@ -64,12 +76,13 @@ export function TeamTicketsPane({
           <span className={styles.stateIcon}>
             <TicketIcon aria-hidden="true" />
           </span>
-          <strong>No Tickets yet</strong>
-          <p>Client Tickets will appear here.</p>
+          <strong>{needle ? "No tickets found" : "No Tickets yet"}</strong>
+          <p>{needle ? "Try a different reference or client name." : "Client Tickets will appear here."}</p>
         </div>
       ) : null}
 
-      {tickets.map((ticket) => (
+      <div role="list" aria-label="Tickets">
+      {visible.map((ticket) => (
         <button
           key={ticket.ticket_id}
           type="button"
@@ -88,6 +101,7 @@ export function TeamTicketsPane({
             {ticket.company_name ?? ticket.client_name ?? "Unlinked client"}
           </span>
           <span className={styles.ticketRowMeta}>
+            <span>{ticket.public_ref}</span>{" · "}
             <span className={styles.ticketRowStatus}>
               {ticketStatusLabels[ticket.status]}
             </span>
@@ -96,6 +110,7 @@ export function TeamTicketsPane({
           </span>
         </button>
       ))}
+      </div>
     </div>
   );
 }

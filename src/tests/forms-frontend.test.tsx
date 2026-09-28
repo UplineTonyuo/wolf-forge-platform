@@ -40,7 +40,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const capabilities: FormCapabilities = { view: true, manage: true, publish: true, assign: true, submissionsView: true, submissionsManage: true };
-const service = { id: "20000000-0000-4000-8000-000000000001", name: "SEO Strategy", price: 497, currency: "USD" } as ServiceRow;
+const service = { id: "20000000-0000-4000-8000-000000000001", name: "SEO Strategy", price: 497, currency: "USD", is_active: true, folder_id: null } as ServiceRow;
 const fieldA = "30000000-0000-4000-8000-000000000001";
 const fieldB = "30000000-0000-4000-8000-000000000002";
 const optionA = "40000000-0000-4000-8000-000000000001";
@@ -102,9 +102,13 @@ describe("Forms admin list and creation", () => {
     fireEvent.click(screen.getByRole("button", { name: /Intake Forms/ }));
     fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Project Intake" } });
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Intake Service"), { target: { value: "SEO" } });
-    fireEvent.click(await screen.findByRole("option", { name: "SEO Strategy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Intake Service: Choose a service" }));
+    fireEvent.click(screen.getByRole("option", { name: /Unfiled/ }));
+    fireEvent.click(await screen.findByRole("option", { name: /SEO Strategy/ }));
     expect(screen.getByRole("button", { name: /Create draft/ })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    await waitFor(() => expect(actions.createFormAction).toHaveBeenCalled());
+    expect(vi.mocked(actions.createFormAction).mock.calls[0]![0].definition.service_links[0]?.service_id).toBe(service.id);
   });
 });
 
@@ -149,6 +153,36 @@ describe("visual builder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
     expect(screen.getByText("Draft Version 2 saved")).toBeInTheDocument();
+  });
+
+  it("persists a custom Visibility selection through the custom select", async () => {
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Visibility: Public" }));
+    fireEvent.click(screen.getByRole("option", { name: "Assigned" }));
+    expect(document.querySelector('input[name="visibility"]')).toHaveValue("assigned");
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.visibility).toBe("assigned");
+  });
+
+  it("persists a folder-first intake Service selection from the builder", async () => {
+    const folderId = "5e000000-0000-4000-8000-000000000001";
+    const secondService = { ...service, id: "20000000-0000-4000-8000-000000000002", name: "Local SEO", folder_id: folderId } as ServiceRow;
+    render(
+      <FormBuilder
+        detail={detail("intake")}
+        capabilities={capabilities}
+        services={[{ ...service, folder_id: folderId } as ServiceRow, secondService]}
+        folders={[{ id: folderId, name: "SEO" }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Intake Service: SEO Strategy" }));
+    fireEvent.click(screen.getByRole("option", { name: /SEO\s*2 services/u }));
+    fireEvent.click(screen.getByRole("option", { name: /Local SEO/u }));
+    expect(document.querySelector('input[name="service_id"]')).toHaveValue(secondService.id);
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links[0]?.service_id).toBe(secondService.id);
   });
 
   it("previews the current draft through the shared renderer", () => {
@@ -201,7 +235,7 @@ describe("visual builder", () => {
     render(<FormBuilder detail={detail("intake")} capabilities={capabilities} services={[service]} />);
     expect(screen.queryByRole("button", { name: "Payment" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Email" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Intake Service")).toHaveValue(service.id);
+    expect(document.querySelector('input[name="service_id"]')).toHaveValue(service.id);
   });
 });
 

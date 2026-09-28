@@ -176,16 +176,50 @@ describe("Subscriptions admin list", () => {
     expect(screen.getAllByText("WF-A13C9F2B").length).toBeGreaterThan(0);
     expect(screen.getAllByText("$807.30").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Monthly").length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /Past Due\s*1/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Filter subscriptions" })).toBeInTheDocument();
   });
 
-  it("filters by status tabs and instant search", () => {
+  it("filters by status in the shared sheet and instant search", () => {
     render(<SubscriptionsList summaries={[baseSummary, pastDueSummary]} canManage />);
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
     fireEvent.click(screen.getByRole("button", { name: /Past Due\s*1/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect(screen.getAllByText("WF-B22D8E3C").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("WF-A13C9F2B")).toHaveLength(0);
     fireEvent.change(screen.getByPlaceholderText(/Search reference/i), { target: { value: "no result" } });
     expect(screen.getByText("No subscriptions match your search.")).toBeInTheDocument();
+  });
+
+  it("keeps the Health and Interval filters in the shared sheet", () => {
+    const pausedSummary: SubscriptionSummary = {
+      ...baseSummary,
+      subscription_id: "88888888-8888-4888-8888-888888888888",
+      public_ref: "WF-C33E9F4D",
+      company_name: "Quiet Harbour Media",
+      status: "paused",
+      health: "stalled",
+      interval_unit: "year",
+    };
+    render(<SubscriptionsList summaries={[baseSummary, pastDueSummary, pausedSummary]} canManage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
+    fireEvent.click(screen.getByRole("button", { name: /^All\s*3$/u }));
+    fireEvent.click(screen.getByRole("button", { name: "Stalled" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(screen.getAllByText("WF-C33E9F4D").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("WF-A13C9F2B")).toHaveLength(0);
+    expect(screen.queryAllByText("WF-B22D8E3C")).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.getAllByText("WF-A13C9F2B").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
+    fireEvent.click(screen.getByRole("button", { name: /^All\s*3$/u }));
+    fireEvent.click(screen.getByRole("button", { name: "Yearly" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(screen.getAllByText("WF-C33E9F4D").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("WF-B22D8E3C")).toHaveLength(0);
   });
 
   it("renders an intentional empty state", () => {

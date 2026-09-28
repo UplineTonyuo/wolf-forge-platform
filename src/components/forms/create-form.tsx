@@ -8,7 +8,7 @@ import { createFormAction } from "../../app/actions/forms";
 import type { FormDefinition } from "../../domain/forms/schema";
 import type { ServiceRow } from "../../lib/supabase/database-rows";
 import { formTypeLabels } from "../../lib/forms/presentation";
-import { SearchableSelect } from "../ui/searchable-select";
+import { ServicePicker, type PickerFolder } from "../services/service-picker";
 import styles from "./forms.module.css";
 
 const types = ["order", "contact", "intake", "onboarding"] as const;
@@ -17,7 +17,7 @@ function slugify(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "");
 }
 
-export function CreateForm({ services }: { services: ServiceRow[] }) {
+export function CreateForm({ services, folders = [] }: { services: ServiceRow[]; folders?: PickerFolder[] }) {
   const router = useRouter();
   const [formType, setFormType] = useState<(typeof types)[number]>("order");
   const [name, setName] = useState("");
@@ -53,7 +53,7 @@ export function CreateForm({ services }: { services: ServiceRow[] }) {
     <Link href="/forms" className={styles.backLink}><ArrowLeft aria-hidden="true" />Back to Forms</Link>
     <header><span>New Form</span><h1>Choose the workflow this Form supports.</h1><p>The type sets safe visibility and field boundaries. You can shape the draft in the visual builder next.</p></header>
     <div className={styles.typeChoices}>{types.map((type) => <button key={type} type="button" data-selected={formType === type} onClick={() => setFormType(type)}><strong>{formTypeLabels[type]}</strong><span>{type === "order" ? "Collect service choices and order configuration." : type === "contact" ? "Collect a published inquiry without creating a Ticket yet." : type === "intake" ? "Assign to a Project with a linked Service." : "Assign directly to a client company."}</span></button>)}</div>
-    <section className={styles.createFields}><label><span>Form name</span><input autoFocus value={name} onChange={(event) => { const next = event.currentTarget.value; setName(next); if (!slugEdited) setCanonicalKey(slugify(next)); }} placeholder="Client onboarding" maxLength={200} /></label><label><span>Public slug</span><div><b>/f/</b><input value={canonicalKey} onChange={(event) => { setSlugEdited(true); setCanonicalKey(slugify(event.currentTarget.value)); }} placeholder="client-onboarding" /></div></label>{formType === "intake" ? <label><span>Intake Service</span><SearchableSelect name="service_id" label="Intake Service" options={services.map((service) => ({ id: service.id, label: service.name }))} value={serviceId} onChange={setServiceId} placeholder="Search services..." menuLabel="Intake Service" required /></label> : null}<dl><div><dt>Visibility</dt><dd>{visibility === "assigned" ? "Assigned only" : "Public (editable in builder)"}</dd></div><div><dt>Initial state</dt><dd>Draft</dd></div></dl></section>
+    <section className={styles.createFields}><label><span>Form name</span><input autoFocus value={name} onChange={(event) => { const next = event.currentTarget.value; setName(next); if (!slugEdited) setCanonicalKey(slugify(next)); }} placeholder="Client onboarding" maxLength={200} /></label><label><span>Public slug</span><div><b>/f/</b><input value={canonicalKey} onChange={(event) => { setSlugEdited(true); setCanonicalKey(slugify(event.currentTarget.value)); }} placeholder="client-onboarding" /></div></label>{formType === "intake" ? <div className={styles.customField}><span>Intake Service</span><ServicePicker label="Intake Service" folders={folders} services={services} value={serviceId} onChange={setServiceId} /></div> : null}<dl><div><dt>Visibility</dt><dd>{visibility === "assigned" ? "Assigned only" : "Public (editable in builder)"}</dd></div><div><dt>Initial state</dt><dd>Draft</dd></div></dl></section>
     {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
     <footer><button className="button-primary" type="button" aria-busy={pending || undefined} disabled={pending || !name.trim() || !canonicalKey || (formType === "intake" && !serviceId)} onClick={create}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />Create draft <ArrowRight aria-hidden="true" /></button></footer>
   </div>;

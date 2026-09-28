@@ -10,21 +10,30 @@ import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
 import type { OrderReplyTarget } from "./order-message-actions";
 
+/**
+ * The client Project conversation. It renders through the same `orderChat`
+ * surface the internal Project conversation uses (no row dividers, message
+ * spacing, other-party identity only), and resolves "my message" from the
+ * signed-in profile id rather than from the client role, so the two POVs of
+ * one Project run the same perspective rule and reverse cleanly.
+ */
 export function ProjectConversation({
   orderId,
   heading,
   messages,
+  viewerProfileId,
   repliesDisabled,
 }: {
   orderId: string;
   heading: string;
   messages: TicketDetailMessage[];
+  viewerProfileId: string;
   repliesDisabled: boolean;
 }) {
   const router = useRouter();
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
   useClientConversationPresence("project", orderId);
-  const optimistic = useOptimisticTicketMessages(messages, { mode: "client" });
+  const optimistic = useOptimisticTicketMessages(messages, { mode: "client", viewerProfileId });
 
   useEffect(() => {
     const refresh = () => {
@@ -44,8 +53,10 @@ export function ProjectConversation({
   return (
     <>
       <TicketConversation
-        messages={optimistic.messages}
+        orderChat
         clientView
+        viewerProfileId={viewerProfileId}
+        messages={optimistic.messages}
         heading={heading}
         onReply={repliesDisabled ? undefined : setReplyTo}
         canReact

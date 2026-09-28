@@ -14,7 +14,7 @@ export default async function ClientProjectDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const { services } = await getClientContext();
+  const { services, user } = await getClientContext();
 
   let project: ClientProjectView | null = null;
   let conversation: TicketDetail | null = null;
@@ -39,5 +39,5 @@ export default async function ClientProjectDetailPage({
   if (denied) redirect("/account");
   if (missing || !project) notFound();
 
-  return <ClientProjectDetail project={project} conversation={conversation} />;
+  return <ClientProjectDetail project={project} conversation={conversation} viewerId={user.id} />;
 }

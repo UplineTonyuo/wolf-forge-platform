@@ -121,9 +121,13 @@ export function ClientProjectsList({ projects }: { projects: ClientProjectView[]
 export function ClientProjectDetail({
   project,
   conversation,
+  viewerId,
 }: {
   project: ClientProjectView;
   conversation: TicketDetail | null;
+  /** The signed-in client's profile id, so message ownership comes from the
+   *  authenticated user rather than from the client role. */
+  viewerId: string;
 }) {
   const attention = projectAttention(project.status);
   const conversationTicket = conversation?.ticket ?? null;
@@ -219,6 +223,7 @@ export function ClientProjectDetail({
           orderId={project.id}
           heading={project.reference}
           messages={conversation?.messages ?? []}
+          viewerProfileId={viewerId}
           repliesDisabled={repliesDisabled}
         />
       </section>

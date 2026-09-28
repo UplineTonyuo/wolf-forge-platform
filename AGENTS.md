@@ -206,3 +206,13 @@ After finishing meaningful implementation, audit, debugging, or validation work:
 This applies to both Claude Code and Codex when they follow AGENTS.md.
 
 <!-- END:WOLF-FORGE-FINAL-REPORT-HANDOFF -->
+
+## Wolf Forge UI consistency rules
+
+- Inspect and reuse existing selects, filters, dialogs, sheets, calendars, action menus and popovers before creating another implementation.
+- Use `AnimatedSelect` / `SearchableSelect` instead of raw `<select>` controls on polished product surfaces, and `DatePicker` instead of browser-default date calendars. Exceptions require an explicit product instruction or an accessibility/platform constraint.
+- Service selection follows Folder → Service wherever Services are folder-organized. Reuse `ServicePicker`, the established folder glyph, and configured service icons when available; otherwise use the canonical `service-icons.ts` mapping and fallback.
+- Filters use `MobileFilterSheet` / `SheetFrame`: shared enter/exit motion, blurred backdrop, radius, hover/focus states, and viewport-safe sizing.
+- Fix overflowing children and flex/grid minimum widths. Never hide important content or mask layout defects with arbitrary overflow clipping.
+- Preserve keyboard navigation, labels, focus-visible, Escape dismissal, focus return, and adequate touch targets when replacing native controls.
+- Verify touched routes rendered at 320, 360, 390, 430 and 768px, with 1280/1440px desktop spot checks; include opened menus, long content and sticky actions.

@@ -34,10 +34,14 @@ import { useClientConversationPresence } from "./use-client-conversation-presenc
 export function TicketClientConversation({
   ticketId,
   messages,
+  viewerProfileId,
   repliesDisabled,
 }: {
   ticketId: string;
   messages: TicketDetailMessage[];
+  /** The signed-in client's profile id: ownership comes from the
+   *  authenticated user, not from the client role. */
+  viewerProfileId: string;
   repliesDisabled: boolean;
 }) {
   useClientConversationPresence("ticket", ticketId);
@@ -46,6 +50,7 @@ export function TicketClientConversation({
     ticketId,
     serverMessages: messages,
     mode: "client",
+    viewerProfileId,
   });
 
   /* A local reaction wakes the lane too, so the two views converge on the
@@ -62,6 +67,7 @@ export function TicketClientConversation({
         orderChat
         clientView
         sourceLabel="Ticket"
+        viewerProfileId={viewerProfileId}
         messages={conversation.messages}
         onReply={repliesDisabled ? undefined : setReplyTo}
         canReact

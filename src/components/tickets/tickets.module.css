@@ -2659,6 +2659,8 @@
   position: relative;
   min-height: 38px;
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   align-items: center;
   gap: 1px;
   padding: 3px 6px;
@@ -2788,7 +2790,7 @@
 /* Link popover ----------------------------------------------------------- */
 
 .ticketRichLinkControl {
-  position: relative;
+  position: static;
   display: flex;
 }
 
@@ -2797,7 +2799,7 @@
   z-index: 140;
   top: calc(100% + 8px);
   left: 0;
-  width: 286px;
+  width: min(286px, 100%);
   padding: 11px;
   border: 1px solid #d5dbe7;
   border-radius: 8px;
@@ -3711,6 +3713,8 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
   object-fit: cover;
 }
 .composerReplyContext strong { color: #000d51; font-size: 11px; }
+.composerReplyContext > div { min-width: 0; }
+.composerReplyContext > button { flex-shrink: 0; }
 .composerReplyContext p {
   max-width: 70ch;
   margin: 2px 0 0;
@@ -3863,7 +3867,13 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
  * would swallow the tap that is supposed to dismiss the menu.
  */
 .orderMessageActions > button { position: absolute; top: 0; left: 100%; margin-left: 6px; }
-.orderChat .thread > li[data-own="true"] .orderMessageActions > button {
+/*
+ * The right-hand (own-message) rows park the trigger on their left, in either
+ * viewer's perspective. `data-side` is the rendered side, so these two
+ * selectors are "the rows that render right" for a staff and a client viewer.
+ */
+.orderChat:not([data-client-view="true"]) .thread > li[data-side="internal"] .orderMessageActions > button,
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] .orderMessageActions > button {
   left: auto;
   right: 100%;
   margin-left: 0;
@@ -3900,9 +3910,9 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
   /*
    * Anchored to the message's own edge: a left-aligned message anchors left, a
    * right-aligned one anchors right, so the menu always opens inward, under
-   * the message it belongs to. Keyed on `data-own` rather than `data-side`
-   * because which side a bubble sits on depends on WHO is looking, not on who
-   * wrote it.
+   * the message it belongs to. `data-side` is the RENDERED side (own vs
+   * other, mirrored per viewer), so the anchor follows the perspective in
+   * both POVs without reading the author's role.
    */
   left: 0;
   right: auto;
@@ -3916,7 +3926,8 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
   opacity: 0;
   transform: translateY(-4px);
 }
-.orderChat .thread > li[data-own="true"] .orderMessageMenu { left: auto; right: 0; }
+.orderChat:not([data-client-view="true"]) .thread > li[data-side="internal"] .orderMessageMenu,
+.orderChat[data-client-view="true"] .thread > li[data-side="client"] .orderMessageMenu { left: auto; right: 0; }
 .orderMessageMenu[data-motion] {
   transition: opacity 150ms var(--wf-ease), transform 150ms var(--wf-ease);
 }
@@ -4096,15 +4107,14 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 .orderChat .messageBubble { max-width: 100%; }
 
 /*
- * A client viewer of their own Ticket conversation: they are the "client"
- * side, so their own messages take the right/navy "own message" treatment
- * OrderConversation already gives its own staff viewer, while Wolf Forge/
- * staff messages take the plain left-side treatment "client" gets everywhere
- * else. Every declaration below is copied from (or is the reset for) the
- * existing `[data-side="internal"]` staff-own rules above, mirrored onto
- * "client" — scoped strictly to `data-client-view` so OrderConversation and
- * the plain staff Ticket view are untouched. Placed after the client-identity
- * grid block (`:not([data-grouped])`) so equal-specificity ties resolve here.
+ * A client viewer: `data-side` is the rendered side, so `[data-side="client"]`
+ * is the viewer's OWN messages (right/navy, exactly the treatment
+ * OrderConversation gives its own staff viewer) and `[data-side="internal"]`
+ * is everyone else (left, plain). Every declaration below mirrors the
+ * `[data-side="internal"]` staff-own rules above onto "client" — scoped
+ * strictly to `data-client-view` so OrderConversation and the plain staff
+ * Ticket view are untouched. Placed after the client-identity grid block
+ * (`:not([data-grouped])`) so equal-specificity ties resolve here.
  */
 .orderChat[data-client-view="true"] .thread > li[data-side="client"] {
   justify-content: flex-end;
