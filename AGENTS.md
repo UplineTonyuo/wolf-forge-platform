@@ -216,3 +216,7 @@ This applies to both Claude Code and Codex when they follow AGENTS.md.
 - Fix overflowing children and flex/grid minimum widths. Never hide important content or mask layout defects with arbitrary overflow clipping.
 - Preserve keyboard navigation, labels, focus-visible, Escape dismissal, focus return, and adequate touch targets when replacing native controls.
 - Verify touched routes rendered at 320, 360, 390, 430 and 768px, with 1280/1440px desktop spot checks; include opened menus, long content and sticky actions.
+
+## Security Documentation Requirement
+
+Any task that adds, removes, changes, weakens, strengthens, or tests a security control must update the canonical Wolf Forge Security handbook at `C:\Users\User\Downloads\Lord's Vault\Lord\Anthony OS\02 Projects\Wolf Forge Platform\Security` before completion. Use the topic mapping in `00 Security Overview.md`. Update `16 Security Control Registry.md` for a new, removed, renamed, materially changed, or reclassified control; append `17 Security Change Log.md` for a material security change; update `15 Security Gaps & Future Hardening.md` when a verified gap opens or closes. Cite actual code, migrations, policies, tests, or configuration, and keep relevant tests current. Never label an unevidenced control IMPLEMENTED. Never put passwords, API keys, OAuth secrets, tokens, cookies, private keys, Supabase secrets, or production credentials in the handbook.
