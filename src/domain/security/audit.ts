@@ -5,7 +5,7 @@
  *
  * C2-4 emits one structured log line per security signal. C2-5 escalates a
  * deliberately small, selected subset of those signals into durable,
- * append-only rows (`private.security_audit_events`) so that security-sensitive
+ * append-only rows (`public.security_audit_events`) so that security-sensitive
  * actions can be reconstructed long after the log drain has rotated:
  *
  *   WHO        actor_profile_id + actor_class
@@ -47,6 +47,7 @@ import { normalizeCorrelationId } from "./correlation-id";
  *   auth.password.changed                takeover-timeline anchor; rare
  *   auth.login.unassigned                de-provisioned account signal; rare
  *   authorization.context.denied         verified actor on the wrong surface
+ *   authorization.team_supervision.read  privileged Team content access
  *   integration.gmail.connected          external credential state created
  *   integration.gmail.disconnected       external credential state removed
  *   integration.gmail.reauthorization_required   consent lost / identity drift
@@ -56,6 +57,7 @@ export const SECURITY_AUDIT_EVENT_CODES = [
   "auth.password.changed",
   "auth.login.unassigned",
   "authorization.context.denied",
+  "authorization.team_supervision.read",
   "integration.gmail.connected",
   "integration.gmail.disconnected",
   "integration.gmail.reauthorization_required",
