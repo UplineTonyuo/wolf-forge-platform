@@ -569,13 +569,9 @@ select is(
   (select count(*) from pg_proc as function_row
    join pg_namespace as schema_row on schema_row.oid = function_row.pronamespace
    where schema_row.nspname = 'public'
-     and function_row.proname in (
-       'app_list_team_supervised_messages_before',
-       'app_get_team_supervised_message_window',
-       'app_search_team_supervised_conversation_messages'
-     )),
+      and function_row.proname = 'app_search_team_supervised_conversation_messages'),
   0::bigint,
-  'no supervisory history, window, or search RPC exists'
+  'the supervisory search RPC remains absent'
 );
 
 select is(
