@@ -408,3 +408,87 @@ describe("team supervision entry-point boundary (source)", () => {
     }
   });
 });
+
+describe("team supervision adversarial input (Phase 2B-4)", () => {
+  const cursorTime = "2026-09-02T00:00:00+00:00";
+
+  it.each([
+    ["list limit 0", "listSupervisedConversationsAction", { limit: 0 }],
+    ["list negative limit", "listSupervisedConversationsAction", { limit: -1 }],
+    ["list fractional limit", "listSupervisedConversationsAction", { limit: 1.5 }],
+    ["list huge limit", "listSupervisedConversationsAction", { limit: 1e9 }],
+    ["list string limit", "listSupervisedConversationsAction", { limit: "10" }],
+    ["list malformed cursor time", "listSupervisedConversationsAction", { beforeLastMessageAt: "yesterday", beforeConversationId: conversationId }],
+    ["list bad cursor uuid", "listSupervisedConversationsAction", { beforeConversationId: "nope" }],
+    ["detail limit 0", "getSupervisedConversationAction", { conversationId, limit: 0 }],
+    ["detail sql-looking id", "getSupervisedConversationAction", { conversationId: "' or 1=1 --" }],
+    ["history time without offset", "listSupervisedMessagesBeforeAction", { conversationId, beforeCreatedAt: "2026-09-02T00:00:00", beforeMessageId: messageId }],
+    ["history bad cursor uuid", "listSupervisedMessagesBeforeAction", { conversationId, beforeCreatedAt: cursorTime, beforeMessageId: "nope" }],
+    ["history time only", "listSupervisedMessagesBeforeAction", { conversationId, beforeCreatedAt: cursorTime }],
+    ["history limit 101", "listSupervisedMessagesBeforeAction", { conversationId, beforeCreatedAt: cursorTime, beforeMessageId: messageId, limit: 101 }],
+    ["window negative side", "getSupervisedMessageWindowAction", { conversationId, targetMessageId: messageId, beforeLimit: -1 }],
+    ["window huge side", "getSupervisedMessageWindowAction", { conversationId, targetMessageId: messageId, afterLimit: 1e6 }],
+    ["window bad target", "getSupervisedMessageWindowAction", { conversationId, targetMessageId: "nope" }],
+    ["search empty", "searchSupervisedConversationAction", { conversationId, query: "" }],
+    ["search whitespace", "searchSupervisedConversationAction", { conversationId, query: " \n\t " }],
+    ["search max + 1", "searchSupervisedConversationAction", { conversationId, query: "x".repeat(201) }],
+    ["search limit 0", "searchSupervisedConversationAction", { conversationId, query: "x", limit: 0 }],
+    ["search malformed cursor", "searchSupervisedConversationAction", { conversationId, query: "x", beforeCreatedAt: "nope", beforeMessageId: messageId }],
+  ] as const)("%s never reaches the database", async (_label, action, input) => {
+    const { calls } = wire({ data: null, error: null });
+    expect(await run(action, input)).toEqual({ ok: false, error: safe.validation });
+    expect(calls).toEqual([]);
+  });
+
+  it.each([
+    ["exactly max length", "x".repeat(200)],
+    ["unicode", "résumé 給料 🔒"],
+    ["html-looking", "<script>alert(1)</script>"],
+    ["sql-looking", "'; drop table team_messages; --"],
+  ])("search %s query goes verbatim to p_query only", async (_label, query) => {
+    const { calls } = wire({
+      data: { results: [], has_more: false, next_before_created_at: null, next_before_message_id: null },
+      error: null,
+    });
+    const result = await run("searchSupervisedConversationAction", { conversationId, query });
+    expect(result).toEqual({ ok: true, data: { results: [], hasMore: false, nextCursor: null } });
+    expect(calls).toHaveLength(1);
+    const { p_query, ...rest } = calls[0]!.args;
+    expect(p_query).toBe(query);
+    expect(JSON.stringify(rest)).not.toContain(query);
+  });
+
+  it.each([
+    ["list at max", "listSupervisedConversationsAction", { limit: 100 }],
+    ["window at max and zero", "getSupervisedMessageWindowAction", { conversationId, targetMessageId: messageId, beforeLimit: 100, afterLimit: 0 }],
+  ] as const)("%s is accepted as one RPC", async (_label, action, input) => {
+    const { calls } = wire({ data: action === "listSupervisedConversationsAction" ? [] : { found: false, messages: [] }, error: null });
+    expect((await run(action, input)) as { ok: boolean }).toMatchObject({ ok: true });
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each(allActions)("%s ignores caller-supplied authority and audit fields", async (action) => {
+    const authority = {
+      actorId: messageId,
+      supervisorId: messageId,
+      profileId: messageId,
+      p_actor_id: messageId,
+      role: "owner",
+      permission: "team_messages.supervise",
+      canSupervise: true,
+      supervise: true,
+      organizationId: messageId,
+      clientId: messageId,
+      serviceRole: true,
+      auditActor: messageId,
+      auditAction: "team.supervision.none",
+      metadata: { query: secretQuery },
+    };
+    const clean = wire({ data: null, error: { code: "P0002", message: "x" } });
+    await run(action);
+    const hostile = wire({ data: null, error: { code: "P0002", message: "x" } });
+    await run(action, { ...(validInputs[action] as object), ...authority });
+    expect(hostile.calls).toHaveLength(1);
+    expect(hostile.calls).toEqual(clean.calls);
+  });
+});

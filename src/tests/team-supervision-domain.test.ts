@@ -539,3 +539,94 @@ describe("Team supervision error safety", () => {
     expect(`${String(failure)} ${JSON.stringify(cause)}`).not.toContain(secretQuery);
   });
 });
+
+describe("Team supervision mapping against hostile rows", () => {
+  // Fields an RPC must never return. If one ever did (a future migration, a
+  // wrong join), the explicit mappers must still drop it rather than spread it.
+  const hostile = {
+    unread_count: 9,
+    last_read_at: "2026-09-02T00:00:00+00:00",
+    reacted_by_me: true,
+    capabilities: { can_delete: true },
+    hidden_for_me: true,
+    voice_storage_path: "team-voice/secret.webm",
+    signed_url: "https://storage.example/secret?token=x",
+    deliveries: [{ profile_id: ownerId }],
+    presence: "online",
+    source_ticket_id: messageId,
+    request_id: correlationId,
+    original_body: "reconstructed original",
+  };
+  const hostileValues = /team-voice|token=x|reconstructed original|online/;
+
+  /** Only JSON primitives, arrays and plain objects; no undefined, Date, Map, class. */
+  function expectPlainJson(value: unknown) {
+    if (value === null || ["string", "number", "boolean"].includes(typeof value)) return;
+    if (Array.isArray(value)) return value.forEach(expectPlainJson);
+    expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+    for (const child of Object.values(value as object)) expectPlainJson(child);
+  }
+
+  const message = {
+    ...messageRow({
+      reply: {
+        message_id: messageId,
+        author_profile_id: ownerId,
+        author_name: "Owner",
+        author_avatar_url: null,
+        body: "quoted",
+        message_type: "text",
+        deleted_for_everyone: false,
+        ...hostile,
+      } as SupervisedMessageRow["reply"],
+      reactions: [{ reaction_code: "like", reaction_count: 2, ...hostile }],
+    }),
+    ...hostile,
+  } as SupervisedMessageRow;
+  const participants = pageRow.participants.map((row) => ({ ...row, ...hostile }));
+
+  it.each([
+    ["list", () => toSupervisedConversationPage([{ ...listRow, ...hostile }], 50)],
+    ["transcript", () => toSupervisedTranscriptPage({ ...pageRow, participants, messages: [message], ...hostile })],
+    [
+      "window",
+      () =>
+        toSupervisedMessageWindow({
+          found: true,
+          conversation_id: conversationId,
+          conversation_kind: "direct",
+          created_at: pageRow.created_at,
+          last_message_at: pageRow.last_message_at,
+          participants,
+          messages: [message],
+          has_more_before: false,
+          has_more_after: false,
+          ...hostile,
+        }),
+    ],
+    [
+      "search",
+      () =>
+        toSupervisedMessageSearchPage({
+          ...searchRow,
+          results: searchRow.results.map((row) => ({ ...row, body: secretBody, ...hostile })),
+          ...hostile,
+        }),
+    ],
+  ] as const)("%s drops every unexpected field and stays plain JSON", (_label, map) => {
+    const mapped = map();
+    expectNoExcludedKeys(mapped);
+    expect(allKeys(mapped)).not.toContain("request_id");
+    expect(JSON.stringify(mapped)).not.toMatch(hostileValues);
+    expectPlainJson(mapped);
+    expect(JSON.parse(JSON.stringify(mapped))).toEqual(mapped);
+  });
+
+  it("search results carry the snippet, never the full body", () => {
+    const page = toSupervisedMessageSearchPage({
+      ...searchRow,
+      results: searchRow.results.map((row) => ({ ...row, body: secretBody })),
+    });
+    expect(JSON.stringify(page)).not.toContain(secretBody);
+  });
+});
