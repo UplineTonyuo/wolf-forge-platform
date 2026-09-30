@@ -111,7 +111,13 @@ export function SupervisedConversationList({
                   className={`${styles.row} ${styles.rowButton}`}
                   data-conversation-id={conversation.conversationId}
                   aria-current={selectedId === conversation.conversationId ? "true" : undefined}
-                  onClick={() => onSelect(conversation)}
+                  onClick={(event) => {
+                    // The tail of a double tap (e.g. on mobile Back, which
+                    // reveals this row under the finger) is not a deliberate
+                    // open. Keyboard activation reports 0 and still opens.
+                    if (event.detail > 1) return;
+                    onSelect(conversation);
+                  }}
                 >
                   {content}
                 </button>

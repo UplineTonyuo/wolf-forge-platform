@@ -2,9 +2,10 @@
  * Supervised transcript and the All Conversations workspace.
  *
  * One neutral column: no left/right sides, no bubbles, no composer. Desktop
- * (>= 1024px) splits list and transcript, each scrolling on its own inside a
- * viewport-high workspace. Below that the two take turns and the page is the
- * only scroll region.
+ * (>= 1024px) splits list and transcript, each scrolling on its own; the page
+ * frame becomes a viewport-high column and the workspace takes whatever the
+ * page header leaves, so a wrapping title never pushes it off screen. Below
+ * that the two take turns and the page is the only scroll region.
  */
 
 .workspace {
@@ -42,6 +43,8 @@
 }
 
 .back {
+  grid-area: back;
+  justify-self: start;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -73,6 +76,7 @@
 }
 
 .headerAvatars {
+  grid-area: avatars;
   display: inline-flex;
   flex-shrink: 0;
 }
@@ -82,6 +86,7 @@
 }
 
 .title {
+  grid-area: title;
   flex: 1 1 200px;
   min-width: 0;
   display: flex;
@@ -92,7 +97,7 @@
   color: var(--wf-text);
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
 .title:focus {
@@ -128,6 +133,7 @@
 }
 
 .readOnly {
+  grid-area: readonly;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -257,6 +263,8 @@
 
 .message {
   min-width: 0;
+  /* Wide desktop panels keep prose at a readable measure. */
+  max-width: 75ch;
   display: grid;
   gap: 4px;
   color: var(--wf-text);
@@ -421,17 +429,47 @@
     padding-left: 12px;
     padding-right: 12px;
   }
+
+  /*
+   * Phones: Back and Read-only share the first row and the names get the full
+   * width of the second, so long names wrap once instead of three times. The
+   * names are the identity; the initials beside them only cost width here.
+   */
+  .header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "back . readonly"
+      "title title title";
+    gap: 2px 10px;
+    padding-top: 6px;
+  }
+
+  .headerAvatars {
+    display: none;
+  }
 }
 
 /* Split: list beside transcript, each its own scroll region. */
 @media (min-width: 1024px) {
+  /* The shell card sits 20px below the viewport top (globals.css "WF FRAME PRECISION"). */
+  .frame {
+    height: max(560px, calc(100dvh - 20px));
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The transcript stays primary: the list takes 30% within a readable band. */
   .workspace {
-    height: max(520px, calc(100dvh - 170px));
+    flex: 1;
+    min-height: 0;
     display: grid;
-    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    grid-template-columns: clamp(260px, 30%, 360px) minmax(0, 1fr);
     gap: 16px;
     margin-top: 16px;
   }
+
+
 
   .listPane {
     min-height: 0;

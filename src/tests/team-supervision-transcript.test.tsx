@@ -148,6 +148,32 @@ describe("Supervised transcript: explicit open only", () => {
     expect(row(1)).not.toHaveAttribute("aria-current");
   });
 
+  it("ignores the tail of a double tap, but opens on keyboard activation", async () => {
+    detailAction.mockResolvedValue(transcript(1, [message(1)]));
+    renderWorkspace();
+    // e.g. a double tap on mobile Back whose second tap lands on the revealed row
+    fireEvent.click(row(1), { detail: 2 });
+    expect(detailAction).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(row(1), { detail: 0 }));
+    expect(detailAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("switching shows the new conversation loading, never the previous transcript", async () => {
+    detailAction.mockResolvedValueOnce(transcript(1, [message(1, { body: "From A" })]));
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+    expect(screen.getByText("From A")).toBeInTheDocument();
+
+    const pending = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    detailAction.mockReturnValueOnce(pending.promise);
+    fireEvent.click(row(2));
+    expect(screen.queryByText("From A")).toBeNull();
+    expect(screen.getByRole("status", { name: "Loading conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Anthony 2");
+    await act(async () => pending.resolve(transcript(2, [message(2, { body: "From B" })])));
+    expect(screen.getByText("From B")).toBeInTheDocument();
+  });
+
   it("Back forgets the transcript without reading; reopening is a new open", async () => {
     detailAction.mockResolvedValue(transcript(1, [message(1)]));
     renderWorkspace();

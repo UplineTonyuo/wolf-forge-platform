@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Eye } from "lucide-react";
 import { listSupervisedConversationsAction } from "../../../actions/team-supervision";
 import { SupervisedConversationsWorkspace } from "../../../../components/team-supervision/supervised-conversations-workspace";
-import styles from "../../../../components/team-supervision/supervised-conversation-list.module.css";
+import styles from "../../../../components/team-supervision/supervised-transcript.module.css";
 import { PageFrame } from "../../../../components/ui/page-frame";
 
 export const metadata: Metadata = {
@@ -22,12 +21,7 @@ export default async function AllConversationsPage() {
     <PageFrame
       title="All Conversations"
       description="Read-only view of Team conversations."
-      action={
-        <span className={styles.readOnly}>
-          <Eye aria-hidden="true" />
-          Read-only
-        </span>
-      }
+      className={styles.frame}
     >
       <SupervisedConversationsWorkspace initial={initial} />
     </PageFrame>

@@ -6,6 +6,8 @@
 .list {
   min-width: 0;
   margin-top: 16px;
+  /* Rows adapt to the list's own width: a phone and the desktop split pane both stack. */
+  container-type: inline-size;
 }
 
 .list ul {
@@ -40,6 +42,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background-color 140ms ease;
 }
 
 .list li:first-child .rowButton {
@@ -55,7 +58,7 @@
 }
 
 .rowButton:hover {
-  background: var(--wf-warm-100);
+  background: rgba(0, 13, 81, 0.035);
 }
 
 .rowButton:focus-visible {
@@ -63,10 +66,11 @@
   outline-offset: -2px;
 }
 
-/* Selection is quiet: a tint and an edge, never an unread-style weight change. */
-.rowButton[aria-current="true"] {
-  background: var(--wf-warm-100);
-  box-shadow: inset 3px 0 0 var(--wf-navy);
+/* Selection is quiet: a tint and a hairline ring, never an unread-style weight change. */
+.rowButton[aria-current="true"],
+.rowButton[aria-current="true"]:hover {
+  background: rgba(0, 13, 81, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(0, 13, 81, 0.16);
 }
 
 .avatars {
@@ -148,25 +152,8 @@
   white-space: nowrap;
 }
 
-.readOnly {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--wf-border);
-  border-radius: 999px;
-  color: var(--wf-text-muted);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.readOnly svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Narrow screens: names stack under each other, activity drops below them. */
-@media (max-width: 559px) {
+/* Narrow list: names stack under each other, activity drops below them. */
+@container (max-width: 559px) {
   .row {
     grid-template-columns: auto minmax(0, 1fr);
     padding: 12px;
