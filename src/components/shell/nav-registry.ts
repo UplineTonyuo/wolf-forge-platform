@@ -12,6 +12,7 @@ export type NavigationItemId =
   | "services"
   | "forms"
   | "team"
+  | "team_supervision"
   | "settings";
 
 export type NavigationItem = {
@@ -66,6 +67,7 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "services", label: "Services", route: "/services" },
       { id: "forms", label: "Forms", route: "/forms" },
       { id: "team", label: "Team", route: "/team" },
+      { id: "team_supervision", label: "All Conversations", route: "/team/all-conversations" },
       { id: "settings", label: "Settings", route: "/settings" },
     ],
   },
@@ -94,12 +96,24 @@ export function routeIsCurrent(route: string, pathname: string): boolean {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
+/**
+ * The one navigation route that owns the path: the longest match, so
+ * /team/all-conversations lights All Conversations and not also Team.
+ */
+export function activeNavigationRoute(pathname: string): string | undefined {
+  return navigationCategories
+    .flatMap((category) => category.items)
+    .filter((item) => routeIsCurrent(item.route, pathname))
+    .sort((a, b) => b.route.length - a.route.length)[0]?.route;
+}
+
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "Operations";
   if (pathname === "/clients/new") return "New client";
   if (pathname === "/reporting/new") return "New report";
   if (pathname.startsWith("/reporting/")) return "Report";
   if (pathname.startsWith("/clients/")) return "Client";
-  const item = navigationCategories.flatMap((category) => category.items).find((entry) => routeIsCurrent(entry.route, pathname));
+  const route = activeNavigationRoute(pathname);
+  const item = navigationCategories.flatMap((category) => category.items).find((entry) => entry.route === route);
   return item?.label ?? "Wolf Forge";
 }
