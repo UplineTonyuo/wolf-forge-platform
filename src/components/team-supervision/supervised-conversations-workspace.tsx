@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, Eye } from "lucide-react";
+import { ChevronLeft, Eye, Search, X } from "lucide-react";
 import { useRef, useState } from "react";
 import {
   getSupervisedConversationAction,
@@ -15,6 +15,7 @@ import type { ClientSafeError } from "../../lib/errors/application-error";
 import { teamInitials } from "../../domain/team/projections";
 import { TeamAvatar } from "../team/team-avatar";
 import { SupervisedConversationList } from "./supervised-conversation-list";
+import { SupervisedSearch } from "./supervised-search";
 import { SupervisedTranscript } from "./supervised-transcript";
 import styles from "./supervised-transcript.module.css";
 
@@ -35,6 +36,9 @@ type Detail =
  * the open (or opening) row does nothing; a late response for a conversation
  * that is no longer selected is dropped. Closing (mobile Back) forgets the
  * transcript, so viewing it again is a new, audited open.
+ *
+ * Opening the search box reads nothing; switching or closing a conversation
+ * discards the search with it.
  */
 export function SupervisedConversationsWorkspace({
   initial,
@@ -43,9 +47,12 @@ export function SupervisedConversationsWorkspace({
 }) {
   const [selected, setSelected] = useState<SupervisedConversationSummary | null>(null);
   const [detail, setDetail] = useState<Detail>({ state: "loading" });
+  const [searchOpen, setSearchOpen] = useState(false);
   const activeRef = useRef<{ id: string; failed: boolean } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const searchToggleRef = useRef<HTMLButtonElement>(null);
 
   // Nothing to split: the list alone renders the empty, forbidden or failed state.
   if (!initial.ok || initial.data.conversations.length === 0) {
@@ -59,6 +66,8 @@ export function SupervisedConversationsWorkspace({
     activeRef.current = active;
     setSelected(conversation);
     setDetail({ state: "loading" });
+    setSearchOpen(false);
+
     // On narrow screens the row disappears under the transcript; move focus with it.
     if (window.matchMedia?.(stackedQuery).matches) {
       requestAnimationFrame(() => headingRef.current?.focus());
@@ -76,9 +85,29 @@ export function SupervisedConversationsWorkspace({
     activeRef.current = null;
     setSelected(null);
     setDetail({ state: "loading" });
+    setSearchOpen(false);
     requestAnimationFrame(() =>
       rootRef.current?.querySelector<HTMLElement>(`[data-conversation-id="${id}"]`)?.focus(),
     );
+  }
+
+  function toggleSearch() {
+    if (searchOpen) {
+      setSearchOpen(false);
+      return;
+    }
+    setSearchOpen(true);
+    requestAnimationFrame(() => {
+      // Stacked, the page is the scroll region: bring the panel top (header and
+      // search) into view instead of leaving the box above the reader.
+      if (window.matchMedia?.(stackedQuery).matches) panelRef.current?.scrollIntoView?.({ block: "start" });
+      panelRef.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus({ preventScroll: true });
+    });
+  }
+
+  function closeSearch() {
+    setSearchOpen(false);
+    searchToggleRef.current?.focus();
   }
 
   return (
@@ -92,7 +121,7 @@ export function SupervisedConversationsWorkspace({
       </div>
 
       {selected ? (
-        <section className={styles.panel} aria-labelledby="supervised-transcript-heading">
+        <section className={styles.panel} aria-labelledby="supervised-transcript-heading" ref={panelRef}>
           <header className={styles.header}>
             <button type="button" className={styles.back} onClick={back} aria-label="Back to conversations">
               <ChevronLeft aria-hidden="true" />
@@ -130,11 +159,35 @@ export function SupervisedConversationsWorkspace({
                 </span>
               ))}
             </h2>
+            {detail.state === "ready" ? (
+              <button
+                type="button"
+                ref={searchToggleRef}
+                className={styles.searchToggle}
+                aria-label={searchOpen ? "Close search" : "Search this conversation"}
+                aria-expanded={searchOpen}
+                onClick={(event) => {
+                  // Like Back, the tail of a double tap is not a second decision.
+                  if (event.detail > 1) return;
+                  toggleSearch();
+                }}
+              >
+                {searchOpen ? <X aria-hidden="true" /> : <Search aria-hidden="true" />}
+              </button>
+            ) : null}
             <span className={styles.readOnly}>
               <Eye aria-hidden="true" />
               Read-only
             </span>
           </header>
+
+          {detail.state === "ready" && searchOpen ? (
+            <SupervisedSearch
+              key={`search-${selected.conversationId}`}
+              conversationId={selected.conversationId}
+              onClose={closeSearch}
+            />
+          ) : null}
 
           {detail.state === "ready" ? (
             <SupervisedTranscript key={selected.conversationId} initial={detail.page} />

@@ -10,6 +10,8 @@ import { SupervisedConversationsWorkspace } from "../components/team-supervision
 import type {
   SupervisedConversationSummary,
   SupervisedMessage,
+  SupervisedMessageSearchPage,
+  SupervisedMessageSearchResult,
   SupervisedTranscriptPage,
 } from "../domain/team-supervision/projections";
 
@@ -23,6 +25,8 @@ vi.mock("../app/actions/team-supervision", () => ({
 
 const detailAction = vi.mocked(supervisionActions.getSupervisedConversationAction);
 const historyAction = vi.mocked(supervisionActions.listSupervisedMessagesBeforeAction);
+const searchAction = vi.mocked(supervisionActions.searchSupervisedConversationAction);
+const windowAction = vi.mocked(supervisionActions.getSupervisedMessageWindowAction);
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
@@ -338,8 +342,10 @@ describe("Supervised transcript: rendering", () => {
     const panel = await openWith([message(1, { reactions: [{ reactionCode: "like", count: 2 }] })]);
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(document.querySelector("textarea, input, [contenteditable]")).toBeNull();
-    const controls = within(panel).queryAllByRole("button").map((button) => button.textContent);
-    expect(controls).toEqual(["Back"]);
+    const controls = within(panel)
+      .queryAllByRole("button")
+      .map((button) => button.getAttribute("aria-label") ?? button.textContent);
+    expect(controls).toEqual(["Back to conversations", "Search this conversation"]);
     expect(panel.textContent).not.toMatch(/\b(send|reply|forward|react|delete|hide|pin|task|mute|mark)\b/i);
   });
 });
@@ -501,5 +507,336 @@ describe("Supervised transcript boundary (source)", () => {
       /team-messages-drawer|team-conversation-view|team-presence|use-team|team-rich-composer|team-message-actions|team-message-reactions|team-voice|team-task|team-pins|team-http-client/,
     );
     expect(source).not.toMatch(/markRead|presence=|reactedByMe|storagePath|signedUrl/);
+  });
+});
+
+describe("Supervised search", () => {
+  type SearchResult = TeamSupervisionActionResult<SupervisedMessageSearchPage>;
+
+  function hit(n: number, overrides: Partial<SupervisedMessageSearchResult> = {}): SupervisedMessageSearchResult {
+    return {
+      messageId: msgId(100 + n),
+      author: { profileId: "b-1", displayName: "John 1", avatarUrl: null },
+      createdAt: `2026-09-0${n}T09:15:00+00:00`,
+      snippet: `about the invoice number ${n}`,
+      ...overrides,
+    };
+  }
+
+  function page(results: SupervisedMessageSearchResult[], more = false): SearchResult {
+    const last = results[results.length - 1];
+    return {
+      ok: true,
+      data: {
+        results,
+        hasMore: more,
+        nextCursor: more && last ? { beforeCreatedAt: last.createdAt, beforeMessageId: last.messageId } : null,
+      },
+    };
+  }
+
+  const failure = (code: "RATE_LIMITED" | "DATABASE_ERROR"): SearchResult => ({
+    ok: false,
+    error: { code, message: "Something went wrong." },
+  });
+
+  const toggle = () => screen.getByRole("button", { name: "Search this conversation" });
+  const input = () => screen.getByRole("searchbox", { name: "Search this conversation" });
+  const type = (value: string) => fireEvent.change(input(), { target: { value } });
+  const submit = () => fireEvent.submit(screen.getByRole("search"));
+  const searchStatus = () => document.querySelector("form[role=search] ~ [role=status]")!;
+  const resultItems = () =>
+    within(screen.getByRole("list", { name: "Search results" })).getAllByRole("listitem");
+  const resultTimes = () => resultItems().map((item) => item.querySelector("time")?.getAttribute("datetime"));
+
+  async function openConversation(n = 1) {
+    detailAction.mockResolvedValue(transcript(n, [message(1, { body: "Transcript stays" })]));
+    await act(async () => fireEvent.click(row(n)));
+  }
+
+  async function openSearch() {
+    renderWorkspace();
+    await openConversation();
+    fireEvent.click(toggle());
+  }
+
+  it("reads nothing until a deliberate, non-empty submit", async () => {
+    await openSearch();
+    fireEvent.focus(input());
+    type("inv");
+    type("invoice");
+    fireEvent.keyDown(input(), { key: "a" });
+    type("");
+    submit();
+    type("   ");
+    submit();
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(searchAction).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    searchAction.mockResolvedValue(page([hit(1)]));
+    type("invoice");
+    await act(async () => submit());
+    expect(searchAction).toHaveBeenCalledTimes(1);
+    expect(searchAction).toHaveBeenCalledWith({ conversationId: id(1), query: "invoice" });
+
+    // The same query again is a new deliberate search.
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Search" })));
+    expect(searchAction).toHaveBeenCalledTimes(2);
+    expect(windowAction).not.toHaveBeenCalled();
+    expect(historyAction).not.toHaveBeenCalled();
+    expect(detailAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches once while a submit is pending and keeps the transcript visible", async () => {
+    const pending = deferred<SearchResult>();
+    searchAction.mockReturnValue(pending.promise);
+    await openSearch();
+    type("invoice");
+    submit();
+    submit();
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(searchAction).toHaveBeenCalledTimes(1);
+    expect(searchStatus()).toHaveTextContent("Searching…");
+    expect(screen.getByText("Transcript stays")).toBeInTheDocument();
+    await act(async () => pending.resolve(page([hit(1)])));
+    expect(searchStatus()).toHaveTextContent("1 matching message");
+  });
+
+  it("caps the query at the shared 200-character limit without rewriting it", async () => {
+    searchAction.mockResolvedValue(page([]));
+    await openSearch();
+    expect(input()).toHaveAttribute("maxLength", "200");
+    const long = "a".repeat(200);
+    type(long);
+    await act(async () => submit());
+    expect(searchAction).toHaveBeenCalledWith({ conversationId: id(1), query: long });
+  });
+
+  it("renders author, date and time, and a plain-text snippet in server order", async () => {
+    searchAction.mockResolvedValue(
+      page([
+        hit(3),
+        hit(2, {
+          author: { profileId: "a-1", displayName: null, avatarUrl: null },
+          snippet: '<img src=x onerror="alert(1)"> invoice',
+        }),
+      ]),
+    );
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+
+    const items = resultItems();
+    expect(resultTimes()).toEqual([hit(3).createdAt, hit(2).createdAt]);
+    expect(items[0]).toHaveTextContent("John 1");
+    expect(items[0]).toHaveTextContent(/Sep \d+, 2026 · \d+:\d\d/);
+    expect(items[0]!.querySelector("mark")).toHaveTextContent("invoice");
+    expect(items[0]).toHaveTextContent("about the invoice number 3");
+    expect(items[1]).toHaveTextContent("Unnamed member");
+    // Markup in a snippet is text, never HTML.
+    expect(items[1]!.querySelector("img")).toBeNull();
+    expect(items[1]).toHaveTextContent('<img src=x onerror="alert(1)"> invoice');
+    // Display-only: no row control, no id, no participant or policy state.
+    const region = screen.getByRole("list", { name: "Search results" });
+    expect(within(region).queryAllByRole("button")).toEqual([]);
+    expect(region.innerHTML).not.toContain(msgId(103));
+    expect(region.innerHTML).not.toMatch(/\b(hidden|deleted|voice|storage|unread|seen|online)\b|\.webm/i);
+    expect(document.body.innerHTML).not.toMatch(/[]/);
+  });
+
+  it("shows a neutral zero-result state without echoing the query", async () => {
+    searchAction.mockResolvedValue(page([]));
+    await openSearch();
+    type("nothing-matches-this");
+    await act(async () => submit());
+    expect(searchStatus()).toHaveTextContent("No matching messages");
+    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(document.body.textContent).not.toContain("nothing-matches-this");
+    expect(screen.getByText("Transcript stays")).toBeInTheDocument();
+  });
+
+  it("shows a safe rate-limit message and does not retry", async () => {
+    searchAction.mockResolvedValue(failure("RATE_LIMITED"));
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+    expect(screen.getByRole("alert")).toHaveTextContent("Too many searches. Try again shortly.");
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    expect(searchAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows one generic failure for any other error", async () => {
+    searchAction.mockResolvedValueOnce(page([hit(1)])).mockResolvedValueOnce(failure("DATABASE_ERROR"));
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+    await act(async () => submit());
+    expect(screen.getByRole("alert")).toHaveTextContent("Search could not be completed. Try again.");
+    // A failed new search does not leave the previous results looking current.
+    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(searchAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a session redirect escape instead of rendering it", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" });
+    searchAction.mockRejectedValue(redirect);
+    await openSearch();
+    type("invoice");
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    await act(async () => submit());
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    process.off("unhandledRejection", unhandled);
+    expect(unhandled).toHaveBeenCalledWith(redirect, expect.anything());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("loads more results once per click with the exact cursor and the submitted query", async () => {
+    searchAction.mockResolvedValueOnce(page([hit(5), hit(4)], true));
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+
+    // Editing the box afterwards does not change what "more" means.
+    type("something else");
+    const more = deferred<SearchResult>();
+    searchAction.mockReturnValueOnce(more.promise);
+    const button = screen.getByRole("button", { name: "Load more results" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    submit();
+    expect(searchAction).toHaveBeenCalledTimes(2);
+    expect(searchAction).toHaveBeenLastCalledWith({
+      conversationId: id(1),
+      query: "invoice",
+      beforeCreatedAt: hit(4).createdAt,
+      beforeMessageId: hit(4).messageId,
+    });
+
+    await act(async () => more.resolve(page([hit(3)])));
+    expect(resultTimes()).toEqual([hit(5).createdAt, hit(4).createdAt, hit(3).createdAt]);
+    expect(screen.queryByRole("button", { name: "Load more results" })).toBeNull();
+
+    // A new search starts over.
+    searchAction.mockResolvedValueOnce(page([hit(1)]));
+    await act(async () => submit());
+    expect(searchAction).toHaveBeenLastCalledWith({ conversationId: id(1), query: "something else" });
+    expect(resultTimes()).toEqual([hit(1).createdAt]);
+  });
+
+  it("keeps results when loading more fails, and waits for another click", async () => {
+    searchAction.mockResolvedValueOnce(page([hit(5)], true)).mockResolvedValueOnce(failure("RATE_LIMITED"));
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load more results" })));
+    expect(screen.getByRole("alert")).toHaveTextContent("Too many searches. Try again shortly.");
+    expect(resultTimes()).toEqual([hit(5).createdAt]);
+    expect(screen.getByRole("button", { name: "Load more results" })).toBeEnabled();
+    expect(searchAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a response for a search that was cleared while pending", async () => {
+    const pending = deferred<SearchResult>();
+    searchAction.mockReturnValueOnce(pending.promise);
+    await openSearch();
+    type("invoice");
+    submit();
+    type("");
+    await act(async () => pending.resolve(page([hit(1)])));
+    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(searchStatus()).toHaveTextContent("");
+  });
+
+  it.each([
+    ["success", () => page([hit(1, { snippet: "stale A result" })])],
+    ["error", () => failure("RATE_LIMITED")],
+  ])("never shows a late %s from the previous conversation", async (_label, late) => {
+    const pending = deferred<SearchResult>();
+    searchAction.mockReturnValueOnce(pending.promise);
+    await openSearch();
+    type("invoice");
+    submit();
+
+    // Switch to B and open its search box before A's search settles.
+    await openConversation(2);
+    if (!screen.queryByRole("search")) fireEvent.click(toggle());
+    await act(async () => pending.resolve(late()));
+
+    expect(screen.queryByText(/stale/)).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(searchStatus()).toHaveTextContent("");
+    expect(input()).toHaveValue("");
+    expect(searchAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("Back discards the search; a double tap opens nothing and nothing reruns", async () => {
+    searchAction.mockResolvedValue(page([hit(1)]));
+    await openSearch();
+    type("invoice");
+    await act(async () => submit());
+    expect(searchAction).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }), { detail: 1 });
+    fireEvent.click(row(1), { detail: 2 });
+    expect(detailAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("search")).toBeNull();
+
+    await act(async () => fireEvent.click(row(1), { detail: 1 }));
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("search")).toBeNull();
+    fireEvent.click(toggle());
+    expect(input()).toHaveValue("");
+    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(searchAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens and closes without reading; Escape returns focus to the toggle", async () => {
+    await openSearch();
+    const button = screen.getByRole("button", { name: "Close search" });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    // The tail of a double tap does not close it again.
+    fireEvent.click(button, { detail: 2 });
+    expect(screen.getByRole("search")).toBeInTheDocument();
+
+    type("invoice");
+    fireEvent.keyDown(input(), { key: "Escape" });
+    expect(screen.queryByRole("search")).toBeNull();
+    expect(toggle()).toHaveFocus();
+    fireEvent.click(toggle());
+    expect(input()).toHaveValue("");
+    expect(searchAction).not.toHaveBeenCalled();
+  });
+
+  it("offers no search before a transcript has loaded", () => {
+    detailAction.mockReturnValue(new Promise(() => {}));
+    renderWorkspace();
+    expect(screen.queryByRole("button", { name: "Search this conversation" })).toBeNull();
+    fireEvent.click(row(1));
+    expect(screen.queryByRole("button", { name: "Search this conversation" })).toBeNull();
+  });
+});
+
+describe("Supervised search boundary (source)", () => {
+  const search = readFileSync("src/components/team-supervision/supervised-search.tsx", "utf8");
+  const workspace = readFileSync("src/components/team-supervision/supervised-conversations-workspace.tsx", "utf8");
+
+  it("calls only the search action, only from a submit or an explicit click", () => {
+    expect(search.match(/\w+Action\b/g)).toEqual([
+      "searchSupervisedConversationAction",
+      "searchSupervisedConversationAction",
+    ]);
+    expect(search).not.toMatch(
+      /supabase|team-supervision-(repository|service)|MessageWindow|useEffect|setInterval|setTimeout|IntersectionObserver|onScroll|addEventListener/,
+    );
+    expect(workspace).not.toMatch(/searchSupervised|MessageWindow/);
+  });
+
+  it("keeps the query out of logs, storage and the URL", () => {
+    expect(search).not.toMatch(
+      /console\.|Sentry|captureException|localStorage|sessionStorage|indexedDB|URLSearchParams|useRouter|useSearchParams|history\.(push|replace)State|location\.|dangerouslySetInnerHTML|innerHTML/,
+    );
   });
 });

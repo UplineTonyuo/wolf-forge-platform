@@ -24,6 +24,8 @@
   border: 1px solid var(--wf-border);
   border-radius: 8px;
   background: var(--wf-white);
+  /* Opening search on a phone scrolls here; keep it clear of the shell bar. */
+  scroll-margin-top: var(--wf-mobile-header-h, 0px);
 }
 
 .placeholder {
@@ -149,6 +151,144 @@
 .readOnly svg {
   width: 14px;
   height: 14px;
+}
+
+.searchToggle {
+  grid-area: search;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wf-text-muted);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.searchToggle:hover,
+.searchToggle[aria-expanded="true"] {
+  background: var(--wf-warm-100);
+  color: var(--wf-text);
+}
+
+.searchToggle:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.searchToggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Search sits between the header and the transcript; the transcript stays. */
+.search {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--wf-border);
+  background: var(--wf-warm-50);
+}
+
+.searchForm {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: var(--wf-white);
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.searchInput:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 1px;
+}
+
+.searchForm button {
+  flex-shrink: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.searchForm button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.searchStatus {
+  padding: 0 16px 8px;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.searchStatus:empty {
+  padding: 0;
+}
+
+.searchError {
+  margin: 0;
+  padding: 0 16px 10px;
+  color: var(--wf-danger);
+  font-size: 13px;
+}
+
+.searchResults {
+  min-height: 0;
+  border-top: 1px solid var(--wf-border);
+}
+
+.searchResults ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.searchResult {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 10px 16px;
+}
+
+.searchResult + .searchResult {
+  border-top: 1px solid var(--wf-border);
+}
+
+.searchSnippet {
+  min-width: 0;
+  max-width: 75ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wf-text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.searchSnippet mark {
+  background: rgba(174, 126, 25, 0.14);
+  color: inherit;
+  font-weight: 600;
+  border-radius: 3px;
+}
+
+.searchResults .older {
+  margin: 10px 0;
 }
 
 .scroll {
@@ -425,7 +565,11 @@
 
 @media (max-width: 559px) {
   .header,
-  .scroll {
+  .scroll,
+  .searchForm,
+  .searchStatus,
+  .searchError,
+  .searchResult {
     padding-left: 12px;
     padding-right: 12px;
   }
@@ -437,10 +581,10 @@
    */
   .header {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "back . readonly"
-      "title title title";
+      "back . search readonly"
+      "title title title title";
     gap: 2px 10px;
     padding-top: 6px;
   }
@@ -483,6 +627,16 @@
   .panel {
     min-height: 0;
     margin-top: 0;
+  }
+
+  /* Results scroll on their own and never take more than half the panel. */
+  .search {
+    flex-shrink: 0;
+    max-height: 50%;
+  }
+
+  .searchResults {
+    overflow-y: auto;
   }
 
   .panel .scroll {
