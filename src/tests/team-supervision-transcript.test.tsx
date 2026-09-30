@@ -102,6 +102,12 @@ describe("Supervised transcript: explicit open only", () => {
     fireEvent.mouseEnter(row(1));
     fireEvent.mouseOver(row(1));
     fireEvent.focus(row(1));
+    // A press that never completes (touch cancelled, pointer dragged away) is not a click.
+    fireEvent.pointerDown(row(1));
+    fireEvent.mouseDown(row(1));
+    fireEvent.touchStart(row(1));
+    fireEvent.touchCancel(row(1));
+    fireEvent.keyDown(row(1), { key: "Tab" });
     expect(detailAction).not.toHaveBeenCalled();
     expect(historyAction).not.toHaveBeenCalled();
     expect(screen.getByText("Select a conversation to view it")).toBeInTheDocument();
@@ -148,6 +154,38 @@ describe("Supervised transcript: explicit open only", () => {
     expect(row(1)).not.toHaveAttribute("aria-current");
   });
 
+  it("never shows a stale result or stale error while the newer open is pending", async () => {
+    const first = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    const second = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    const third = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    detailAction
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockReturnValueOnce(third.promise);
+    renderWorkspace();
+
+    // A -> B -> A: three deliberate opens, three calls, only the last may render.
+    fireEvent.click(row(1));
+    fireEvent.click(row(2));
+    fireEvent.click(row(1));
+    expect(detailAction).toHaveBeenCalledTimes(3);
+
+    // The older A and B settle first — a success and a failure — while the newest A is pending.
+    await act(async () => first.resolve(transcript(1, [message(1, { body: "Stale A" })])));
+    await act(async () =>
+      second.resolve({ ok: false, error: { code: "NOT_FOUND", message: "The requested resource was not found." } }),
+    );
+    expect(screen.queryByText("Stale A")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("status", { name: "Loading conversation" })).toBeInTheDocument();
+    expect(row(1)).toHaveAttribute("aria-current", "true");
+    expect(row(2)).not.toHaveAttribute("aria-current");
+
+    await act(async () => third.resolve(transcript(1, [message(3, { body: "Fresh A" })])));
+    expect(screen.getByText("Fresh A")).toBeInTheDocument();
+    expect(detailAction).toHaveBeenCalledTimes(3);
+  });
+
   it("ignores the tail of a double tap, but opens on keyboard activation", async () => {
     detailAction.mockResolvedValue(transcript(1, [message(1)]));
     renderWorkspace();
@@ -172,6 +210,23 @@ describe("Supervised transcript: explicit open only", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Anthony 2");
     await act(async () => pending.resolve(transcript(2, [message(2, { body: "From B" })])));
     expect(screen.getByText("From B")).toBeInTheDocument();
+  });
+
+  it("a double tap on Back closes without opening the row revealed under it", async () => {
+    detailAction.mockResolvedValue(transcript(1, [message(1)]));
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+    expect(detailAction).toHaveBeenCalledTimes(1);
+
+    // Same finger position: first tap hits Back, the second lands on the revealed row.
+    fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }), { detail: 1 });
+    fireEvent.click(row(1), { detail: 2 });
+    expect(detailAction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("region")).toBeNull();
+
+    // A later ordinary tap is a deliberate open again.
+    await act(async () => fireEvent.click(row(1), { detail: 1 }));
+    expect(detailAction).toHaveBeenCalledTimes(2);
   });
 
   it("Back forgets the transcript without reading; reopening is a new open", async () => {
@@ -325,6 +380,41 @@ describe("Supervised transcript: history", () => {
     expect(detailAction).toHaveBeenCalledTimes(1);
   });
 
+  it("drops a history response that arrives after the conversation changed", async () => {
+    detailAction
+      .mockResolvedValueOnce(transcript(1, [message(10, { body: "A newest" })], true))
+      .mockResolvedValueOnce(transcript(2, [message(20, { body: "B newest" })], false));
+    const pending = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    historyAction.mockReturnValue(pending.promise);
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+    fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+    expect(historyAction).toHaveBeenCalledTimes(1);
+
+    await act(async () => fireEvent.click(row(2)));
+    await act(async () => pending.resolve(transcript(1, [message(9, { body: "A older" })], false)));
+
+    const bodies = [...document.querySelectorAll("[data-message-id]")].map((node) => node.textContent);
+    expect(bodies).toEqual(["B newest"]);
+    expect(historyAction).toHaveBeenCalledTimes(1);
+    expect(detailAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("Back while history is pending makes no further call and leaves nothing behind", async () => {
+    detailAction.mockResolvedValue(transcript(1, [message(10)], true));
+    const pending = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    historyAction.mockReturnValue(pending.promise);
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+    fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
+    await act(async () => pending.resolve(transcript(1, [message(9)], false)));
+
+    expect(document.querySelector("[data-message-id]")).toBeNull();
+    expect(historyAction).toHaveBeenCalledTimes(1);
+    expect(detailAction).toHaveBeenCalledTimes(1);
+  });
+
   it("offers no Load older when the first page is the whole history", async () => {
     detailAction.mockResolvedValue(transcript(1, [message(1)], false));
     renderWorkspace();
@@ -366,8 +456,13 @@ describe("Supervised transcript: safe errors", () => {
     const alert = await openFailing("DATABASE_ERROR");
     expect(alert).toHaveTextContent("This conversation could not be loaded.");
     expect(document.body.textContent).not.toMatch(/database|row 42/i);
-    detailAction.mockResolvedValue(transcript(1, [message(1)]));
-    await act(async () => fireEvent.click(within(alert).getByRole("button", { name: "Try again" })));
+    const retry = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
+    detailAction.mockReturnValue(retry.promise);
+    const tryAgain = within(alert).getByRole("button", { name: "Try again" });
+    fireEvent.click(tryAgain);
+    fireEvent.click(tryAgain);
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    await act(async () => retry.resolve(transcript(1, [message(1)])));
     expect(detailAction).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Message 1")).toBeInTheDocument();
   });
