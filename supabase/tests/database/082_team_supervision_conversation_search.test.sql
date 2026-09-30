@@ -1,6 +1,6 @@
 begin;
 
-select plan(65);
+select plan(71);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -704,6 +704,22 @@ select is(
   'participant search does not consume the supervisory search quota'
 );
 
+select is(
+  (select coalesce(sum(hits), 0)
+   from private.rate_limit_counters
+   where scope = 'team.supervision.search.actor'
+     and subject = '9f400000-0000-4000-8000-000000000001'),
+  11::bigint, 'successful Owner searches consume exactly one actor-scoped allowance each'
+);
+
+select is(
+  (select coalesce(sum(hits), 0)
+   from private.rate_limit_counters
+   where scope = 'team.supervision.search.actor'
+     and subject = '9f400000-0000-4000-8000-000000000002'),
+  1::bigint, 'the Admin has an independent supervisory search allowance'
+);
+
 select ok(
   exists (
     select 1 from private.rate_limit_counters
@@ -766,12 +782,38 @@ select is(
   0::bigint, 'non-member supervisors remain non-members after search'
 );
 
--- Exhaust only the supervisory Owner bucket. The primitive's rollback on WF429
--- must leave the counter at its configured limit and must not write an audit.
-update private.rate_limit_counters
-set hits = 60
-where scope = 'team.supervision.search.actor'
-  and subject = '9f400000-0000-4000-8000-000000000001';
+-- Consume the remaining 49 real valid searches for the Owner. The primitive's
+-- rollback on WF429 must leave the counter at its configured limit and must not
+-- write an audit.
+select pg_temp.become('9f400000-0000-4000-8000-000000000001');
+set local role authenticated;
+do $$
+declare
+  attempt integer;
+begin
+  for attempt in 1..49 loop
+    perform public.app_search_team_supervised_conversation_messages(
+      '9f410000-0000-4000-8000-000000000001', 'supervisionneedle'
+    );
+  end loop;
+end;
+$$;
+reset role;
+
+select is(
+  (select max(hits) from private.rate_limit_counters
+   where scope = 'team.supervision.search.actor'
+     and subject = '9f400000-0000-4000-8000-000000000001'),
+  60, 'repeated valid searches reach the configured supervisory allowance'
+);
+
+select is(
+  (select count(*) from public.security_audit_events
+   where event_code = 'authorization.team_supervision.read'
+     and action_slug = 'team.supervision.search'),
+  (select count from search_audit_before) + (select count(*) from supervised_search_results) + 49,
+  'each repeated valid search appends exactly one SEARCH audit'
+);
 
 select pg_temp.become('9f400000-0000-4000-8000-000000000001');
 set local role authenticated;
@@ -781,11 +823,27 @@ select throws_ok(
 );
 reset role;
 
+select pg_temp.become('9f400000-0000-4000-8000-000000000002');
+set local role authenticated;
+select lives_ok(
+  $$select public.app_search_team_supervised_conversation_messages('9f410000-0000-4000-8000-000000000001', 'supervisionneedle')$$,
+  'a second supervisor remains searchable after the Owner bucket is exhausted'
+);
+reset role;
+
+select pg_temp.become('9f400000-0000-4000-8000-000000000001');
+set local role authenticated;
+select lives_ok(
+  $$select public.app_search_team_conversation_messages('9f410000-0000-4000-8000-000000000004', 'participantneedle')$$,
+  'participant search remains usable after the supervisory bucket is exhausted'
+);
+reset role;
+
 select is(
   (select count(*) from public.security_audit_events
    where event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
-  (select count from search_audit_before) + (select count(*) from supervised_search_results),
+  (select count from search_audit_before) + (select count(*) from supervised_search_results) + 49 + 1,
   'a rate-limited search creates no successful SEARCH audit'
 );
 
