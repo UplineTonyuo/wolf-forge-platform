@@ -569,9 +569,10 @@ select is(
   (select count(*) from pg_proc as function_row
    join pg_namespace as schema_row on schema_row.oid = function_row.pronamespace
    where schema_row.nspname = 'public'
-      and function_row.proname = 'app_search_team_supervised_conversation_messages'),
+     and function_row.proname like 'app_search_team_supervised%'
+     and function_row.proname <> 'app_search_team_supervised_conversation_messages'),
   0::bigint,
-  'the supervisory search RPC remains absent'
+  'no additional or global supervisory search RPC exists'
 );
 
 select is(
