@@ -88,7 +88,14 @@ function Timestamp({ iso }: { iso: string }) {
  * Older history loads only on an explicit click: one click, one history action,
  * one PAGE audit. Nothing here polls, refreshes, marks read or writes.
  */
-export function SupervisedTranscript({ initial }: { initial: SupervisedTranscriptPage }) {
+export function SupervisedTranscript({
+  initial,
+  hidden = false,
+}: {
+  initial: SupervisedTranscriptPage;
+  /** Kept mounted while a search context window is shown, so nothing is refetched. */
+  hidden?: boolean;
+}) {
   const [messages, setMessages] = useState(initial.messages);
   const [cursor, setCursor] = useState(initial.hasMore ? initial.nextCursor : null);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -144,13 +151,17 @@ export function SupervisedTranscript({ initial }: { initial: SupervisedTranscrip
   }
 
   return (
-    <div className={styles.scroll} ref={scrollRef}>
+    <div className={styles.scroll} ref={scrollRef} hidden={hidden} data-transcript>
       {cursor ? (
         <div className={styles.older}>
           <button
             type="button"
             className="button-secondary"
-            onClick={loadOlder}
+            onClick={(event) => {
+              // A double-tap tail (e.g. on Return, which reveals this button) is not a second decision.
+              if (event.detail > 1) return;
+              void loadOlder();
+            }}
             disabled={loadingOlder}
             aria-busy={loadingOlder}
           >
@@ -167,32 +178,90 @@ export function SupervisedTranscript({ initial }: { initial: SupervisedTranscrip
       {messages.length === 0 ? (
         <p className={styles.notice}>No messages in this conversation.</p>
       ) : (
-        <ol className={styles.groups} aria-label="Messages">
-          {groupMessages(messages).map((group) => (
-            <li key={group.key}>
-              {group.startsDay ? (
-                <p className={styles.day}>
-                  <span suppressHydrationWarning>{formatTeamDayHeading(group.day)}</span>
-                </p>
-              ) : null}
-              <MessageGroup messages={group.messages} />
-            </li>
-          ))}
-        </ol>
+        <MessageGroups messages={messages} />
       )}
       <div ref={endRef} />
     </div>
   );
 }
 
-function MessageGroup({ messages }: { messages: SupervisedMessage[] }) {
+/**
+ * The bounded window the search-result jump returned: the target and its
+ * neighbours, in the transcript's own rendering, with the target marked in text
+ * as well as tint. Nothing here loads more; the edges only say there is more.
+ */
+export function SupervisedContextWindow({
+  messages,
+  targetId,
+  hasMoreBefore,
+  hasMoreAfter,
+}: {
+  messages: SupervisedMessage[];
+  targetId: string;
+  hasMoreBefore: boolean;
+  hasMoreAfter: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Bring the target to the middle of whichever region scrolls. Desktop moves
+  // only this panel (scrollIntoView would also shift the shell card); stacked,
+  // the page scrolls, and a tall target starts below the sticky header instead.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    const target = root?.querySelector(`[data-message-id="${targetId}"]`);
+    if (!root || !target) return;
+    const t = target.getBoundingClientRect();
+    if (root.scrollHeight > root.clientHeight) {
+      const r = root.getBoundingClientRect();
+      root.scrollTop += t.top + t.height / 2 - (r.top + r.height / 2);
+    } else {
+      target.scrollIntoView?.({ block: t.height > window.innerHeight / 2 ? "start" : "center" });
+    }
+  }, [targetId]);
+
+  return (
+    <div className={styles.scroll} ref={rootRef}>
+      {hasMoreBefore ? <p className={styles.windowEdge}>Earlier messages not shown</p> : null}
+      <MessageGroups messages={messages} targetId={targetId} />
+      {hasMoreAfter ? <p className={styles.windowEdge}>Later messages not shown</p> : null}
+    </div>
+  );
+}
+
+function MessageGroups({ messages, targetId }: { messages: SupervisedMessage[]; targetId?: string }) {
+  return (
+    <ol className={styles.groups} aria-label="Messages">
+      {groupMessages(messages).map((group) => (
+        <li key={group.key}>
+          {group.startsDay ? (
+            <p className={styles.day}>
+              <span suppressHydrationWarning>{formatTeamDayHeading(group.day)}</span>
+            </p>
+          ) : null}
+          <MessageGroup messages={group.messages} targetId={targetId} />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function MatchLabel() {
+  return <span className={styles.matchLabel}>Matched message</span>;
+}
+
+function MessageGroup({ messages, targetId }: { messages: SupervisedMessage[]; targetId?: string }) {
   const first = messages[0]!;
   const name = authorName(first.author.displayName);
 
   if (first.messageType === "task_activity" || first.messageType === "governance_activity") {
     const Icon = first.messageType === "task_activity" ? CheckCircle2 : Settings;
+    const target = first.messageId === targetId;
     return (
-      <div className={styles.activity} data-message-id={first.messageId}>
+      <div
+        className={`${styles.activity} ${target ? styles.target : ""}`}
+        data-message-id={first.messageId}
+        aria-current={target ? "true" : undefined}
+      >
         <Icon aria-hidden="true" />
         <span className={styles.activityText}>
           <span className={styles.activityAuthor}>{name}</span>
@@ -219,24 +288,28 @@ function MessageGroup({ messages }: { messages: SupervisedMessage[] }) {
           <Timestamp iso={first.createdAt} />
         </p>
         {messages.map((message) => (
-          <MessageBody key={message.messageId} message={message} />
+          <MessageBody key={message.messageId} message={message} target={message.messageId === targetId} />
         ))}
       </div>
     </div>
   );
 }
 
-function MessageBody({ message }: { message: SupervisedMessage }) {
+function MessageBody({ message, target }: { message: SupervisedMessage; target: boolean }) {
+  const className = `${styles.message} ${target ? styles.target : ""}`;
+  const current = target ? "true" : undefined;
   if (message.deletion) {
     return (
-      <div className={styles.message} data-message-id={message.messageId}>
+      <div className={className} data-message-id={message.messageId} aria-current={current}>
+        {target ? <MatchLabel /> : null}
         <p className={styles.deleted}>{message.body}</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.message} data-message-id={message.messageId}>
+    <div className={className} data-message-id={message.messageId} aria-current={current}>
+      {target ? <MatchLabel /> : null}
       {message.forwarded ? (
         <p className={styles.forwarded}>
           <Forward aria-hidden="true" />

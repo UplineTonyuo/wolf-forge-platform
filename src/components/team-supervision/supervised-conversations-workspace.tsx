@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronLeft, Eye, Search, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArrowLeft, ChevronLeft, Eye, Search, X } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   getSupervisedConversationAction,
+  getSupervisedMessageWindowAction,
   type TeamSupervisionActionResult,
 } from "../../app/actions/team-supervision";
 import type {
   SupervisedConversationPage,
   SupervisedConversationSummary,
+  SupervisedMessage,
   SupervisedTranscriptPage,
 } from "../../domain/team-supervision/projections";
 import type { ClientSafeError } from "../../lib/errors/application-error";
@@ -16,7 +18,7 @@ import { teamInitials } from "../../domain/team/projections";
 import { TeamAvatar } from "../team/team-avatar";
 import { SupervisedConversationList } from "./supervised-conversation-list";
 import { SupervisedSearch } from "./supervised-search";
-import { SupervisedTranscript } from "./supervised-transcript";
+import { SupervisedContextWindow, SupervisedTranscript } from "./supervised-transcript";
 import styles from "./supervised-transcript.module.css";
 
 /** Below this the list and the transcript take turns; matches the CSS split. */
@@ -26,6 +28,17 @@ type Detail =
   | { state: "loading" }
   | { state: "ready"; page: SupervisedTranscriptPage }
   | { state: "error"; code: ClientSafeError["code"] };
+
+type Jump =
+  | { targetId: string; state: "loading" }
+  | {
+      targetId: string;
+      state: "ready";
+      messages: SupervisedMessage[];
+      hasMoreBefore: boolean;
+      hasMoreAfter: boolean;
+    }
+  | { targetId: string; state: "unavailable" | "failed" };
 
 /**
  * All Conversations: the list, and at most one supervised transcript.
@@ -39,6 +52,12 @@ type Detail =
  *
  * Opening the search box reads nothing; switching or closing a conversation
  * discards the search with it.
+ *
+ * A search result opens a bounded window around that message only when it is
+ * activated: one activation, one window action, one PAGE audit. Re-activating
+ * the shown or loading result does nothing and a superseded response is
+ * dropped. The loaded transcript stays mounted (hidden) meanwhile, so "Return
+ * to conversation" restores it, scroll included, without another read.
  */
 export function SupervisedConversationsWorkspace({
   initial,
@@ -48,11 +67,24 @@ export function SupervisedConversationsWorkspace({
   const [selected, setSelected] = useState<SupervisedConversationSummary | null>(null);
   const [detail, setDetail] = useState<Detail>({ state: "loading" });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [jump, setJump] = useState<Jump | null>(null);
   const activeRef = useRef<{ id: string; failed: boolean } | null>(null);
+  const jumpRef = useRef<{ targetId: string; failed: boolean } | null>(null);
+  const restoreRef = useRef<{ page: number; transcript: number } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
+
+  // Leaving a context window puts the retained transcript back where it was.
+  useLayoutEffect(() => {
+    const restore = restoreRef.current;
+    if (jump || !restore) return;
+    restoreRef.current = null;
+    const scroller = panelRef.current?.querySelector<HTMLElement>("[data-transcript]");
+    if (scroller) scroller.scrollTop = restore.transcript;
+    window.scrollTo?.(0, restore.page);
+  }, [jump]);
 
   // Nothing to split: the list alone renders the empty, forbidden or failed state.
   if (!initial.ok || initial.data.conversations.length === 0) {
@@ -67,6 +99,7 @@ export function SupervisedConversationsWorkspace({
     setSelected(conversation);
     setDetail({ state: "loading" });
     setSearchOpen(false);
+    leaveJump();
 
     // On narrow screens the row disappears under the transcript; move focus with it.
     if (window.matchMedia?.(stackedQuery).matches) {
@@ -86,14 +119,66 @@ export function SupervisedConversationsWorkspace({
     setSelected(null);
     setDetail({ state: "loading" });
     setSearchOpen(false);
+    leaveJump();
     requestAnimationFrame(() =>
       rootRef.current?.querySelector<HTMLElement>(`[data-conversation-id="${id}"]`)?.focus(),
+    );
+  }
+
+  function leaveJump() {
+    jumpRef.current = null;
+    restoreRef.current = null;
+    setJump(null);
+  }
+
+  async function jumpTo(targetId: string) {
+    const conversation = activeRef.current;
+    if (!conversation || (jumpRef.current?.targetId === targetId && !jumpRef.current.failed)) return;
+    const active = { targetId, failed: false };
+    if (!jumpRef.current) {
+      const scroller = panelRef.current?.querySelector<HTMLElement>("[data-transcript]");
+      restoreRef.current = { page: window.scrollY, transcript: scroller?.scrollTop ?? 0 };
+    }
+    jumpRef.current = active;
+    setJump({ targetId, state: "loading" });
+
+    const result = await getSupervisedMessageWindowAction({
+      conversationId: conversation.id,
+      targetMessageId: targetId,
+    });
+
+    if (jumpRef.current !== active) return;
+    if (result.ok && result.data.found) {
+      setJump({
+        targetId,
+        state: "ready",
+        messages: result.data.messages,
+        hasMoreBefore: result.data.hasMoreBefore,
+        hasMoreAfter: result.data.hasMoreAfter,
+      });
+      return;
+    }
+    // Missing, foreign and ineligible targets all read as one unavailable state.
+    const unavailable = result.ok || result.error.code === "NOT_FOUND";
+    active.failed = !unavailable;
+    setJump({ targetId, state: unavailable ? "unavailable" : "failed" });
+  }
+
+  function returnToConversation() {
+    const targetId = jumpRef.current?.targetId;
+    jumpRef.current = null;
+    setJump(null);
+    requestAnimationFrame(() =>
+      (
+        panelRef.current?.querySelector<HTMLElement>(`[data-result-id="${targetId}"]`) ?? headingRef.current
+      )?.focus({ preventScroll: true }),
     );
   }
 
   function toggleSearch() {
     if (searchOpen) {
       setSearchOpen(false);
+      leaveJump();
       return;
     }
     setSearchOpen(true);
@@ -107,6 +192,7 @@ export function SupervisedConversationsWorkspace({
 
   function closeSearch() {
     setSearchOpen(false);
+    leaveJump();
     searchToggleRef.current?.focus();
   }
 
@@ -185,12 +271,60 @@ export function SupervisedConversationsWorkspace({
             <SupervisedSearch
               key={`search-${selected.conversationId}`}
               conversationId={selected.conversationId}
+              activeResultId={jump?.targetId ?? null}
+              onSelectResult={jumpTo}
               onClose={closeSearch}
             />
           ) : null}
 
+          {detail.state === "ready" && jump ? (
+            <>
+              <div className={styles.contextBar}>
+                <p>Search result in context</p>
+                <button type="button" className={styles.contextReturn} onClick={returnToConversation}>
+                  <ArrowLeft aria-hidden="true" />
+                  Return to conversation
+                </button>
+              </div>
+              {jump.state === "ready" ? (
+                <SupervisedContextWindow
+                  key={jump.targetId}
+                  messages={jump.messages}
+                  targetId={jump.targetId}
+                  hasMoreBefore={jump.hasMoreBefore}
+                  hasMoreAfter={jump.hasMoreAfter}
+                />
+              ) : jump.state === "loading" ? (
+                <div className={styles.scroll}>
+                  <div className={styles.skeleton} role="status" aria-label="Loading message context">
+                    <div className="skeleton-line" />
+                    <div className="skeleton-line" />
+                    <div className="skeleton-line" />
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.scroll}>
+                  {jump.state === "unavailable" ? (
+                    <p className={styles.notice} role="alert">This message is unavailable.</p>
+                  ) : (
+                    <div className={styles.notice} role="alert">
+                      <p>This message could not be loaded.</p>
+                      <button type="button" className="button-secondary" onClick={() => jumpTo(jump.targetId)}>
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : null}
+
           {detail.state === "ready" ? (
-            <SupervisedTranscript key={selected.conversationId} initial={detail.page} />
+            <SupervisedTranscript
+              key={selected.conversationId}
+              initial={detail.page}
+              hidden={jump !== null}
+            />
           ) : detail.state === "loading" ? (
             <div className={styles.scroll}>
               <div className={styles.skeleton} role="status" aria-label="Loading conversation">

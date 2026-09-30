@@ -32,13 +32,19 @@ type Found = {
  * the query and results and nothing reruns. A response that no longer belongs
  * to the current search (cleared, or superseded) is dropped.
  *
- * Results are display-only in this phase: no jump, no window read.
+ * A result is a button that hands its message id to the workspace, which
+ * alone reads the context window; this component never does. Selecting a
+ * result never searches again.
  */
 export function SupervisedSearch({
   conversationId,
+  activeResultId,
+  onSelectResult,
   onClose,
 }: {
   conversationId: string;
+  activeResultId: string | null;
+  onSelectResult: (messageId: string) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
@@ -152,25 +158,37 @@ export function SupervisedSearch({
         <div className={styles.searchResults}>
           <ol aria-label="Search results">
             {found.results.map((result) => (
-              <li key={result.messageId} className={styles.searchResult}>
-                <p className={styles.groupHeader}>
-                  <span className={styles.author}>
-                    {result.author.displayName?.trim() || "Unnamed member"}
+              <li key={result.messageId}>
+                <button
+                  type="button"
+                  className={styles.searchResult}
+                  data-result-id={result.messageId}
+                  aria-current={activeResultId === result.messageId ? "true" : undefined}
+                  onClick={(event) => {
+                    // The tail of a double tap is not a second selection; keyboard reports 0.
+                    if (event.detail > 1) return;
+                    onSelectResult(result.messageId);
+                  }}
+                >
+                  <span className={styles.groupHeader}>
+                    <span className={styles.author}>
+                      {result.author.displayName?.trim() || "Unnamed member"}
+                    </span>
+                    <time
+                      className={styles.time}
+                      dateTime={result.createdAt}
+                      title={new Date(result.createdAt).toLocaleString()}
+                      suppressHydrationWarning
+                    >
+                      {formatTeamSearchResultDate(result.createdAt)} · {formatTeamMessageTime(result.createdAt)}
+                    </time>
                   </span>
-                  <time
-                    className={styles.time}
-                    dateTime={result.createdAt}
-                    title={new Date(result.createdAt).toLocaleString()}
-                    suppressHydrationWarning
-                  >
-                    {formatTeamSearchResultDate(result.createdAt)} · {formatTeamMessageTime(result.createdAt)}
-                  </time>
-                </p>
-                <p className={styles.searchSnippet}>
-                  {parseTeamHighlightedSnippet(result.snippet).map((segment, index) =>
-                    segment.matched ? <mark key={index}>{segment.text}</mark> : segment.text,
-                  )}
-                </p>
+                  <span className={styles.searchSnippet}>
+                    {parseTeamHighlightedSnippet(result.snippet).map((segment, index) =>
+                      segment.matched ? <mark key={index}>{segment.text}</mark> : segment.text,
+                    )}
+                  </span>
+                </button>
               </li>
             ))}
           </ol>

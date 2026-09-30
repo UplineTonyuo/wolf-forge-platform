@@ -12,6 +12,7 @@ import type {
   SupervisedMessage,
   SupervisedMessageSearchPage,
   SupervisedMessageSearchResult,
+  SupervisedMessageWindow,
   SupervisedTranscriptPage,
 } from "../domain/team-supervision/projections";
 
@@ -496,9 +497,11 @@ describe("Supervised transcript boundary (source)", () => {
 
   it("reads only through the detail and history actions, never automatically", () => {
     expect(source).not.toMatch(
-      /supabase|team-supervision-(repository|service)|next-server|server-only|searchSupervised|MessageWindow|team-live|setInterval|setTimeout|visibilitychange|addEventListener\(["']focus|useEffect|IntersectionObserver|next\/link|router\.prefetch/,
+      /supabase|team-supervision-(repository|service)|next-server|server-only|searchSupervised|team-live|setInterval|setTimeout|visibilitychange|addEventListener\(["']focus|useEffect|IntersectionObserver|onScroll|next\/link|router\.prefetch/,
     );
     expect(source).not.toMatch(/catch/);
+    // The window action is imported once and called once, from the result handler.
+    expect(source.match(/getSupervisedMessageWindowAction/g)).toHaveLength(2);
   });
 
   it("reuses only pure Team visuals", () => {
@@ -637,10 +640,10 @@ describe("Supervised search", () => {
     // Markup in a snippet is text, never HTML.
     expect(items[1]!.querySelector("img")).toBeNull();
     expect(items[1]).toHaveTextContent('<img src=x onerror="alert(1)"> invoice');
-    // Display-only: no row control, no id, no participant or policy state.
+    // One plain button per result; no id in visible text, no participant or policy state.
     const region = screen.getByRole("list", { name: "Search results" });
-    expect(within(region).queryAllByRole("button")).toEqual([]);
-    expect(region.innerHTML).not.toContain(msgId(103));
+    expect(within(region).getAllByRole("button")).toHaveLength(2);
+    expect(region.textContent).not.toContain(msgId(103));
     expect(region.innerHTML).not.toMatch(/\b(hidden|deleted|voice|storage|unread|seen|online)\b|\.webm/i);
     expect(document.body.innerHTML).not.toMatch(/[]/);
   });
@@ -831,12 +834,308 @@ describe("Supervised search boundary (source)", () => {
     expect(search).not.toMatch(
       /supabase|team-supervision-(repository|service)|MessageWindow|useEffect|setInterval|setTimeout|IntersectionObserver|onScroll|addEventListener/,
     );
-    expect(workspace).not.toMatch(/searchSupervised|MessageWindow/);
+    expect(workspace).not.toMatch(/searchSupervised/);
   });
 
   it("keeps the query out of logs, storage and the URL", () => {
     expect(search).not.toMatch(
       /console\.|Sentry|captureException|localStorage|sessionStorage|indexedDB|URLSearchParams|useRouter|useSearchParams|history\.(push|replace)State|location\.|dangerouslySetInnerHTML|innerHTML/,
     );
+  });
+});
+
+describe("Supervised search result jump", () => {
+  type WindowResult = TeamSupervisionActionResult<SupervisedMessageWindow>;
+
+  const target = (n: number) => msgId(200 + n);
+
+  function hits(...ns: number[]): TeamSupervisionActionResult<SupervisedMessageSearchPage> {
+    return {
+      ok: true,
+      data: {
+        results: ns.map((n) => ({
+          messageId: target(n),
+          author: { profileId: "b-1", displayName: "John 1", avatarUrl: null },
+          createdAt: `2026-09-01T0${n}:00:00+00:00`,
+          snippet: `hit number ${n}`,
+        })),
+        hasMore: false,
+        nextCursor: null,
+      },
+    };
+  }
+
+  function contextWindow(n: number, around: SupervisedMessage[] = []): WindowResult {
+    const summary = conversation(1);
+    return {
+      ok: true,
+      data: {
+        found: true,
+        conversationId: summary.conversationId,
+        kind: "direct",
+        createdAt: summary.createdAt,
+        lastMessageAt: summary.lastMessageAt,
+        participants: summary.participants,
+        messages: [
+          ...around,
+          message(50 + n, { messageId: target(n), body: `Target body ${n}`, createdAt: "2026-09-02T11:30:00+00:00" }),
+        ],
+        hasMoreBefore: true,
+        hasMoreAfter: false,
+      },
+    };
+  }
+
+  const result = (n: number) => document.querySelector<HTMLButtonElement>(`button[data-result-id="${target(n)}"]`)!;
+  const returnButton = () => screen.getByRole("button", { name: "Return to conversation" });
+
+  async function searchFor(...ns: number[]) {
+    detailAction.mockResolvedValue(transcript(1, [message(1, { body: "Latest transcript" })], true));
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+    fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
+    searchAction.mockResolvedValue(hits(...ns));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    await act(async () => fireEvent.submit(screen.getByRole("search")));
+  }
+
+  it("reads no window until a result is deliberately activated, then exactly one", async () => {
+    await searchFor(1, 2);
+    fireEvent.mouseEnter(result(1));
+    fireEvent.focus(result(1));
+    fireEvent.pointerDown(result(1));
+    fireEvent.mouseDown(result(1));
+    fireEvent.touchStart(result(1));
+    fireEvent.touchCancel(result(1));
+    fireEvent.keyDown(result(1), { key: "ArrowDown" });
+    expect(windowAction).not.toHaveBeenCalled();
+
+    windowAction.mockResolvedValue(contextWindow(1));
+    await act(async () => fireEvent.click(result(1)));
+    expect(windowAction).toHaveBeenCalledTimes(1);
+    expect(windowAction).toHaveBeenCalledWith({ conversationId: id(1), targetMessageId: target(1) });
+    // A jump is not an open, a search or a history read.
+    expect(detailAction).toHaveBeenCalledTimes(1);
+    expect(searchAction).toHaveBeenCalledTimes(1);
+    expect(historyAction).not.toHaveBeenCalled();
+  });
+
+  it("makes one call for a double tap, rapid Enter or mouse plus keyboard while pending", async () => {
+    await searchFor(1, 2);
+    const pending = deferred<WindowResult>();
+    windowAction.mockReturnValue(pending.promise);
+    fireEvent.click(result(1), { detail: 1 });
+    fireEvent.click(result(1), { detail: 2 });
+    fireEvent.click(result(1), { detail: 0 });
+    fireEvent.click(result(1), { detail: 0 });
+    // A tail that lands on the neighbouring result is not a selection either.
+    fireEvent.click(result(2), { detail: 2 });
+    expect(windowAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status", { name: "Loading message context" })).toBeInTheDocument();
+    await act(async () => pending.resolve(contextWindow(1)));
+
+    // Already showing it: selecting it again reads nothing; another result is a new read.
+    fireEvent.click(result(1));
+    expect(windowAction).toHaveBeenCalledTimes(1);
+    windowAction.mockResolvedValue(contextWindow(2));
+    await act(async () => fireEvent.click(result(2)));
+    expect(windowAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("Target body 2")).toBeInTheDocument();
+  });
+
+  it("shows the bounded window with the target marked, in place of the transcript", async () => {
+    await searchFor(1);
+    windowAction.mockResolvedValue(
+      contextWindow(1, [
+        message(2, { body: "HIDDEN CANONICAL" }),
+        message(3, { body: "Message deleted", deletion: { deletedAt: null, deletedByProfileId: null, deletedByName: null } }),
+        message(4, {
+          messageType: "voice",
+          body: "Voice message",
+          supervisoryNotice: "Unavailable in supervisory view",
+          reactions: [{ reactionCode: "like", count: 2 }],
+        }),
+        message(5, {
+          forwarded: true,
+          forwardedFromAuthorName: "Liam",
+          reply: {
+            messageId: msgId(1),
+            authorProfileId: "b-1",
+            authorName: "John 1",
+            authorAvatarUrl: null,
+            body: "Earlier",
+            messageType: "text",
+            deletedForEveryone: false,
+          },
+        }),
+      ]),
+    );
+    await act(async () => fireEvent.click(result(1)));
+
+    expect(screen.getByText("Search result in context")).toBeInTheDocument();
+    expect(screen.queryByText("Latest transcript")).not.toBeVisible();
+    expect(screen.queryByRole("button", { name: "Load older messages" })).toBeNull();
+    const marked = document.querySelector('[aria-current="true"][data-message-id]')!;
+    expect(marked).toHaveAttribute("data-message-id", target(1));
+    expect(marked).toHaveTextContent("Matched message");
+    expect(marked).toHaveTextContent("Target body 1");
+    expect(document.querySelectorAll('[data-message-id][aria-current="true"]')).toHaveLength(1);
+    expect(screen.getByText("Earlier messages not shown")).toBeInTheDocument();
+    expect(screen.queryByText("Later messages not shown")).toBeNull();
+
+    // The same safe rendering as the transcript.
+    expect(screen.getByText("HIDDEN CANONICAL")).toBeInTheDocument();
+    expect(screen.getByText("Unavailable in supervisory view")).toBeInTheDocument();
+    expect(screen.getByText(/Forwarded from Liam/)).toBeInTheDocument();
+    expect(screen.getByText("Replying to John 1")).toBeInTheDocument();
+    const panel = screen.getByRole("region", { name: /Anthony 1/ });
+    expect(panel.querySelector("audio, video, source, a[download]")).toBeNull();
+    expect(panel.innerHTML).not.toMatch(/\.webm|storage|signed|reactedByMe|\bhidden for\b/i);
+  });
+
+  it("returns to the retained transcript without reading anything", async () => {
+    await searchFor(1);
+    historyAction.mockResolvedValue(transcript(1, [message(0, { body: "Older history kept" })]));
+    // Load older first, so there is fetched state worth keeping.
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load older messages" })));
+    expect(historyAction).toHaveBeenCalledTimes(1);
+
+    windowAction.mockResolvedValue(contextWindow(1));
+    await act(async () => fireEvent.click(result(1)));
+    const calls = () => [detailAction, searchAction, historyAction, windowAction].map((fn) => fn.mock.calls.length);
+    const before = calls();
+
+    fireEvent.click(returnButton(), { detail: 1 });
+    expect(screen.queryByText("Search result in context")).toBeNull();
+    expect(screen.getByText("Latest transcript")).toBeVisible();
+    expect(screen.getByText("Older history kept")).toBeVisible();
+    // The results are still there to pick another; nothing searched again.
+    expect(result(1)).toBeInTheDocument();
+    expect(result(1)).not.toHaveAttribute("aria-current");
+    expect(calls()).toEqual(before);
+
+    // Re-selecting after returning is a new deliberate read.
+    await act(async () => fireEvent.click(result(1)));
+    expect(windowAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("the tail of a double tap on Return does not load older history", async () => {
+    await searchFor(1);
+    windowAction.mockResolvedValue(contextWindow(1));
+    await act(async () => fireEvent.click(result(1)));
+    fireEvent.click(returnButton(), { detail: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "Load older messages" }), { detail: 2 });
+    expect(historyAction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["success", () => contextWindow(1)],
+    ["error", (): WindowResult => ({ ok: false, error: { code: "DATABASE_ERROR", message: "x" } })],
+  ])("drops a late %s for a result that is no longer selected", async (_label, late) => {
+    await searchFor(1, 2);
+    const first = deferred<WindowResult>();
+    const second = deferred<WindowResult>();
+    windowAction.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    fireEvent.click(result(1));
+    fireEvent.click(result(2));
+    expect(windowAction).toHaveBeenCalledTimes(2);
+
+    await act(async () => first.resolve(late()));
+    expect(screen.queryByText("Target body 1")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("status", { name: "Loading message context" })).toBeInTheDocument();
+    expect(result(2)).toHaveAttribute("aria-current", "true");
+
+    await act(async () => second.resolve(contextWindow(2)));
+    expect(screen.getByText("Target body 2")).toBeInTheDocument();
+    expect(screen.queryByText("Target body 1")).toBeNull();
+  });
+
+  it("drops a late window after switching conversation or going Back", async () => {
+    await searchFor(1);
+    const late = deferred<WindowResult>();
+    windowAction.mockReturnValueOnce(late.promise);
+    fireEvent.click(result(1));
+    detailAction.mockResolvedValue(transcript(2, [message(2, { body: "From B" })]));
+    await act(async () => fireEvent.click(row(2)));
+    await act(async () => late.resolve(contextWindow(1)));
+    expect(screen.getByText("From B")).toBeVisible();
+    expect(screen.queryByText("Target body 1")).toBeNull();
+    expect(screen.queryByText("Search result in context")).toBeNull();
+    expect(screen.queryByRole("search")).toBeNull();
+
+    // Back while a window is pending: nothing arrives afterwards either.
+    fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
+    searchAction.mockResolvedValue(hits(1));
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    await act(async () => fireEvent.submit(screen.getByRole("search")));
+    const lateBack = deferred<WindowResult>();
+    windowAction.mockReturnValueOnce(lateBack.promise);
+    fireEvent.click(result(1));
+    fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }), { detail: 1 });
+    fireEvent.click(row(2), { detail: 2 });
+    await act(async () => lateBack.resolve(contextWindow(1)));
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(screen.queryByText("Target body 1")).toBeNull();
+    expect(windowAction).toHaveBeenCalledTimes(2);
+    expect(detailAction).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["a missing or foreign target", (): WindowResult => ({ ok: true, data: { found: false } })],
+    ["an ineligible conversation", (): WindowResult => ({ ok: false, error: { code: "NOT_FOUND", message: "x" } })],
+  ])("shows one unavailable state for %s, with no retry", async (_label, response) => {
+    await searchFor(1);
+    windowAction.mockResolvedValue(response());
+    await act(async () => fireEvent.click(result(1)));
+    expect(screen.getByRole("alert")).toHaveTextContent("This message is unavailable.");
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(document.querySelector("[aria-current='true'][data-message-id]")).toBeNull();
+    // Selecting it again does not loop.
+    fireEvent.click(result(1));
+    expect(windowAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a generic failure only on a deliberate click, once per click", async () => {
+    await searchFor(1);
+    windowAction.mockResolvedValueOnce({ ok: false, error: { code: "DATABASE_ERROR", message: "x" } });
+    await act(async () => fireEvent.click(result(1)));
+    expect(screen.getByRole("alert")).toHaveTextContent("This message could not be loaded.");
+    expect(screen.getByRole("alert").textContent).not.toMatch(/database|rpc|sql/i);
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    expect(windowAction).toHaveBeenCalledTimes(1);
+
+    const retry = deferred<WindowResult>();
+    windowAction.mockReturnValueOnce(retry.promise);
+    const button = screen.getByRole("button", { name: "Try again" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(windowAction).toHaveBeenCalledTimes(2);
+    await act(async () => retry.resolve(contextWindow(1)));
+    expect(screen.getByText("Target body 1")).toBeInTheDocument();
+  });
+
+  it("lets a session redirect escape instead of rendering it", async () => {
+    await searchFor(1);
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" });
+    windowAction.mockRejectedValue(redirect);
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    await act(async () => fireEvent.click(result(1)));
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    process.off("unhandledRejection", unhandled);
+    expect(unhandled).toHaveBeenCalledWith(redirect, expect.anything());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("closing search leaves the window; the query never reaches the window action", async () => {
+    await searchFor(1);
+    windowAction.mockResolvedValue(contextWindow(1));
+    await act(async () => fireEvent.click(result(1)));
+    expect(JSON.stringify(windowAction.mock.calls)).not.toContain("hit");
+    fireEvent.click(screen.getByRole("button", { name: "Close search" }));
+    expect(screen.queryByText("Search result in context")).toBeNull();
+    expect(screen.getByText("Latest transcript")).toBeVisible();
+    expect(windowAction).toHaveBeenCalledTimes(1);
   });
 });
