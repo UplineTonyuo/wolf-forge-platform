@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { listSupervisedConversationsAction, type TeamSupervisionActionResult } from "../../app/actions/team-supervision";
 import type {
   SupervisedConversationPage,
+  SupervisedConversationSummary,
   SupervisedParticipant,
 } from "../../domain/team-supervision/projections";
 import { formatTeamRelativeTime, teamInitials } from "../../domain/team/projections";
@@ -17,12 +18,17 @@ import styles from "./supervised-conversation-list.module.css";
  * state, presence or typing, and it is not the participant Team view — nothing
  * here can write, mark read or announce the viewer.
  *
- * Rows are not selectable yet; the transcript arrives in Phase 2C-2.
+ * A row is a button only when the workspace passes `onSelect`; the list itself
+ * never reads a transcript.
  */
 export function SupervisedConversationList({
   initial,
+  selectedId = null,
+  onSelect,
 }: {
   initial: TeamSupervisionActionResult<SupervisedConversationPage>;
+  selectedId?: string | null;
+  onSelect?: (conversation: SupervisedConversationSummary) => void;
 }) {
   const [conversations, setConversations] = useState(initial.ok ? initial.data.conversations : []);
   const [cursor, setCursor] = useState(initial.ok ? initial.data.nextCursor : null);
@@ -69,33 +75,52 @@ export function SupervisedConversationList({
   return (
     <div className={styles.list}>
       <ul aria-label="Team conversations">
-        {conversations.map((conversation) => (
-          <li className={styles.row} key={conversation.conversationId}>
-            <span className={styles.avatars}>
-              {conversation.participants.map((participant) => (
-                <TeamAvatar
-                  key={participant.profileId}
-                  name={participantName(participant)}
-                  initials={teamInitials(participant.displayName)}
-                  avatarUrl={participant.avatarUrl?.trim() || null}
-                  small
-                />
-              ))}
-            </span>
-            <span className={styles.pair}>
-              <Participant participant={conversation.participants[0]} />
-              {/* The arrow wraps with the second name, never dangling at a line end. */}
-              <span className={styles.person}>
-                <span className={styles.separator} aria-hidden="true">
-                  ↔
-                </span>
-                <span className={styles.srOnly}>and</span>
-                <Participant participant={conversation.participants[1]} />
+        {conversations.map((conversation) => {
+          const content = (
+            <>
+              <span className={styles.avatars}>
+                {conversation.participants.map((participant) => (
+                  <TeamAvatar
+                    key={participant.profileId}
+                    name={participantName(participant)}
+                    initials={teamInitials(participant.displayName)}
+                    avatarUrl={participant.avatarUrl?.trim() || null}
+                    small
+                  />
+                ))}
               </span>
-            </span>
-            <LastActivity iso={conversation.lastMessageAt} />
-          </li>
-        ))}
+              <span className={styles.pair}>
+                <Participant participant={conversation.participants[0]} />
+                {/* The arrow wraps with the second name, never dangling at a line end. */}
+                <span className={styles.person}>
+                  <span className={styles.separator} aria-hidden="true">
+                    ↔
+                  </span>
+                  {" "}<span className={styles.srOnly}>and</span>{" "}
+                  <Participant participant={conversation.participants[1]} />
+                </span>
+              </span>
+              <LastActivity iso={conversation.lastMessageAt} />
+            </>
+          );
+          return (
+            <li key={conversation.conversationId}>
+              {onSelect ? (
+                <button
+                  type="button"
+                  className={`${styles.row} ${styles.rowButton}`}
+                  data-conversation-id={conversation.conversationId}
+                  aria-current={selectedId === conversation.conversationId ? "true" : undefined}
+                  onClick={() => onSelect(conversation)}
+                >
+                  {content}
+                </button>
+              ) : (
+                <div className={styles.row}>{content}</div>
+              )}
+            </li>
+          );
+        })}
       </ul>
 
       {cursor ? (

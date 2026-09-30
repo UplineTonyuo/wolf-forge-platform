@@ -1,0 +1,483 @@
+/*
+ * Supervised transcript and the All Conversations workspace.
+ *
+ * One neutral column: no left/right sides, no bubbles, no composer. Desktop
+ * (>= 1024px) splits list and transcript, each scrolling on its own inside a
+ * viewport-high workspace. Below that the two take turns and the page is the
+ * only scroll region.
+ */
+
+.workspace {
+  min-width: 0;
+}
+
+.listPane {
+  min-width: 0;
+}
+
+.panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: var(--wf-white);
+}
+
+.placeholder {
+  display: none;
+}
+
+.header {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wf-border);
+  border-radius: 8px 8px 0 0;
+  background: var(--wf-white);
+}
+
+.back {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -8px;
+  padding: 0 10px 0 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.back:hover {
+  background: var(--wf-warm-100);
+}
+
+.back:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.headerAvatars {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.headerAvatars > * + * {
+  margin-left: -8px;
+}
+
+.title {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  color: var(--wf-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.title:focus {
+  outline: none;
+}
+
+.titlePerson {
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.titleName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.titleSeparator {
+  color: var(--wf-text-muted);
+  font-weight: 400;
+}
+
+.archived {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.readOnly {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.readOnly svg {
+  width: 14px;
+  height: 14px;
+}
+
+.scroll {
+  min-width: 0;
+  padding: 12px 16px 20px;
+  /* Older rows are re-anchored by hand; the browser must not also shift them. */
+  overflow-anchor: none;
+}
+
+.skeleton {
+  display: grid;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.notice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin: 8px 0;
+  color: var(--wf-text-muted);
+  font-size: 14px;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.older {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.older button {
+  min-height: 44px;
+}
+
+.olderError {
+  margin: 0;
+  color: var(--wf-danger);
+  font-size: 13px;
+}
+
+.groups {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.groups > li + li {
+  margin-top: 14px;
+}
+
+.day {
+  display: grid;
+  grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.day::before,
+.day::after {
+  content: "";
+  height: 1px;
+  background: var(--wf-border);
+}
+
+.group {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.groupBody {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.groupHeader {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.author {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--wf-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.time {
+  color: var(--wf-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.message {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--wf-text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.forwarded {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.forwarded svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+}
+
+.reply {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--wf-border);
+  border-radius: 0 6px 6px 0;
+  background: var(--wf-warm-100);
+  font-size: 12px;
+}
+
+.replyAuthor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--wf-text-muted);
+  font-weight: 600;
+}
+
+.replyText,
+.replyDeleted {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+  color: var(--wf-text);
+}
+
+.replyDeleted,
+.deleted {
+  color: var(--wf-text-muted);
+  font-style: italic;
+}
+
+.deleted {
+  margin: 0;
+}
+
+.voice {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  justify-self: start;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--wf-border);
+  border-radius: 8px;
+  color: var(--wf-text);
+}
+
+.voice svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  color: var(--wf-text-muted);
+}
+
+.voiceNotice {
+  display: block;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reaction {
+  padding: 1px 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 999px;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.activity {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--wf-warm-100);
+  color: var(--wf-text-muted);
+  font-size: 13px;
+}
+
+.activity svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+}
+
+.activityText {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.activityAuthor {
+  color: var(--wf-text);
+  font-weight: 600;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Stacked: list, or transcript — never both. */
+@media (max-width: 1023px) {
+  .workspace[data-view="transcript"] .listPane {
+    display: none;
+  }
+
+  .header {
+    position: sticky;
+    top: var(--wf-mobile-header-h, 0px);
+    z-index: 2;
+  }
+}
+
+@media (max-width: 559px) {
+  .header,
+  .scroll {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Split: list beside transcript, each its own scroll region. */
+@media (min-width: 1024px) {
+  .workspace {
+    height: max(520px, calc(100dvh - 170px));
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .listPane {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .listPane > * {
+    margin-top: 0;
+  }
+
+  .panel {
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .panel .scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .back {
+    display: none;
+  }
+
+  .placeholder {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+    padding: 24px;
+    border: 1px dashed var(--wf-border);
+    border-radius: 8px;
+    color: var(--wf-text-muted);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .placeholder p {
+    margin: 0;
+  }
+
+  .placeholderTitle {
+    color: var(--wf-text);
+    font-size: 14px;
+    font-weight: 500;
+  }
+}

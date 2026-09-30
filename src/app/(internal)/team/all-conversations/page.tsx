@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Eye } from "lucide-react";
 import { listSupervisedConversationsAction } from "../../../actions/team-supervision";
-import { SupervisedConversationList } from "../../../../components/team-supervision/supervised-conversation-list";
+import { SupervisedConversationsWorkspace } from "../../../../components/team-supervision/supervised-conversations-workspace";
 import styles from "../../../../components/team-supervision/supervised-conversation-list.module.css";
 import { PageFrame } from "../../../../components/ui/page-frame";
 
@@ -29,7 +29,7 @@ export default async function AllConversationsPage() {
         </span>
       }
     >
-      <SupervisedConversationList initial={initial} />
+      <SupervisedConversationsWorkspace initial={initial} />
     </PageFrame>
   );
 }
