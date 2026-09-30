@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TeamSupervisionActionResult } from "../app/actions/team-supervision";
 import * as supervisionActions from "../app/actions/team-supervision";
 import { SupervisedConversationsWorkspace } from "../components/team-supervision/supervised-conversations-workspace";
+import { reconcileLatest } from "../components/team-supervision/supervised-transcript";
 import type {
   SupervisedConversationSummary,
   SupervisedMessage,
@@ -346,7 +347,7 @@ describe("Supervised transcript: rendering", () => {
     const controls = within(panel)
       .queryAllByRole("button")
       .map((button) => button.getAttribute("aria-label") ?? button.textContent);
-    expect(controls).toEqual(["Back to conversations", "Search this conversation"]);
+    expect(controls).toEqual(["Back to conversations", "Search this conversation", "Refresh latest"]);
     expect(panel.textContent).not.toMatch(/\b(send|reply|forward|react|delete|hide|pin|task|mute|mark)\b/i);
   });
 });
@@ -1137,5 +1138,280 @@ describe("Supervised search result jump", () => {
     expect(screen.queryByText("Search result in context")).toBeNull();
     expect(screen.getByText("Latest transcript")).toBeVisible();
     expect(windowAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Supervised controlled refresh", () => {
+  type DetailResult = TeamSupervisionActionResult<SupervisedTranscriptPage>;
+
+  const bodies = () => [...document.querySelectorAll("[data-transcript] [data-message-id]")].map((node) => node.textContent);
+  const refreshButton = () => screen.getByRole("button", { name: /Refresh latest|Refreshing/ });
+  const checked = () => screen.getByText(/Last checked/).querySelector("time")!.getAttribute("datetime");
+
+  async function openAt(iso: string, page: DetailResult) {
+    vi.setSystemTime(new Date(iso));
+    detailAction.mockResolvedValueOnce(page);
+    renderWorkspace();
+    await act(async () => fireEvent.click(row(1)));
+  }
+
+  beforeEach(() => vi.useFakeTimers({ toFake: ["Date"] }));
+  afterEach(() => vi.useRealTimers());
+
+  it("reads nothing until clicked, then once per click; Last checked moves only on success", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10), message(11)], true));
+    expect(checked()).toBe("2026-09-02T12:00:00.000Z");
+    fireEvent.mouseEnter(refreshButton());
+    fireEvent.focus(refreshButton());
+    fireEvent.pointerDown(refreshButton());
+    expect(detailAction).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date("2026-09-02T12:05:00Z"));
+    const pending = deferred<DetailResult>();
+    detailAction.mockReturnValueOnce(pending.promise);
+    fireEvent.click(refreshButton(), { detail: 1 });
+    fireEvent.click(refreshButton(), { detail: 2 });
+    fireEvent.click(refreshButton(), { detail: 0 });
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    expect(detailAction).toHaveBeenLastCalledWith({ conversationId: id(1) });
+    expect(refreshButton()).toBeDisabled();
+    expect(checked()).toBe("2026-09-02T12:00:00.000Z");
+
+    await act(async () => pending.resolve(transcript(1, [message(11), message(12)], true)));
+    expect(checked()).toBe("2026-09-02T12:05:00.000Z");
+    expect(refreshButton()).toBeEnabled();
+    // The tail of a double tap that outlives the read is not a second refresh.
+    fireEvent.click(refreshButton(), { detail: 2 });
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    expect(historyAction).not.toHaveBeenCalled();
+    expect(searchAction).not.toHaveBeenCalled();
+    expect(windowAction).not.toHaveBeenCalled();
+  });
+
+  it("merges the fresh latest page into loaded history instead of replacing it", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10), message(11), message(12)], true));
+    historyAction.mockResolvedValueOnce(transcript(1, [message(8), message(9)], true));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load older messages" })));
+    expect(bodies()).toEqual(["Message 8", "Message 9", "Message 10", "Message 11", "Message 12"]);
+
+    // Fresh page: 11 is now a tombstone, 12 changed, 13 is new. 10 fell off its start.
+    detailAction.mockResolvedValueOnce(
+      transcript(
+        1,
+        [
+          message(11, { body: "Message deleted", deletion: { deletedAt: null, deletedByProfileId: null, deletedByName: null } }),
+          message(12, { body: "Message 12 fresh" }),
+          message(13),
+        ],
+        true,
+      ),
+    );
+    await act(async () => fireEvent.click(refreshButton()));
+    expect(bodies()).toEqual(["Message 8", "Message 9", "Message 10", "Message deleted", "Message 12 fresh", "Message 13"]);
+    expect(screen.queryByText("Message 11")).toBeNull();
+
+    // Load older continues from the oldest loaded row, not from the fresh page.
+    historyAction.mockResolvedValueOnce(transcript(1, [message(7)], false));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load older messages" })));
+    expect(historyAction).toHaveBeenLastCalledWith({
+      conversationId: id(1),
+      beforeCreatedAt: message(8).createdAt,
+      beforeMessageId: msgId(8),
+    });
+    expect(bodies()[0]).toBe("Message 7");
+  });
+
+  it("reconciles by id and keyset order, replacing only when the fresh page is whole or disjoint", () => {
+    const loaded = [message(8), message(9), message(10), message(11)];
+    const cursor = { beforeCreatedAt: message(8).createdAt, beforeMessageId: msgId(8) };
+    const page = (messages: SupervisedMessage[], more: boolean) =>
+      (transcript(1, messages, more) as { data: SupervisedTranscriptPage }).data;
+
+    const merged = reconcileLatest(loaded, cursor, page([message(10, { body: "new 10" }), message(11), message(12)], true));
+    expect(merged.messages.map((m) => m.body)).toEqual(["Message 8", "Message 9", "new 10", "Message 11", "Message 12"]);
+    expect(merged.cursor).toEqual(cursor);
+
+    // Same timestamp: the id breaks the tie, as in the RPC keyset.
+    const tie = message(9, { messageId: msgId(99), createdAt: message(10).createdAt });
+    expect(
+      reconcileLatest([message(8), tie, message(10)], cursor, page([message(10)], true)).messages.map((m) => m.messageId),
+    ).toEqual([msgId(8), msgId(10)]);
+
+    // Everything the conversation has: the fresh page is authoritative.
+    expect(reconcileLatest(loaded, cursor, page([message(11), message(12)], false))).toEqual({
+      messages: [message(11), message(12)],
+      cursor: null,
+    });
+    // More new rows than one page: no overlap, so older rows would sit behind a gap.
+    const gap = reconcileLatest(loaded, cursor, page([message(30), message(31)], true));
+    expect(gap.messages.map((m) => m.messageId)).toEqual([msgId(30), msgId(31)]);
+    expect(gap.cursor).toEqual({ beforeCreatedAt: message(30).createdAt, beforeMessageId: msgId(30) });
+    // Nothing older than the fresh page was loaded: the fresh cursor applies.
+    expect(reconcileLatest([message(11)], null, page([message(11), message(12)], true)).cursor).toEqual({
+      beforeCreatedAt: message(11).createdAt,
+      beforeMessageId: msgId(11),
+    });
+  });
+
+  it("scrolls to the latest message after a refresh", async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    try {
+      await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10)], false));
+      scrolled.mockClear();
+      detailAction.mockResolvedValueOnce(transcript(1, [message(10), message(11)], false));
+      await act(async () => fireEvent.click(refreshButton()));
+      expect(scrolled).toHaveBeenCalledTimes(1);
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("never runs refresh and Load older at the same time", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10)], true));
+    const refresh = deferred<DetailResult>();
+    detailAction.mockReturnValueOnce(refresh.promise);
+    fireEvent.click(refreshButton());
+    const older = screen.getByRole("button", { name: "Load older messages" });
+    expect(older).toBeDisabled();
+    fireEvent.click(older);
+    expect(historyAction).not.toHaveBeenCalled();
+    await act(async () => refresh.resolve(transcript(1, [message(10)], true)));
+
+    const history = deferred<DetailResult>();
+    historyAction.mockReturnValueOnce(history.promise);
+    fireEvent.click(screen.getByRole("button", { name: "Load older messages" }));
+    expect(refreshButton()).toBeDisabled();
+    fireEvent.click(refreshButton());
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    await act(async () => history.resolve(transcript(1, [message(9)], false)));
+    expect(refreshButton()).toBeEnabled();
+  });
+
+  it("keeps the transcript on a generic failure and retries only when clicked", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10)], false));
+    vi.setSystemTime(new Date("2026-09-02T12:05:00Z"));
+    detailAction.mockResolvedValueOnce({ ok: false, error: { code: "DATABASE_ERROR", message: "row 42 failed" } });
+    await act(async () => fireEvent.click(refreshButton()));
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't refresh. Try again.");
+    expect(document.body.textContent).not.toMatch(/row 42|database/i);
+    expect(bodies()).toEqual(["Message 10"]);
+    expect(checked()).toBe("2026-09-02T12:00:00.000Z");
+    expect(detailAction).toHaveBeenCalledTimes(2);
+
+    detailAction.mockResolvedValueOnce(transcript(1, [message(10), message(11)], false));
+    await act(async () => fireEvent.click(refreshButton()));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(bodies()).toEqual(["Message 10", "Message 11"]);
+    expect(checked()).toBe("2026-09-02T12:05:00.000Z");
+  });
+
+  it.each([
+    ["NOT_FOUND", "This conversation is unavailable."],
+    ["PERMISSION_DENIED", "You don't have access to this view."],
+  ] as const)("clears the transcript, search and window when refresh returns %s", async (code, copy) => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10, { body: "Privileged body" })], true));
+    fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
+    detailAction.mockResolvedValueOnce({ ok: false, error: { code, message: "x" } });
+    await act(async () => fireEvent.click(refreshButton()));
+    expect(screen.getByRole("alert")).toHaveTextContent(copy);
+    expect(screen.queryByText("Privileged body")).toBeNull();
+    expect(screen.queryByRole("search")).toBeNull();
+    expect(screen.queryByText(/Last checked/)).toBeNull();
+    expect(detailAction).toHaveBeenCalledTimes(2);
+    // Reopening is a deliberate new read, not a loop.
+    detailAction.mockResolvedValueOnce(transcript(1, [message(10, { body: "Reopened" })]));
+    await act(async () => fireEvent.click(row(1)));
+    expect(screen.getByText("Reopened")).toBeInTheDocument();
+  });
+
+  it("does not rerun or clear search, and stays hidden while a context window is shown", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10, { body: "Old latest" })], true));
+    fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
+    searchAction.mockResolvedValue({
+      ok: true,
+      data: {
+        results: [
+          {
+            messageId: msgId(10),
+            author: { profileId: "a-1", displayName: "Anthony 1", avatarUrl: null },
+            createdAt: message(10).createdAt,
+            snippet: "hit",
+          },
+        ],
+        hasMore: false,
+        nextCursor: null,
+      },
+    });
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    await act(async () => fireEvent.submit(screen.getByRole("search")));
+
+    const pending = deferred<DetailResult>();
+    detailAction.mockReturnValueOnce(pending.promise);
+    fireEvent.click(refreshButton());
+    const base = (transcript(1, [message(10, { body: "Window row" })]) as { data: SupervisedTranscriptPage }).data;
+    windowAction.mockResolvedValue({ ok: true, data: { ...base, found: true, hasMoreBefore: false, hasMoreAfter: false } });
+    await act(async () => fireEvent.click(document.querySelector<HTMLButtonElement>("[data-result-id]")!));
+    expect(screen.queryByRole("button", { name: /Refresh latest|Refreshing/ })).toBeNull();
+    expect(screen.queryByText(/Last checked/)).not.toBeVisible();
+
+    // The pending refresh lands behind the window: the window stays, the hidden transcript updates.
+    await act(async () => pending.resolve(transcript(1, [message(10), message(11, { body: "New latest" })], false)));
+    expect(screen.getByText("Window row")).toBeVisible();
+    expect(screen.getByText("New latest")).not.toBeVisible();
+    expect(searchAction).toHaveBeenCalledTimes(1);
+    expect(windowAction).toHaveBeenCalledTimes(1);
+    expect(document.querySelector("[data-result-id]")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Return to conversation" }));
+    expect(screen.getByText("New latest")).toBeVisible();
+    expect(refreshButton()).toBeEnabled();
+    expect(searchAction).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["success", (): DetailResult => transcript(1, [message(10, { body: "Late A" })])],
+    ["unavailable", (): DetailResult => ({ ok: false, error: { code: "NOT_FOUND", message: "x" } })],
+    ["error", (): DetailResult => ({ ok: false, error: { code: "DATABASE_ERROR", message: "x" } })],
+  ])("drops a late %s after switching conversation or going Back", async (_label, late) => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10)], true));
+    const first = deferred<DetailResult>();
+    detailAction.mockReturnValueOnce(first.promise);
+    fireEvent.click(refreshButton());
+    detailAction.mockResolvedValueOnce(transcript(2, [message(20, { body: "From B" })]));
+    await act(async () => fireEvent.click(row(2)));
+    await act(async () => first.resolve(late()));
+    expect(screen.getByText("From B")).toBeVisible();
+    expect(screen.queryByText("Late A")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    const second = deferred<DetailResult>();
+    detailAction.mockReturnValueOnce(second.promise);
+    fireEvent.click(refreshButton());
+    fireEvent.click(screen.getByRole("button", { name: "Back to conversations" }));
+    await act(async () => second.resolve(late()));
+    expect(screen.queryByRole("region")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(detailAction).toHaveBeenCalledTimes(4);
+  });
+
+  it("lets a session redirect escape instead of rendering it", async () => {
+    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10)], false));
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" });
+    detailAction.mockRejectedValueOnce(redirect);
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    await act(async () => fireEvent.click(refreshButton()));
+    await act(async () => new Promise((done) => setTimeout(done, 0)));
+    process.off("unhandledRejection", unhandled);
+    expect(unhandled).toHaveBeenCalledWith(redirect, expect.anything());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps Last checked local: no storage, logs, timers or automatic reads (source)", () => {
+    const source = readFileSync("src/components/team-supervision/supervised-transcript.tsx", "utf8");
+    expect(source).not.toMatch(/localStorage|sessionStorage|console\.|Sentry|history\.|searchParams|setInterval|setTimeout|requestAnimationFrame/);
+    // One import, one call: the click handler.
+    expect(source.match(/getSupervisedConversationAction/g)).toHaveLength(2);
   });
 });

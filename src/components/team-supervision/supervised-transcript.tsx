@@ -1,12 +1,17 @@
 "use client";
 
-import { CheckCircle2, Forward, Mic, Settings } from "lucide-react";
+import { CheckCircle2, Forward, Mic, RotateCw, Settings } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { listSupervisedMessagesBeforeAction } from "../../app/actions/team-supervision";
+import {
+  getSupervisedConversationAction,
+  listSupervisedMessagesBeforeAction,
+} from "../../app/actions/team-supervision";
 import type {
   SupervisedMessage,
+  SupervisedMessageCursor,
   SupervisedTranscriptPage,
 } from "../../domain/team-supervision/projections";
+import type { ClientSafeError } from "../../lib/errors/application-error";
 import {
   formatTeamDayHeading,
   formatTeamMessageTime,
@@ -62,6 +67,38 @@ function groupMessages(messages: SupervisedMessage[]): Group[] {
   return groups;
 }
 
+/** Keyset order: (created_at, id), the same order the RPCs page by. */
+function isBefore(a: SupervisedMessage, b: SupervisedMessage): boolean {
+  const at = Date.parse(a.createdAt);
+  const bt = Date.parse(b.createdAt);
+  return at !== bt ? at < bt : a.messageId < b.messageId;
+}
+
+/**
+ * Merges a fresh latest page into what is already loaded. The fresh page wins
+ * for everything it covers (deletions, reaction counts, new rows); older rows
+ * loaded earlier are kept, and so is their Load older cursor. When the fresh
+ * page no longer overlaps what was loaded (more new rows than one page), the
+ * old rows would sit behind an invisible gap, so the fresh page replaces them.
+ */
+export function reconcileLatest(
+  current: SupervisedMessage[],
+  currentCursor: SupervisedMessageCursor | null,
+  fresh: SupervisedTranscriptPage,
+): { messages: SupervisedMessage[]; cursor: SupervisedMessageCursor | null } {
+  const freshCursor = fresh.hasMore ? fresh.nextCursor : null;
+  const first = fresh.messages[0];
+  const freshIds = new Set(fresh.messages.map((message) => message.messageId));
+  if (!first || !fresh.hasMore || !current.some((message) => freshIds.has(message.messageId))) {
+    return { messages: fresh.messages, cursor: freshCursor };
+  }
+  const older = current.filter((message) => isBefore(message, first));
+  return {
+    messages: [...older, ...fresh.messages],
+    cursor: older.length > 0 ? currentCursor : freshCursor,
+  };
+}
+
 function authorName(name: string | null): string {
   return name?.trim() || "Unnamed member";
 }
@@ -86,24 +123,46 @@ function Timestamp({ iso }: { iso: string }) {
  * are counts, deleted and voice rows show the database's own placeholder text.
  *
  * Older history loads only on an explicit click: one click, one history action,
- * one PAGE audit. Nothing here polls, refreshes, marks read or writes.
+ * one PAGE audit. "Refresh latest" is the only other read: one click, one
+ * detail action, one OPEN audit, merged by `reconcileLatest`. Nothing here
+ * polls, refreshes on its own, marks read or writes. Only one of the two reads
+ * runs at a time, so they cannot interleave their merges.
  */
 export function SupervisedTranscript({
   initial,
+  checkedAt,
   hidden = false,
+  onLostAccess,
 }: {
   initial: SupervisedTranscriptPage;
+  /** When the detail read that produced `initial` completed. */
+  checkedAt: string;
   /** Kept mounted while a search context window is shown, so nothing is refetched. */
   hidden?: boolean;
+  /** A refresh found the conversation unavailable or the view forbidden. */
+  onLostAccess: (code: ClientSafeError["code"]) => void;
 }) {
   const [messages, setMessages] = useState(initial.messages);
   const [cursor, setCursor] = useState(initial.hasMore ? initial.nextCursor : null);
-  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [busy, setBusy] = useState<"older" | "refresh" | null>(null);
   const [olderFailed, setOlderFailed] = useState(false);
-  const loadingRef = useRef(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const [lastChecked, setLastChecked] = useState(checkedAt);
+  const busyRef = useRef(false);
+  const aliveRef = useRef(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<{ element: Element; top: number } | null>(null);
+  const toLatestRef = useRef(false);
+
+  // A response that lands after this transcript closed (switch, Back) must not
+  // reach the workspace, which by then shows something else.
+  useLayoutEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
 
   // Open at the latest message. Desktop scrolls the panel; mobile, where the
   // page is the one scroll region, brings the end into view.
@@ -116,21 +175,31 @@ export function SupervisedTranscript({
     }
   }, []);
 
-  // After older rows are prepended, keep the previously first message where it was.
+  // After older rows are prepended, keep the previously first message where it
+  // was; after "Refresh latest", show the latest.
   useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (toLatestRef.current) {
+      toLatestRef.current = false;
+      if (scroller && scroller.scrollHeight > scroller.clientHeight) {
+        scroller.scrollTop = scroller.scrollHeight;
+      } else {
+        endRef.current?.scrollIntoView?.({ block: "nearest" });
+      }
+      return;
+    }
     const anchor = anchorRef.current;
     anchorRef.current = null;
     if (!anchor) return;
     const delta = anchor.element.getBoundingClientRect().top - anchor.top;
-    const scroller = scrollRef.current;
     if (scroller && scroller.scrollHeight > scroller.clientHeight) scroller.scrollTop += delta;
     else window.scrollBy(0, delta);
   }, [messages]);
 
   async function loadOlder() {
-    if (!cursor || loadingRef.current) return;
-    loadingRef.current = true;
-    setLoadingOlder(true);
+    if (!cursor || busyRef.current) return;
+    busyRef.current = true;
+    setBusy("older");
     setOlderFailed(false);
 
     const result = await listSupervisedMessagesBeforeAction({
@@ -138,8 +207,8 @@ export function SupervisedTranscript({
       ...cursor,
     });
 
-    loadingRef.current = false;
-    setLoadingOlder(false);
+    busyRef.current = false;
+    setBusy(null);
     if (!result.ok) {
       setOlderFailed(true);
       return;
@@ -150,38 +219,97 @@ export function SupervisedTranscript({
     setCursor(result.data.hasMore ? result.data.nextCursor : null);
   }
 
-  return (
-    <div className={styles.scroll} ref={scrollRef} hidden={hidden} data-transcript>
-      {cursor ? (
-        <div className={styles.older}>
-          <button
-            type="button"
-            className="button-secondary"
-            onClick={(event) => {
-              // A double-tap tail (e.g. on Return, which reveals this button) is not a second decision.
-              if (event.detail > 1) return;
-              void loadOlder();
-            }}
-            disabled={loadingOlder}
-            aria-busy={loadingOlder}
-          >
-            {loadingOlder ? "Loading…" : "Load older messages"}
-          </button>
-          {olderFailed ? (
-            <p className={styles.olderError} role="alert">
-              Older messages could not be loaded.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+  async function refreshLatest() {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy("refresh");
+    setRefreshFailed(false);
 
-      {messages.length === 0 ? (
-        <p className={styles.notice}>No messages in this conversation.</p>
-      ) : (
-        <MessageGroups messages={messages} />
-      )}
-      <div ref={endRef} />
-    </div>
+    const result = await getSupervisedConversationAction({ conversationId: initial.conversationId });
+
+    busyRef.current = false;
+    if (!aliveRef.current) return;
+    setBusy(null);
+    if (!result.ok) {
+      // Access or eligibility changed: stop presenting privileged content as current.
+      if (result.error.code === "NOT_FOUND" || result.error.code === "PERMISSION_DENIED") {
+        onLostAccess(result.error.code);
+      } else {
+        setRefreshFailed(true);
+      }
+      return;
+    }
+    const next = reconcileLatest(messages, cursor, result.data);
+    toLatestRef.current = true;
+    setMessages(next.messages);
+    setCursor(next.cursor);
+    setLastChecked(new Date().toISOString());
+  }
+
+  return (
+    <>
+      <div className={styles.scroll} ref={scrollRef} hidden={hidden} data-transcript>
+        {cursor ? (
+          <div className={styles.older}>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={(event) => {
+                // A double-tap tail (e.g. on Return, which reveals this button) is not a second decision.
+                if (event.detail > 1) return;
+                void loadOlder();
+              }}
+              disabled={busy !== null}
+              aria-busy={busy === "older"}
+            >
+              {busy === "older" ? "Loading…" : "Load older messages"}
+            </button>
+            {olderFailed ? (
+              <p className={styles.olderError} role="alert">
+                Older messages could not be loaded.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {messages.length === 0 ? (
+          <p className={styles.notice}>No messages in this conversation.</p>
+        ) : (
+          <MessageGroups messages={messages} />
+        )}
+        <div ref={endRef} />
+      </div>
+      <div className={styles.freshness} hidden={hidden}>
+        <p>
+          Last checked{" "}
+          <time
+            dateTime={lastChecked}
+            title={new Date(lastChecked).toLocaleString()}
+            suppressHydrationWarning
+          >
+            {formatTeamMessageTime(lastChecked)}
+          </time>
+        </p>
+        {refreshFailed ? (
+          <p className={styles.freshnessError} role="alert">
+            Couldn&apos;t refresh. Try again.
+          </p>
+        ) : null}
+        <button
+          type="button"
+          className={styles.refresh}
+          disabled={busy !== null}
+          aria-busy={busy === "refresh"}
+          onClick={(event) => {
+            if (event.detail > 1) return;
+            void refreshLatest();
+          }}
+        >
+          <RotateCw aria-hidden="true" />
+          {busy === "refresh" ? "Refreshing…" : "Refresh latest"}
+        </button>
+      </div>
+    </>
   );
 }
 

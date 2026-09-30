@@ -362,6 +362,74 @@
   height: 16px;
 }
 
+/* Freshness: after the latest message, where "latest" is. Manual only. */
+.freshness {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--wf-border);
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+.freshness[hidden] {
+  display: none;
+}
+
+.freshness p {
+  margin: 0;
+}
+
+.freshness p:first-child {
+  flex: 1 1 auto;
+}
+
+.freshnessError {
+  flex-basis: 100%;
+  order: 3;
+  color: var(--wf-danger);
+  font-size: 13px;
+}
+
+.refresh {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.refresh:hover:not(:disabled) {
+  background: var(--wf-warm-100);
+}
+
+.refresh:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 2px;
+}
+
+.refresh:disabled {
+  color: var(--wf-text-muted);
+  cursor: default;
+}
+
+.refresh svg {
+  width: 15px;
+  height: 15px;
+}
+
 .windowEdge {
   margin: 0 0 14px;
   color: var(--wf-text-muted);
@@ -671,7 +739,8 @@
   .searchStatus,
   .searchError,
   .searchResult,
-  .contextBar {
+  .contextBar,
+  .freshness {
     padding-left: 12px;
     padding-right: 12px;
   }

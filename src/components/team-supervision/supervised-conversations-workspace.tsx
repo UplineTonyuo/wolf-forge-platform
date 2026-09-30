@@ -26,7 +26,7 @@ const stackedQuery = "(max-width: 1023px)";
 
 type Detail =
   | { state: "loading" }
-  | { state: "ready"; page: SupervisedTranscriptPage }
+  | { state: "ready"; page: SupervisedTranscriptPage; checkedAt: string }
   | { state: "error"; code: ClientSafeError["code"] };
 
 type Jump =
@@ -110,7 +110,11 @@ export function SupervisedConversationsWorkspace({
 
     if (activeRef.current !== active) return;
     active.failed = !result.ok;
-    setDetail(result.ok ? { state: "ready", page: result.data } : { state: "error", code: result.error.code });
+    setDetail(
+      result.ok
+        ? { state: "ready", page: result.data, checkedAt: new Date().toISOString() }
+        : { state: "error", code: result.error.code },
+    );
   }
 
   function back() {
@@ -162,6 +166,16 @@ export function SupervisedConversationsWorkspace({
     const unavailable = result.ok || result.error.code === "NOT_FOUND";
     active.failed = !unavailable;
     setJump({ targetId, state: unavailable ? "unavailable" : "failed" });
+  }
+
+  // A deliberate refresh found the conversation unavailable or the view
+  // forbidden: drop the transcript, search and window rather than keep showing
+  // privileged content as current. Opening the row again is a new read.
+  function lostAccess(code: ClientSafeError["code"]) {
+    if (activeRef.current) activeRef.current.failed = true;
+    setSearchOpen(false);
+    leaveJump();
+    setDetail({ state: "error", code });
   }
 
   function returnToConversation() {
@@ -323,7 +337,9 @@ export function SupervisedConversationsWorkspace({
             <SupervisedTranscript
               key={selected.conversationId}
               initial={detail.page}
+              checkedAt={detail.checkedAt}
               hidden={jump !== null}
+              onLostAccess={lostAccess}
             />
           ) : detail.state === "loading" ? (
             <div className={styles.scroll}>
