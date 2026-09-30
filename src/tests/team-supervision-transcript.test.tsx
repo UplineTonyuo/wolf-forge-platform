@@ -1237,6 +1237,18 @@ describe("Supervised controlled refresh", () => {
       reconcileLatest([message(8), tie, message(10)], cursor, page([message(10)], true)).messages.map((m) => m.messageId),
     ).toEqual([msgId(8), msgId(10)]);
 
+    // Postgres keeps microseconds; rows inside one millisecond still order by
+    // time before id, or a boundary row is dropped or duplicated.
+    const at = (micros: string) => `2026-09-02T10:20:00.123${micros}+00:00`;
+    const earlier = message(20, { messageId: msgId(50), createdAt: at("100") });
+    const first = message(21, { messageId: msgId(40), createdAt: at("500") });
+    const later = message(22, { messageId: msgId(35), createdAt: at("900") });
+    expect(
+      reconcileLatest([message(8), earlier, first, later], cursor, page([first, later, message(30)], true)).messages.map(
+        (m) => m.messageId,
+      ),
+    ).toEqual([msgId(8), msgId(50), msgId(40), msgId(35), msgId(30)]);
+
     // Everything the conversation has: the fresh page is authoritative.
     expect(reconcileLatest(loaded, cursor, page([message(11), message(12)], false))).toEqual({
       messages: [message(11), message(12)],

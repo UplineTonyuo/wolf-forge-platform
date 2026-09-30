@@ -67,10 +67,16 @@ function groupMessages(messages: SupervisedMessage[]): Group[] {
   return groups;
 }
 
+/** Microseconds since the epoch: Postgres keeps them, Date.parse stops at ms. */
+function keysetTime(iso: string): number {
+  const micros = /\.\d{3}(\d{1,3})/.exec(iso)?.[1] ?? "";
+  return Date.parse(iso) * 1000 + Number(micros.padEnd(3, "0"));
+}
+
 /** Keyset order: (created_at, id), the same order the RPCs page by. */
 function isBefore(a: SupervisedMessage, b: SupervisedMessage): boolean {
-  const at = Date.parse(a.createdAt);
-  const bt = Date.parse(b.createdAt);
+  const at = keysetTime(a.createdAt);
+  const bt = keysetTime(b.createdAt);
   return at !== bt ? at < bt : a.messageId < b.messageId;
 }
 
