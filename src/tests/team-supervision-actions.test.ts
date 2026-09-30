@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { redirect } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TeamSupervisionRepository } from "../repositories/team-supervision-repository";
 import type { UserMutationClient } from "../repositories/types";
@@ -182,46 +183,174 @@ describe("team supervision actions: one service call, one RPC", () => {
   });
 });
 
-describe("team supervision actions: validation happens before any RPC", () => {
+type ActionName =
+  | "listSupervisedConversationsAction"
+  | "getSupervisedConversationAction"
+  | "listSupervisedMessagesBeforeAction"
+  | "getSupervisedMessageWindowAction"
+  | "searchSupervisedConversationAction";
+
+/** One valid input per action, so a failure can only come from the service/DB path. */
+const validInputs: Record<ActionName, unknown> = {
+  listSupervisedConversationsAction: {},
+  getSupervisedConversationAction: { conversationId },
+  listSupervisedMessagesBeforeAction: {
+    conversationId,
+    beforeCreatedAt: "2026-09-02T00:00:00+00:00",
+    beforeMessageId: messageId,
+  },
+  getSupervisedMessageWindowAction: { conversationId, targetMessageId: messageId },
+  searchSupervisedConversationAction: { conversationId, query: secretQuery },
+};
+const allActions = Object.keys(validInputs) as ActionName[];
+
+function run(action: ActionName, input: unknown = validInputs[action]) {
+  return (actions[action] as (value: unknown) => Promise<unknown>)(input);
+}
+
+const safe = {
+  validation: { code: "VALIDATION_ERROR", message: "The supplied data is invalid." },
+  databaseValidation: { code: "VALIDATION_ERROR", message: "The data violates a database constraint." },
+  notFound: { code: "NOT_FOUND", message: "Team conversation was not found." },
+  forbidden: { code: "PERMISSION_DENIED", message: "You do not have permission to perform this operation." },
+  rateLimited: { code: "RATE_LIMITED", message: "Too many requests. Please wait a moment and try again." },
+  databaseError: { code: "DATABASE_ERROR", message: "The database operation failed." },
+  unknownError: { code: "DATABASE_ERROR", message: "The operation failed." },
+};
+
+/** Anything a raw failure could carry that must never reach the browser. */
+const leakPattern = new RegExp(
+  [
+    "private\\.",
+    "app_",
+    "team\\.supervision",
+    "unavailable",
+    "permission required",
+    "SQLSTATE",
+    "stack",
+    conversationId,
+    requestCorrelation,
+    secretQuery,
+  ].join("|"),
+);
+
+describe("team supervision error contract: validation happens before any RPC", () => {
   it.each([
     ["list over limit", "listSupervisedConversationsAction", { limit: 101 }],
     ["detail bad uuid", "getSupervisedConversationAction", { conversationId: "not-a-uuid" }],
     ["detail non-object", "getSupervisedConversationAction", "11111111-1111-4111-8111-111111111111"],
     ["history half cursor", "listSupervisedMessagesBeforeAction", { conversationId, beforeMessageId: messageId }],
     ["window side over 100", "getSupervisedMessageWindowAction", { conversationId, targetMessageId: messageId, beforeLimit: 101 }],
-    ["search too long", "searchSupervisedConversationAction", { conversationId, query: "x".repeat(201) }],
+    ["search too long", "searchSupervisedConversationAction", { conversationId, query: `${secretQuery}${"x".repeat(201)}` }],
     ["search without conversation", "searchSupervisedConversationAction", { query: "needle" }],
   ] as const)("%s", async (_label, action, input) => {
-    const { calls } = wire({ data: null, error: null });
-    const result = await (actions[action] as (value: unknown) => Promise<{ ok: boolean; error?: string }>)(input);
-    expect(result).toEqual({ ok: false, error: "The supplied data is invalid." });
+    const { calls, spies } = wire({ data: null, error: null });
+    const result = await run(action, input);
+    expect(result).toEqual({ ok: false, error: safe.validation });
+    expect(JSON.stringify(result)).not.toContain(secretQuery);
     expect(calls).toEqual([]);
+    // The service is entered, but its schema refuses before the repository runs.
+    for (const spy of Object.values(spies)) {
+      for (const outcome of spy.mock.results) expect(outcome.type).toBe("return");
+    }
   });
 });
 
-describe("team supervision actions: safe error propagation", () => {
-  it("session failure returns the generic failure", async () => {
-    getInternalContext.mockRejectedValue(new Error("Authenticated user verification failed."));
-    const result = await actions.listSupervisedConversationsAction();
-    expect(result).toEqual({ ok: false, error: "The operation failed." });
+describe("team supervision error contract: one mapper for all five actions", () => {
+  const cases = [
+    ["P0002 safe boundary", { code: "P0002", message: "team conversation unavailable" }, safe.notFound],
+    ["42501 missing capability", { code: "42501", message: "team supervision permission required" }, safe.forbidden],
+    ["22023 invalid cursor", { code: "22023", message: "invalid search cursor" }, safe.databaseValidation],
+    ["unexpected database", { code: "XX000", message: `relation private.x failed at app_get_team_supervised_conversation ${conversationId}` }, safe.databaseError],
+  ] as const;
+
+  for (const action of allActions) {
+    it.each(cases)(`${action}: %s`, async (_label, dbError, expected) => {
+      wire({ data: null, error: dbError });
+      const result = await run(action);
+      expect(result).toEqual({ ok: false, error: expected });
+      expect(JSON.stringify(result)).not.toMatch(leakPattern);
+    });
+  }
+
+  it.each(allActions)("%s: a non-database throw is the generic failure", async (action) => {
+    getInternalContext.mockRejectedValue(new Error(`boom ${secretQuery} stack at private.fn`));
+    const result = await run(action);
+    expect(result).toEqual({ ok: false, error: safe.unknownError });
+  });
+});
+
+describe("team supervision error contract: resource ambiguity", () => {
+  it.each(allActions.filter((action) => action !== "listSupervisedConversationsAction"))(
+    "%s: every P0002 variant is the same result",
+    async (action) => {
+      // The database raises one P0002 for nonexistent, group, client/mixed and
+      // malformed conversations. Even if its text, detail or hint differed,
+      // the browser must see one identical result.
+      const variants = [
+        { code: "P0002", message: "team conversation unavailable" },
+        { code: "P0002", message: "group conversation", details: "kind=group" },
+        { code: "P0002", message: "client member present", hint: "mixed" },
+        { code: "P0002", message: "malformed direct pair", details: "member_count=3" },
+      ];
+      const results = [];
+      for (const error of variants) {
+        wire({ data: null, error });
+        results.push(JSON.stringify(await run(action)));
+      }
+      expect(new Set(results)).toEqual(new Set([JSON.stringify({ ok: false, error: safe.notFound })]));
+    },
+  );
+
+  it("a missing target and a target in another conversation are the same success", async () => {
+    // Both are the database's `{ found: false }` with no audit.
+    const outputs = [];
+    for (const targetMessageId of [messageId, "33333333-3333-4333-8333-333333333333"]) {
+      wire({ data: { found: false, messages: [] }, error: null });
+      outputs.push(await run("getSupervisedMessageWindowAction", { conversationId, targetMessageId }));
+    }
+    expect(outputs[0]).toEqual({ ok: true, data: { found: false } });
+    expect(outputs[1]).toEqual(outputs[0]);
   });
 
-  it.each([
-    ["safe not-found", { code: "P0002", message: "team conversation unavailable" }, "Team conversation was not found."],
-    ["authorization", { code: "42501", message: "team supervision permission required" }, "You do not have permission to perform this operation."],
-    ["generic database", { code: "XX000", message: "relation private.x failed at app_get_team_supervised_conversation" }, "The database operation failed."],
-  ])("%s maps to one client-safe message with no database detail", async (_label, dbError, message) => {
-    wire({ data: null, error: dbError });
-    const result = await actions.getSupervisedConversationAction({ conversationId });
-    expect(result).toEqual({ ok: false, error: message });
-    expect(JSON.stringify(result)).not.toMatch(/private\.|app_get_team|unavailable|permission required/);
+  it("a permission refusal names no conversation", async () => {
+    wire({ data: null, error: { code: "42501", message: `denied for ${conversationId}` } });
+    const result = await run("getSupervisedConversationAction");
+    expect(result).toEqual({ ok: false, error: safe.forbidden });
+    expect(JSON.stringify(result)).not.toContain(conversationId);
   });
+});
 
-  it("a rate-limited search does not echo the query", async () => {
-    wire({ data: null, error: { code: "WF429", message: "rate limited" } });
-    const result = await actions.searchSupervisedConversationAction({ conversationId, query: secretQuery });
-    expect(result.ok).toBe(false);
-    expect(JSON.stringify(result)).not.toContain(secretQuery);
+describe("team supervision error contract: search rate limit", () => {
+  it("WF429 is RATE_LIMITED, not not-found, and leaks no bucket, key or query", async () => {
+    const logs = ["log", "info", "warn", "error", "debug"].map((level) =>
+      vi.spyOn(console, level as "log").mockImplementation(() => undefined),
+    );
+    wire({
+      data: null,
+      error: {
+        code: "WF429",
+        message: "rate limit exceeded",
+        details: `team.supervision.search.actor ${messageId} 61/60`,
+      },
+    });
+    const result = await run("searchSupervisedConversationAction");
+    expect(result).toEqual({ ok: false, error: safe.rateLimited });
+    expect(JSON.stringify(result)).not.toMatch(new RegExp(`team\\.supervision|${messageId}|61|${secretQuery}`));
+    for (const spy of logs) expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("team supervision error contract: expired session", () => {
+  it.each(allActions)("%s lets getInternalContext's /login redirect through", async (action) => {
+    let redirectError: unknown;
+    try {
+      redirect("/login");
+    } catch (error) {
+      redirectError = error;
+    }
+    getInternalContext.mockRejectedValue(redirectError);
+    await expect(run(action)).rejects.toBe(redirectError);
   });
 });
 
@@ -243,7 +372,7 @@ describe("team supervision entry-point boundary (source)", () => {
 
   it("uses no privileged client, role check, cache, revalidation, logging or participant call", () => {
     expect(actionSource).not.toMatch(
-      /trusted-server-client|auth-admin|createTrusted|SECRET_KEY|roleName|role ===|unstable_cache|revalidatePath|revalidateTag|console\.|services\.team\.|\.rpc\(|\.from\(/,
+      /trusted-server-client|auth-admin|createTrusted|SECRET_KEY|roleName|role ===|context\.user|context\.actor|\.permissions|unstable_cache|revalidatePath|revalidateTag|console\.|services\.team\.|\.rpc\(|\.from\(/,
     );
   });
 

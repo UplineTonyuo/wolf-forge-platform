@@ -1,6 +1,7 @@
 "use server";
 
-import { toClientSafeError } from "../../lib/errors/application-error";
+import { unstable_rethrow } from "next/navigation";
+import { type ClientSafeError, toClientSafeError } from "../../lib/errors/application-error";
 import { currentCorrelationId } from "../../lib/security/request-correlation";
 import { getInternalContext } from "../../lib/supabase/next-server";
 import type {
@@ -24,12 +25,31 @@ import type {
  *
  * Nothing is cached, revalidated or logged. The search query goes to the
  * service and nowhere else.
+ *
+ * Failures are the canonical `ClientSafeError` ({ code, message }), so a
+ * caller can tell apart only what it needs:
+ *   VALIDATION_ERROR  - input rejected by the zod schema; no RPC ran
+ *   PERMISSION_DENIED - no team_messages.supervise (a feature refusal, 42501;
+ *                       it says nothing about any conversation)
+ *   NOT_FOUND         - the database's single P0002 for a nonexistent, group,
+ *                       client/mixed or malformed conversation; never split
+ *   RATE_LIMITED      - supervisory search quota (WF429); bucket never named
+ *   DATABASE_ERROR    - anything else, generic
+ * A window target that is missing or belongs to another conversation is not
+ * an error: it is the success `{ found: false }`, identical for both.
+ *
+ * An expired or missing session is not an error result either:
+ * `getInternalContext()` already redirects to /login, and `unstable_rethrow`
+ * lets that redirect through instead of flattening it into DATABASE_ERROR.
  */
 
-export type TeamSupervisionActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+export type TeamSupervisionActionResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: ClientSafeError };
 
 function failed<T>(error: unknown): TeamSupervisionActionResult<T> {
-  return { ok: false, error: toClientSafeError(error).message };
+  unstable_rethrow(error);
+  return { ok: false, error: toClientSafeError(error) };
 }
 
 /** Replaces any caller-supplied correlation id with the trusted request one. */
