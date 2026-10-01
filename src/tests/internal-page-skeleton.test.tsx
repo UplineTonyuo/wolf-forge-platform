@@ -57,10 +57,12 @@ describe("Internal route loading boundary", () => {
     cleanup();
 
     const conversations = render(<RouteSkeleton pathname="/team/all-conversations" />).container;
-    const split = conversations.querySelector(".route-skeleton-split-wide");
-    expect(split?.children).toHaveLength(2);
-    expect(split?.querySelector(".route-skeleton-rows")).toBeTruthy();
-    expect(split?.querySelector(".route-skeleton-transcript")).toBeTruthy();
+    // The real workspace markup: employees, conversations, and an empty transcript pane.
+    const panes = conversations.querySelector("[data-view='employees']");
+    expect(panes?.children).toHaveLength(3);
+    expect(panes?.children[0]?.querySelectorAll(".internal-page-skeleton-bar").length).toBeGreaterThan(7);
+    expect(panes?.children[2]?.children).toHaveLength(0);
+    expect(conversations.textContent).toBe("Loading page");
     expect(conversations.querySelector(".route-skeleton-metrics, .internal-page-skeleton-cards")).toBeNull();
     cleanup();
 

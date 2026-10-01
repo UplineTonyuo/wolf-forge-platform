@@ -38,6 +38,7 @@ afterEach(cleanup);
 const id = (n: number) => `11111111-1111-4111-8111-${String(n).padStart(12, "0")}`;
 const msgId = (n: number) => `22222222-2222-4222-8222-${String(n).padStart(12, "0")}`;
 
+// Every fixture conversation is Anthony 1's, so they all list under the first (default) employee.
 function conversation(n: number, overrides: Partial<SupervisedConversationSummary> = {}): SupervisedConversationSummary {
   return {
     conversationId: id(n),
@@ -45,7 +46,7 @@ function conversation(n: number, overrides: Partial<SupervisedConversationSummar
     createdAt: "2026-09-01T00:00:00+00:00",
     lastMessageAt: "2026-09-02T00:00:00+00:00",
     participants: [
-      { profileId: `a-${n}`, displayName: `Anthony ${n}`, avatarUrl: null, archived: false },
+      { profileId: "a-1", displayName: "Anthony 1", avatarUrl: null, archived: false },
       { profileId: `b-${n}`, displayName: `John ${n}`, avatarUrl: null, archived: false },
     ],
     ...overrides,
@@ -233,7 +234,7 @@ describe("Supervised transcript: explicit open only", () => {
     fireEvent.click(row(2));
     expect(screen.queryByText("From A")).toBeNull();
     expect(screen.getByRole("status", { name: "Loading conversation" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Anthony 2");
+    expect(document.getElementById("supervised-transcript-heading")).toHaveTextContent("John 2");
     await act(async () => pending.resolve(transcript(2, [message(2, { body: "From B" })])));
     expect(screen.getByText("From B")).toBeInTheDocument();
   });
@@ -362,8 +363,11 @@ describe("Supervised transcript: rendering", () => {
 
   it("has no composer and no message controls", async () => {
     const panel = await openWith([message(1, { reactions: [{ reactionCode: "like", count: 2 }] })]);
-    expect(screen.queryByRole("textbox")).toBeNull();
-    expect(document.querySelector("textarea, input, [contenteditable]")).toBeNull();
+    // The only field on the page is the employee name filter, outside the transcript.
+    expect(within(panel).queryByRole("textbox")).toBeNull();
+    expect(panel.querySelector("textarea, input, [contenteditable]")).toBeNull();
+    expect(document.querySelectorAll("textarea, input, [contenteditable]")).toHaveLength(1);
+    expect(screen.getByRole("searchbox", { name: "Search employees" })).toBeInTheDocument();
     const controls = within(panel)
       .queryAllByRole("button")
       .map((button) => button.getAttribute("aria-label") ?? button.textContent);
@@ -983,7 +987,7 @@ describe("Supervised search result jump", () => {
     await act(async () => fireEvent.click(row(1)));
     fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
     searchAction.mockResolvedValue(hits(...ns));
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search this conversation" }), { target: { value: "hit" } });
     await act(async () => fireEvent.submit(screen.getByRole("search")));
   }
 
@@ -1164,7 +1168,7 @@ describe("Supervised search result jump", () => {
     // Back while a window is pending: nothing arrives afterwards either.
     fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
     searchAction.mockResolvedValue(hits(1));
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search this conversation" }), { target: { value: "hit" } });
     await act(async () => fireEvent.submit(screen.getByRole("search")));
     const lateBack = deferred<WindowResult>();
     windowAction.mockReturnValueOnce(lateBack.promise);
@@ -1467,7 +1471,7 @@ describe("Supervised controlled refresh", () => {
         nextCursor: null,
       },
     });
-    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search this conversation" }), { target: { value: "hit" } });
     await act(async () => fireEvent.submit(screen.getByRole("search")));
 
     const pending = deferred<DetailResult>();

@@ -167,7 +167,6 @@ tbody tr:hover { background: #fbfbfc; }
 .route-skeleton-list-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-top: 1px solid #edf0f4; }
 .route-skeleton-list-row:first-child { border-top: 0; }
 .route-skeleton-list-row > div { min-width: 0; flex: 1; display: grid; gap: 7px; }
-.route-skeleton-transcript { min-height: 480px; gap: 18px; }
 .route-skeleton-nav { display: grid; gap: 6px; }
 .route-skeleton-fields { display: grid; gap: 18px; }
 .route-skeleton-fields > div { display: grid; gap: 8px; }
@@ -193,10 +192,6 @@ tbody tr:hover { background: #fbfbfc; }
 }
 @media (max-width: 1180px) {
   .route-skeleton-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 1023px) {
-  .route-skeleton-split-wide { grid-template-columns: minmax(0, 1fr); }
-  .route-skeleton-split-wide > :last-child { display: none; }
 }
 @media (max-width: 900px) {
   .route-skeleton-split { grid-template-columns: minmax(0, 1fr); }
