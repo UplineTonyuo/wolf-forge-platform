@@ -40,6 +40,15 @@ type Jump =
     }
   | { targetId: string; state: "unavailable" | "failed" };
 
+const accessDeniedPage: TeamSupervisionActionResult<SupervisedConversationPage> = {
+  ok: false,
+  error: { code: "PERMISSION_DENIED", message: "The operation failed." },
+};
+
+function isLostAccessCode(code: ClientSafeError["code"]): boolean {
+  return code === "PERMISSION_DENIED" || code === "NOT_FOUND";
+}
+
 /**
  * All Conversations: the list, and at most one supervised transcript.
  *
@@ -64,6 +73,7 @@ export function SupervisedConversationsWorkspace({
 }: {
   initial: TeamSupervisionActionResult<SupervisedConversationPage>;
 }) {
+  const [conversationPage, setConversationPage] = useState(initial);
   const [selected, setSelected] = useState<SupervisedConversationSummary | null>(null);
   const [detail, setDetail] = useState<Detail>({ state: "loading" });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -76,6 +86,23 @@ export function SupervisedConversationsWorkspace({
   const panelRef = useRef<HTMLElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
 
+  function lostAccess() {
+    activeRef.current = null;
+    jumpRef.current = null;
+    restoreRef.current = null;
+    setSelected(null);
+    setDetail({ state: "error", code: "PERMISSION_DENIED" });
+    setSearchOpen(false);
+    setJump(null);
+    setConversationPage(accessDeniedPage);
+  }
+
+  function handleReadFailure(code: ClientSafeError["code"]): boolean {
+    if (!isLostAccessCode(code)) return false;
+    lostAccess();
+    return true;
+  }
+
   // Leaving a context window puts the retained transcript back where it was.
   useLayoutEffect(() => {
     const restore = restoreRef.current;
@@ -86,9 +113,10 @@ export function SupervisedConversationsWorkspace({
     window.scrollTo?.(0, restore.page);
   }, [jump]);
 
-  // Nothing to split: the list alone renders the empty, forbidden or failed state.
-  if (!initial.ok || initial.data.conversations.length === 0) {
-    return <SupervisedConversationList initial={initial} />;
+  // Replacing the list page on access loss unmounts its local metadata cache.
+  // The original server-provided page is never rendered again in this workspace.
+  if (!conversationPage.ok || conversationPage.data.conversations.length === 0) {
+    return <SupervisedConversationList initial={conversationPage} />;
   }
 
   async function open(conversation: SupervisedConversationSummary) {
@@ -109,6 +137,7 @@ export function SupervisedConversationsWorkspace({
     const result = await getSupervisedConversationAction({ conversationId: id });
 
     if (activeRef.current !== active) return;
+    if (!result.ok && handleReadFailure(result.error.code)) return;
     active.failed = !result.ok;
     setDetail(
       result.ok
@@ -152,6 +181,7 @@ export function SupervisedConversationsWorkspace({
     });
 
     if (jumpRef.current !== active) return;
+    if (!result.ok && handleReadFailure(result.error.code)) return;
     if (result.ok && result.data.found) {
       setJump({
         targetId,
@@ -163,19 +193,9 @@ export function SupervisedConversationsWorkspace({
       return;
     }
     // Missing, foreign and ineligible targets all read as one unavailable state.
-    const unavailable = result.ok || result.error.code === "NOT_FOUND";
+    const unavailable = result.ok;
     active.failed = !unavailable;
     setJump({ targetId, state: unavailable ? "unavailable" : "failed" });
-  }
-
-  // A deliberate refresh found the conversation unavailable or the view
-  // forbidden: drop the transcript, search and window rather than keep showing
-  // privileged content as current. Opening the row again is a new read.
-  function lostAccess(code: ClientSafeError["code"]) {
-    if (activeRef.current) activeRef.current.failed = true;
-    setSearchOpen(false);
-    leaveJump();
-    setDetail({ state: "error", code });
   }
 
   function returnToConversation() {
@@ -214,9 +234,10 @@ export function SupervisedConversationsWorkspace({
     <div className={styles.workspace} data-view={selected ? "transcript" : "list"} ref={rootRef}>
       <div className={styles.listPane}>
         <SupervisedConversationList
-          initial={initial}
+          initial={conversationPage}
           selectedId={selected?.conversationId ?? null}
           onSelect={open}
+          onReadFailure={handleReadFailure}
         />
       </div>
 
@@ -288,6 +309,7 @@ export function SupervisedConversationsWorkspace({
               activeResultId={jump?.targetId ?? null}
               onSelectResult={jumpTo}
               onClose={closeSearch}
+              onReadFailure={handleReadFailure}
             />
           ) : null}
 
@@ -339,7 +361,7 @@ export function SupervisedConversationsWorkspace({
               initial={detail.page}
               checkedAt={detail.checkedAt}
               hidden={jump !== null}
-              onLostAccess={lostAccess}
+              onReadFailure={handleReadFailure}
             />
           ) : detail.state === "loading" ? (
             <div className={styles.scroll}>

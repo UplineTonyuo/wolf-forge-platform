@@ -129,6 +129,33 @@ tbody tr:hover { background: #fbfbfc; }
 .skeleton-heading { height: 36px; background-color: var(--wf-warm-100); }
 @keyframes skeleton { from { opacity: .55; } to { opacity: 1; } }
 
+/*
+ * Generic internal route skeleton ((internal)/loading.tsx). Geometry comes
+ * from the real .page-frame/.page-header classes (D-181); only the bars are
+ * skeleton-specific, on the shared restrained pulse (D-182).
+ */
+.internal-page-skeleton { min-height: calc(100dvh - 96px); }
+.internal-page-skeleton .page-header > div { flex: 1; min-width: 0; }
+.internal-page-skeleton-bar { display: block; border-radius: 5px; background: #e9ecf2; animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite; }
+.internal-page-skeleton-title { width: min(220px, 60%); height: 24px; margin-top: 2px; background: #d8dce7; }
+.internal-page-skeleton-subtitle { width: min(340px, 85%); height: 12px; margin-top: 12px; }
+.internal-page-skeleton-cards { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
+.internal-page-skeleton-card { min-width: 0; display: grid; gap: 12px; padding: 18px; border: 1px solid #e1e4ea; border-radius: 8px; background: #fff; }
+.internal-page-skeleton-card .internal-page-skeleton-bar:first-child { width: 45%; height: 10px; }
+.internal-page-skeleton-card .internal-page-skeleton-bar:last-child { width: 65%; height: 22px; }
+.internal-page-skeleton-list { margin-top: 24px; overflow: hidden; border: 1px solid #e1e4ea; border-radius: 9px; background: #fff; }
+.internal-page-skeleton-row { min-height: 56px; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 0 18px; border-bottom: 1px solid #edf0f4; }
+.internal-page-skeleton-row:first-child { min-height: 42px; background: #f8f9fb; }
+.internal-page-skeleton-row:last-child { border-bottom: 0; }
+.internal-page-skeleton-row .internal-page-skeleton-bar { height: 10px; }
+.internal-page-skeleton-row .internal-page-skeleton-bar:first-child { width: 80%; }
+.internal-page-skeleton-row .internal-page-skeleton-bar:not(:first-child) { width: 60%; }
+@media (max-width: 600px) {
+  .internal-page-skeleton-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 0 14px; }
+  .internal-page-skeleton-row .internal-page-skeleton-bar:nth-child(3) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .internal-page-skeleton-bar { animation: none; } }
+
 .attention-stack { margin-top: 24px; }
 .attention-title { margin-bottom: 16px; display: flex; align-items: center; gap: 10px; color: var(--wf-text-muted); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .attention-title span { width: 2px; height: 18px; background: var(--wf-gold); }
@@ -8759,12 +8786,9 @@ td {
 /* WF ROUTE VACUUM TRANSITIONS START */
 
 /*
- * Wolf Forge route transition:
- *
- * Fast slanted 3D flip.
- *
- * Sidebar and command bar remain stationary.
- * Only the route content moves.
+ * Route content stage. A sidebar click swaps it to InternalPageSkeleton until
+ * the destination commits (internal-shell.tsx); it is never hidden. The
+ * transform hint stays: fixed descendants anchor here (D-197).
  */
 
 .workspace-route-stage {
@@ -8786,129 +8810,6 @@ td {
 
 
 /* ----------------------------------------------------------
-   OUTGOING PAGE
----------------------------------------------------------- */
-
-.workspace-route-stage.is-vacuuming {
-  pointer-events: none;
-
-  animation:
-    wf-route-slant-flip-out
-    190ms
-    cubic-bezier(
-      0.55,
-      0.05,
-      0.4,
-      1
-    )
-    forwards;
-}
-
-
-@keyframes wf-route-slant-flip-out {
-  0% {
-    opacity: 1;
-
-    transform:
-      perspective(1200px)
-      translate3d(
-        0,
-        0,
-        0
-      )
-      rotateY(0deg)
-      rotateZ(0deg)
-      scale(1);
-  }
-
-  45% {
-    opacity: 0.92;
-
-    transform:
-      perspective(1200px)
-      translate3d(
-        -10px,
-        -2px,
-        0
-      )
-      rotateY(-9deg)
-      rotateZ(-0.8deg)
-      scale(0.995);
-  }
-
-  100% {
-    opacity: 0;
-
-    transform:
-      perspective(1200px)
-      translate3d(
-        -42px,
-        -6px,
-        0
-      )
-      rotateY(-30deg)
-      rotateZ(-2.2deg)
-      scale(0.975);
-  }
-}
-
-
-/* ----------------------------------------------------------
-   INCOMING PAGE
----------------------------------------------------------- */
-
-.workspace-route-stage.is-entering {
-  opacity: 0;
-
-  transform:
-    perspective(1200px)
-    translate3d(
-      34px,
-      5px,
-      0
-    )
-    rotateY(22deg)
-    rotateZ(1.7deg)
-    scale(0.982);
-
-  transition: none;
-}
-
-
-.workspace-route-stage:not(
-  .is-vacuuming
-):not(
-  .is-entering
-) {
-  opacity: 1;
-
-  transform:
-    perspective(1200px)
-    translate3d(
-      0,
-      0,
-      0
-    )
-    rotateY(0deg)
-    rotateZ(0deg)
-    scale(1);
-
-  transition:
-    transform
-      240ms
-      cubic-bezier(
-        0.16,
-        1,
-        0.3,
-        1
-      ),
-    opacity
-      175ms
-      ease-out;
-}
-
-
-/* ----------------------------------------------------------
    DESTINATION SIDEBAR ITEM
 ---------------------------------------------------------- */
 
@@ -8925,35 +8826,6 @@ td {
     );
 }
 
-
-/* ----------------------------------------------------------
-   REDUCED MOTION
----------------------------------------------------------- */
-
-@media (
-  prefers-reduced-motion:
-    reduce
-) {
-  .workspace-route-stage,
-  .workspace-route-stage.is-vacuuming,
-  .workspace-route-stage.is-entering,
-  .workspace-route-stage:not(
-    .is-vacuuming
-  ):not(
-    .is-entering
-  ) {
-    opacity: 1 !important;
-
-    transform:
-      none !important;
-
-    animation:
-      none !important;
-
-    transition:
-      none !important;
-  }
-}
 
 /* WF ROUTE VACUUM TRANSITIONS END */
 

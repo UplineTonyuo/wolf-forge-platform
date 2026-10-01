@@ -138,15 +138,15 @@ export function SupervisedTranscript({
   initial,
   checkedAt,
   hidden = false,
-  onLostAccess,
+  onReadFailure,
 }: {
   initial: SupervisedTranscriptPage;
   /** When the detail read that produced `initial` completed. */
   checkedAt: string;
   /** Kept mounted while a search context window is shown, so nothing is refetched. */
   hidden?: boolean;
-  /** A refresh found the conversation unavailable or the view forbidden. */
-  onLostAccess: (code: ClientSafeError["code"]) => void;
+  /** True means the workspace cleared all retained privileged state. */
+  onReadFailure: (code: ClientSafeError["code"]) => boolean;
 }) {
   const [messages, setMessages] = useState(initial.messages);
   const [cursor, setCursor] = useState(initial.hasMore ? initial.nextCursor : null);
@@ -214,8 +214,10 @@ export function SupervisedTranscript({
     });
 
     busyRef.current = false;
+    if (!aliveRef.current) return;
     setBusy(null);
     if (!result.ok) {
+      if (onReadFailure(result.error.code)) return;
       setOlderFailed(true);
       return;
     }
@@ -237,12 +239,8 @@ export function SupervisedTranscript({
     if (!aliveRef.current) return;
     setBusy(null);
     if (!result.ok) {
-      // Access or eligibility changed: stop presenting privileged content as current.
-      if (result.error.code === "NOT_FOUND" || result.error.code === "PERMISSION_DENIED") {
-        onLostAccess(result.error.code);
-      } else {
-        setRefreshFailed(true);
-      }
+      if (onReadFailure(result.error.code)) return;
+      setRefreshFailed(true);
       return;
     }
     const next = reconcileLatest(messages, cursor, result.data);

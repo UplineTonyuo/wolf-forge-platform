@@ -7,6 +7,7 @@ import type {
   SupervisedConversationSummary,
   SupervisedParticipant,
 } from "../../domain/team-supervision/projections";
+import type { ClientSafeError } from "../../lib/errors/application-error";
 import { formatTeamRelativeTime, teamInitials } from "../../domain/team/projections";
 import { TeamAvatar } from "../team/team-avatar";
 import { DataError, EmptyState } from "../ui/list-states";
@@ -25,10 +26,12 @@ export function SupervisedConversationList({
   initial,
   selectedId = null,
   onSelect,
+  onReadFailure,
 }: {
   initial: TeamSupervisionActionResult<SupervisedConversationPage>;
   selectedId?: string | null;
   onSelect?: (conversation: SupervisedConversationSummary) => void;
+  onReadFailure?: (code: ClientSafeError["code"]) => boolean;
 }) {
   const [conversations, setConversations] = useState(initial.ok ? initial.data.conversations : []);
   const [cursor, setCursor] = useState(initial.ok ? initial.data.nextCursor : null);
@@ -65,6 +68,7 @@ export function SupervisedConversationList({
     loadingRef.current = false;
     setLoadingMore(false);
     if (!result.ok) {
+      if (onReadFailure?.(result.error.code)) return;
       setLoadMoreFailed(true);
       return;
     }
