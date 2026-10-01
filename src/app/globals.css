@@ -895,6 +895,21 @@ td {
 
     padding: 24px 40px 48px;
   }
+
+  /*
+    The command bar follows the centered Settings column so the search field
+    and the header frame end on the same edge. Same rule as the frame above:
+    the offset is the frame's own gutter, never smaller than the default 24px.
+  */
+  .workspace:has(.settings-page-layout) .workspace-command-bar {
+    right: max(24px, calc((100% - 1060px) / 2 + 40px));
+  }
+
+  /* Quieter support copy under the page title on Settings surfaces. */
+  .settings-page-layout .page-header p {
+    max-width: 62ch;
+    font-size: 13.5px;
+  }
 }
 
 /* WF SPP PAGE POSITION END */
