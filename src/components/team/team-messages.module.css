@@ -495,7 +495,9 @@
 .ticketSearch input { min-width: 0; width: 100%; min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 13px; }
 .ticketSearch input::-webkit-search-cancel-button { appearance: none; }
 .ticketSearch button { display: grid; place-items: center; flex: 0 0 32px; min-height: 44px; border: 0; background: transparent; color: var(--wf-navy); cursor: pointer; }
-.ticketSearch:focus-within { outline: 2px solid var(--wf-navy); outline-offset: 2px; }
+/* The field owns the focus treatment (same as Subscriptions search); the input's global outline would stack a second rectangle. The clear button keeps its own. */
+.ticketSearch:has(input:focus) { border-color: #52629a; box-shadow: 0 0 0 3px rgba(0, 13, 81, .08); }
+.ticketSearch input:focus-visible { outline: 0; }
 
 .ticketRow {
   width: 100%;

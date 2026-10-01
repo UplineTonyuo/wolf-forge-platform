@@ -8,6 +8,11 @@
  * that the two take turns and the page is the only scroll region.
  */
 
+/* The shared .page-header divider is not wanted on this page; its spacing stays. */
+.frame :global(.page-header) {
+  border-bottom: 0;
+}
+
 .workspace {
   min-width: 0;
 }
