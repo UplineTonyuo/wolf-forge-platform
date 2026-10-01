@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Loader2, Search, TicketIcon, X } from "lucide-react";
+import { AlertCircle, Search, TicketIcon, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatTeamRelativeTime } from "../../domain/team/projections";
@@ -53,8 +53,15 @@ export function TeamTicketsPane({
         {query ? <button type="button" aria-label="Clear ticket search" onClick={() => setQuery("")}><X aria-hidden="true" size={16} /></button> : null}
       </div>
       {loading ? (
-        <div className={styles.paneHeaderActions} style={{ padding: "8px 12px" }}>
-          <Loader2 aria-label="Refreshing" className={styles.spin} />
+        /* First load: rows shaped like .ticketRow (subject, client, meta) instead of a spinner. */
+        <div role="status" aria-label="Loading tickets">
+          {Array.from({ length: 6 }, (_, row) => (
+            <div className={`${styles.ticketRow} ${styles.ticketRowSkeleton}`} aria-hidden="true" key={row}>
+              <span className={styles.ticketSkeletonTitle} style={{ width: "78%" }} />
+              <span className={styles.ticketSkeletonRef} style={{ width: "46%" }} />
+              <span className={styles.ticketSkeletonRef} style={{ width: "62%" }} />
+            </div>
+          ))}
         </div>
       ) : null}
 

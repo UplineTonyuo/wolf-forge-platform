@@ -62,6 +62,12 @@ describe("The drawer wires that rule into every Ticket render site", () => {
     expect(drawer).toContain("styles.ticketSkeletonRef");
   });
 
+  it("holds the ticket pane's shape, not the Select prompt, while the list is on its first load", () => {
+    const branch = drawer.slice(drawer.indexOf(") : !ticketInboxList.loaded && ticketInboxList.tickets.length === 0 ? ("));
+    expect(branch.length).toBeLessThan(drawer.length);
+    expect(branch.indexOf("styles.skeletonList")).toBeLessThan(branch.indexOf("Select a Ticket"));
+  });
+
   it("keeps the stale-response guard", () => {
     expect(drawer).toContain("if (activeTicketIdRef.current !== ticketId) return;");
   });
