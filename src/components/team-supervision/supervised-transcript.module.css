@@ -1,11 +1,16 @@
 /*
  * Supervised transcript and the All Conversations workspace.
  *
- * One neutral column: no left/right sides, no bubbles, no composer. Desktop
- * (>= 1024px) splits list and transcript, each scrolling on its own; the page
- * frame becomes a viewport-high column and the workspace takes whatever the
- * page header leaves, so a wrapping title never pushes it off screen. Below
- * that the two take turns and the page is the only scroll region.
+ * One bordered workspace, three panes divided by hairlines: employees, the
+ * selected employee's conversations, and the transcript. The transcript is one
+ * neutral column: no left/right sides, no bubbles, no composer.
+ *
+ * >= 1200px: all three side by side, each scrolling on its own; the page frame
+ *   becomes a viewport-high column and the workspace takes what the header leaves.
+ * 1024-1199px: employees beside conversations; an open transcript replaces both.
+ * < 1024px (the shell sidebar still takes ~250px at 768): one pane at a time,
+ *   employees -> conversations -> transcript.
+ * Below 1200px the page is the only scroll region.
  */
 
 /* The shared .page-header divider is not wanted on this page; its spacing stays. */
@@ -15,19 +20,172 @@
 
 .workspace {
   min-width: 0;
+  margin-top: 16px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: var(--wf-white);
+  /* Rounds the panes' corners without becoming a scroll container (sticky headers still work). */
+  overflow: clip;
 }
 
-.listPane {
+.employeePane,
+.conversationPane {
   min-width: 0;
+}
+
+/* The navigation tier sits on the warm canvas; the transcript stays white as the destination. */
+.employeePane {
+  background: var(--wf-warm-50);
+}
+
+.paneHeader {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+/* The employee title row matches the other pane headers so their dividers line up. */
+.employeeTitle {
+  min-height: 63px;
+  align-content: center;
+}
+
+.filterRow {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.paneTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--wf-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.paneCount {
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.filter {
+  position: relative;
+  display: block;
+}
+
+.filter svg {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  width: 15px;
+  height: 15px;
+  color: var(--wf-text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.filter input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px 0 32px;
+  border: 1px solid var(--wf-border);
+  border-radius: 8px;
+  background: var(--wf-white);
+  color: var(--wf-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.filter input:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 1px;
+}
+
+.paneEmpty {
+  margin: 0;
+  padding: 16px;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+}
+
+.more {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--wf-border);
+  color: var(--wf-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.more p {
+  margin: 0;
+}
+
+.more button {
+  min-height: 44px;
+}
+
+.more .moreError {
+  color: var(--wf-danger);
+  font-size: 13px;
+}
+
+.employeeHeader {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 63px;
+}
+
+/* Stacked, Back to employees sits above the name like the transcript's Back. */
+.employeeHeader .back {
+  grid-area: auto;
+  grid-row: 1;
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.employeeIdentity {
+  min-width: 0;
+}
+
+.employeeName {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--wf-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.employeeName:focus {
+  outline: none;
+}
+
+.paneMeta {
+  margin: 2px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+
+/* A new employee's rows settle in place; nothing slides. */
+.paneBody {
+  min-width: 0;
+  animation: paneIn 160ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .panel {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  margin-top: 16px;
-  border: 1px solid var(--wf-border);
-  border-radius: 8px;
   background: var(--wf-white);
   /* Opening search on a phone scrolls here; keep it clear of the shell bar. */
   scroll-margin-top: var(--wf-mobile-header-h, 0px);
@@ -39,13 +197,13 @@
 
 .header {
   min-width: 0;
+  min-height: 63px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 10px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--wf-border);
-  border-radius: 8px 8px 0 0;
   background: var(--wf-white);
 }
 
@@ -151,6 +309,7 @@
   color: var(--wf-text-muted);
   font-size: 12px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .readOnly svg {
@@ -467,10 +626,68 @@
   overflow-anchor: none;
 }
 
+/* Each change of transcript content (skeleton, messages, error) fades in once. */
+.panel > .scroll {
+  animation: paneIn 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .skeleton {
+  padding: 4px 0;
+}
+
+/* One pulse for the whole block; the bars never animate on their own. */
+.skeletonBody {
   display: grid;
-  gap: 12px;
-  padding: 8px 0;
+  gap: 18px;
+  animation: skeletonPulse 1600ms ease-in-out infinite;
+}
+
+.skeletonGroup {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.skeletonAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #e9ecf2;
+}
+
+.skeletonLines {
+  min-width: 0;
+  max-width: 75ch;
+  display: grid;
+  gap: 8px;
+  padding-top: 3px;
+}
+
+.skeletonBar {
+  display: block;
+  max-width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: #e9ecf2;
+}
+
+.skeletonText {
+  height: 12px;
+  background: #eef0f4;
+}
+
+@keyframes skeletonPulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes paneIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
 }
 
 .notice {
@@ -719,9 +936,10 @@
   white-space: nowrap;
 }
 
-/* Stacked: list, or transcript — never both. */
-@media (max-width: 1023px) {
-  .workspace[data-view="transcript"] .listPane {
+/* Below the three-pane split: an open transcript replaces both lists. */
+@media (max-width: 1199px) {
+  .workspace[data-view="transcript"] .employeePane,
+  .workspace[data-view="transcript"] .conversationPane {
     display: none;
   }
 
@@ -737,8 +955,46 @@
   }
 }
 
+/* Tablet: employees beside their conversations. */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .workspace:not([data-view="transcript"]) {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .employeePane {
+    border-right: 1px solid var(--wf-border);
+  }
+
+  .employeeHeader .back {
+    display: none;
+  }
+}
+
+/* Phones and narrow tablets: one pane at a time. Entering a pane settles it in from the side. */
+@media (max-width: 1023px) {
+  .workspace:not([data-view="employees"]) .employeePane,
+  .workspace:not([data-view="conversations"]) .conversationPane {
+    display: none;
+  }
+
+  .workspace[data-view="conversations"] .conversationPane,
+  .workspace[data-view="transcript"] .panel {
+    animation: drillIn 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes drillIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
 @media (max-width: 559px) {
   .header,
+  .paneHeader,
+  .filterRow,
   .scroll,
   .searchForm,
   .searchStatus,
@@ -770,8 +1026,8 @@
   }
 }
 
-/* Split: list beside transcript, each its own scroll region. */
-@media (min-width: 1024px) {
+/* Three panes, each its own scroll region. */
+@media (min-width: 1200px) {
   /* The shell card sits 20px below the viewport top (globals.css "WF FRAME PRECISION"). */
   .frame {
     height: max(560px, calc(100dvh - 20px));
@@ -779,30 +1035,45 @@
     flex-direction: column;
   }
 
-  /* The transcript stays primary: the list takes 30% within a readable band. */
+  /* The route skeleton wraps its shapes in one aria-hidden box; keep it in the column. */
+  .frame > [aria-hidden="true"] {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The lists stay narrow navigation; the transcript keeps the width. */
   .workspace {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: clamp(260px, 30%, 360px) minmax(0, 1fr);
-    gap: 16px;
-    margin-top: 16px;
+    grid-template-columns: clamp(220px, 22%, 272px) clamp(260px, 27%, 330px) minmax(0, 1fr);
   }
 
+  .employeePane,
+  .conversationPane {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--wf-border);
+  }
 
+  .paneHeader,
+  .filterRow,
+  .more {
+    flex-shrink: 0;
+  }
 
-  .listPane {
+  .employeePane > ul,
+  .paneBody {
+    flex: 1;
     min-height: 0;
     overflow-y: auto;
   }
 
-  .listPane > * {
-    margin-top: 0;
-  }
-
   .panel {
     min-height: 0;
-    margin-top: 0;
   }
 
   /* Results scroll on their own and never take more than half the panel. */
@@ -831,11 +1102,16 @@
     justify-items: center;
     gap: 4px;
     padding: 24px;
-    border: 1px dashed var(--wf-border);
-    border-radius: 8px;
     color: var(--wf-text-muted);
     font-size: 13px;
     text-align: center;
+  }
+
+  .placeholder svg {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 6px;
+    color: var(--wf-text-muted);
   }
 
   .placeholder p {
@@ -846,5 +1122,32 @@
     color: var(--wf-text);
     font-size: 14px;
     font-weight: 500;
+  }
+}
+
+/* The narrowest phones keep the eye; the label stays for screen readers. */
+@media (max-width: 359px) {
+  .readOnly {
+    position: relative;
+    padding: 6px;
+  }
+
+  .readOnlyLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paneBody,
+  .panel > .scroll,
+  .skeletonBody,
+  .workspace .conversationPane,
+  .workspace .panel {
+    animation: none !important;
   }
 }

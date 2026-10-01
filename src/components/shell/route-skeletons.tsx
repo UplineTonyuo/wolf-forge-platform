@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { TasksLoading } from "../operations/tasks-loading";
+import supervisionRows from "../team-supervision/supervised-conversation-list.module.css";
+import supervision from "../team-supervision/supervised-transcript.module.css";
 import tickets from "../tickets/tickets.module.css";
 
 /*
@@ -9,7 +11,8 @@ import tickets from "../tickets/tickets.module.css";
  * primitives below, measured against the real page (header, toolbar, table
  * columns, panels); unknown paths fall back to the generic page skeleton.
  * Shapes only: no fake data, one status per skeleton, everything decorative
- * aria-hidden. Tickets reuses its real CSS-module classes (D-181).
+ * aria-hidden. Tickets and All Conversations reuse their real CSS-module
+ * classes (D-181).
  */
 
 export type InternalSkeletonVariant =
@@ -200,10 +203,10 @@ function Rows({ count, side = true, height = 64 }: { count: number; side?: boole
   );
 }
 
-function Split({ columns, wide = false, children }: { columns: string; wide?: boolean; children: ReactNode }) {
+function Split({ columns, children }: { columns: string; children: ReactNode }) {
   return (
     <div
-      className={wide ? "route-skeleton-split route-skeleton-split-wide" : "route-skeleton-split"}
+      className="route-skeleton-split"
       style={{ "--route-skeleton-split": columns } as CSSProperties}
     >
       {children}
@@ -455,22 +458,54 @@ function TeamSkeleton() {
   );
 }
 
+/** Avatar plus two lines, in the real row's box. */
+function PersonRows({ count }: { count: number }) {
+  return Array.from({ length: count }, (_, row) => (
+    <div className={supervisionRows.row} key={row}>
+      <Bar w={28} h={28} r={999} />
+      <span className={supervisionRows.text} style={{ gap: 7 }}>
+        <Bar w={row % 3 ? "62%" : "74%"} />
+        <Bar w="38%" h={8} />
+      </span>
+    </div>
+  ));
+}
+
+/**
+ * The real workspace classes, so the panes collapse exactly as the page does:
+ * three panes on desktop, two on tablet, employees alone on phones. The
+ * transcript pane is blank because the page opens with none selected.
+ */
 function ConversationsSkeleton() {
   return (
-    <Frame variant="conversations">
+    <Frame className={`page-frame ${supervision.frame}`} variant="conversations">
       <Header />
-      <Split columns="clamp(260px, 30%, 360px) minmax(0, 1fr)" wide>
-        <Rows count={7} height={68} side={false} />
-        <div className="route-skeleton-panel route-skeleton-transcript">
-          <Bar w="35%" h={16} />
-          {Array.from({ length: 5 }, (_, message) => (
-            <div key={message}>
-              <Bar w={140} h={9} />
-              <Bar w={message % 2 ? "55%" : "75%"} h={40} r={8} className="route-skeleton-gap" />
-            </div>
-          ))}
+      <div className={supervision.workspace} data-view="employees">
+        <div className={supervision.employeePane}>
+          <div className={`${supervision.paneHeader} ${supervision.employeeTitle}`}>
+            <Bar w={92} h={14} />
+          </div>
+          <div className={supervision.filterRow}>
+            <Bar w="100%" h={38} r={8} />
+          </div>
+          <div>
+            <PersonRows count={7} />
+          </div>
         </div>
-      </Split>
+        <div className={supervision.conversationPane}>
+          <div className={`${supervision.paneHeader} ${supervision.employeeHeader}`}>
+            <Bar w={36} h={36} r={999} />
+            <span className={supervisionRows.text} style={{ gap: 7 }}>
+              <Bar w={140} h={14} />
+              <Bar w={64} h={8} />
+            </span>
+          </div>
+          <div>
+            <PersonRows count={4} />
+          </div>
+        </div>
+        <div className={supervision.placeholder} />
+      </div>
     </Frame>
   );
 }

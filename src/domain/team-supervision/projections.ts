@@ -291,3 +291,44 @@ export function toSupervisedMessageSearchPage(
     nextCursor: toMessageCursor(row.next_before_created_at, row.next_before_message_id),
   };
 }
+
+/** One internal participant of the supervised list and their direct conversations. */
+export type SupervisedEmployee = {
+  participant: SupervisedParticipant;
+  /** Server order (latest activity first); `partner` is the other participant. */
+  conversations: { conversation: SupervisedConversationSummary; partner: SupervisedParticipant }[];
+  /** Distinct people. Equal to the conversation count, since a pair has one direct key. */
+  partnerCount: number;
+};
+
+/**
+ * Groups loaded conversations by participant, sorted by name. Counts cover
+ * only the conversations passed in, so callers must pass the whole list or
+ * say that it is partial.
+ */
+export function groupSupervisedConversationsByEmployee(
+  conversations: SupervisedConversationSummary[],
+): SupervisedEmployee[] {
+  const employees = new Map<string, SupervisedEmployee>();
+  for (const conversation of conversations) {
+    conversation.participants.forEach((participant, index) => {
+      const partner = conversation.participants[1 - index]!;
+      let employee = employees.get(participant.profileId);
+      if (!employee) {
+        employee = { participant, conversations: [], partnerCount: 0 };
+        employees.set(participant.profileId, employee);
+      }
+      employee.conversations.push({ conversation, partner });
+    });
+  }
+  for (const employee of employees.values()) {
+    employee.partnerCount = new Set(employee.conversations.map(({ partner }) => partner.profileId)).size;
+  }
+  // Unnamed members sort last.
+  const name = (employee: SupervisedEmployee) => employee.participant.displayName?.trim() || "￿";
+  return [...employees.values()].sort(
+    (a, b) =>
+      name(a).localeCompare(name(b), undefined, { sensitivity: "base" }) ||
+      a.participant.profileId.localeCompare(b.participant.profileId),
+  );
+}

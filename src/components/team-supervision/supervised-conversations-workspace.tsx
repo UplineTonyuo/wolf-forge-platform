@@ -1,28 +1,37 @@
 "use client";
 
-import { ArrowLeft, ChevronLeft, Eye, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, Eye, MessagesSquare, Search, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   getSupervisedConversationAction,
   getSupervisedMessageWindowAction,
+  listSupervisedConversationsAction,
   type TeamSupervisionActionResult,
 } from "../../app/actions/team-supervision";
-import type {
-  SupervisedConversationPage,
-  SupervisedConversationSummary,
-  SupervisedMessage,
-  SupervisedTranscriptPage,
+import {
+  groupSupervisedConversationsByEmployee,
+  type SupervisedConversationPage,
+  type SupervisedConversationSummary,
+  type SupervisedMessage,
+  type SupervisedTranscriptPage,
 } from "../../domain/team-supervision/projections";
 import type { ClientSafeError } from "../../lib/errors/application-error";
-import { teamInitials } from "../../domain/team/projections";
-import { TeamAvatar } from "../team/team-avatar";
-import { SupervisedConversationList } from "./supervised-conversation-list";
+import {
+  Avatar,
+  participantName,
+  peopleLabel,
+  SupervisedEmployeeList,
+  SupervisedListState,
+  SupervisedPartnerList,
+} from "./supervised-conversation-list";
 import { SupervisedSearch } from "./supervised-search";
 import { SupervisedContextWindow, SupervisedTranscript } from "./supervised-transcript";
 import styles from "./supervised-transcript.module.css";
 
-/** Below this the list and the transcript take turns; matches the CSS split. */
-const stackedQuery = "(max-width: 1023px)";
+/** Below this the transcript replaces the lists; matches the CSS three-pane split. */
+const stackedQuery = "(max-width: 1199px)";
+/** Below this employees and their conversations also take turns. */
+const phoneQuery = "(max-width: 1023px)";
 
 type Detail =
   | { state: "loading" }
@@ -50,7 +59,14 @@ function isLostAccessCode(code: ClientSafeError["code"]): boolean {
 }
 
 /**
- * All Conversations: the list, and at most one supervised transcript.
+ * All Conversations, employee first: employees, the selected employee's direct
+ * conversations, and at most one supervised transcript.
+ *
+ * Employees are grouped from the list page already in hand, so choosing one
+ * reads nothing and has nothing to load. Choosing a different employee closes
+ * the open transcript, so another employee's conversation is never left on
+ * screen. On phones the three panes take turns; below the three-pane split the
+ * transcript replaces both lists.
  *
  * The transcript is read only from a row activation, never from render, an
  * effect, hover, focus or prefetch: each successful detail action writes one
@@ -74,6 +90,13 @@ export function SupervisedConversationsWorkspace({
   initial: TeamSupervisionActionResult<SupervisedConversationPage>;
 }) {
   const [conversationPage, setConversationPage] = useState(initial);
+  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  // Phones only: the employee's conversations are showing instead of the employees.
+  const [browsing, setBrowsing] = useState(false);
+  const [employeeQuery, setEmployeeQuery] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const loadingMoreRef = useRef(false);
   const [selected, setSelected] = useState<SupervisedConversationSummary | null>(null);
   const [detail, setDetail] = useState<Detail>({ state: "loading" });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -84,6 +107,7 @@ export function SupervisedConversationsWorkspace({
   const rootRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const employeeHeadingRef = useRef<HTMLHeadingElement>(null);
   const searchToggleRef = useRef<HTMLButtonElement>(null);
 
   function lostAccess() {
@@ -116,7 +140,67 @@ export function SupervisedConversationsWorkspace({
   // Replacing the list page on access loss unmounts its local metadata cache.
   // The original server-provided page is never rendered again in this workspace.
   if (!conversationPage.ok || conversationPage.data.conversations.length === 0) {
-    return <SupervisedConversationList initial={conversationPage} />;
+    return <SupervisedListState initial={conversationPage} />;
+  }
+
+  const { conversations, nextCursor } = conversationPage.data;
+  const employees = groupSupervisedConversationsByEmployee(conversations);
+  // Nothing is chosen until a click, so the first employee stands in.
+  const employee = employees.find((item) => item.participant.profileId === employeeId) ?? employees[0]!;
+  const query = employeeQuery.trim().toLocaleLowerCase();
+  const shownEmployees = query
+    ? employees.filter(({ participant }) => participantName(participant).toLocaleLowerCase().includes(query))
+    : employees;
+  const view = selected ? "transcript" : browsing ? "conversations" : "employees";
+
+  function chooseEmployee(profileId: string) {
+    setBrowsing(true);
+    if (profileId !== employee.participant.profileId) {
+      setEmployeeId(profileId);
+      // Another employee's transcript must not stay on screen.
+      if (activeRef.current) closeConversation();
+    }
+    if (window.matchMedia?.(phoneQuery).matches) {
+      requestAnimationFrame(() => employeeHeadingRef.current?.focus());
+    }
+  }
+
+  function backToEmployees() {
+    setBrowsing(false);
+    requestAnimationFrame(() =>
+      rootRef.current
+        ?.querySelector<HTMLElement>(`[data-employee-id="${employee.participant.profileId}"]`)
+        ?.focus(),
+    );
+  }
+
+  // One keyset page at a time. No retry loop: a failure waits for another click.
+  async function loadMore() {
+    if (!nextCursor || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreFailed(false);
+
+    const result = await listSupervisedConversationsAction(nextCursor);
+
+    loadingMoreRef.current = false;
+    setLoadingMore(false);
+    if (!result.ok) {
+      if (handleReadFailure(result.error.code)) return;
+      setLoadMoreFailed(true);
+      return;
+    }
+    setConversationPage((current) =>
+      current.ok
+        ? {
+            ok: true,
+            data: {
+              conversations: [...current.data.conversations, ...result.data.conversations],
+              nextCursor: result.data.nextCursor,
+            },
+          }
+        : current,
+    );
   }
 
   async function open(conversation: SupervisedConversationSummary) {
@@ -146,13 +230,18 @@ export function SupervisedConversationsWorkspace({
     );
   }
 
-  function back() {
-    const id = activeRef.current?.id;
+  /** Forgets the transcript; a pending open is dropped when it lands. */
+  function closeConversation() {
     activeRef.current = null;
     setSelected(null);
     setDetail({ state: "loading" });
     setSearchOpen(false);
     leaveJump();
+  }
+
+  function back() {
+    const id = activeRef.current?.id;
+    closeConversation();
     requestAnimationFrame(() =>
       rootRef.current?.querySelector<HTMLElement>(`[data-conversation-id="${id}"]`)?.focus(),
     );
@@ -230,15 +319,90 @@ export function SupervisedConversationsWorkspace({
     searchToggleRef.current?.focus();
   }
 
+  // The selected employee reads first: "William ↔ Licaros" under William.
+  const pair = selected
+    ? selected.participants[1].profileId === employee.participant.profileId
+      ? [selected.participants[1], selected.participants[0]]
+      : selected.participants
+    : [];
+
   return (
-    <div className={styles.workspace} data-view={selected ? "transcript" : "list"} ref={rootRef}>
-      <div className={styles.listPane}>
-        <SupervisedConversationList
-          initial={conversationPage}
-          selectedId={selected?.conversationId ?? null}
-          onSelect={open}
-          onReadFailure={handleReadFailure}
-        />
+    <div className={styles.workspace} data-view={view} ref={rootRef}>
+      <div className={styles.employeePane}>
+        <div className={`${styles.paneHeader} ${styles.employeeTitle}`}>
+          <h2 className={styles.paneTitle}>
+            Employees <span className={styles.paneCount}>{employees.length}</span>
+          </h2>
+        </div>
+        <div className={styles.filterRow}>
+          <label className={styles.filter}>
+            <Search aria-hidden="true" />
+            <span className={styles.srOnly}>Search employees</span>
+            <input
+              type="search"
+              value={employeeQuery}
+              placeholder="Search employees"
+              autoComplete="off"
+              onChange={(event) => setEmployeeQuery(event.currentTarget.value)}
+            />
+          </label>
+        </div>
+        {shownEmployees.length ? (
+          <SupervisedEmployeeList
+            employees={shownEmployees}
+            selectedId={employee.participant.profileId}
+            onSelect={chooseEmployee}
+          />
+        ) : (
+          <p className={styles.paneEmpty}>No employees match.</p>
+        )}
+        {nextCursor ? (
+          <div className={styles.more}>
+            {/* Counts cover loaded conversations only, so say so while more exist. */}
+            <p>Counts include loaded conversations only.</p>
+            <button
+              type="button"
+              className="button-secondary"
+              onClick={loadMore}
+              disabled={loadingMore}
+              aria-busy={loadingMore}
+            >
+              {loadingMore ? "Loading…" : "Load more"}
+            </button>
+            {loadMoreFailed ? (
+              <p className={styles.moreError} role="alert">
+                More conversations could not be loaded.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className={styles.conversationPane}>
+        <div className={`${styles.paneHeader} ${styles.employeeHeader}`}>
+          <button type="button" className={styles.back} onClick={backToEmployees} aria-label="Back to employees">
+            <ChevronLeft aria-hidden="true" />
+            Employees
+          </button>
+          <Avatar participant={employee.participant} small={false} />
+          <div className={styles.employeeIdentity}>
+            <h2 className={styles.employeeName} ref={employeeHeadingRef} tabIndex={-1}>
+              {participantName(employee.participant)}
+            </h2>
+            <p className={styles.paneMeta}>
+              {employee.participant.archived ? "Archived · " : null}
+              {peopleLabel(employee.partnerCount)}
+            </p>
+          </div>
+        </div>
+        {/* Keyed so a new employee's rows fade in rather than morph from the last. */}
+        <div className={styles.paneBody} key={employee.participant.profileId}>
+          <SupervisedPartnerList
+            employee={employee}
+            selectedId={selected?.conversationId ?? null}
+            onSelect={open}
+          />
+        </div>
       </div>
 
       {selected ? (
@@ -246,17 +410,11 @@ export function SupervisedConversationsWorkspace({
           <header className={styles.header}>
             <button type="button" className={styles.back} onClick={back} aria-label="Back to conversations">
               <ChevronLeft aria-hidden="true" />
-              Back
+              Conversations
             </button>
             <span className={styles.headerAvatars}>
-              {selected.participants.map((participant) => (
-                <TeamAvatar
-                  key={participant.profileId}
-                  name={participant.displayName?.trim() || "Unnamed member"}
-                  initials={teamInitials(participant.displayName)}
-                  avatarUrl={participant.avatarUrl?.trim() || null}
-                  small
-                />
+              {pair.map((participant) => (
+                <Avatar key={participant.profileId} participant={participant} />
               ))}
             </span>
             <h2
@@ -265,7 +423,7 @@ export function SupervisedConversationsWorkspace({
               ref={headingRef}
               tabIndex={-1}
             >
-              {selected.participants.map((participant, index) => (
+              {pair.map((participant, index) => (
                 <span className={styles.titlePerson} key={participant.profileId}>
                   {index > 0 ? (
                     <>
@@ -298,7 +456,7 @@ export function SupervisedConversationsWorkspace({
             ) : null}
             <span className={styles.readOnly}>
               <Eye aria-hidden="true" />
-              Read-only
+              <span className={styles.readOnlyLabel}>Read-only</span>
             </span>
           </header>
 
@@ -332,11 +490,7 @@ export function SupervisedConversationsWorkspace({
                 />
               ) : jump.state === "loading" ? (
                 <div className={styles.scroll}>
-                  <div className={styles.skeleton} role="status" aria-label="Loading message context">
-                    <div className="skeleton-line" />
-                    <div className="skeleton-line" />
-                    <div className="skeleton-line" />
-                  </div>
+                  <MessageSkeleton label="Loading message context" />
                 </div>
               ) : (
                 <div className={styles.scroll}>
@@ -365,12 +519,7 @@ export function SupervisedConversationsWorkspace({
             />
           ) : detail.state === "loading" ? (
             <div className={styles.scroll}>
-              <div className={styles.skeleton} role="status" aria-label="Loading conversation">
-                <div className="skeleton-line skeleton-heading" />
-                <div className="skeleton-line" />
-                <div className="skeleton-line" />
-                <div className="skeleton-line" />
-              </div>
+              <MessageSkeleton label="Loading conversation" />
             </div>
           ) : (
             <div className={styles.scroll}>
@@ -380,10 +529,38 @@ export function SupervisedConversationsWorkspace({
         </section>
       ) : (
         <div className={styles.placeholder}>
+          <MessagesSquare aria-hidden="true" />
           <p className={styles.placeholderTitle}>Select a conversation to view it</p>
           <p>Transcripts open read-only.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Line widths per message group, in the transcript's own author-then-text shape. */
+const skeletonGroups = [["62%", "38%"], ["74%"], ["48%", "66%"], ["56%"], ["70%", "30%"]];
+
+/**
+ * The transcript loading shape: author groups in the same single column, one
+ * shared pulse on the whole block, no text. The header above stays real.
+ */
+function MessageSkeleton({ label }: { label: string }) {
+  return (
+    <div className={styles.skeleton} role="status" aria-label={label}>
+      <div className={styles.skeletonBody} aria-hidden="true">
+        {skeletonGroups.map((lines, group) => (
+          <div className={styles.skeletonGroup} key={group}>
+            <span className={styles.skeletonAvatar} />
+            <span className={styles.skeletonLines}>
+              <span className={styles.skeletonBar} style={{ width: group % 2 ? 88 : 116 }} />
+              {lines.map((width, line) => (
+                <span className={`${styles.skeletonBar} ${styles.skeletonText}`} style={{ width }} key={line} />
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
