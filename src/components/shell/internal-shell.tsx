@@ -33,6 +33,7 @@ import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
+import { InternalPageSkeleton } from "../ui/list-states";
 
 const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
@@ -51,11 +52,6 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   team_supervision: MessagesSquare,
   settings: Settings,
 };
-
-type RouteTransitionPhase =
-  | "idle"
-  | "vacuum"
-  | "enter";
 
 function SidebarLink({
   id,
@@ -130,137 +126,21 @@ export function InternalShell({
     return () => desktop.removeEventListener("change", closeOnDesktop);
   }, []);
 
-  const mainRef =
-    useRef<HTMLElement>(null);
-
-  const pendingRouteRef =
-    useRef<string | null>(null);
-
-  const exitTimerRef =
-    useRef<
-      ReturnType<typeof setTimeout> | null
-    >(null);
-
-  const frameRefs =
-    useRef<number[]>([]);
-
-  const [
-    transitionPhase,
-    setTransitionPhase,
-  ] =
-    useState<RouteTransitionPhase>(
-      "idle",
-    );
-
-  const [
-    transitionTarget,
-    setTransitionTarget,
-  ] =
-    useState<string | null>(null);
-
-
-  useEffect(() => {
-    return () => {
-      if (exitTimerRef.current) {
-        clearTimeout(
-          exitTimerRef.current,
-        );
-      }
-
-      frameRefs.current.forEach(
-        (frame) =>
-          window.cancelAnimationFrame(
-            frame,
-          ),
-      );
-    };
-  }, []);
-
-
-  useEffect(() => {
-    const pending =
-      pendingRouteRef.current;
-
-    if (!pending) {
-      return;
-    }
-
-    if (
-      !routeIsCurrent(
-        pending,
-        pathname,
-      )
-    ) {
-      return;
-    }
-
-    if (exitTimerRef.current) {
-      clearTimeout(
-        exitTimerRef.current,
-      );
-
-      exitTimerRef.current = null;
-    }
-
-    /*
-     * The new route has committed.
-     *
-     * Keep it hidden for one paint,
-     * then release it into the normal
-     * workspace position.
-     */
-    setTransitionPhase("enter");
-
-    frameRefs.current.forEach(
-      (frame) =>
-        window.cancelAnimationFrame(
-          frame,
-        ),
-    );
-
-    frameRefs.current = [];
-
-    const firstFrame =
-      window.requestAnimationFrame(
-        () => {
-          const secondFrame =
-            window.requestAnimationFrame(
-              () => {
-                setTransitionPhase(
-                  "idle",
-                );
-
-                setTransitionTarget(
-                  null,
-                );
-
-                pendingRouteRef.current =
-                  null;
-
-                frameRefs.current = [];
-              },
-            );
-
-          frameRefs.current = [
-            secondFrame,
-          ];
-        },
-      );
-
-    frameRefs.current = [
-      firstFrame,
-    ];
-  }, [pathname]);
-
+  /*
+   * A sidebar click swaps the content pane to the shared skeleton at once and
+   * keeps it there until the destination commits (pathname changes). The
+   * pane is never hidden, so a slow or unprefetched route can't read as a
+   * blank page. Reset happens during render, not in an effect.
+   */
+  const [pending, setPending] = useState<{ route: string; from: string } | null>(null);
+  if (pending && pending.from !== pathname) setPending(null);
+  const pendingRoute = pending?.route ?? null;
 
   function handleSidebarNavigate(
     route: string,
     event: MouseEvent<HTMLAnchorElement>,
   ) {
-    /*
-     * Preserve normal browser behavior
-     * for new tabs / modified clicks.
-     */
+    // Preserve normal browser behavior for new tabs / modified clicks.
     if (
       event.button !== 0 ||
       event.metaKey ||
@@ -271,129 +151,12 @@ export function InternalShell({
       return;
     }
 
-    if (
-      routeIsCurrent(
-        route,
-        pathname,
-      )
-    ) {
-      event.preventDefault();
-      return;
-    }
-
-    if (
-      transitionPhase !== "idle"
-    ) {
-      event.preventDefault();
-      return;
-    }
-
     event.preventDefault();
+    if (routeIsCurrent(route, pathname)) return;
 
-    /*
-     * Respect reduced-motion users and
-     * navigate immediately.
-     */
-    if (
-      window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches
-    ) {
-      router.push(route);
-      return;
-    }
-
-    const main =
-      mainRef.current;
-
-    if (!main) {
-      router.push(route);
-      return;
-    }
-
-    /*
-     * Warm the destination while the
-     * outgoing animation is playing.
-     */
-    router.prefetch(route);
-
-    const destinationRect =
-      event.currentTarget.getBoundingClientRect();
-
-    const mainRect =
-      main.getBoundingClientRect();
-
-    const destinationCenterY =
-      destinationRect.top +
-      destinationRect.height / 2;
-
-    /*
-     * Make the page collapse toward the
-     * vertical position of the sidebar
-     * item that was clicked.
-     */
-    const rawOriginY =
-      destinationCenterY -
-      mainRect.top;
-
-    const safeMinimum = 24;
-
-    const safeMaximum =
-      Math.max(
-        safeMinimum,
-        mainRect.height - 24,
-      );
-
-    const originY =
-      Math.min(
-        Math.max(
-          rawOriginY,
-          safeMinimum,
-        ),
-        safeMaximum,
-      );
-
-    main.style.setProperty(
-      "--wf-route-origin-y",
-      `${originY}px`,
-    );
-
-    pendingRouteRef.current =
-      route;
-
-    setTransitionTarget(route);
-
-    setTransitionPhase(
-      "vacuum",
-    );
-
-    const navigationFrame =
-      window.requestAnimationFrame(
-        () => {
-          router.push(route);
-        },
-      );
-
-    frameRefs.current.push(
-      navigationFrame,
-    );
+    setPending({ route, from: pathname });
+    router.push(route);
   }
-
-
-  const stageClassName = [
-    "workspace-route-stage",
-
-    transitionPhase === "vacuum"
-      ? "is-vacuuming"
-      : "",
-
-    transitionPhase === "enter"
-      ? "is-entering"
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
 
   function renderNavigation(mobile = false) {
     return (
@@ -406,9 +169,12 @@ export function InternalShell({
                 <SidebarLink
                   key={item.id}
                   {...item}
-                  active={item.route === activeNavigationRoute(transitionTarget ?? pathname)}
-                  transitioning={transitionTarget === item.route}
-                  onNavigate={mobile ? () => mobileDrawerRef.current?.close() : handleSidebarNavigate}
+                  active={item.route === activeNavigationRoute(pendingRoute ?? pathname)}
+                  transitioning={pendingRoute === item.route}
+                  onNavigate={(route, event) => {
+                    if (mobile) mobileDrawerRef.current?.close();
+                    handleSidebarNavigate(route, event);
+                  }}
                 />
               ))}
             </div>
@@ -486,13 +252,8 @@ export function InternalShell({
           }
         />
 
-        <main
-          ref={mainRef}
-          className={
-            stageClassName
-          }
-        >
-          {children}
+        <main className="workspace-route-stage">
+          {pendingRoute ? <InternalPageSkeleton /> : children}
         </main>
       </div>
       </div>
