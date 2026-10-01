@@ -2,6 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   setMemberPresetAction,
@@ -210,6 +212,27 @@ describe("Role change protection", () => {
       await screen.findByText("You do not have permission to perform this operation."),
     ).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("opens Change role as a native modal that centres itself inside the viewport", () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Change role for Casey Field" }));
+    const dialog = screen.getByRole("dialog", { name: "Change role" });
+    expect(dialog.tagName).toBe("DIALOG");
+    expect(HTMLDialogElement.prototype.showModal).toHaveBeenCalled();
+    expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeEnabled();
+
+    // Preflight zeroes margin; without margin:auto the top-layer modal pins to the corner.
+    const css = readFileSync(resolve(import.meta.dirname, "../components/settings/team-roles-panel.module.css"), "utf8");
+    const rule = css.match(/^\.roleDialog \{([^}]*)\}/mu)?.[1] ?? "";
+    expect(rule).toMatch(/margin:\s*auto;/u);
+    expect(rule).toMatch(/width:\s*min\(400px, calc\(100vw - 32px\)\);/u);
+    expect(rule).toMatch(/max-height:\s*calc\(100dvh - 32px\);/u);
+    expect(rule).toMatch(/overflow-y:\s*auto;/u);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(dialog).not.toHaveAttribute("open");
+    expect(setMemberPresetAction).not.toHaveBeenCalled();
   });
 });
 

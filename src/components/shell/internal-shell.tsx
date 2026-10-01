@@ -21,14 +21,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import type {
   ComponentType,
   MouseEvent,
   ReactNode,
 } from "react";
 import type { InternalUser } from "../../lib/supabase/next-server";
-import { activeNavigationRoute, navigationForModules, routeIsCurrent } from "./nav-registry";
+import { activeNavigationRoute, navigationForModules } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
@@ -127,14 +127,14 @@ export function InternalShell({
   }, []);
 
   /*
-   * A sidebar click swaps the content pane to the destination's skeleton at once and
-   * keeps it there until the destination commits (pathname changes). The
-   * pane is never hidden, so a slow or unprefetched route can't read as a
-   * blank page. Reset happens during render, not in an effect.
+   * A sidebar click swaps the content pane to the destination's skeleton at
+   * once and marks the destination active. The pending route is optimistic
+   * state tied to the navigation transition, so React drops it in the same
+   * commit as the destination page, and also when the navigation is
+   * superseded, cancelled or lands back on the current path. The pane is
+   * never hidden, so a slow or unprefetched route can't read as blank.
    */
-  const [pending, setPending] = useState<{ route: string; from: string } | null>(null);
-  if (pending && pending.from !== pathname) setPending(null);
-  const pendingRoute = pending?.route ?? null;
+  const [pendingRoute, setPendingRoute] = useOptimistic<string | null>(null);
 
   function handleSidebarNavigate(
     route: string,
@@ -152,10 +152,13 @@ export function InternalShell({
     }
 
     event.preventDefault();
-    if (routeIsCurrent(route, pathname)) return;
+    // Exact: from /team/all-conversations a Team click must still navigate.
+    if (route === pathname) return;
 
-    setPending({ route, from: pathname });
-    router.push(route);
+    startTransition(() => {
+      setPendingRoute(route);
+      router.push(route);
+    });
   }
 
   function renderNavigation(mobile = false) {
