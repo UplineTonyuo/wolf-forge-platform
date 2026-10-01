@@ -805,8 +805,16 @@
 
 /* ------------------------------------------------------- Role dialog */
 
+/*
+ * `margin: auto` is load-bearing: a modal <dialog> centres itself with the
+ * user agent's `margin: auto` against `inset: 0`, and Tailwind's preflight
+ * resets margin to 0, which pins the dialog to the top-left corner.
+ */
 .roleDialog {
   width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow-y: auto;
   border: 1px solid #e2e5ec;
   border-radius: 14px;
   background: #ffffff;
