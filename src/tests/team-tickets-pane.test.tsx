@@ -90,6 +90,25 @@ describe("TeamTicketsPane", () => {
     expect(onSelect).toHaveBeenCalledWith("t42");
   });
 
+  it("first load shows ticket-row skeletons, not a spinner or the empty state", () => {
+    const { container } = render(
+      <TeamTicketsPane
+        tickets={[]}
+        loading
+        error={null}
+        activeTicketId={null}
+        onSelect={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    );
+    const status = screen.getByRole("status", { name: "Loading tickets" });
+    expect(status.querySelectorAll("[aria-hidden='true']")).toHaveLength(6);
+    expect(status.textContent).toBe("");
+    expect(container.querySelector("svg.lucide-loader-circle, svg.lucide-loader-2, [class*='spin']")).toBeNull();
+    expect(screen.queryByText("No Tickets yet")).toBeNull();
+    expect(screen.getByRole("searchbox", { name: "Search tickets" })).toBeInTheDocument();
+  });
+
   it("shows the empty state only once loaded, with no error", () => {
     render(
       <TeamTicketsPane

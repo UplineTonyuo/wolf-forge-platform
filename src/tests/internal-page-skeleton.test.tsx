@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import InternalLoading from "../app/(internal)/loading";
 import { InternalShell } from "../components/shell/internal-shell";
+import { RouteSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
 import type { InternalUser } from "../lib/supabase/next-server";
 
 const nav = vi.hoisted(() => ({ pathname: "/orders", push: vi.fn() }));
@@ -32,7 +33,7 @@ describe("Internal route loading boundary", () => {
     fireEvent.click(container.querySelector(".app-sidebar a[href='/tickets']")!);
 
     expect(nav.push).toHaveBeenCalledWith("/tickets");
-    expect(main.querySelector(".internal-page-skeleton")).toBeTruthy();
+    expect(main.querySelector("[data-skeleton='tickets']")).toBeTruthy();
     expect(main.textContent).not.toContain("Projects page");
     // The pane itself is never put into a hidden transition state.
     expect(main.className).toBe("workspace-route-stage");
@@ -49,15 +50,86 @@ describe("Internal route loading boundary", () => {
     expect(css).not.toMatch(/is-vacuuming|is-entering/u);
   });
 
-  it("renders one status inside the real page frame with decorative bars hidden", () => {
-    const { container } = render(<InternalLoading />);
-    const status = screen.getByRole("status");
+  it("updates the skeleton when the destination changes before the first one commits", () => {
+    nav.pathname = "/orders";
+    vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    const user = { id: "u1", displayName: "Test User", role: "staff", avatarUrl: null, modules: { projects: true, tickets: true, team: true, settings: true }, teamMessaging: { use: false } } as unknown as InternalUser;
+    const { container } = render(<InternalShell user={user}><p>Projects page</p></InternalShell>);
+    const main = container.querySelector("main")!;
 
-    expect(status.classList.contains("page-frame")).toBe(true);
-    expect(status.textContent).toBe("Loading page");
-    expect(container.querySelector(".page-header")?.closest("[aria-hidden='true']")).toBeTruthy();
-    expect(container.querySelector("h1")).toBeNull();
-    expect(container.querySelectorAll(".internal-page-skeleton-card")).toHaveLength(3);
+    fireEvent.click(container.querySelector(".app-sidebar a[href='/tickets']")!);
+    expect(main.querySelector("[data-skeleton]")?.getAttribute("data-skeleton")).toBe("tickets");
+    fireEvent.click(container.querySelector(".app-sidebar a[href='/settings']")!);
+    expect(main.querySelector("[data-skeleton]")?.getAttribute("data-skeleton")).toBe("settings");
+    expect(main.querySelectorAll("[data-skeleton]")).toHaveLength(1);
+  });
+
+  it("maps sidebar destinations to their own skeletons and everything else to the generic one", () => {
+    expect(getInternalSkeletonVariant("/dashboard")).toBe("dashboard");
+    expect(getInternalSkeletonVariant("/orders")).toBe("projects");
+    expect(getInternalSkeletonVariant("/tickets")).toBe("tickets");
+    expect(getInternalSkeletonVariant("/tickets/")).toBe("tickets");
+    expect(getInternalSkeletonVariant("/todo")).toBe("operations");
+    expect(getInternalSkeletonVariant("/investment-intent")).toBe("investmentIntent");
+    expect(getInternalSkeletonVariant("/team")).toBe("team");
+    expect(getInternalSkeletonVariant("/team/all-conversations")).toBe("conversations");
+    expect(getInternalSkeletonVariant("/settings")).toBe("settings");
+    expect(getInternalSkeletonVariant("/settings/general")).toBe("settings");
+    // Detail pages never borrow a list skeleton.
+    expect(getInternalSkeletonVariant("/tickets/abc")).toBe("generic");
+    expect(getInternalSkeletonVariant("/teams")).toBe("generic");
+    expect(getInternalSkeletonVariant("/unknown")).toBe("generic");
+  });
+
+  it("gives Tickets its real toolbar and six-column table, without metric cards", () => {
+    const { container } = render(<RouteSkeleton pathname="/tickets" />);
+    const headers = [...container.querySelectorAll("th")];
+    expect(headers).toHaveLength(6);
+    expect(headers.every((th) => th.textContent === "" && th.querySelector(".internal-page-skeleton-bar"))).toBe(true);
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(7);
+    expect(container.querySelector(".route-skeleton-ticket-search")).toBeTruthy();
+    expect(container.querySelectorAll(".route-skeleton-ticket-action")).toHaveLength(2);
+    expect(container.querySelector(".route-skeleton-metrics, .internal-page-skeleton-cards")).toBeNull();
+  });
+
+  it("gives Dashboard metric cards and panels, All Conversations a split pane, Settings a form", () => {
+    const dashboard = render(<RouteSkeleton pathname="/dashboard" />).container;
+    expect(dashboard.querySelectorAll(".route-skeleton-metrics > .route-skeleton-panel")).toHaveLength(4);
+    expect(dashboard.querySelector(".route-skeleton-table")).toBeNull();
+    cleanup();
+
+    const conversations = render(<RouteSkeleton pathname="/team/all-conversations" />).container;
+    const split = conversations.querySelector(".route-skeleton-split-wide");
+    expect(split?.children).toHaveLength(2);
+    expect(split?.querySelector(".route-skeleton-rows")).toBeTruthy();
+    expect(split?.querySelector(".route-skeleton-transcript")).toBeTruthy();
+    expect(conversations.querySelector(".route-skeleton-metrics, .internal-page-skeleton-cards")).toBeNull();
+    cleanup();
+
+    const settings = render(<RouteSkeleton pathname="/settings/general" />).container;
+    expect(settings.querySelector(".settings-page-layout .route-skeleton-nav")).toBeTruthy();
+    expect(settings.querySelectorAll(".route-skeleton-fields > div").length).toBeGreaterThan(2);
+    expect(settings.querySelector(".route-skeleton-table, table")).toBeNull();
+  });
+
+  it("renders exactly one loading status per skeleton, with decorative parts hidden and nothing focusable", () => {
+    for (const path of ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings", "/nowhere"]) {
+      const { container } = render(<RouteSkeleton pathname={path} />);
+      const statuses = screen.getAllByRole("status");
+      expect(statuses, path).toHaveLength(1);
+      expect(statuses[0]?.querySelector(".sr-only")?.textContent, path).toBe("Loading page");
+      expect(container.querySelector("[data-skeleton] > [aria-hidden='true']"), path).toBeTruthy();
+      expect(container.querySelector("h1, a[href], button, input, [tabindex]"), path).toBeNull();
+      // Shapes only: no visible text that could read as the previous or loaded page.
+      expect(container.querySelector("[data-skeleton] > [aria-hidden='true']")?.textContent, path).toBe("");
+      cleanup();
+    }
+  });
+
+  it("routes the (internal) loading boundary through the same resolver", () => {
+    nav.pathname = "/team/all-conversations";
+    const { container } = render(<InternalLoading />);
+    expect(container.querySelector("[data-skeleton]")?.getAttribute("data-skeleton")).toBe("conversations");
   });
 
   it("drops the All Conversations header divider only on that page", () => {

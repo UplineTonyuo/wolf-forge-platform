@@ -1855,6 +1855,21 @@ export function TeamMessagesDrawer({
                   <div className={styles.skeletonRow} />
                 </div>
               </>
+            ) : !ticketInboxList.loaded && ticketInboxList.tickets.length === 0 ? (
+              /* The list is still on its first load: hold the ticket pane's shape, not a "Select" prompt. */
+              <>
+                <div className={styles.paneHeader} aria-hidden="true">
+                  <div className={styles.paneHeaderText}>
+                    <span className={styles.ticketSkeletonTitle} />
+                    <span className={styles.ticketSkeletonRef} />
+                  </div>
+                </div>
+                <div className={styles.skeletonList} aria-hidden="true">
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                  <div className={styles.skeletonRow} />
+                </div>
+              </>
             ) : (
               <div className={styles.stateBlock}>
                 <span className={styles.stateIcon}>

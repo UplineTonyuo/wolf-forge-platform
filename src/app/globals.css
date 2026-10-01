@@ -130,29 +130,94 @@ tbody tr:hover { background: #fbfbfc; }
 @keyframes skeleton { from { opacity: .55; } to { opacity: 1; } }
 
 /*
- * Generic internal route skeleton ((internal)/loading.tsx). Geometry comes
- * from the real .page-frame/.page-header classes (D-181); only the bars are
- * skeleton-specific, on the shared restrained pulse (D-182).
+ * Internal route skeletons (src/components/shell/route-skeletons.tsx). Page
+ * geometry comes from the real .page-frame/.page-header classes (D-181); the
+ * shapes below are the shared primitives, on the restrained pulse (D-182).
  */
-.internal-page-skeleton { min-height: calc(100dvh - 96px); }
-.internal-page-skeleton .page-header > div { flex: 1; min-width: 0; }
-.internal-page-skeleton-bar { display: block; border-radius: 5px; background: #e9ecf2; animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite; }
-.internal-page-skeleton-title { width: min(220px, 60%); height: 24px; margin-top: 2px; background: #d8dce7; }
-.internal-page-skeleton-subtitle { width: min(340px, 85%); height: 12px; margin-top: 12px; }
+.internal-page-skeleton { min-height: calc(100dvh - 96px); background: var(--wf-white); }
+/* Skeleton bars on a navy table header (Tickets reuses the real navy thead). */
+.internal-page-skeleton-bar.route-skeleton-on-navy { background: rgba(255, 255, 255, .22); animation: none; }
+.internal-page-skeleton .page-header > div:first-child { flex: 1; min-width: 0; }
+.internal-page-skeleton-bar { display: block; flex: none; max-width: 100%; height: 10px; border-radius: 5px; background: #e9ecf2; animation: dept-workflow-skeleton-pulse 1600ms ease-in-out infinite; }
+.internal-page-skeleton-title { width: min(220px, 60%); height: 24px; margin: 2px 0 3px; background: #d8dce7; }
+.internal-page-skeleton-subtitle { width: min(340px, 85%); height: 12px; margin: 12px 0 3px; }
 .internal-page-skeleton-cards { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
-.internal-page-skeleton-card { min-width: 0; display: grid; gap: 12px; padding: 18px; border: 1px solid #e1e4ea; border-radius: 8px; background: #fff; }
-.internal-page-skeleton-card .internal-page-skeleton-bar:first-child { width: 45%; height: 10px; }
-.internal-page-skeleton-card .internal-page-skeleton-bar:last-child { width: 65%; height: 22px; }
-.internal-page-skeleton-list { margin-top: 24px; overflow: hidden; border: 1px solid #e1e4ea; border-radius: 9px; background: #fff; }
-.internal-page-skeleton-row { min-height: 56px; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 0 18px; border-bottom: 1px solid #edf0f4; }
-.internal-page-skeleton-row:first-child { min-height: 42px; background: #f8f9fb; }
-.internal-page-skeleton-row:last-child { border-bottom: 0; }
-.internal-page-skeleton-row .internal-page-skeleton-bar { height: 10px; }
-.internal-page-skeleton-row .internal-page-skeleton-bar:first-child { width: 80%; }
-.internal-page-skeleton-row .internal-page-skeleton-bar:not(:first-child) { width: 60%; }
-@media (max-width: 600px) {
-  .internal-page-skeleton-row { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; padding: 0 14px; }
-  .internal-page-skeleton-row .internal-page-skeleton-bar:nth-child(3) { display: none; }
+.internal-page-skeleton[data-skeleton="conversations"] .page-header { border-bottom: 0; }
+
+.route-skeleton-row { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.route-skeleton-toolbar { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.route-skeleton-gap { margin-top: 7px; }
+.route-skeleton-push { margin-left: auto; }
+.route-skeleton-stack { min-width: 0; max-width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 14px; }
+
+.route-skeleton-table { margin-top: 16px; overflow: hidden; border: 1px solid #e1e4ea; border-radius: 9px; background: #fff; }
+.route-skeleton-thead,
+.route-skeleton-tr { display: grid; grid-template-columns: var(--route-skeleton-cols); align-items: center; gap: 16px; padding: 0 16px; }
+.route-skeleton-thead { min-height: 46px; background: #000d51; }
+.route-skeleton-thead .internal-page-skeleton-bar { height: 8px; background: rgba(255, 255, 255, .22); animation: none; }
+.route-skeleton-tr { min-height: 56px; border-top: 1px solid #edf0f4; }
+.route-skeleton-thead + .route-skeleton-tr { border-top: 0; }
+
+.route-skeleton-panel { min-width: 0; display: grid; align-content: start; gap: 12px; padding: 18px; border: 1px solid #e1e4ea; border-radius: 10px; background: #fff; }
+.route-skeleton-metrics,
+.route-skeleton-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.route-skeleton-summary { margin-top: 14px; }
+.route-skeleton-split { margin-top: 16px; display: grid; grid-template-columns: var(--route-skeleton-split); align-items: start; gap: 16px; }
+.route-skeleton-rows { min-width: 0; overflow: hidden; border: 1px solid #e1e4ea; border-radius: 9px; background: #fff; }
+.route-skeleton-list-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-top: 1px solid #edf0f4; }
+.route-skeleton-list-row:first-child { border-top: 0; }
+.route-skeleton-list-row > div { min-width: 0; flex: 1; display: grid; gap: 7px; }
+.route-skeleton-transcript { min-height: 480px; gap: 18px; }
+.route-skeleton-nav { display: grid; gap: 6px; }
+.route-skeleton-fields { display: grid; gap: 18px; }
+.route-skeleton-fields > div { display: grid; gap: 8px; }
+
+/* Dashboard and Team & Roles have their own page wrappers instead of .page-frame. */
+.route-skeleton-dashboard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 20px 18px 34px 20px; }
+.route-skeleton-dashboard > div { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.route-skeleton-dashboard .route-skeleton-toolbar,
+.route-skeleton-dashboard .route-skeleton-split { margin-top: 0; }
+.route-skeleton-hero { min-height: 75px; align-items: flex-end; }
+.route-skeleton-hero .route-skeleton-stack { gap: 12px; }
+.route-skeleton-team { width: min(1180px, 100%); margin: 0 auto; padding: 6px 24px 48px; }
+.route-skeleton-team .page-header { min-height: 61px; padding-bottom: 0; border-bottom: 0; }
+.route-skeleton-team .page-header + .route-skeleton-gap { margin: 29px 0 11px; }
+.route-skeleton-team > div > .route-skeleton-toolbar { margin-top: 28px; }
+.route-skeleton-team > div > .route-skeleton-split { margin-top: 22px; }
+.settings-page-layout .route-skeleton-split { margin-top: 0; column-gap: 44px; }
+
+/* Tickets reuses tickets.module.css; only its toolbar shapes need a mobile rule. */
+@media (max-width: 800px) {
+  .route-skeleton-ticket-search { grid-column: 1 / -1; width: 100% !important; }
+  .route-skeleton-ticket-action { width: 100% !important; margin-left: 0; }
+}
+@media (max-width: 1180px) {
+  .route-skeleton-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1023px) {
+  .route-skeleton-split-wide { grid-template-columns: minmax(0, 1fr); }
+  .route-skeleton-split-wide > :last-child { display: none; }
+}
+@media (max-width: 900px) {
+  .route-skeleton-split { grid-template-columns: minmax(0, 1fr); }
+  .route-skeleton-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Settings' real nav is a horizontal scroll strip here; the skeleton shows its visible start. */
+  .route-skeleton-nav { grid-auto-flow: column; grid-auto-columns: minmax(84px, 1fr); overflow: hidden; }
+}
+/* Mobile list pages switch from tables to stacked records (globals .mobile-record-list, 767px).
+   Range syntax on purpose: tests slice this file at the first "(max-width: 767px)" block. */
+@media (width <= 767px) {
+  .route-skeleton-thead { display: none; }
+  .route-skeleton-tr { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 14px 16px; min-height: 0; }
+  .route-skeleton-tr > :not(.route-skeleton-keep) { display: none; }
+  .route-skeleton-tr > .route-skeleton-keep + .route-skeleton-keep { width: 45% !important; height: 8px; }
+  .route-skeleton-team { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 720px) {
+  .route-skeleton-dashboard { gap: 14px; padding: 0 10px 24px; }
+  /* Matches dashboard.module.css: one metric column, 158px cards (beats the inline desktop height). */
+  .route-skeleton-dashboard .route-skeleton-metrics { grid-template-columns: minmax(0, 1fr); }
+  .route-skeleton-dashboard .route-skeleton-metrics > * { min-height: 158px !important; }
 }
 @media (prefers-reduced-motion: reduce) { .internal-page-skeleton-bar { animation: none; } }
 
@@ -2553,6 +2618,9 @@ td {
 .tasks-skeleton-bar-sub { width: 40%; height: 8px; }
 .tasks-skeleton-bar-status { width: 56px; height: 20px; border-radius: 999px; }
 .tasks-skeleton-bar-date { width: 48px; height: 9px; }
+/* Shapes for the static section labels: no text in a skeleton. Heights keep the real label line boxes. */
+.tasks-skeleton-bar-label { height: 9px; }
+.tasks-skeleton-bar-heading { height: 10px; margin: 3px 0; }
 
 /*
  * The Departments directory skeleton reuses the real page's own CSS module

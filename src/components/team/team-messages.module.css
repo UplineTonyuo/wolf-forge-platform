@@ -538,6 +538,9 @@
   background: rgba(0, 13, 81, 0.06);
 }
 
+/* First-load placeholder rows: same box as a ticket row, not interactive. */
+.ticketRowSkeleton { cursor: default; pointer-events: none; }
+
 .ticketRowSubject {
   min-width: 0;
   overflow: hidden;

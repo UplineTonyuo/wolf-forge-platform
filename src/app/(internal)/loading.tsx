@@ -1,11 +1,14 @@
-import { InternalPageSkeleton } from "../../components/ui/list-states";
+"use client";
+
+import { usePathname } from "next/navigation";
+import { RouteSkeleton } from "../../components/shell/route-skeletons";
 
 /*
- * One Suspense boundary for every internal route below InternalShell. Without
- * it a sidebar click waits for the whole destination RSC payload with the
- * shell's outgoing flip already at opacity 0, which reads as a blank pane.
+ * One Suspense boundary for every internal route below InternalShell, for
+ * navigation that does not go through the sidebar (links, search, reloads).
+ * It renders the destination-shaped skeleton for the committed pathname.
  * Routes with their own loading.tsx (Operations, All Conversations) still win.
  */
 export default function InternalLoading() {
-  return <InternalPageSkeleton />;
+  return <RouteSkeleton pathname={usePathname()} />;
 }

@@ -33,7 +33,7 @@ import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
-import { InternalPageSkeleton } from "../ui/list-states";
+import { RouteSkeleton } from "./route-skeletons";
 
 const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
@@ -127,7 +127,7 @@ export function InternalShell({
   }, []);
 
   /*
-   * A sidebar click swaps the content pane to the shared skeleton at once and
+   * A sidebar click swaps the content pane to the destination's skeleton at once and
    * keeps it there until the destination commits (pathname changes). The
    * pane is never hidden, so a slow or unprefetched route can't read as a
    * blank page. Reset happens during render, not in an effect.
@@ -253,7 +253,7 @@ export function InternalShell({
         />
 
         <main className="workspace-route-stage">
-          {pendingRoute ? <InternalPageSkeleton /> : children}
+          {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : children}
         </main>
       </div>
       </div>
