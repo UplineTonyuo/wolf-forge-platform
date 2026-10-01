@@ -9,6 +9,7 @@ import * as supervisionActions from "../app/actions/team-supervision";
 import { SupervisedConversationsWorkspace } from "../components/team-supervision/supervised-conversations-workspace";
 import { reconcileLatest } from "../components/team-supervision/supervised-transcript";
 import type {
+  SupervisedConversationPage,
   SupervisedConversationSummary,
   SupervisedMessage,
   SupervisedMessageSearchPage,
@@ -29,6 +30,7 @@ const detailAction = vi.mocked(supervisionActions.getSupervisedConversationActio
 const historyAction = vi.mocked(supervisionActions.listSupervisedMessagesBeforeAction);
 const searchAction = vi.mocked(supervisionActions.searchSupervisedConversationAction);
 const windowAction = vi.mocked(supervisionActions.getSupervisedMessageWindowAction);
+const listAction = vi.mocked(supervisionActions.listSupervisedConversationsAction);
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
@@ -84,10 +86,28 @@ function transcript(n: number, messages: SupervisedMessage[], more = false): Tea
   };
 }
 
-function renderWorkspace(rows = [conversation(1), conversation(2)]) {
+function renderWorkspace(
+  rows = [conversation(1), conversation(2)],
+  nextCursor: SupervisedConversationPage["nextCursor"] = null,
+) {
   return render(
-    <SupervisedConversationsWorkspace initial={{ ok: true, data: { conversations: rows, nextCursor: null } }} />,
+    <SupervisedConversationsWorkspace initial={{ ok: true, data: { conversations: rows, nextCursor } }} />,
   );
+}
+
+function expectWorkspaceAccessCleared() {
+  expect(screen.getByRole("heading", { name: "You don't have access to this view." })).toBeInTheDocument();
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  expect(screen.queryByText("Anthony 1")).toBeNull();
+  expect(screen.queryByText("John 1")).toBeNull();
+  expect(screen.queryByText("Anthony 2")).toBeNull();
+  expect(screen.queryByText("John 2")).toBeNull();
+  expect(screen.queryByRole("search")).toBeNull();
+  expect(screen.queryByRole("searchbox")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Return to conversation" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Back to conversations" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Search this conversation" })).toBeNull();
+  expect(document.querySelector("[data-message-id]")).toBeNull();
 }
 
 function deferred<T>() {
@@ -440,6 +460,41 @@ describe("Supervised transcript: history", () => {
     expect(screen.getByText("Message 10")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Load older messages" })).toBeEnabled();
   });
+
+  it.each(["PERMISSION_DENIED", "NOT_FOUND"] as const)(
+    "clears the whole supervision workspace when history returns %s",
+    async (code) => {
+      detailAction.mockResolvedValue(transcript(1, [message(10, { body: "Retained transcript secret" })], true));
+      historyAction.mockResolvedValue({
+        ok: false,
+        error: { code, message: "The requested resource was not found." },
+      });
+      renderWorkspace();
+      await act(async () => fireEvent.click(row(1)));
+      expect(screen.getByText("Retained transcript secret")).toBeInTheDocument();
+
+      await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load older messages" })));
+
+      expectWorkspaceAccessCleared();
+      expect(historyAction).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("clears cached list metadata when Load more is denied", async () => {
+    const cursor = { beforeLastMessageAt: null, beforeConversationId: id(1) };
+    detailAction.mockResolvedValue(transcript(1, [message(10, { body: "Retained transcript secret" })]));
+    listAction.mockResolvedValue({
+      ok: false,
+      error: { code: "PERMISSION_DENIED", message: "You don't have access to this view." },
+    });
+    renderWorkspace([conversation(1), conversation(2)], cursor);
+    await act(async () => fireEvent.click(row(1)));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load more" })));
+
+    expectWorkspaceAccessCleared();
+    expect(listAction).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("Supervised transcript: safe errors", () => {
@@ -447,21 +502,17 @@ describe("Supervised transcript: safe errors", () => {
     detailAction.mockResolvedValue({ ok: false, error: { code, message: "The database operation failed on row 42." } });
     renderWorkspace();
     await act(async () => fireEvent.click(row(1)));
-    return screen.getByRole("alert");
   }
 
-  it("shows one generic unavailable state", async () => {
-    const alert = await openFailing("NOT_FOUND");
-    expect(alert).toHaveTextContent("This conversation is unavailable.");
+  it.each(["NOT_FOUND", "PERMISSION_DENIED"] as const)("clears the workspace on an open %s", async (code) => {
+    await openFailing(code);
+    expectWorkspaceAccessCleared();
     expect(document.body.textContent).not.toMatch(/group|client|malformed|database|row 42/i);
   });
 
-  it("shows the safe access state", async () => {
-    expect(await openFailing("PERMISSION_DENIED")).toHaveTextContent("You don't have access to this view.");
-  });
-
   it("shows a generic failure with an explicit retry", async () => {
-    const alert = await openFailing("DATABASE_ERROR");
+    await openFailing("DATABASE_ERROR");
+    const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("This conversation could not be loaded.");
     expect(document.body.textContent).not.toMatch(/database|row 42/i);
     const retry = deferred<TeamSupervisionActionResult<SupervisedTranscriptPage>>();
@@ -660,6 +711,22 @@ describe("Supervised search", () => {
     expect(screen.getByText("Transcript stays")).toBeInTheDocument();
   });
 
+  it.each(["PERMISSION_DENIED", "NOT_FOUND"] as const)(
+    "clears the whole supervision workspace when a search returns %s",
+    async (code) => {
+      searchAction.mockResolvedValue({
+        ok: false,
+        error: { code, message: "The requested resource was not found." },
+      });
+      await openSearch();
+      type("private query");
+      await act(async () => submit());
+
+      expectWorkspaceAccessCleared();
+      expect(document.body.textContent).not.toContain("private query");
+    },
+  );
+
   it("shows a safe rate-limit message and does not retry", async () => {
     searchAction.mockResolvedValue(failure("RATE_LIMITED"));
     await openSearch();
@@ -670,15 +737,17 @@ describe("Supervised search", () => {
     expect(searchAction).toHaveBeenCalledTimes(1);
   });
 
-  it("shows one generic failure for any other error", async () => {
+  it("preserves the last successful search and transcript on a generic failure", async () => {
     searchAction.mockResolvedValueOnce(page([hit(1)])).mockResolvedValueOnce(failure("DATABASE_ERROR"));
     await openSearch();
     type("invoice");
     await act(async () => submit());
+    type("a different query");
     await act(async () => submit());
     expect(screen.getByRole("alert")).toHaveTextContent("Search could not be completed. Try again.");
-    // A failed new search does not leave the previous results looking current.
-    expect(screen.queryByRole("list", { name: "Search results" })).toBeNull();
+    expect(input()).toHaveValue("invoice");
+    expect(resultItems()).toHaveLength(1);
+    expect(screen.getByText("Transcript stays")).toBeInTheDocument();
     expect(searchAction).toHaveBeenCalledTimes(2);
   });
 
@@ -739,6 +808,24 @@ describe("Supervised search", () => {
     expect(resultTimes()).toEqual([hit(5).createdAt]);
     expect(screen.getByRole("button", { name: "Load more results" })).toBeEnabled();
     expect(searchAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("clears the transcript, query and earlier hits when Load more is denied", async () => {
+    searchAction
+      .mockResolvedValueOnce(page([hit(5)], true))
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { code: "PERMISSION_DENIED", message: "You don't have access to this view." },
+      });
+    await openSearch();
+    type("private query");
+    await act(async () => submit());
+    expect(resultItems()).toHaveLength(1);
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Load more results" })));
+
+    expectWorkspaceAccessCleared();
+    expect(document.body.textContent).not.toContain("private query");
   });
 
   it("drops a response for a search that was cleared while pending", async () => {
@@ -898,6 +985,15 @@ describe("Supervised search result jump", () => {
     searchAction.mockResolvedValue(hits(...ns));
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "hit" } });
     await act(async () => fireEvent.submit(screen.getByRole("search")));
+  }
+
+  async function deniedWindow() {
+    await searchFor(1);
+    windowAction.mockResolvedValue({
+      ok: false,
+      error: { code: "PERMISSION_DENIED", message: "You don't have access to this view." },
+    });
+    await act(async () => fireEvent.click(result(1)));
   }
 
   it("reads no window until a result is deliberately activated, then exactly one", async () => {
@@ -1082,12 +1178,9 @@ describe("Supervised search result jump", () => {
     expect(detailAction).toHaveBeenCalledTimes(2);
   });
 
-  it.each([
-    ["a missing or foreign target", (): WindowResult => ({ ok: true, data: { found: false } })],
-    ["an ineligible conversation", (): WindowResult => ({ ok: false, error: { code: "NOT_FOUND", message: "x" } })],
-  ])("shows one unavailable state for %s, with no retry", async (_label, response) => {
+  it("shows one unavailable state for a missing or foreign target, with no retry", async () => {
     await searchFor(1);
-    windowAction.mockResolvedValue(response());
+    windowAction.mockResolvedValue({ ok: true, data: { found: false } });
     await act(async () => fireEvent.click(result(1)));
     expect(screen.getByRole("alert")).toHaveTextContent("This message is unavailable.");
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
@@ -1097,12 +1190,36 @@ describe("Supervised search result jump", () => {
     expect(windowAction).toHaveBeenCalledTimes(1);
   });
 
+  it("clears the workspace when the conversation becomes ineligible", async () => {
+    await searchFor(1);
+    windowAction.mockResolvedValue({ ok: false, error: { code: "NOT_FOUND", message: "x" } });
+    await act(async () => fireEvent.click(result(1)));
+
+    expectWorkspaceAccessCleared();
+  });
+
+  it("clears transcript, search hits and selection when a message-window read is denied", async () => {
+    await deniedWindow();
+
+    expectWorkspaceAccessCleared();
+  });
+
+  it("does not leave Return able to reveal a transcript after a denied window", async () => {
+    await deniedWindow();
+
+    expect(screen.queryByRole("button", { name: "Return to conversation" })).toBeNull();
+    expect(screen.queryByText("Latest transcript")).toBeNull();
+    expect(screen.queryByText(/hit number/)).toBeNull();
+  });
+
   it("retries a generic failure only on a deliberate click, once per click", async () => {
     await searchFor(1);
     windowAction.mockResolvedValueOnce({ ok: false, error: { code: "DATABASE_ERROR", message: "x" } });
     await act(async () => fireEvent.click(result(1)));
     expect(screen.getByRole("alert")).toHaveTextContent("This message could not be loaded.");
     expect(screen.getByRole("alert").textContent).not.toMatch(/database|rpc|sql/i);
+    expect(screen.getByText("Latest transcript")).toBeInTheDocument();
+    expect(result(1)).toBeInTheDocument();
     await act(async () => new Promise((done) => setTimeout(done, 0)));
     expect(windowAction).toHaveBeenCalledTimes(1);
 
@@ -1318,24 +1435,19 @@ describe("Supervised controlled refresh", () => {
     expect(checked()).toBe("2026-09-02T12:05:00.000Z");
   });
 
-  it.each([
-    ["NOT_FOUND", "This conversation is unavailable."],
-    ["PERMISSION_DENIED", "You don't have access to this view."],
-  ] as const)("clears the transcript, search and window when refresh returns %s", async (code, copy) => {
-    await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10, { body: "Privileged body" })], true));
-    fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
-    detailAction.mockResolvedValueOnce({ ok: false, error: { code, message: "x" } });
-    await act(async () => fireEvent.click(refreshButton()));
-    expect(screen.getByRole("alert")).toHaveTextContent(copy);
-    expect(screen.queryByText("Privileged body")).toBeNull();
-    expect(screen.queryByRole("search")).toBeNull();
-    expect(screen.queryByText(/Last checked/)).toBeNull();
-    expect(detailAction).toHaveBeenCalledTimes(2);
-    // Reopening is a deliberate new read, not a loop.
-    detailAction.mockResolvedValueOnce(transcript(1, [message(10, { body: "Reopened" })]));
-    await act(async () => fireEvent.click(row(1)));
-    expect(screen.getByText("Reopened")).toBeInTheDocument();
-  });
+  it.each(["NOT_FOUND", "PERMISSION_DENIED"] as const)(
+    "clears all transcript and list metadata when refresh returns %s",
+    async (code) => {
+      await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10, { body: "Privileged body" })], true));
+      fireEvent.click(screen.getByRole("button", { name: "Search this conversation" }));
+      detailAction.mockResolvedValueOnce({ ok: false, error: { code, message: "x" } });
+      await act(async () => fireEvent.click(refreshButton()));
+      expectWorkspaceAccessCleared();
+      expect(screen.queryByText("Privileged body")).toBeNull();
+      expect(screen.queryByText(/Last checked/)).toBeNull();
+      expect(detailAction).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("does not rerun or clear search, and stays hidden while a context window is shown", async () => {
     await openAt("2026-09-02T12:00:00Z", transcript(1, [message(10, { body: "Old latest" })], true));

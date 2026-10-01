@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { searchSupervisedConversationAction } from "../../app/actions/team-supervision";
 import type {
   SupervisedMessageCursor,
@@ -41,17 +41,28 @@ export function SupervisedSearch({
   activeResultId,
   onSelectResult,
   onClose,
+  onReadFailure,
 }: {
   conversationId: string;
   activeResultId: string | null;
   onSelectResult: (messageId: string) => void;
   onClose: () => void;
+  onReadFailure: (code: ClientSafeError["code"]) => boolean;
 }) {
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<Found | null>(null);
   const [pending, setPending] = useState<"search" | "more" | null>(null);
   const [error, setError] = useState<{ code: ClientSafeError["code"]; more: boolean } | null>(null);
   const requestRef = useRef<object | null>(null);
+  const aliveRef = useRef(true);
+
+  useLayoutEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      requestRef.current = null;
+    };
+  }, []);
 
   function reset() {
     requestRef.current = null;
@@ -73,12 +84,13 @@ export function SupervisedSearch({
       ...cursor,
     });
 
-    if (requestRef.current !== request) return;
+    if (!aliveRef.current || requestRef.current !== request) return;
     requestRef.current = null;
     setPending(null);
     if (!result.ok) {
+      if (onReadFailure(result.error.code)) return;
+      if (found) setQuery(found.query);
       setError({ code: result.error.code, more: Boolean(cursor) });
-      if (!cursor) setFound(null);
       return;
     }
     const page = result.data;
