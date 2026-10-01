@@ -124,6 +124,9 @@ export const SECURITY_EVENTS = {
    */
   "authorization.context.denied": { category: "authorization", severity: "warn" },
 
+  /** A supervisor successfully accessed privileged Team conversation content. */
+  "authorization.team_supervision.read": { category: "authorization", severity: "info" },
+
   /** A capability/permission gate refused a specific operation. */
   "authorization.capability.denied": { category: "authorization", severity: "warn" },
 

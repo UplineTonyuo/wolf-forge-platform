@@ -9,6 +9,7 @@ import {
   FormInput,
   HandCoins,
   LayoutDashboard,
+  MessagesSquare,
   ReceiptText,
   Settings,
   ShieldCheck,
@@ -27,7 +28,7 @@ import type {
   ReactNode,
 } from "react";
 import type { InternalUser } from "../../lib/supabase/next-server";
-import { navigationForModules, routeIsCurrent } from "./nav-registry";
+import { activeNavigationRoute, navigationForModules, routeIsCurrent } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
@@ -47,6 +48,7 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   services: Wrench,
   forms: FormInput,
   team: ShieldCheck,
+  team_supervision: MessagesSquare,
   settings: Settings,
 };
 
@@ -404,7 +406,7 @@ export function InternalShell({
                 <SidebarLink
                   key={item.id}
                   {...item}
-                  active={routeIsCurrent(item.route, transitionTarget ?? pathname)}
+                  active={item.route === activeNavigationRoute(transitionTarget ?? pathname)}
                   transitioning={transitionTarget === item.route}
                   onNavigate={mobile ? () => mobileDrawerRef.current?.close() : handleSidebarNavigate}
                 />

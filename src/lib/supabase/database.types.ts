@@ -1738,6 +1738,7 @@ export type Database = {
           event_key: string
           href: string
           id: string
+          message_count: number
           read_at: string | null
           recipient_profile_id: string
           title: string
@@ -1755,6 +1756,7 @@ export type Database = {
           event_key: string
           href: string
           id?: string
+          message_count?: number
           read_at?: string | null
           recipient_profile_id: string
           title: string
@@ -1772,6 +1774,7 @@ export type Database = {
           event_key?: string
           href?: string
           id?: string
+          message_count?: number
           read_at?: string | null
           recipient_profile_id?: string
           title?: string
@@ -2136,6 +2139,190 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "roles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_attachments: {
+        Row: {
+          checksum_sha256: string
+          created_at: string
+          id: string
+          mime_type: string
+          order_id: string
+          original_name: string
+          project_message_id: string
+          scan_status: string
+          size_bytes: number
+          storage_object_key: string
+          uploaded_by_profile_id: string | null
+        }
+        Insert: {
+          checksum_sha256: string
+          created_at?: string
+          id?: string
+          mime_type: string
+          order_id: string
+          original_name: string
+          project_message_id: string
+          scan_status?: string
+          size_bytes: number
+          storage_object_key: string
+          uploaded_by_profile_id?: string | null
+        }
+        Update: {
+          checksum_sha256?: string
+          created_at?: string
+          id?: string
+          mime_type?: string
+          order_id?: string
+          original_name?: string
+          project_message_id?: string
+          scan_status?: string
+          size_bytes?: number
+          storage_object_key?: string
+          uploaded_by_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_attachments_message_order_fkey"
+            columns: ["project_message_id", "order_id"]
+            isOneToOne: false
+            referencedRelation: "project_messages"
+            referencedColumns: ["id", "order_id"]
+          },
+          {
+            foreignKeyName: "project_attachments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_attachments_project_message_id_fkey"
+            columns: ["project_message_id"]
+            isOneToOne: false
+            referencedRelation: "project_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_attachments_uploaded_by_profile_id_fkey"
+            columns: ["uploaded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_message_reactions: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id: string
+          reaction_code: string
+          reactor_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          message_id?: string
+          reaction_code?: string
+          reactor_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "project_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_message_reactions_reactor_profile_id_fkey"
+            columns: ["reactor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_messages: {
+        Row: {
+          author_profile_id: string | null
+          author_type: string
+          body: string
+          created_at: string
+          id: string
+          order_id: string
+          reply_quote_text: string | null
+          reply_to_attachment_id: string | null
+          reply_to_message_id: string | null
+          request_id: string | null
+        }
+        Insert: {
+          author_profile_id?: string | null
+          author_type: string
+          body: string
+          created_at?: string
+          id?: string
+          order_id: string
+          reply_quote_text?: string | null
+          reply_to_attachment_id?: string | null
+          reply_to_message_id?: string | null
+          request_id?: string | null
+        }
+        Update: {
+          author_profile_id?: string | null
+          author_type?: string
+          body?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          reply_quote_text?: string | null
+          reply_to_attachment_id?: string | null
+          reply_to_message_id?: string | null
+          request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_messages_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_messages_reply_attachment_fkey"
+            columns: ["reply_to_attachment_id", "reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "project_attachments"
+            referencedColumns: ["id", "project_message_id"]
+          },
+          {
+            foreignKeyName: "project_messages_reply_source_fkey"
+            columns: ["reply_to_message_id", "order_id"]
+            isOneToOne: false
+            referencedRelation: "project_messages"
+            referencedColumns: ["id", "order_id"]
           },
         ]
       }
@@ -3723,6 +3910,7 @@ export type Database = {
           id: string
           message_kind: string
           reply_quote_text: string | null
+          reply_to_attachment_id: string | null
           reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
@@ -3738,6 +3926,7 @@ export type Database = {
           id?: string
           message_kind: string
           reply_quote_text?: string | null
+          reply_to_attachment_id?: string | null
           reply_to_message_id?: string | null
           request_id?: string | null
           ticket_id: string
@@ -3753,6 +3942,7 @@ export type Database = {
           id?: string
           message_kind?: string
           reply_quote_text?: string | null
+          reply_to_attachment_id?: string | null
           reply_to_message_id?: string | null
           request_id?: string | null
           ticket_id?: string
@@ -3767,6 +3957,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_messages_reply_attachment_fkey"
+            columns: ["reply_to_attachment_id", "reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_attachments"
+            referencedColumns: ["id", "ticket_message_id"]
           },
           {
             foreignKeyName: "ticket_messages_reply_source_fkey"
@@ -3802,6 +3999,7 @@ export type Database = {
           created_by_profile_id: string | null
           id: string
           inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -3825,6 +4023,7 @@ export type Database = {
           created_by_profile_id?: string | null
           id?: string
           inbox_added_at?: string | null
+          investment_service_id?: string | null
           order_id?: string | null
           priority?: string
           public_ref?: string | null
@@ -3848,6 +4047,7 @@ export type Database = {
           created_by_profile_id?: string | null
           id?: string
           inbox_added_at?: string | null
+          investment_service_id?: string | null
           order_id?: string | null
           priority?: string
           public_ref?: string | null
@@ -3888,6 +4088,13 @@ export type Database = {
             columns: ["created_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_investment_service_id_fkey"
+            columns: ["investment_service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
           {
@@ -4014,6 +4221,7 @@ export type Database = {
           id: string
           message_kind: string
           reply_quote_text: string | null
+          reply_to_attachment_id: string | null
           reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
@@ -4040,6 +4248,7 @@ export type Database = {
           created_by_profile_id: string | null
           id: string
           inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -4270,6 +4479,8 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -4401,6 +4612,8 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -4912,6 +5125,8 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -5166,6 +5381,10 @@ export type Database = {
           profile_id: string
         }[]
       }
+      app_get_project_conversation: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       app_get_published_form_schema: {
         Args: { p_canonical_key: string }
         Returns: Json
@@ -5197,12 +5416,34 @@ export type Database = {
         }
         Returns: Json
       }
+      app_get_team_supervised_conversation: {
+        Args: {
+          p_conversation_id: string
+          p_correlation_id?: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      app_get_team_supervised_message_window: {
+        Args: {
+          p_after_limit?: number
+          p_before_limit?: number
+          p_conversation_id: string
+          p_correlation_id?: string
+          p_target_message_id: string
+        }
+        Returns: Json
+      }
       app_get_team_voice_playback: {
         Args: { p_message_id: string }
         Returns: Json
       }
       app_get_team_voice_upload_context: {
         Args: { p_upload_id: string }
+        Returns: Json
+      }
+      app_get_ticket_attachment_download: {
+        Args: { p_attachment_id: string }
         Returns: Json
       }
       app_get_ticket_detail: { Args: { p_ticket_id: string }; Returns: Json }
@@ -5380,6 +5621,8 @@ export type Database = {
       app_list_investment_intents: {
         Args: { p_limit?: number }
         Returns: {
+          active_ticket_id: string
+          active_ticket_status: string
           add_count: number
           company_id: string
           company_name: string
@@ -5615,6 +5858,37 @@ export type Database = {
         }
         Returns: Json
       }
+      app_list_team_supervised_conversations: {
+        Args: {
+          p_before_conversation_id?: string
+          p_before_last_message_at?: string
+          p_limit?: number
+        }
+        Returns: {
+          conversation_id: string
+          conversation_kind: string
+          created_at: string
+          last_message_at: string
+          participant_one_archived: boolean
+          participant_one_avatar_url: string
+          participant_one_name: string
+          participant_one_profile_id: string
+          participant_two_archived: boolean
+          participant_two_avatar_url: string
+          participant_two_name: string
+          participant_two_profile_id: string
+        }[]
+      }
+      app_list_team_supervised_messages_before: {
+        Args: {
+          p_before_created_at: string
+          p_before_message_id: string
+          p_conversation_id: string
+          p_correlation_id?: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       app_list_team_typing: {
         Args: { p_conversation_id: string }
         Returns: {
@@ -5642,8 +5916,8 @@ export type Database = {
           client_profile_id: string
           company_id: string
           company_name: string
-          inbox_added_at: string
           created_at: string
+          inbox_added_at: string
           last_message_at: string
           message_count: number
           priority: string
@@ -5722,6 +5996,15 @@ export type Database = {
       app_pin_team_message: { Args: { p_message_id: string }; Returns: Json }
       app_prepare_team_voice_upload: {
         Args: { p_conversation_id: string; p_mime_type: string }
+        Returns: Json
+      }
+      app_prepare_ticket_attachment: {
+        Args: {
+          p_order_id?: string
+          p_reply_to_message_id?: string
+          p_request_id: string
+          p_ticket_id?: string
+        }
         Returns: Json
       }
       app_provision_client_account_profile: {
@@ -6000,6 +6283,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_reply_to_order_message: {
+        Args: {
+          p_body: string
+          p_order_id: string
+          p_reply_to_attachment_id?: string
+          p_reply_to_message_id: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       app_reply_to_ticket: {
         Args: { p_body: string; p_request_id: string; p_ticket_id: string }
         Returns: {
@@ -6010,6 +6303,7 @@ export type Database = {
           id: string
           message_kind: string
           reply_quote_text: string | null
+          reply_to_attachment_id: string | null
           reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
@@ -6027,6 +6321,7 @@ export type Database = {
       app_reply_to_ticket_message: {
         Args: {
           p_body: string
+          p_reply_to_attachment_id?: string
           p_reply_to_message_id: string
           p_request_id: string
           p_ticket_id: string
@@ -6039,6 +6334,7 @@ export type Database = {
           id: string
           message_kind: string
           reply_quote_text: string | null
+          reply_to_attachment_id: string | null
           reply_to_message_id: string | null
           request_id: string | null
           ticket_id: string
@@ -6210,6 +6506,17 @@ export type Database = {
         }
         Returns: Json
       }
+      app_search_team_supervised_conversation_messages: {
+        Args: {
+          p_before_created_at?: string
+          p_before_message_id?: string
+          p_conversation_id: string
+          p_correlation_id?: string
+          p_limit?: number
+          p_query: string
+        }
+        Returns: Json
+      }
       app_send_client_report: {
         Args: { p_payload: Json; p_request_id: string }
         Returns: {
@@ -6289,6 +6596,20 @@ export type Database = {
         }
         Returns: Json
       }
+      app_send_ticket_message_with_attachment: {
+        Args: {
+          p_body?: string
+          p_checksum_sha256?: string
+          p_mime_type?: string
+          p_order_id?: string
+          p_original_name?: string
+          p_reply_to_message_id?: string
+          p_request_id: string
+          p_size_bytes?: number
+          p_ticket_id?: string
+        }
+        Returns: Json
+      }
       app_server_claim_client_welcome_email: {
         Args: {
           p_actor_id: string
@@ -6358,6 +6679,14 @@ export type Database = {
       }
       app_server_verify_gmail_connection: {
         Args: { p_actor_id: string; p_expires_at: string }
+        Returns: undefined
+      }
+      app_set_client_conversation_presence: {
+        Args: {
+          p_active: boolean
+          p_conversation_id: string
+          p_conversation_type: string
+        }
         Returns: undefined
       }
       app_set_investment_intent_status: {
@@ -6504,6 +6833,14 @@ export type Database = {
         Returns: Json
       }
       app_team_unread_count: { Args: never; Returns: number }
+      app_toggle_order_message_reaction: {
+        Args: {
+          p_message_id: string
+          p_order_id: string
+          p_reaction_code: string
+        }
+        Returns: Json
+      }
       app_toggle_team_message_reaction: {
         Args: { p_message_id: string; p_reaction_code: string }
         Returns: Json
@@ -6820,6 +7157,8 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null
@@ -6851,6 +7190,8 @@ export type Database = {
           created_at: string
           created_by_profile_id: string | null
           id: string
+          inbox_added_at: string | null
+          investment_service_id: string | null
           order_id: string | null
           priority: string
           public_ref: string | null

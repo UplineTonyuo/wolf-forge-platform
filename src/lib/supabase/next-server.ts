@@ -39,6 +39,7 @@ import { ProfileRepository } from "../../repositories/profile-repository";
 import { IntegrationRepository } from "../../repositories/integration-repository";
 import { TaskRepository } from "../../repositories/task-repository";
 import { TeamRepository } from "../../repositories/team-repository";
+import { TeamSupervisionRepository } from "../../repositories/team-supervision-repository";
 import { canonicalGreetingName } from "../../domain/profile/greeting";
 import { AccountProvisioningService } from "../../services/account-provisioning-service";
 import { PermissionService } from "../../services/permission-service";
@@ -64,6 +65,7 @@ import { ReportingService } from "../../services/reporting-service";
 import { StoreInterestService } from "../../services/store-interest-service";
 import { TaskService } from "../../services/task-service";
 import { TeamService } from "../../services/team-service";
+import { TeamSupervisionService } from "../../services/team-supervision-service";
 
 const internalRoleNames = new Set(["owner", "admin", "manager", "staff"]);
 
@@ -507,6 +509,14 @@ export const getInternalContext = cache(async () => {
        * team_messages.use, so constructing it grants nothing.
        */
       team: new TeamService({ repository: new TeamRepository(client) }),
+      /**
+       * Read-only Team supervision. Same user-scoped client: every supervisory
+       * RPC derives the supervisor from auth.uid() and requires
+       * team_messages.supervise, so constructing this grants nothing.
+       */
+      teamSupervision: new TeamSupervisionService({
+        repository: new TeamSupervisionRepository(client),
+      }),
       /**
        * The Reporting builder and the transitional quick send. Every RPC behind
        * it re-checks for an internal actor holding reports.send through the

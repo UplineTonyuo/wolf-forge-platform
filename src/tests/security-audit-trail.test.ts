@@ -92,6 +92,7 @@ describe("the auditable selection is a deliberate subset of the C2-4 taxonomy", 
         "auth.password.changed",
         "auth.login.unassigned",
         "authorization.context.denied",
+        "authorization.team_supervision.read",
         "integration.gmail.connected",
         "integration.gmail.disconnected",
         "integration.gmail.reauthorization_required",
@@ -477,13 +478,14 @@ describe("Gmail routes persist only lifecycle transitions", () => {
 
 describe("the migration seed and the TypeScript selection agree", () => {
   it("seeds exactly the codes SECURITY_AUDIT_EVENT_CODES selects", () => {
-    const migration = read("supabase/migrations/20260826120000_c25_durable_security_audit.sql");
-    const seedSection = migration.slice(
-      migration.indexOf("insert into private.security_audit_event_codes"),
-      migration.indexOf("revoke all on table private.security_audit_event_codes"),
+    const migrations = [
+      "supabase/migrations/20260826120000_c25_durable_security_audit.sql",
+      "supabase/migrations/20260928202728_team_supervision_audit_foundation.sql",
+    ].map(read);
+    const seeded = migrations.flatMap((migration) =>
+      [...migration.matchAll(/(?:values|,)\s*\('([a-z][a-z0-9._]*)',\s*'(?:authentication|authorization|integration)'/g)]
+        .map((match) => match[1]),
     );
-
-    const seeded = [...seedSection.matchAll(/\('([a-z][a-z0-9._]*)'/g)].map((match) => match[1]);
 
     expect(seeded.sort()).toEqual([...SECURITY_AUDIT_EVENT_CODES].sort());
   });

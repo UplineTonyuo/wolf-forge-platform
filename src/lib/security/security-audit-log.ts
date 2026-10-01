@@ -1,7 +1,5 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
-
 import {
   buildSecurityAuditRow,
   type SecurityAuditInput,
@@ -9,7 +7,7 @@ import {
 } from "../../domain/security/audit";
 import { readServerEnvironment } from "../env/server-env";
 import { createTrustedServerSupabaseClient } from "../supabase/trusted-server-client";
-import type { Database } from "../supabase/database.types";
+import type { Json } from "../supabase/database.types";
 
 /**
  * The durable security audit writer. Server-only, vendor-neutral, never throws.
@@ -26,7 +24,7 @@ import type { Database } from "../supabase/database.types";
  *
  * ## Who may write
  *
- * Rows land in `private.security_audit_events`, which holds no grant for any
+ * Rows land in `public.security_audit_events`, which holds no grant for any
  * browser role — not even SELECT. The only application-side writer is the
  * trusted server client (`SUPABASE_SECRET_KEY`, service role) used here, and
  * the table's privileges allow that role INSERT alone: even it cannot update,
@@ -42,24 +40,6 @@ import type { Database } from "../supabase/database.types";
  * call site also writes — and must never break the request being audited.
  */
 
-/** The generated `Database` type covers the public schema; audit rows live in `private`. */
-type AuditDatabase = Database & {
-  private: {
-    Tables: {
-      security_audit_events: {
-        Row: SecurityAuditRow & { id: string; occurred_at: string };
-        Insert: SecurityAuditRow;
-        Update: never;
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
-    Enums: Record<string, never>;
-    CompositeTypes: Record<string, never>;
-  };
-};
-
 /**
  * Replaces the default trusted-client write path. Exists for tests, exactly
  * like `setSecurityLogSink`: assertions inspect the ROW rather than a database.
@@ -73,20 +53,11 @@ export function setSecurityAuditSink(next: SecurityAuditSink | null): void {
   sink = next;
 }
 
-let cachedClient: AuditSupabaseClient | null = null;
+let cachedClient: ReturnType<typeof createTrustedServerSupabaseClient> | null = null;
 
-/**
- * The audit table lives in the `private` schema, so the client is pinned to
- * that schema name explicitly — leaving it defaulted would resolve every
- * relation against the generated public schema and reject the insert.
- */
-type AuditSupabaseClient = SupabaseClient<AuditDatabase, "private">;
-
-function trustedAuditClient(): AuditSupabaseClient {
+function trustedAuditClient(): ReturnType<typeof createTrustedServerSupabaseClient> {
   if (!cachedClient) {
-    cachedClient = createTrustedServerSupabaseClient(
-      readServerEnvironment(),
-    ) as unknown as AuditSupabaseClient;
+    cachedClient = createTrustedServerSupabaseClient(readServerEnvironment());
   }
   return cachedClient;
 }
@@ -95,7 +66,10 @@ async function writeToDatabase(row: SecurityAuditRow): Promise<void> {
   // A fresh process without SUPABASE_SECRET_KEY (KI-027) must degrade to the
   // C2-4 log line, not raise. The throw is caught by the caller's guard.
   const client = trustedAuditClient();
-  const { error } = await client.from("security_audit_events").insert(row);
+  const { error } = await client.from("security_audit_events").insert({
+    ...row,
+    metadata: row.metadata as Json,
+  });
   if (error) {
     /* Deliberately silent — see the contract above. */
   }
