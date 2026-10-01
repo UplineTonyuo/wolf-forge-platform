@@ -1,7 +1,7 @@
 const NEEDS_ATTENTION_GROUPS = [
-  { title: "Overdue", rows: 3 },
-  { title: "Unassigned", rows: 2 },
-  { title: "Waiting on client", rows: 2 },
+  { width: 64, rows: 3 },
+  { width: 88, rows: 2 },
+  { width: 128, rows: 2 },
 ];
 
 function SkeletonRows({ count }: { count: number }) {
@@ -31,18 +31,19 @@ function SkeletonRows({ count }: { count: number }) {
  * resolved page renders, so this skeleton occupies the real page's geometry
  * instead of an approximate mock. A prior version used its own skeleton-only
  * wrapper with no dividers and landed ~170px shorter, which read as a layout
- * jump on resolve.
+ * jump on resolve. Section labels are drawn as bars too: a loading state shows
+ * shapes only, never text that reads as loaded content.
  */
 export function TasksLoading() {
   return (
     <div className="attention-stack" role="status" aria-label="Loading tasks" aria-busy="true">
       <div className="attention-title">
         <span />
-        Team tasks
+        <div className="tasks-skeleton-bar tasks-skeleton-bar-label" style={{ width: 78 }} />
       </div>
       <section className="attention-section">
         <div className="section-heading">
-          <h2>Assigned to me</h2>
+          <div className="tasks-skeleton-bar tasks-skeleton-bar-heading" style={{ width: 104 }} />
           <span />
         </div>
         <SkeletonRows count={1} />
@@ -50,12 +51,12 @@ export function TasksLoading() {
 
       <div className="attention-title">
         <span />
-        Needs attention
+        <div className="tasks-skeleton-bar tasks-skeleton-bar-label" style={{ width: 112 }} />
       </div>
       {NEEDS_ATTENTION_GROUPS.map((group) => (
-        <section className="attention-section" key={group.title}>
+        <section className="attention-section" key={group.width}>
           <div className="section-heading">
-            <h2>{group.title}</h2>
+            <div className="tasks-skeleton-bar tasks-skeleton-bar-heading" style={{ width: group.width }} />
             <span />
           </div>
           <SkeletonRows count={group.rows} />

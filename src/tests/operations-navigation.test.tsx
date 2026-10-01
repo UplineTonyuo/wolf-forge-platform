@@ -63,13 +63,10 @@ describe("Operations route-transition skeletons", () => {
     const region = screen.getByRole("status", { name: "Loading tasks" });
     expect(region.getAttribute("aria-busy")).toBe("true");
     expect(region.className).toContain("attention-stack");
-    // Real, static section labels (not fetched data) are kept so the skeleton
-    // reserves the same vertical space as the resolved page's dividers and
-    // headings — only counts and row content are pulsing placeholders.
-    expect(screen.getByText("Assigned to me")).toBeTruthy();
-    expect(screen.getByText("Overdue")).toBeTruthy();
-    expect(screen.getByText("Unassigned")).toBeTruthy();
-    expect(screen.getByText("Waiting on client")).toBeTruthy();
+    // Same dividers and section headings as the page, but drawn as bars: no text.
+    expect(region.textContent?.trim()).toBe("");
+    expect(container.querySelectorAll(".attention-title")).toHaveLength(2);
+    expect(container.querySelectorAll(".section-heading .tasks-skeleton-bar-heading")).toHaveLength(4);
     expect(container.querySelectorAll(".attention-rows").length).toBeGreaterThan(0);
     expect(screen.queryByText(/loading workflow/iu)).toBeNull();
   });
