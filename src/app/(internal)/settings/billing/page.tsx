@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Info } from "lucide-react";
 import { ConnectionStatus } from "../../../../components/settings/connection-status";
 import styles from "../../../../components/settings/settings-foundation.module.css";
 import { DataError } from "../../../../components/ui/list-states";
@@ -21,34 +22,33 @@ export default async function BillingSettingsPage() {
 
       {!paymentConnections ? <DataError message="Payment-provider state could not be loaded." /> : (
         <div className={styles.sectionStack}>
-          <section className={styles.surfaceSection}>
-            <div className={styles.sectionHeading}>
-              <span className={styles.eyebrow}>Provider connections</span>
-              <h2>Payment processors</h2>
-              <p>Canonical connection management remains in Integrations.</p>
+          <section className={styles.panel} aria-labelledby="payment-processors-heading">
+            <div className={styles.panelHeading}>
+              <h3 id="payment-processors-heading">Payment processors</h3>
+              <p>Read-only connection state. Canonical connection management remains in Integrations.</p>
             </div>
-            <div>
-              <ul className={styles.foundationList}>
-                {paymentConnections.map((connection) => (
-                  <li key={connection.provider.id}>
-                    <strong>{connection.provider.name}</strong>
-                    <ConnectionStatus status={connection.status} />
-                  </li>
-                ))}
-              </ul>
+
+            <ul className={styles.rowList}>
+              {paymentConnections.map((connection) => (
+                <li key={connection.provider.id} className={styles.row}>
+                  <span className={styles.rowLabel}>{connection.provider.name}</span>
+                  <ConnectionStatus status={connection.status} />
+                </li>
+              ))}
+            </ul>
+
+            <div className={styles.panelFooter}>
               <Link href="/settings/integrations" className={styles.textLink}>Manage integrations</Link>
             </div>
           </section>
-          <section className={styles.surfaceSection}>
-            <div className={styles.sectionHeading}>
-              <span className={styles.eyebrow}>Separate concern</span>
-              <h2>Feature enablement</h2>
-              <p>A provider connection does not automatically enable payment behavior.</p>
+
+          <div className={styles.callout}>
+            <Info aria-hidden="true" />
+            <div>
+              <strong>Feature enablement</strong>
+              <p>A provider connection does not automatically enable payment behavior. Store payments, Invoice payments, and Subscription autopay remain unchanged; their future enablement will be persisted separately from connection status.</p>
             </div>
-            <div className={styles.callout}>
-              Store payments, Invoice payments, and Subscription autopay remain unchanged. Their future enablement will be persisted separately from connection status.
-            </div>
-          </section>
+          </div>
         </div>
       )}
     </div>

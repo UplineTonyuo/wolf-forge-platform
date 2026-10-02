@@ -1,29 +1,31 @@
 .shell {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 44px;
+  grid-template-columns: 208px minmax(0, 1fr);
+  gap: 40px;
   align-items: start;
 }
 
+/* Compact settings menu: a quiet rail, not a column of feature cards. */
 .navigation {
   position: sticky;
   top: 28px;
   display: grid;
-  gap: 3px;
-  padding-right: 22px;
-  border-right: 1px solid #e4e0d7;
+  gap: 2px;
+  padding-right: 20px;
+  border-right: 1px solid var(--wf-border);
 }
 
 .navigationLink {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
-  padding: 0 12px;
-  border-radius: 7px;
-  color: #606879;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #5f6675;
   font-size: 13px;
-  font-weight: 560;
+  font-weight: 520;
   text-decoration: none;
   transition: color 140ms ease, background-color 140ms ease;
 }
@@ -31,17 +33,26 @@
 .navigationLink svg {
   width: 16px;
   height: 16px;
+  opacity: .82;
 }
 
 .navigationLink:hover {
-  color: #000d51;
-  background: #f6f4ee;
+  color: var(--wf-navy);
+  background: var(--wf-warm-100);
 }
 
+/*
+ * Active row: navy text and icon over a soft warm tint with a hairline ring,
+ * plus the same thin gold edge the primary shell navigation uses. No slab.
+ */
 .navigationLink[aria-current="page"] {
-  color: #000d51;
-  background: #f1eee5;
-  box-shadow: inset 2px 0 #c8a842;
+  color: var(--wf-navy);
+  background: #f6f4ee;
+  box-shadow: inset 0 0 0 1px rgba(0, 13, 81, .05), inset 2px 0 0 0 var(--wf-gold);
+}
+
+.navigationLink[aria-current="page"] svg {
+  opacity: 1;
 }
 
 .navigationLink:focus-visible,
@@ -59,67 +70,86 @@
   min-width: 0;
 }
 
+/*
+ * Sub-page intro. Sits one clear step below the page title in the shell
+ * header, so "Settings" stays the strongest heading on the page.
+ */
 .pageIntro {
   max-width: 720px;
-  margin-bottom: 30px;
+  margin-bottom: 22px;
 }
 
 .pageIntro h1 {
   margin: 0;
-  color: #000d51;
+  color: var(--wf-navy);
   font-family: var(--wf-font-heading);
   font-size: clamp(25px, 3vw, 32px);
   font-weight: 590;
   letter-spacing: -.028em;
 }
 
+.pageIntro h2 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -.016em;
+}
+
 .pageIntro p {
-  max-width: 66ch;
-  margin: 9px 0 0;
-  color: #697184;
-  font-size: 13.5px;
-  line-height: 1.65;
+  max-width: 64ch;
+  margin: 7px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .sectionStack {
   display: grid;
-  gap: 0;
+  gap: 16px;
 }
 
+/*
+ * Sections are cards on the white workspace: controlled border, soft radius,
+ * no decorative fill. Two columns carry "what this section is" on the left and
+ * its data on the right; the card keeps them on one axis at every width.
+ */
 .surfaceSection {
   display: grid;
-  grid-template-columns: minmax(180px, .72fr) minmax(300px, 1.28fr);
-  gap: 42px;
-  padding: 30px 0;
-  border-top: 1px solid #e4e0d7;
-}
-
-.surfaceSection:last-of-type {
-  border-bottom: 1px solid #e4e0d7;
+  grid-template-columns: minmax(170px, .62fr) minmax(0, 1.38fr);
+  gap: 40px;
+  padding: 22px 24px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
 }
 
 .sectionHeading h2 {
-  margin: 4px 0 7px;
-  color: #000d51;
+  margin: 0 0 5px;
+  color: var(--wf-navy);
   font-family: var(--wf-font-heading);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 620;
-  letter-spacing: -.01em;
+  letter-spacing: -.008em;
 }
 
 .sectionHeading p,
 .manageCopy {
   margin: 0;
-  color: #697184;
+  color: var(--wf-text-muted);
   font-size: 12.5px;
-  line-height: 1.65;
+  line-height: 1.6;
 }
 
+/* Category label, deliberately quieter than the heading it introduces. */
 .eyebrow {
-  color: #94781f;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: .13em;
+  display: block;
+  margin-bottom: 6px;
+  color: #857f72;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .11em;
   text-transform: uppercase;
 }
 
@@ -135,8 +165,8 @@
   display: grid;
   grid-template-columns: minmax(130px, .48fr) minmax(0, 1fr);
   gap: 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid #ece9e1;
+  padding: 12px 0;
+  border-bottom: 1px solid #efede9;
 }
 
 .readOnlyGrid > div:first-child,
@@ -146,7 +176,7 @@
 
 .readOnlyGrid dt,
 .connectionDetails dt {
-  color: #7a8190;
+  color: var(--wf-text-muted);
   font-size: 11px;
   font-weight: 620;
 }
@@ -155,24 +185,48 @@
 .connectionDetails dd {
   min-width: 0;
   margin: 0;
-  color: #17213f;
+  color: var(--wf-text);
   font-size: 12.5px;
   line-height: 1.55;
 }
 
+/*
+ * Structured advisory panel: a bordered warm surface with an optional leading
+ * icon, a small title and body copy. Self-contained, not a highlighted strip.
+ */
 .callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 16px 18px;
-  border-left: 2px solid #c8a842;
-  color: #4f586b;
-  background: #faf8f1;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  color: var(--wf-text-muted);
+  background: var(--wf-warm-50);
   font-size: 12.5px;
   line-height: 1.6;
+}
+
+.callout > svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--wf-navy);
+  opacity: .7;
 }
 
 .callout strong {
   display: block;
   margin-bottom: 3px;
-  color: #000d51;
+  color: var(--wf-navy);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.callout p {
+  margin: 0;
+  max-width: 78ch;
 }
 
 .successNotice,
@@ -196,10 +250,9 @@
 .providerCard {
   scroll-margin-top: 24px;
   overflow: hidden;
-  border: 1px solid #dedbd2;
-  border-radius: 10px;
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
   background: #fff;
-  box-shadow: 0 8px 26px rgba(19, 31, 63, .045);
 }
 
 .providerMain {
@@ -215,9 +268,9 @@
   height: 46px;
   display: grid;
   place-items: center;
-  border: 1px solid #e5e1d8;
+  border: 1px solid var(--wf-border);
   border-radius: 10px;
-  background: #fbfaf7;
+  background: var(--wf-warm-50);
 }
 
 .providerIcon svg {
@@ -240,7 +293,7 @@
 
 .providerTitleRow h3 {
   margin: 0;
-  color: #000d51;
+  color: var(--wf-navy);
   font-family: var(--wf-font-heading);
   font-size: 16px;
   font-weight: 630;
@@ -249,7 +302,7 @@
 .providerCopy > p {
   max-width: 60ch;
   margin: 7px 0 0;
-  color: #697184;
+  color: var(--wf-text-muted);
   font-size: 12.5px;
   line-height: 1.55;
 }
@@ -262,52 +315,71 @@
   font-weight: 620;
 }
 
+/*
+ * Status chip in the quiet system register: white surface, hairline border,
+ * small radius and a colour dot. The label always states the status, so the
+ * dot is redundant decoration and colour is never the only signal.
+ */
 .connectionStatus {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-height: 24px;
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .025em;
+  gap: 6px;
+  min-height: 22px;
+  padding: 0 9px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  color: var(--wf-text-muted);
+  background: var(--wf-white);
+  font-size: 11px;
+  font-weight: 560;
+  white-space: nowrap;
 }
 
-.connectionStatus svg { width: 12px; height: 12px; }
-.disconnected { color: #687082; background: #f1f2f4; }
-.connected { color: #216942; background: #eaf5ee; }
-.error, .expired { color: #8d482e; background: #fbede7; }
+.connectionStatus::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .5;
+}
+
+.disconnected { color: #65605a; }
+.connected { color: #2e6749; border-color: #cfe4d8; background: #f8fbf9; }
+.connected::before { opacity: .9; }
+.error, .expired { color: #8a3d36; border-color: #e7d6d1; background: #fdf8f6; }
+.error::before, .expired::before { opacity: .9; }
 
 .providerAction,
 .primaryButton,
 .secondaryButton,
 .textLink {
-  min-height: 38px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid #000d51;
-  border-radius: 7px;
+  border: 1px solid var(--wf-navy);
+  border-radius: 8px;
   color: #fff;
-  background: #000d51;
+  background: var(--wf-navy);
   font-family: inherit;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 620;
   text-decoration: none;
   cursor: pointer;
 }
 
 .providerAction { min-width: 102px; padding: 0 13px; }
 .providerAction svg { width: 14px; height: 14px; }
-.providerAction:hover, .primaryButton:hover { background: #091967; }
+.providerAction:hover, .primaryButton:hover, .textLink:hover { background: var(--wf-navy-hover); }
 .providerAction[aria-expanded="true"] { color: #000d51; background: #fff; }
 .primaryButton { padding: 0 16px; }
 .primaryButton svg, .secondaryButton svg, .dangerButton svg { width: 14px; height: 14px; animation: spin 900ms linear infinite; }
 .primaryButton:disabled, .secondaryButton:disabled, .dangerButton:disabled { opacity: .58; cursor: wait; }
-.secondaryButton { padding: 0 14px; color: #000d51; background: #fff; }
-.secondaryButton:hover { background: #f6f4ee; }
+.secondaryButton { padding: 0 14px; color: var(--wf-navy); background: #fff; }
+.secondaryButton:hover { background: var(--wf-warm-100); }
 
 .permissionNote {
   padding-top: 6px;
@@ -328,11 +400,13 @@
   display: flex;
   gap: 12px;
   padding: 14px 15px;
-  color: #17213f;
-  background: #f8f6ef;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
+  color: var(--wf-text);
+  background: var(--wf-warm-50);
 }
 
-.secureNote > svg { flex: 0 0 auto; width: 17px; height: 17px; color: #94781f; }
+.secureNote > svg { flex: 0 0 auto; width: 17px; height: 17px; color: var(--wf-navy); opacity: .7; }
 .secureNote strong { display: block; color: #000d51; font-size: 12px; }
 .secureNote p { margin: 3px 0 0; color: #697184; font-size: 11.5px; line-height: 1.55; }
 .manageCopy { margin-top: 12px; }
@@ -372,14 +446,14 @@
   justify-content: space-between;
   gap: 22px;
   padding: 16px 18px;
-  border: 1px solid #e2ded5;
-  border-radius: 8px;
+  border: 1px solid var(--wf-border);
+  border-radius: 10px;
   cursor: pointer;
 }
 
 .preferenceRow > span { display: grid; gap: 4px; }
-.preferenceRow strong { color: #17213f; font-size: 12.5px; }
-.preferenceRow small { color: #737b8c; font-size: 11.5px; line-height: 1.45; }
+.preferenceRow strong { color: var(--wf-text); font-size: 12.5px; }
+.preferenceRow small { color: var(--wf-text-muted); font-size: 11.5px; line-height: 1.45; }
 .preferenceRow input { width: 18px; height: 18px; accent-color: #000d51; }
 
 .foundationList {
@@ -395,12 +469,77 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 13px 0;
-  border-bottom: 1px solid #ece9e1;
+  padding: 11px 0;
+  border-bottom: 1px solid #efede9;
 }
 
-.foundationList strong { color: #17213f; font-size: 12px; font-weight: 580; }
-.foundationList span { color: #8a7a45; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+.foundationList li:last-child { border-bottom: 0; }
+.foundationList strong { color: var(--wf-text); font-size: 12.5px; font-weight: 560; }
+.foundationList span { color: var(--wf-text-muted); font-size: 11.5px; font-weight: 520; }
+
+/*
+ * Bounded card with an explicit action zone: heading, aligned rows, then the
+ * footer that owns the panel's primary action.
+ */
+.panel {
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
+  background: var(--wf-white);
+  overflow: hidden;
+}
+
+.panelHeading {
+  padding: 20px 24px 16px;
+}
+
+.panelHeading h3 {
+  margin: 0;
+  color: var(--wf-navy);
+  font-family: var(--wf-font-heading);
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -.008em;
+}
+
+.panelHeading p {
+  max-width: 70ch;
+  margin: 5px 0 0;
+  color: var(--wf-text-muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.rowList {
+  margin: 0;
+  padding: 0 24px;
+  list-style: none;
+  border-top: 1px solid #efede9;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 52px;
+  padding: 12px 0;
+  border-bottom: 1px solid #efede9;
+}
+
+.row:last-child { border-bottom: 0; }
+.rowLabel { min-width: 0; color: var(--wf-text); font-size: 13px; font-weight: 560; }
+
+.panelFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--wf-border);
+  background: #fcfbf9;
+}
+
+.panelFooter .textLink { margin-top: 0; }
 
 .formFooter {
   display: flex;
@@ -410,15 +549,15 @@
   padding-top: 18px;
 }
 
-.formFooter > span { color: #747c8c; font-size: 11.5px; }
+.formFooter > span { color: var(--wf-text-muted); font-size: 11.5px; }
 
 .teamSummary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
-  background: #e1ddd4;
-  border: 1px solid #e1ddd4;
-  border-radius: 9px;
+  background: var(--wf-border);
+  border: 1px solid var(--wf-border);
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -427,8 +566,8 @@
   background: #fff;
 }
 
-.teamMetric span { display: block; color: #777f8f; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
-.teamMetric strong { display: block; margin-top: 6px; color: #000d51; font-family: var(--wf-font-heading); font-size: 22px; font-weight: 610; }
+.teamMetric span { display: block; color: var(--wf-text-muted); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.teamMetric strong { display: block; margin-top: 6px; color: var(--wf-navy); font-family: var(--wf-font-heading); font-size: 22px; font-weight: 610; }
 .textLink { width: fit-content; margin-top: 18px; padding: 0 14px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -441,16 +580,22 @@
     overflow-x: auto;
     padding: 0 0 10px;
     border-right: 0;
-    border-bottom: 1px solid #e4e0d7;
+    border-bottom: 1px solid var(--wf-border);
     scrollbar-width: thin;
   }
   .navigationLink { flex: 0 0 auto; white-space: nowrap; }
-  .navigationLink[aria-current="page"] { box-shadow: inset 0 -2px #c8a842; }
+  .navigationLink[aria-current="page"] {
+    background: #f6f4ee;
+    box-shadow: inset 0 0 0 1px rgba(0, 13, 81, .05), inset 0 -2px 0 0 var(--wf-gold);
+  }
 }
 
 @media (max-width: 640px) {
-  .navigationLink { min-height: 38px; padding: 0 10px; font-size: 12px; }
-  .surfaceSection { grid-template-columns: 1fr; gap: 20px; padding: 25px 0; }
+  .navigationLink { min-height: 36px; padding: 0 10px; font-size: 12px; }
+  .surfaceSection { grid-template-columns: 1fr; gap: 18px; padding: 18px; }
+  .panelHeading { padding: 17px 18px 14px; }
+  .rowList { padding: 0 18px; }
+  .panelFooter { padding: 13px 18px; }
   .providerMain { grid-template-columns: 42px minmax(0, 1fr); padding: 18px; }
   .providerIcon { width: 40px; height: 40px; }
   .providerAction, .permissionNote { grid-column: 2; justify-self: start; }
