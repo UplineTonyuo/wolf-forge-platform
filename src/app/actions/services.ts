@@ -56,6 +56,7 @@ function serviceInput(formData: FormData) {
     deadline_unit: deadlineAmount == null ? null : optionalText(formData, "deadline_unit"),
     require_client_profile: checked(formData, "require_client_profile"),
     sort_order: requiredNumber(formData, "sort_order"),
+    subscription_eligible: checked(formData, "subscription_eligible"),
   };
 }
 
@@ -266,4 +267,31 @@ export async function archiveServiceFolderAction(
 
   revalidatePath("/services");
   redirect("/services?folderArchived=1");
+}
+
+export async function setFolderSubscriptionEligibilityAction(
+  folderId: string,
+  eligible: boolean,
+  _state: CatalogFormState,
+  _formData: FormData,
+): Promise<CatalogFormState> {
+  void _state;
+  void _formData;
+  const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("services");
+  } catch (error) {
+    return formError(error);
+  }
+  if (!context.user.services.edit) {
+    return { error: "You do not have permission to edit Services." };
+  }
+  try {
+    await context.services.catalog.setFolderSubscriptionEligibility(folderId, eligible, context.actor);
+  } catch (error) {
+    return formError(error);
+  }
+
+  revalidatePath("/services");
+  redirect(`/services/folders/${folderId}?subscriptions=${eligible ? "on" : "off"}`);
 }

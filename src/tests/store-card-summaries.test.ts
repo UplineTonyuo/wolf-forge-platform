@@ -40,6 +40,7 @@ function serviceRow(overrides: Partial<ServiceRow> & { id: string; name: string 
     recurring_interval_unit: null,
     recurring_price: null,
     require_client_profile: false,
+    subscription_eligible: false,
     sort_order: 0,
     updated_at: "2026-08-01T00:00:00.000Z",
     ...overrides,

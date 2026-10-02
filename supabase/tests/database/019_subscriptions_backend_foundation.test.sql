@@ -129,7 +129,7 @@ where id in (
 create temporary table subscription_test_services as
 select id, name, row_number() over (order by id) as ordinal
 from public.services
-where is_active and archived_at is null
+where is_active and archived_at is null and subscription_eligible
 order by id
 limit 2;
 grant select on subscription_test_services to authenticated;

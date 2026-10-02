@@ -100,6 +100,11 @@ export class CatalogService {
     );
   }
 
+  async setFolderSubscriptionEligibility(id: unknown, eligible: boolean, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.setFolderSubscriptionEligibility(parseInput(uuidSchema, id), eligible);
+  }
+
   async archiveFolder(id: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.archiveFolder(parseInput(uuidSchema, id));

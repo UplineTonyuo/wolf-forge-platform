@@ -297,6 +297,18 @@ export function ServiceForm({
         </div>
       </section>
 
+      <section className="service-form-section" aria-labelledby="service-subscription-heading">
+        <div className="service-form-section-heading">
+          <h2 id="service-subscription-heading">Subscription availability</h2>
+        </div>
+        <div className="service-form-fields">
+          <label className="service-toggle service-field-wide">
+            <input name="subscription_eligible" type="checkbox" defaultChecked={service?.subscription_eligible ?? false} />
+            <span><strong>Available for subscriptions</strong><small>When enabled, this service can be selected when creating or changing a subscription.</small></span>
+          </label>
+        </div>
+      </section>
+
       <section className="service-form-section" aria-labelledby="service-visibility-heading">
         <div className="service-form-section-heading">
           <h2 id="service-visibility-heading">Visibility</h2>
