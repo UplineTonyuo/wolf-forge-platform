@@ -14,5 +14,5 @@ export default async function NewSubscriptionPage() {
   ]);
   const today = new Date().toISOString().slice(0, 10);
 
-  return <PageFrame title="New Subscription" description="Create an administrative recurring plan using a snapshot of current Service terms." narrow><SubscriptionPlanForm mode="create" companies={companies.map((company) => ({ id: company.id, name: company.name, recordKind: "client" as const }))} services={services} folders={folders} today={today} requestId={crypto.randomUUID()} /></PageFrame>;
+  return <PageFrame title="New Subscription" description="Create an administrative recurring plan using a snapshot of current Service terms." narrow><SubscriptionPlanForm mode="create" companies={companies.map((company) => ({ id: company.id, name: company.name, recordKind: "client" as const }))} services={services.filter((service) => service.subscription_eligible)} folders={folders} today={today} requestId={crypto.randomUUID()} /></PageFrame>;
 }

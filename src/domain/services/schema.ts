@@ -42,6 +42,7 @@ const serviceFieldsSchema = z.object({
   deadline_unit: z.enum(deadlineUnits).nullable().optional(),
   require_client_profile: z.boolean().optional(),
   sort_order: sortOrderSchema.optional(),
+  subscription_eligible: z.boolean().optional(),
 });
 
 function validateServiceConfiguration(

@@ -6,6 +6,7 @@ import type {
   UpdateServiceInput,
 } from "../domain/services/schema";
 import type { ServiceFolderRow, ServiceRow } from "../lib/supabase/database-rows";
+import { mapDatabaseError } from "../lib/errors/map-database-error";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { UserMutationClient } from "./types";
 
@@ -158,6 +159,15 @@ export class ServiceRepository {
       }),
       "Service folder",
     );
+  }
+
+  async setFolderSubscriptionEligibility(id: string, eligible: boolean): Promise<number> {
+    const { data, error } = await this.client.rpc("app_set_service_folder_subscription_eligibility", {
+      p_folder_id: id,
+      p_eligible: eligible,
+    });
+    if (error) throw mapDatabaseError(error, "Service folder");
+    return data;
   }
 
   async archiveFolder(id: string): Promise<ServiceFolderRow> {

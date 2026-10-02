@@ -2603,6 +2603,7 @@ export type Database = {
           recurring_price: number | null
           require_client_profile: boolean
           sort_order: number
+          subscription_eligible: boolean
           updated_at: string
         }
         Insert: {
@@ -2628,6 +2629,7 @@ export type Database = {
           recurring_price?: number | null
           require_client_profile?: boolean
           sort_order?: number
+          subscription_eligible?: boolean
           updated_at?: string
         }
         Update: {
@@ -2653,6 +2655,7 @@ export type Database = {
           recurring_price?: number | null
           require_client_profile?: boolean
           sort_order?: number
+          subscription_eligible?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -4439,6 +4442,7 @@ export type Database = {
           recurring_price: number | null
           require_client_profile: boolean
           sort_order: number
+          subscription_eligible: boolean
           updated_at: string
         }
         SetofOptions: {
@@ -4997,6 +5001,7 @@ export type Database = {
           recurring_price: number | null
           require_client_profile: boolean
           sort_order: number
+          subscription_eligible: boolean
           updated_at: string
         }
         SetofOptions: {
@@ -5211,6 +5216,7 @@ export type Database = {
           recurring_price: number | null
           require_client_profile: boolean
           sort_order: number
+          subscription_eligible: boolean
           updated_at: string
         }
         SetofOptions: {
@@ -6763,6 +6769,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_set_service_folder_subscription_eligibility: {
+        Args: { p_eligible: boolean; p_folder_id: string }
+        Returns: number
+      }
       app_set_team_conversation_slow_mode: {
         Args: { p_conversation_id: string; p_scope?: string; p_seconds: number }
         Returns: Json
@@ -7055,6 +7065,7 @@ export type Database = {
           recurring_price: number | null
           require_client_profile: boolean
           sort_order: number
+          subscription_eligible: boolean
           updated_at: string
         }
         SetofOptions: {

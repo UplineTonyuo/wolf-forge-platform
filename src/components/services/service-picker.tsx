@@ -74,7 +74,7 @@ export function ServicePicker({
   const availableFolders = useMemo(
     () =>
       folders
-        .filter((folder) => !folder.archived_at)
+        .filter((folder) => !folder.archived_at && activeServices.some((service) => service.folder_id === folder.id))
         .sort(
           (left, right) =>
             (left.sort_order ?? 0) - (right.sort_order ?? 0) || left.name.localeCompare(right.name),
