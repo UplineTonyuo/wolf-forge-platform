@@ -17,14 +17,16 @@ export type CompanyStatus = z.infer<
   typeof companyStatusSchema
 >;
 
+export const companyNameSchema = nonBlankTextSchema.max(200);
+
 export const createCompanySchema = z.object({
   request_id: uuidSchema.optional(),
-  name: nonBlankTextSchema,
+  name: companyNameSchema,
 });
 
 export const updateCompanySchema = z
   .object({
-    name: nonBlankTextSchema.optional(),
+    name: companyNameSchema.optional(),
     status: companyStatusSchema.optional(),
   })
   .refine(

@@ -2,9 +2,105 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { companyStatuses, type CompanyStatus } from "../../domain/companies/schema";
+import {
+  companyStatuses,
+  createCompanySchema,
+  type CompanyStatus,
+} from "../../domain/companies/schema";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { clientNameSearchScore } from "../../lib/client-name-search";
 import { getInternalContext } from "../../lib/supabase/next-server";
+
+export type CreateCompanyState = {
+  error: string | null;
+  fieldError: string | null;
+  duplicate: { id: string; name: string } | null;
+};
+
+export async function createCompanyAction(
+  _state: CreateCompanyState,
+  formData: FormData,
+): Promise<CreateCompanyState> {
+  const context = await getInternalContext();
+
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+  } catch (error) {
+    return {
+      error: toClientSafeError(error).message,
+      fieldError: null,
+      duplicate: null,
+    };
+  }
+
+  if (!context.user.clients.create) {
+    return {
+      error: "You do not have permission to create Companies.",
+      fieldError: null,
+      duplicate: null,
+    };
+  }
+
+  const rawName = String(formData.get("name") ?? "");
+  const parsed = createCompanySchema.safeParse({
+    request_id: formData.get("request_id"),
+    name: rawName,
+  });
+
+  if (!parsed.success) {
+    const nameIssue = parsed.error.issues.some(
+      (issue) => issue.path[0] === "name",
+    );
+
+    return {
+      error: nameIssue ? null : "Refresh the page and try again.",
+      fieldError: nameIssue
+        ? rawName.trim()
+          ? "Company name must be 200 characters or fewer."
+          : "Enter a company name."
+        : null,
+      duplicate: null,
+    };
+  }
+
+  let createdId: string;
+
+  try {
+    const duplicate = (await context.services.companies.listActive()).find(
+      (company) => clientNameSearchScore(company.name, parsed.data.name) === 1000,
+    );
+
+    if (duplicate) {
+      return {
+        error: null,
+        fieldError: null,
+        duplicate: { id: duplicate.id, name: duplicate.name },
+      };
+    }
+
+    const company = await context.services.companies.create(
+      parsed.data,
+      context.actor,
+    );
+
+    createdId = (await context.services.companies.get(company.id)).id;
+  } catch (error) {
+    const safe = toClientSafeError(error);
+
+    return {
+      error:
+        safe.code === "VALIDATION_ERROR"
+          ? "Check the company information and try again."
+          : safe.message,
+      fieldError: null,
+      duplicate: null,
+    };
+  }
+
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${createdId}`);
+  redirect(`/clients/${createdId}?created=1`);
+}
 
 export type CreateClientState = {
   error: string | null;
