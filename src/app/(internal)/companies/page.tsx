@@ -14,17 +14,22 @@ export default async function CompaniesPage() {
   const context = await getInternalContext();
 
   try {
-    const companies = await context.services.companies.listActive();
-    const contacts = context.user.clients.privateManage
-      ? await context.services.contacts.listForCompanies(companies.map((company) => company.id))
+    // Only explicit Company / Team entities. Client records (and their business
+    // names) live in `companies` and never appear here.
+    const companies = await context.services.organizations.listActive();
+    const members = context.user.clients.privateManage
+      ? await context.services.organizations.listMembers(companies.map((company) => company.id))
       : [];
-    const profileIds = contacts.map((contact) => contact.profile_id).filter((id): id is string => Boolean(id));
+    const profileIds = members.map(({ contact }) => contact.profile_id).filter((id): id is string => Boolean(id));
     const profiles = profileIds.length
       ? await context.client.from("profiles").select("id, avatar_url").in("id", profileIds).is("archived_at", null)
       : { data: [], error: null };
     if (profiles.error) throw profiles.error;
     const avatars = new Map((profiles.data ?? []).map((profile) => [profile.id, profile.avatar_url]));
-    const people = new Map(companies.map((company) => [company.id, contacts.filter((contact) => contact.company_id === company.id)]));
+    const people = new Map(companies.map((company) => [
+      company.id,
+      members.filter((member) => member.organizationId === company.id).map((member) => member.contact),
+    ]));
 
     const rows: CompanyListRow[] = companies.map((company) => ({
       id: company.id,
@@ -40,7 +45,7 @@ export default async function CompaniesPage() {
     }));
 
     return (
-      <PageFrame title="Companies" description="Business entities and the people connected to them." className={styles.page}>
+      <PageFrame title="Companies" description="Companies and teams, and the people who belong to them." className={styles.page}>
         {companies.length === 0 ? (
           <EmptyState
             title="No Companies yet"

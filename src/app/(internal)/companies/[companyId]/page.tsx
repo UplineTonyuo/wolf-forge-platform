@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArrowLeft, CalendarDays, Check, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarDays, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CompanyActions } from "../../../../components/companies/company-actions";
@@ -28,10 +28,22 @@ export default async function CompanyDetailPage({
   const context = await getInternalContext();
 
   try {
-    const company = await context.services.companies.get(companyId);
+    const company = await context.services.organizations.get(companyId);
     const people = context.user.clients.privateManage
-      ? await context.services.contacts.listForCompany(companyId)
+      ? (await context.services.organizations.listMembers([companyId])).map((member) => member.contact)
       : [];
+    const canAddPeople = context.user.clients.create && context.user.clients.privateManage;
+    // Membership is chosen explicitly from existing people; it is never inferred from a business name.
+    const candidates = canAddPeople
+      ? await context.client.from("client_contacts").select("id, name, email, company:companies(name)").is("archived_at", null).order("name")
+      : { data: [], error: null };
+    if (candidates.error) throw candidates.error;
+    const memberIds = new Set(people.map((person) => person.id));
+    const personOptions = (candidates.data ?? []).filter((contact) => !memberIds.has(contact.id)).map((contact) => ({
+      id: contact.id,
+      label: contact.name,
+      sublabel: [contact.email, contact.company?.name ? `Business name: ${contact.company.name}` : null].filter(Boolean).join(" · ") || undefined,
+    }));
     const profileIds = people.map((person) => person.profile_id).filter((id): id is string => Boolean(id));
     const profiles = profileIds.length
       ? await context.client.from("profiles").select("id, avatar_url").in("id", profileIds).is("archived_at", null)
@@ -58,27 +70,23 @@ export default async function CompanyDetailPage({
         </section>
 
         <section className={styles.peopleSection} aria-labelledby="company-people-heading">
-          <header><div><h2 id="company-people-heading">People{context.user.clients.privateManage ? ` (${people.length})` : ""}</h2><p>People linked to this business entity. Portal access is shown separately.</p></div>{context.user.clients.create && context.user.clients.privateManage ? <CompanyActions kind="person" companyId={company.id} companyName={company.name} /> : null}</header>
+          <header><div><h2 id="company-people-heading">People{context.user.clients.privateManage ? ` (${people.length})` : ""}</h2><p>People who belong to this Company. Client status and portal access are separate.</p></div>{canAddPeople ? <CompanyActions kind="person" companyId={company.id} companyName={company.name} people={personOptions} /> : null}</header>
 
           {!context.user.clients.privateManage ? (
             <div className={styles.restricted}><ShieldCheck aria-hidden="true" /><div><strong>Private contact access required</strong><p>You can view the Company without loading private contact or wallet data.</p></div></div>
           ) : people.length === 0 ? (
-            <div className={styles.emptyPeople}><UserRound aria-hidden="true" /><div><strong>No people linked</strong><p>This Company is valid without a contact or portal user.</p></div></div>
+            <div className={styles.emptyPeople}><UserRound aria-hidden="true" /><div><strong>No people yet</strong><p>This Company is valid without any people.</p></div></div>
           ) : (
             <div className={styles.peopleList}>
               {people.map((person) => (
                 <article className={styles.personRow} key={person.id}>
                   <AccountAvatar name={person.name} avatarUrl={avatars.get(person.profile_id ?? "")} size={42} fallback={<span className={styles.initials}>{initials(person.name)}</span>} />
-                  <div className={styles.personIdentity}><div><strong>{person.name}</strong>{person.is_primary ? <span className={styles.primaryBadge}><Check aria-hidden="true" />Primary</span> : null}</div>{person.email ? <span><Mail aria-hidden="true" />{person.email}</span> : <span className={styles.muted}>No email</span>}<small>{person.job_title ? `${person.job_title} · ` : ""}Added {formatDate(person.created_at)}</small></div>
-                  <div className={styles.accessState}>{person.profile_id ? <><KeyRound aria-hidden="true" /><span><strong>Portal access</strong><small>Company portal</small></span></> : <><UserRound aria-hidden="true" /><span><strong>Contact only</strong><small>No authenticated identity</small></span></>}</div>
+                  <div className={styles.personIdentity}><div><strong>{person.name}</strong></div>{person.email ? <span><Mail aria-hidden="true" />{person.email}</span> : <span className={styles.muted}>No email</span>}<small>{person.job_title ? `${person.job_title} · ` : ""}Added {formatDate(person.created_at)}</small></div>
+                  <div className={styles.accessState}>{person.profile_id ? <><KeyRound aria-hidden="true" /><span><strong>Portal access</strong><small>Client portal</small></span></> : <><UserRound aria-hidden="true" /><span><strong>Contact only</strong><small>No authenticated identity</small></span></>}</div>
                 </article>
               ))}
             </div>
           )}
-
-          {context.user.clients.privateManage && context.user.clients.create && context.user.team.create ? (
-            <p className={styles.portalProvision}>Need to create portal credentials? <Link href={`/accounts/client/new?companyId=${company.id}`}>Provision a portal user</Link>.</p>
-          ) : null}
         </section>
       </PageFrame>
     );

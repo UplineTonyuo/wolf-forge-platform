@@ -1940,6 +1940,63 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          contact_id: string
+          created_at: string
+          organization_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          organization_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       permission_modules: {
         Row: {
           account_class: string
@@ -4210,6 +4267,20 @@ export type Database = {
       }
     }
     Functions: {
+      app_add_organization_member: {
+        Args: { p_contact_id: string; p_organization_id: string }
+        Returns: {
+          contact_id: string
+          created_at: string
+          organization_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       app_add_team_conversation_member: {
         Args: { p_conversation_id: string; p_profile_id: string }
         Returns: Json
@@ -4946,6 +5017,22 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_create_organization: {
+        Args: { p_name: string; p_request_id: string }
+        Returns: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -7036,6 +7123,22 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_update_organization: {
+        Args: { p_name: string; p_organization_id: string }
+        Returns: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organizations"
           isOneToOne: true
           isSetofReturn: false
         }

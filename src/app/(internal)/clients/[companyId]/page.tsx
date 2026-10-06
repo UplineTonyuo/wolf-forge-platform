@@ -339,7 +339,7 @@ export default async function ClientDetailPage({
                 <div>
                   <dt>
                     <BriefcaseBusiness aria-hidden="true" />
-                    Company
+                    Business name
                   </dt>
                   <dd>{client.name}</dd>
                 </div>

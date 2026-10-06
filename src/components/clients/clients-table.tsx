@@ -416,7 +416,7 @@ export function ClientsTable({
                 />
               </th>
               <th>Client</th>
-              <th className="clients-table-company-heading">Company</th>
+              <th className="clients-table-company-heading">Business name</th>
               <th className="clients-table-created-heading">Created</th>
               <th>Status</th>
               <th><span className="sr-only">Actions</span></th>

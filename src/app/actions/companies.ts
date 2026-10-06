@@ -9,8 +9,6 @@ export type CompanyMutationResult = { ok: true } | { ok: false; error: string };
 function refreshCompany(companyId: string) {
   revalidatePath("/companies");
   revalidatePath(`/companies/${companyId}`);
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${companyId}`);
 }
 
 export async function updateCompanyAction(
@@ -25,7 +23,7 @@ export async function updateCompanyAction(
       return { ok: false, error: "You do not have permission to edit Companies." };
     }
 
-    await context.services.companies.update(companyId, { name }, context.actor);
+    await context.services.organizations.update(companyId, name, context.actor);
     refreshCompany(companyId);
     return { ok: true };
   } catch (error) {
@@ -39,15 +37,10 @@ export async function updateCompanyAction(
   }
 }
 
+/** Links an existing person to a Company. Membership is explicit; nothing is created or inferred. */
 export async function addCompanyPersonAction(
   companyId: string,
-  input: {
-    requestId: string;
-    name: string;
-    email: string;
-    phone: string;
-    jobTitle: string;
-  },
+  contactId: string,
 ): Promise<CompanyMutationResult> {
   const context = await getInternalContext();
 
@@ -57,34 +50,14 @@ export async function addCompanyPersonAction(
       return { ok: false, error: "You do not have permission to add Company people." };
     }
 
-    const contacts = await context.services.contacts.listForCompany(companyId);
-    const email = input.email.trim().toLowerCase();
-    if (email && contacts.some((contact) => contact.email?.trim().toLowerCase() === email)) {
-      return { ok: false, error: "A person with that email is already linked to this Company." };
-    }
-
-    await context.services.contacts.create(
-      {
-        request_id: input.requestId,
-        company_id: companyId,
-        name: input.name,
-        email: email || null,
-        phone: input.phone || null,
-        job_title: input.jobTitle || null,
-        is_primary: contacts.length === 0,
-      },
-      context.actor,
-    );
-
+    await context.services.organizations.addMember(companyId, contactId, context.actor);
     refreshCompany(companyId);
     return { ok: true };
   } catch (error) {
     const safe = toClientSafeError(error);
     return {
       ok: false,
-      error: safe.code === "VALIDATION_ERROR"
-        ? "Check the person details and try again."
-        : safe.message,
+      error: safe.code === "VALIDATION_ERROR" ? "Choose a person and try again." : safe.message,
     };
   }
 }

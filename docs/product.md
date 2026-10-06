@@ -8,8 +8,8 @@ web
 
 ## Users
 
-- Wolf Forge internal staff use the platform to manage companies, client relationships, work, billing, communication, services, forms, and team access.
-- Client-side users optionally use an authenticated portal to access only the capabilities granted to their Company relationship.
+- Wolf Forge internal staff use the platform to manage clients, companies/teams, work, billing, communication, services, forms, and team access.
+- Client-side users optionally use an authenticated portal to access only the capabilities granted to their Client record.
 
 ## Product Purpose
 
@@ -17,22 +17,24 @@ Wolf Forge Platform is the operating system for a digital marketing and SEO agen
 
 ## Positioning
 
-The platform treats a Company as the durable business entity, people as relationships to that Company, portal identity as optional, and Client as a lifecycle state rather than a duplicate business object.
+A Person (contact) is the human identity. Client is the lifecycle/business relationship a Person can have, and its Business Name is plain information on that Client record. A Company / Team is a separate, explicit organization a Person may optionally belong to. Client lifecycle and Company membership are independent; a Business Name never becomes a Company. Portal identity is optional.
 
 ## Operating Context
 
-- Internal users work across Companies, Clients, Projects, Tickets, Invoices, Subscriptions, Services, Forms, Reporting, and Team workflows.
-- Client users access Company-scoped work through the separate `/account` portal.
-- Company records may exist before any person, portal profile, Auth identity, subscription, or billing activity exists.
+- Internal users work across Clients, Companies, Projects, Tickets, Invoices, Subscriptions, Services, Forms, Reporting, and Team workflows.
+- Client users access their Client-scoped work through the separate `/account` portal.
+- Client records live in `companies` (name = Business Name). Company / Team entities live in `organizations`; membership is an explicit `organization_members` row.
+- A Company may exist with zero people.
 
 ## Capabilities and Constraints
 
-- Company membership, portal access, Auth identity, and capability grants are distinct concepts and must not be collapsed into one flag.
-- A Company may have multiple people. At most one active primary/owner relationship is allowed unless the product explicitly adopts co-owners later.
+- Client lifecycle, Company membership, portal access, Auth identity, and capability grants are distinct concepts and must not be collapsed into one flag.
+- A Company may have multiple people. Membership is always explicit; it is never inferred from a matching name.
+- Creating a Client never creates a Company; creating a Company never creates a Client.
 - All mutations require server-side capability checks and database enforcement. Browser state is never authorization.
 - Cross-company data access must fail closed through scoped RPCs and RLS.
 - `/clients` and `/companies` are related but distinct product surfaces. Existing Client, portal, billing, project, ticket, subscription, wallet, reporting, Team, and conversation flows must remain compatible.
-- Company creation uses the existing `CompanyService` / `CompanyRepository` / `app_create_company` path and must not implicitly create people, credentials, portal users, subscriptions, or external side effects.
+- Company creation uses `OrganizationService` / `OrganizationRepository` / `app_create_organization` and must not implicitly create people, Client records, credentials, portal users, subscriptions, or external side effects.
 - Production data, hosted migrations, deployment, invitations, email, and external user creation require separate explicit authorization.
 
 ## Brand Commitments
@@ -49,7 +51,7 @@ The platform treats a Company as the durable business entity, people as relation
 
 ## Product Principles
 
-1. Preserve one canonical business entity instead of duplicating Company and Client records.
+1. Keep Client records and Company / Team entities separate; never infer one from the other.
 2. Keep human relationships independent from authentication and portal access.
 3. Authorize every read and mutation at the server and database boundaries.
 4. Reuse proven Wolf Forge architecture and interaction primitives before adding new concepts.

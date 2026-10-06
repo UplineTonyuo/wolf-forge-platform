@@ -20,6 +20,7 @@ import { recordSecurityEvent } from "../security/security-log";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
 import { ActivityRepository } from "../../repositories/activity-repository";
 import { CompanyRepository } from "../../repositories/company-repository";
+import { OrganizationRepository } from "../../repositories/organization-repository";
 import { DashboardRepository } from "../../repositories/dashboard-repository";
 import { CompanyWalletRepository } from "../../repositories/company-wallet-repository";
 import { ContactRepository } from "../../repositories/contact-repository";
@@ -49,6 +50,7 @@ import { AuthAdminAdapter } from "./auth-admin";
 import { ActivityService } from "../../services/activity-service";
 import { CatalogService } from "../../services/catalog-service";
 import { CompanyService } from "../../services/company-service";
+import { OrganizationService } from "../../services/organization-service";
 import { DashboardService } from "../../services/dashboard-service";
 import { CompanyWalletService } from "../../services/company-wallet-service";
 import { ContactService } from "../../services/contact-service";
@@ -464,6 +466,7 @@ export const getInternalContext = cache(async () => {
       activity: new ActivityService(new ActivityRepository(client)),
       catalog: new CatalogService({ repository: new ServiceRepository(client) }),
       companies: new CompanyService({ repository: new CompanyRepository(client) }),
+      organizations: new OrganizationService({ repository: new OrganizationRepository(client) }),
       dashboard: new DashboardService({ repository: new DashboardRepository(client) }),
       wallets: new CompanyWalletService({ repository: new CompanyWalletRepository(client) }),
       // Internal staff grant and withdraw the WF Card entitlement that unlocks

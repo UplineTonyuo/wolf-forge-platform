@@ -12,23 +12,24 @@ const { addCompanyPersonAction, updateCompanyAction } = await import("../app/act
 
 const actor = { id: "actor-1" };
 const companyId = "20000000-0000-4000-8000-000000000002";
+const contactId = "30000000-0000-4000-8000-000000000003";
 
-function context(options?: { create?: boolean; edit?: boolean; privateManage?: boolean; contacts?: Array<{ email: string | null }> }) {
-  const contactsCreate = vi.fn().mockResolvedValue({ id: "contact-1" });
-  const companyUpdate = vi.fn().mockResolvedValue({ id: companyId });
+function context(options?: { create?: boolean; edit?: boolean; privateManage?: boolean }) {
+  const addMember = vi.fn().mockResolvedValue(undefined);
+  const organizationUpdate = vi.fn().mockResolvedValue({ id: companyId });
+  const clientCompanies = { create: vi.fn(), update: vi.fn() };
+  const contacts = { create: vi.fn() };
   mocks.getInternalContext.mockResolvedValue({
     actor,
     user: { clients: { create: options?.create ?? true, edit: options?.edit ?? true, privateManage: options?.privateManage ?? true } },
     services: {
       permissions: { requireModuleAccess: vi.fn().mockResolvedValue(undefined) },
-      companies: { update: companyUpdate },
-      contacts: {
-        listForCompany: vi.fn().mockResolvedValue(options?.contacts ?? []),
-        create: contactsCreate,
-      },
+      organizations: { update: organizationUpdate, addMember },
+      companies: clientCompanies,
+      contacts,
     },
   });
-  return { contactsCreate, companyUpdate };
+  return { addMember, organizationUpdate, clientCompanies, contacts };
 }
 
 beforeEach(() => {
@@ -37,49 +38,34 @@ beforeEach(() => {
 });
 
 describe("Company mutations", () => {
-  it("creates the first person as primary without creating portal access", async () => {
+  it("adds an existing person through explicit membership without touching Client records", async () => {
     const spies = context();
-    await expect(addCompanyPersonAction(companyId, {
-      requestId: "30000000-0000-4000-8000-000000000003",
-      name: "Jane Doe",
-      email: "Jane@Example.test",
-      phone: "",
-      jobTitle: "",
-    })).resolves.toEqual({ ok: true });
+    await expect(addCompanyPersonAction(companyId, contactId)).resolves.toEqual({ ok: true });
 
-    expect(spies.contactsCreate).toHaveBeenCalledWith(expect.objectContaining({
-      company_id: companyId,
-      email: "jane@example.test",
-      is_primary: true,
-    }), actor);
-    expect(spies.contactsCreate.mock.calls[0]?.[0]).not.toHaveProperty("profile_id");
+    expect(spies.addMember).toHaveBeenCalledWith(companyId, contactId, actor);
+    expect(spies.contacts.create).not.toHaveBeenCalled();
+    expect(spies.clientCompanies.create).not.toHaveBeenCalled();
+    expect(spies.clientCompanies.update).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/clients");
   });
 
-  it("blocks duplicate email and unauthorized contact access before mutation", async () => {
-    const duplicate = context({ contacts: [{ email: "jane@example.test" }] });
-    await expect(addCompanyPersonAction(companyId, {
-      requestId: "30000000-0000-4000-8000-000000000003",
-      name: "Jane Again",
-      email: " JANE@example.test ",
-      phone: "",
-      jobTitle: "",
-    })).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/already linked/u) });
-    expect(duplicate.contactsCreate).not.toHaveBeenCalled();
-
+  it("blocks unauthorized membership changes before mutation", async () => {
     const denied = context({ privateManage: false });
-    await expect(addCompanyPersonAction(companyId, {
-      requestId: "30000000-0000-4000-8000-000000000003",
-      name: "Denied",
-      email: "",
-      phone: "",
-      jobTitle: "",
-    })).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/permission/u) });
-    expect(denied.contactsCreate).not.toHaveBeenCalled();
+    await expect(addCompanyPersonAction(companyId, contactId))
+      .resolves.toMatchObject({ ok: false, error: expect.stringMatching(/permission/u) });
+    expect(denied.addMember).not.toHaveBeenCalled();
+  });
+
+  it("renames the Company entity, never the Client record", async () => {
+    const spies = context();
+    await expect(updateCompanyAction(companyId, "Renamed")).resolves.toEqual({ ok: true });
+    expect(spies.organizationUpdate).toHaveBeenCalledWith(companyId, "Renamed", actor);
+    expect(spies.clientCompanies.update).not.toHaveBeenCalled();
   });
 
   it("requires edit capability for Company identity changes", async () => {
     const spies = context({ edit: false });
     await expect(updateCompanyAction(companyId, "Renamed")).resolves.toMatchObject({ ok: false });
-    expect(spies.companyUpdate).not.toHaveBeenCalled();
+    expect(spies.organizationUpdate).not.toHaveBeenCalled();
   });
 });

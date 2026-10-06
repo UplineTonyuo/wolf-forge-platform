@@ -36,17 +36,11 @@ describe("Add Client welcome email option", () => {
     expect(container.querySelector('input[name="temporary_password"]')).not.toBeNull();
   });
 
-  it("can target an existing Company without rendering a new Company field", () => {
-    const { container } = render(
-      <CreateClientAccountForm
-        welcomeEmailAvailable={false}
-        companies={[{ id: "company-1", name: "Acme" }]}
-        initialCompanyId="company-1"
-      />,
-    );
+  it("asks for a plain Business name and offers no Company picker", () => {
+    const { container } = render(<CreateClientAccountForm welcomeEmailAvailable={false} />);
 
-    expect(container.querySelector('input[name="company_id"]')).toHaveValue("company-1");
-    expect(container.querySelector('input[name="company"]')).toBeNull();
-    expect(screen.getByRole("button", { name: "Company: Acme" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Business name")).toHaveAttribute("name", "company");
+    expect(container.querySelector('input[name="company_id"]')).toBeNull();
+    expect(screen.queryByText(/create a new company/iu)).toBeNull();
   });
 });

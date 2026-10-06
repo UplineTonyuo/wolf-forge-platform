@@ -66,7 +66,9 @@ export async function createCompanyAction(
   let createdId: string;
 
   try {
-    const duplicate = (await context.services.companies.listActive()).find(
+    // Company / Team names are compared only with other Companies, never with
+    // Client business names.
+    const duplicate = (await context.services.organizations.listActive()).find(
       (company) => clientNameSearchScore(company.name, parsed.data.name) === 1000,
     );
 
@@ -78,12 +80,12 @@ export async function createCompanyAction(
       };
     }
 
-    const company = await context.services.companies.create(
+    const company = await context.services.organizations.create(
       parsed.data,
       context.actor,
     );
 
-    createdId = (await context.services.companies.get(company.id)).id;
+    createdId = (await context.services.organizations.get(company.id)).id;
   } catch (error) {
     const safe = toClientSafeError(error);
 
@@ -97,9 +99,7 @@ export async function createCompanyAction(
     };
   }
 
-  revalidatePath("/clients");
   revalidatePath("/companies");
-  revalidatePath(`/clients/${createdId}`);
   revalidatePath(`/companies/${createdId}`);
   redirect(`/companies/${createdId}?created=1`);
 }

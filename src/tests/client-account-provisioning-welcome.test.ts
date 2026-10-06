@@ -71,17 +71,23 @@ describe("Add Client welcome email option", () => {
     expect(mocks.send).toHaveBeenCalledWith("profile-1", expect.any(String), {});
   });
 
-  it("links the login to an existing Company instead of creating another Company", async () => {
+  it("stores the Business name on a new Client record and never links a Company", async () => {
     await expect(submit({
+      company: "Anthony PLATFORM",
       company_id: "20000000-0000-4000-8000-000000000002",
       temporary_password: "Temp-pass-123",
       confirm_password: "Temp-pass-123",
     })).rejects.toMatchObject({ url: "/clients/company-1?created=1&portal=1" });
 
-    expect(mocks.provisionClientAccount.mock.calls[0]?.[0]).toMatchObject({
-      company_id: "20000000-0000-4000-8000-000000000002",
-      company_name: undefined,
-    });
+    const input = mocks.provisionClientAccount.mock.calls[0]?.[0];
+    expect(input).toMatchObject({ company_name: "Anthony PLATFORM" });
+    expect(input).not.toHaveProperty("company_id");
+  });
+
+  it("requires a Business name", async () => {
+    const state = await submit({ company: "", temporary_password: "Temp-pass-123", confirm_password: "Temp-pass-123" });
+    expect(state.fieldErrors.company).toBe("Enter a business name.");
+    expect(mocks.provisionClientAccount).not.toHaveBeenCalled();
   });
 
   it("keeps the account and reports the email as failed when the send breaks", async () => {

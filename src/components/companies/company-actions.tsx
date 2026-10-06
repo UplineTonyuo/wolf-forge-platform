@@ -6,6 +6,7 @@ import { useCallback, useEffect, useId, useRef, useState, useTransition, type Fo
 import { createPortal } from "react-dom";
 import { addCompanyPersonAction, updateCompanyAction } from "../../app/actions/companies";
 import { RowActionMenu } from "../ui/row-action-menu";
+import { SearchableSelect, type SearchableOption } from "../ui/searchable-select";
 import { useAnimatedPopover } from "../ui/use-animated-popover";
 import styles from "./company-experience.module.css";
 
@@ -16,10 +17,13 @@ export function CompanyActions({
   kind,
   companyId,
   companyName,
+  people = [],
 }: {
   kind: Exclude<DialogKind, null>;
   companyId: string;
   companyName: string;
+  /** Existing people that can be added to this Company. */
+  people?: SearchableOption[];
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -28,6 +32,7 @@ export function CompanyActions({
   const firstFieldRef = useRef<HTMLInputElement>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [error, setError] = useState<string | null>(null);
+  const [personId, setPersonId] = useState("");
   const [pending, startTransition] = useTransition();
   const { render, phase, show, hide } = useAnimatedPopover(130);
 
@@ -42,6 +47,7 @@ export function CompanyActions({
     triggerRef.current = trigger;
     setDialog(kind);
     setError(null);
+    setPersonId("");
     show();
   }
 
@@ -49,7 +55,7 @@ export function CompanyActions({
     if (!dialog) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    firstFieldRef.current?.focus();
+    (firstFieldRef.current ?? dialogRef.current?.querySelector<HTMLInputElement>("input"))?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !pending) close();
       if (event.key !== "Tab") return;
@@ -90,14 +96,11 @@ export function CompanyActions({
 
   function submitPerson(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    startTransition(async () => finish(await addCompanyPersonAction(companyId, {
-      requestId: crypto.randomUUID(),
-      name: String(data.get("name") ?? ""),
-      email: String(data.get("email") ?? ""),
-      phone: String(data.get("phone") ?? ""),
-      jobTitle: String(data.get("job_title") ?? ""),
-    })));
+    if (!personId) {
+      setError("Choose a person.");
+      return;
+    }
+    startTransition(async () => finish(await addCompanyPersonAction(companyId, personId)));
   }
 
   const modal = render && dialog ? (
@@ -106,26 +109,30 @@ export function CompanyActions({
         <header className={styles.dialogHeader}>
           <div>
             <h2 id={titleId}>{dialog === "person" ? "Add person" : "Edit company"}</h2>
-            <p>{dialog === "person" ? `Link a person to ${companyName} without creating portal credentials.` : "Update the business entity name."}</p>
+            <p>{dialog === "person" ? `Add an existing person to ${companyName}. Their Client record does not change.` : "Update the Company name."}</p>
           </div>
           <button type="button" aria-label="Close dialog" onClick={close} disabled={pending}><X aria-hidden="true" /></button>
         </header>
 
         <form className={styles.dialogForm} onSubmit={dialog === "person" ? submitPerson : submitCompany}>
-          <label>
-            <span>{dialog === "person" ? "Name" : "Company name"}</span>
-            <input ref={firstFieldRef} name="name" defaultValue={dialog === "company" ? companyName : ""} maxLength={200} required disabled={pending} autoComplete={dialog === "company" ? "organization" : "name"} />
-          </label>
           {dialog === "person" ? (
-            <>
-              <label><span>Email <small>optional</small></span><input name="email" type="email" maxLength={320} autoComplete="email" disabled={pending} /></label>
-              <div className={styles.fieldGrid}>
-                <label><span>Phone <small>optional</small></span><input name="phone" type="tel" maxLength={50} autoComplete="tel" disabled={pending} /></label>
-                <label><span>Job title <small>optional</small></span><input name="job_title" maxLength={120} autoComplete="organization-title" disabled={pending} /></label>
-              </div>
-              <p className={styles.portalNote}>Portal access stays off. Provisioning a login remains a separate action.</p>
-            </>
-          ) : null}
+            <SearchableSelect
+              label="Person"
+              menuLabel="Choose a person"
+              placeholder="Search people"
+              emptyMessage={people.length ? "No matching people." : "Everyone is already in this Company."}
+              options={people}
+              value={personId}
+              onChange={setPersonId}
+              disabled={pending}
+              required
+            />
+          ) : (
+            <label>
+              <span>Company name</span>
+              <input ref={firstFieldRef} name="name" defaultValue={companyName} maxLength={200} required disabled={pending} autoComplete="organization" />
+            </label>
+          )}
           {error ? <p className={styles.dialogError} role="alert">{error}</p> : null}
           <footer className={styles.dialogFooter}>
             <button type="button" className={styles.secondaryButton} onClick={close} disabled={pending}>Cancel</button>

@@ -62,8 +62,6 @@ div.filterPanelClosing { animation: companyFilterOut 150ms var(--wf-ease) forwar
 .personIdentity > span { display: flex; align-items: center; gap: 5px; color: #555b67; font-size: 11.5px; }
 .personIdentity > span svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .personIdentity small { color: #746f68; font-size: 11px; }
-.primaryBadge { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 999px; color: #6e5112; background: #f7edcf; font-size: 9.5px; font-weight: 700; text-transform: uppercase; }
-.primaryBadge svg { width: 10px; height: 10px; }
 .accessState { display: flex; align-items: center; gap: 8px; color: var(--wf-navy); }
 .accessState > svg { width: 17px; height: 17px; }
 .accessState span { display: grid; gap: 2px; }
@@ -73,8 +71,6 @@ div.filterPanelClosing { animation: companyFilterOut 150ms var(--wf-ease) forwar
 .emptyPeople > svg, .restricted > svg { width: 24px; height: 24px; flex: 0 0 auto; color: #9a7620; }
 .emptyPeople strong, .restricted strong { color: var(--wf-navy); font-size: 13px; }
 .emptyPeople p, .restricted p { margin: 4px 0 0; font-size: 11.5px; line-height: 1.5; }
-.portalProvision { margin: 0; padding: 13px 20px; color: #68645f; background: #faf9f7; font-size: 11.5px; }
-.portalProvision a { color: var(--wf-navy); font-weight: 650; text-underline-offset: 2px; }
 .error { display: grid; gap: 5px; padding: 16px; border: 1px solid #d8bebe; border-radius: 10px; color: #7f2c2c; background: #fffafa; font-size: 12px; }
 
 .backdrop { position: fixed; z-index: 12000; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 48, .42); animation: backdropIn 170ms ease both; }
@@ -91,8 +87,6 @@ div.filterPanelClosing { animation: companyFilterOut 150ms var(--wf-ease) forwar
 .dialogForm label small { color: #817b73; font-weight: 500; }
 .dialogForm input { width: 100%; min-width: 0; height: 42px; padding: 0 12px; border: 1px solid #dcdad6; border-radius: 9px; color: var(--wf-text); background: #fff; font: 13px/1 var(--wf-font-ui); }
 .dialogForm input:focus { border-color: #9aa2bd; outline: 2px solid rgba(0, 13, 81, .1); }
-.fieldGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.portalNote { margin: 0; padding: 10px 12px; border-radius: 9px; color: #5e5a54; background: #f5f3ef; font-size: 11px; line-height: 1.5; }
 .dialogError { margin: 0; color: #7f2c2c; font-size: 11.5px; }
 .dialogFooter { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
 @keyframes backdropIn { from { opacity: 0; } }
@@ -119,11 +113,10 @@ div.filterPanelClosing { animation: companyFilterOut 150ms var(--wf-ease) forwar
   .personRow { grid-template-columns: auto minmax(0, 1fr); padding: 14px 15px; }
   .accessState { grid-column: 2; }
   .peopleSection > header, .identitySection { padding: 16px; }
-  .portalProvision { padding: 12px 15px; }
 }
 
 @media (max-width: 430px) {
-  .identitySection dl, .fieldGrid { grid-template-columns: 1fr; }
+  .identitySection dl { grid-template-columns: 1fr; }
   .dialogFooter { flex-direction: column-reverse; }
   .dialogFooter button { width: 100%; }
 }

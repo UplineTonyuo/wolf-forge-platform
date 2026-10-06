@@ -3,12 +3,7 @@ import { CreateClientAccountForm } from "../../../../../components/accounts/crea
 import { canSendClientWelcomeEmail } from "../../../../../lib/email/client-welcome-email-server";
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
-export default async function AddClientAccountPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ companyId?: string }>;
-}) {
-  const { companyId } = await searchParams;
+export default async function AddClientAccountPage() {
   const context = await getInternalContext();
   await context.services.permissions.requireModuleAccess("clients");
 
@@ -23,11 +18,6 @@ export default async function AddClientAccountPage({
   return (
     <CreateClientAccountForm
       welcomeEmailAvailable={await canSendClientWelcomeEmail(context)}
-      companies={(await context.services.companies.listActive()).map((company) => ({
-        id: company.id,
-        name: company.name,
-      }))}
-      initialCompanyId={companyId}
     />
   );
 }

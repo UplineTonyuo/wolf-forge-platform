@@ -53,6 +53,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Clients table selection", () => {
+  it("labels the Client's business name as Business name, not Company", () => {
+    renderTable();
+    expect(screen.getByRole("columnheader", { name: "Business name" })).toBeTruthy();
+    expect(screen.queryByRole("columnheader", { name: "Company" })).toBeNull();
+  });
+
   it("creates compact, trimmed initials and renders the initials fallback", () => {
     expect(clientInitials("  Matt   Quinn ")).toBe("MQ");
     expect(clientInitials("Clemens Bouter")).toBe("CB");
