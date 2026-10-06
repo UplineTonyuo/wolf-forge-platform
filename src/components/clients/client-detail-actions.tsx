@@ -427,7 +427,7 @@ function EditClientModal({
     <ModalShell eyebrow="CLIENT" title="Edit client" onClose={onClose} pending={pending}>
       <form className="client-balance-form" onSubmit={submit}>
         <label className="client-balance-field">
-          <span>Company name</span>
+          <span>Business name</span>
           <input
             type="text"
             maxLength={200}

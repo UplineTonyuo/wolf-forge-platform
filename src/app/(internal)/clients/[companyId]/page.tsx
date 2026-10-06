@@ -119,12 +119,18 @@ export default async function ClientDetailPage({
   try {
     const [client, contacts, projects, wallet, wfCardMembership] = await Promise.all([
       context.services.companies.get(companyId),
-      context.services.contacts.listForCompany(companyId),
+      context.user.clients.privateManage
+        ? context.services.contacts.listForCompany(companyId)
+        : Promise.resolve([]),
       context.services.orders.listForCompany(companyId),
-      context.services.wallets.getForCompany(companyId),
+      context.user.clients.privateManage
+        ? context.services.wallets.getForCompany(companyId)
+        : Promise.resolve(null),
       // Missing is a real answer here: most companies hold no membership row at
       // all, and that is simply "not active" rather than an error.
-      context.services.wfCard.getMembership(companyId).catch(() => null),
+      context.user.invoices.manage
+        ? context.services.wfCard.getMembership(companyId).catch(() => null)
+        : Promise.resolve(null),
     ]);
 
     const openProjects = projects.filter(
@@ -333,7 +339,7 @@ export default async function ClientDetailPage({
                 <div>
                   <dt>
                     <BriefcaseBusiness aria-hidden="true" />
-                    Company
+                    Business name
                   </dt>
                   <dd>{client.name}</dd>
                 </div>
@@ -352,7 +358,7 @@ export default async function ClientDetailPage({
                     Primary contact
                   </dt>
                   <dd>
-                    {primaryContact?.name ?? "Not set"}
+                    {context.user.clients.privateManage ? primaryContact?.name ?? "Not set" : "Restricted"}
                   </dd>
                 </div>
 
@@ -362,7 +368,7 @@ export default async function ClientDetailPage({
                     Email
                   </dt>
                   <dd>
-                    {primaryContact?.email ?? "Not available"}
+                    {context.user.clients.privateManage ? primaryContact?.email ?? "Not available" : "Restricted"}
                   </dd>
                 </div>
 
@@ -372,7 +378,7 @@ export default async function ClientDetailPage({
                     Phone
                   </dt>
                   <dd>
-                    {primaryContact?.phone ?? "Not available"}
+                    {context.user.clients.privateManage ? primaryContact?.phone ?? "Not available" : "Restricted"}
                   </dd>
                 </div>
 
@@ -382,11 +388,11 @@ export default async function ClientDetailPage({
                     Job title
                   </dt>
                   <dd>
-                    {primaryContact?.job_title ?? "Not available"}
+                    {context.user.clients.privateManage ? primaryContact?.job_title ?? "Not available" : "Restricted"}
                   </dd>
                 </div>
 
-                <div className="client-balance-row">
+                {wallet ? <div className="client-balance-row">
                   <dt>
                     <WalletCards aria-hidden="true" />
                     Account balance
@@ -400,9 +406,9 @@ export default async function ClientDetailPage({
                       currency={wallet.currency}
                     />
                   </dd>
-                </div>
+                </div> : null}
 
-                <div className="client-balance-row">
+                {context.user.invoices.manage ? <div className="client-balance-row">
                   <dt>
                     <CreditCard aria-hidden="true" />
                     WF Card membership
@@ -414,7 +420,7 @@ export default async function ClientDetailPage({
                       status={wfCardMembership?.status ?? null}
                     />
                   </dd>
-                </div>
+                </div> : null}
               </dl>
             </section>
 

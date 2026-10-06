@@ -5,9 +5,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import {
-  useSearchParams,
-} from "next/navigation";
-import {
   ClientsFilterPanel,
   type ClientTypeCounts,
 } from "./clients-filter-panel";
@@ -21,27 +18,11 @@ export function ClientsHeaderTools({
   status: string;
   counts: ClientTypeCounts;
 }) {
-  const searchParams =
-    useSearchParams();
-
-  const companyView =
-    searchParams.get("view") ===
-    "companies";
-
   return (
     <div className="clients-header-tools">
       <Link
-        className={
-          companyView
-            ? "clients-header-tool is-active"
-            : "clients-header-tool"
-        }
-        href={
-          companyView
-            ? "/clients"
-            : "/clients?view=companies"
-        }
-        aria-pressed={companyView}
+        className="clients-header-tool"
+        href="/companies"
       >
         <Building2
           size={16}

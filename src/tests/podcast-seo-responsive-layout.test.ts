@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const css = readFileSync(resolve(import.meta.dirname, "../app/globals.css"), "utf8");
+const css = readFileSync(resolve(import.meta.dirname, "../app/globals.css"), "utf8").replaceAll("\r\n", "\n");
 
 function blockAfter(source: string, marker: string): string {
   const markerIndex = source.indexOf(marker);

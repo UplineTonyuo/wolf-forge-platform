@@ -121,7 +121,7 @@ export function CreateClientAccountForm({
 
         <p>
           Create a real client login,
-          company record, and primary
+          client record, and primary
           contact in one flow.
         </p>
       </header>
@@ -259,7 +259,7 @@ export function CreateClientAccountForm({
           className={styles.field}
         >
           <label htmlFor="client-company">
-            Company
+            Business name
           </label>
 
           <input

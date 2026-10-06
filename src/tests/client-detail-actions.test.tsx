@@ -166,7 +166,7 @@ describe("Edit client", () => {
     fireEvent.click(screen.getByRole("button", { name: /actions/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /edit client/i }));
 
-    fireEvent.change(screen.getByLabelText(/company name/i), { target: { value: "Acme Corp" } });
+    fireEvent.change(screen.getByLabelText(/business name/i), { target: { value: "Acme Corp" } });
     fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: "new@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
@@ -191,7 +191,7 @@ describe("Edit client", () => {
     fireEvent.click(screen.getByRole("button", { name: /actions/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /edit client/i }));
 
-    expect(screen.getByLabelText(/company name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/business name/i)).toBeInTheDocument();
     expect(screen.getByText(/no primary contact/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/^email$/i)).not.toBeInTheDocument();
   });

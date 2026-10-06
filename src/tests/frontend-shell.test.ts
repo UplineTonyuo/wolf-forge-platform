@@ -33,14 +33,15 @@ describe("Phase 3A navigation registry", () => {
     expect(titleForPath("/orders/00000000-0000-0000-0000-000000000000")).toBe("Projects");
     expect(titleForPath("/todo")).toBe("Operations");
     expect(titleForPath("/coupons")).toBe("Coupons");
+    expect(titleForPath("/companies")).toBe("Companies");
   });
 });
 
 describe("navigation derived from real module access", () => {
-  /** Every navigation id is also a public.permission_modules module key. */
-  it("uses module keys that match the navigation ids one for one", () => {
+  /** Each destination is gated by the module key of the same id. */
+  it("uses the module gate for every navigation destination", () => {
     const ids = navigationCategories.flatMap((category) => category.items.map((item) => item.id));
-    const granted = Object.fromEntries(ids.map((id) => [id, true]));
+    const granted = Object.fromEntries(navigationCategories.flatMap((category) => category.items.map((item) => [item.id, true])));
 
     expect(navigationForModules(granted).flatMap((category) => category.items.map((item) => item.id))).toEqual(ids);
   });

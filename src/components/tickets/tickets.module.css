@@ -986,6 +986,11 @@
   }
 }
 
+/* Must follow the `.filterPanel` rule above; the earlier reduced-motion block loses to it on source order. */
+@media (prefers-reduced-motion: reduce) {
+  .filterPanel { animation: none; }
+}
+
 .filterSection {
   display: grid;
   gap: 2px;

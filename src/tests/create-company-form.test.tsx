@@ -22,7 +22,7 @@ describe("CreateCompanyForm", () => {
     expect(name).toHaveAttribute("maxlength", "200");
     expect(name).toHaveAttribute("autocomplete", "organization");
     expect(screen.getByRole("button", { name: "Create company" })).toBeEnabled();
-    expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/clients");
+    expect(screen.getByRole("link", { name: "Cancel" })).toHaveAttribute("href", "/companies");
     expect(container.querySelector('input[name="request_id"]')).toHaveValue();
     expect(container.querySelector('input[type="email"]')).toBeNull();
     expect(container.querySelector('input[name="first_name"]')).toBeNull();

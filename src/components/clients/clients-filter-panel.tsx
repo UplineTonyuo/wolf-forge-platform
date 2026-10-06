@@ -77,7 +77,7 @@ export function ClientsFilterPanel({
             type="search"
             data-autofocus
             value={draftQuery}
-            placeholder="Company name"
+            placeholder="Business name"
             autoComplete="off"
             onChange={(event) => setDraftQuery(event.target.value)}
           />

@@ -5,7 +5,6 @@ import {
   Check,
   ChevronDown,
   Minus,
-  MoreHorizontal,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,7 +16,7 @@ import {
   type ClientBulkResult,
 } from "../../app/actions/clients";
 import { AccountAvatar } from "../ui/account-avatar";
-import { useAnimatedPopover } from "../ui/use-animated-popover";
+import { RowActionMenu } from "../ui/row-action-menu";
 
 export type ClientTableRow = {
   id: string;
@@ -83,79 +82,6 @@ function ClientAvatar({ name, src }: { name: string; src?: string | null }) {
   );
 }
 
-function ClientQuickActions({ id, name }: { id: string; name: string }) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const editRef = useRef<HTMLAnchorElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const { render, phase, animateOpen, show, showWithoutMotion, hide } = useAnimatedPopover(150);
-
-  useEffect(() => {
-    if (!render) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) hide();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [hide, render]);
-
-  function openAndFocus(animate = true) {
-    if (animate) show();
-    else showWithoutMotion();
-    requestAnimationFrame(() => editRef.current?.focus());
-  }
-
-  return (
-    <div
-      className="clients-row-actions"
-      ref={rootRef}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && render) {
-          event.preventDefault();
-          hide();
-          triggerRef.current?.focus();
-        } else if (
-          ["ArrowDown", "ArrowUp", "Enter", " "].includes(event.key) &&
-          !render
-        ) {
-          event.preventDefault();
-          openAndFocus(false);
-        } else if (render && ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-          event.preventDefault();
-          editRef.current?.focus();
-        }
-      }}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node)) hide();
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        className="clients-row-action-trigger"
-        aria-label={`Actions for ${name}`}
-        aria-haspopup="menu"
-        aria-expanded={render && phase === "open"}
-        onClick={() => (render ? hide() : openAndFocus(true))}
-      >
-        <MoreHorizontal aria-hidden="true" />
-      </button>
-
-      {render ? (
-        <div
-          className={phase === "open" ? "clients-row-action-menu is-open" : "clients-row-action-menu"}
-          data-open-motion={animateOpen ? "pointer" : "keyboard"}
-          role="menu"
-          aria-label={`Actions for ${name}`}
-        >
-          <Link ref={editRef} href={`/clients/${id}`} role="menuitem" onClick={hide}>
-            Edit
-          </Link>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function describeResult(result: ClientBulkResult, action: "status" | "delete") {
   const verb = action === "delete" ? "deleted" : "updated";
   if (result.attempted === 0) return "No clients were selected.";
@@ -202,8 +128,8 @@ export function ClientsTable({
    * a floating popover. It pushes the table down instead of covering rows,
    * headers, avatars or checkboxes — the opposite of AnimatedSelect's usual
    * overlay behavior, which is why this toolbar builds its own compact menu
-   * (mirroring ClientQuickActions' existing lightweight role="menu" pattern
-   * elsewhere in this file) rather than reusing that shared component here.
+   * (mirroring RowActionMenu's lightweight role="menu" pattern
+   * in ui/row-action-menu.tsx) rather than reusing that shared component here.
    */
   const [trayOpen, setTrayOpen] = useState(false);
   const [trayView, setTrayView] = useState<"actions" | "status">("actions");
@@ -490,7 +416,7 @@ export function ClientsTable({
                 />
               </th>
               <th>Client</th>
-              <th className="clients-table-company-heading">Company</th>
+              <th className="clients-table-company-heading">Business name</th>
               <th className="clients-table-created-heading">Created</th>
               <th>Status</th>
               <th><span className="sr-only">Actions</span></th>
@@ -529,7 +455,7 @@ export function ClientsTable({
                       {client.statusLabel}
                     </span>
                   </td>
-                  <td><ClientQuickActions id={client.id} name={client.name} /></td>
+                  <td><RowActionMenu name={client.name} items={[{ label: "Edit", href: `/clients/${client.id}` }]} /></td>
                 </tr>
               );
             })}

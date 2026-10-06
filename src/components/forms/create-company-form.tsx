@@ -34,7 +34,7 @@ export function CreateCompanyForm() {
       {state.duplicate ? (
         <div className="form-banner" role="alert">
           A company named {state.duplicate.name} already exists.{" "}
-          <Link href={`/clients/${state.duplicate.id}`}>
+          <Link href={`/companies/${state.duplicate.id}`}>
             Open the existing company.
           </Link>
         </div>
@@ -60,7 +60,7 @@ export function CreateCompanyForm() {
       </div>
 
       <div className="add-account-actions">
-        <Link className="button-secondary" href="/clients">
+        <Link className="button-secondary" href="/companies">
           Cancel
         </Link>
         <button

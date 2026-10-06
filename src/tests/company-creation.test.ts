@@ -38,6 +38,7 @@ function formData(name: string, id = requestId) {
 function context(options?: {
   canCreate?: boolean;
   companies?: typeof company[];
+  clientRecords?: Array<{ id: string; name: string }>;
   moduleError?: Error;
   readbackError?: Error;
 }) {
@@ -48,6 +49,10 @@ function context(options?: {
   const contactsCreate = vi.fn();
   const provisionClientAccount = vi.fn();
   const createAuthUser = vi.fn();
+  const clientRecords = {
+    listActive: vi.fn().mockResolvedValue(options?.clientRecords ?? []),
+    create: vi.fn(),
+  };
   const requireModuleAccess = options?.moduleError
     ? vi.fn().mockRejectedValue(options.moduleError)
     : vi.fn().mockResolvedValue(undefined);
@@ -57,11 +62,13 @@ function context(options?: {
     user: { clients: { create: options?.canCreate ?? true } },
     services: {
       permissions: { requireModuleAccess },
-      companies: {
+      // Company / Team entities, separate from Client records in `companies`.
+      organizations: {
         listActive: vi.fn().mockResolvedValue(options?.companies ?? []),
         create,
         get,
       },
+      companies: clientRecords,
       contacts: { create: contactsCreate },
       accountProvisioning: { provisionClientAccount },
     },
@@ -71,6 +78,7 @@ function context(options?: {
   return {
     create,
     get,
+    clientRecords,
     contactsCreate,
     provisionClientAccount,
     createAuthUser,
@@ -93,7 +101,7 @@ describe("createCompanyAction", () => {
         { error: null, fieldError: null, duplicate: null },
         formData("  QA Local Company Alpha  "),
       ),
-    ).rejects.toMatchObject({ url: `/clients/${companyId}?created=1` });
+    ).rejects.toMatchObject({ url: `/companies/${companyId}?created=1` });
 
     expect(spies.requireModuleAccess).toHaveBeenCalledWith("clients");
     expect(spies.create).toHaveBeenCalledWith(
@@ -102,9 +110,10 @@ describe("createCompanyAction", () => {
     );
     expect(spies.get).toHaveBeenCalledWith(companyId);
     expect(revalidatePath.mock.calls).toEqual([
-      ["/clients"],
-      [`/clients/${companyId}`],
+      ["/companies"],
+      [`/companies/${companyId}`],
     ]);
+    expect(spies.clientRecords.create).not.toHaveBeenCalled();
     expect(spies.contactsCreate).not.toHaveBeenCalled();
     expect(spies.provisionClientAccount).not.toHaveBeenCalled();
     expect(spies.createAuthUser).not.toHaveBeenCalled();
@@ -192,6 +201,19 @@ describe("createCompanyAction", () => {
     });
     expect(spies.create).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a Client business name as an existing Company", async () => {
+    const spies = context({ clientRecords: [{ id: "client-1", name: "Anthony PLATFORM" }] });
+
+    await expect(
+      createCompanyAction(
+        { error: null, fieldError: null, duplicate: null },
+        formData("Anthony PLATFORM"),
+      ),
+    ).rejects.toMatchObject({ url: `/companies/${companyId}?created=1` });
+    expect(spies.clientRecords.listActive).not.toHaveBeenCalled();
+    expect(spies.create).toHaveBeenCalledOnce();
   });
 
   it("does not claim success when fresh readback fails", async () => {

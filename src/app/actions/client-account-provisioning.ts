@@ -172,12 +172,12 @@ export async function provisionClientAccountAction(
 
   if (!companyName) {
     fieldErrors.company =
-      "Enter a company name.";
+      "Enter a business name.";
   } else if (
     companyName.length > 200
   ) {
     fieldErrors.company =
-      "Company name must be 200 characters or fewer.";
+      "Business name must be 200 characters or fewer.";
   }
 
   if (

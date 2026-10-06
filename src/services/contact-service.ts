@@ -7,6 +7,7 @@ export class ContactService {
   constructor(private readonly dependencies: ServiceDependencies<ContactRepository>) {}
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }
+  listForCompanies(companyIds: unknown[]) { return this.dependencies.repository.listForCompanies(companyIds.map((id) => parseInput(uuidSchema, id))); }
 
   async create(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);

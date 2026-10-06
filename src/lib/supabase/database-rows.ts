@@ -5,6 +5,7 @@ import type { Tables } from "./database.types";
 export type RoleRow = Tables<"roles">;
 export type ProfileRow = Tables<"profiles">;
 export type CompanyRow = Tables<"companies">;
+export type OrganizationRow = Tables<"organizations">;
 export type CompanyWalletRow = Tables<"company_wallets">;
 export type CompanyWalletTransactionRow = Tables<"company_wallet_transactions">;
 export type WfCardMembershipRow = Tables<"wf_card_memberships">;

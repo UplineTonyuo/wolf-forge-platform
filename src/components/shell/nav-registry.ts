@@ -110,6 +110,9 @@ export function activeNavigationRoute(pathname: string): string | undefined {
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "Operations";
   if (pathname === "/clients/new") return "New client";
+  if (pathname === "/companies") return "Companies";
+  if (pathname === "/companies/new") return "New company";
+  if (pathname.startsWith("/companies/")) return "Company";
   if (pathname === "/reporting/new") return "New report";
   if (pathname.startsWith("/reporting/")) return "Report";
   if (pathname.startsWith("/clients/")) return "Client";

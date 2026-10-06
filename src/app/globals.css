@@ -2908,8 +2908,14 @@ td {
   transition: opacity 150ms var(--wf-ease);
 }
 
-.clients-row-action-menu a {
+.clients-row-action-menu a,
+.clients-row-action-menu button {
+  width: 100%;
   min-height: 34px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
   display: flex;
   align-items: center;
   padding: 0 9px;
@@ -2921,7 +2927,9 @@ td {
 }
 
 .clients-row-action-menu a:hover,
-.clients-row-action-menu a:focus-visible {
+.clients-row-action-menu a:focus-visible,
+.clients-row-action-menu button:hover,
+.clients-row-action-menu button:focus-visible {
   outline: 0;
   background: #eef1f7;
   color: #000d51;
@@ -9381,13 +9389,6 @@ td {
 
 .clients-header-tool:active {
   transform: scale(0.975);
-}
-
-.clients-header-tool.is-active {
-  border-color: rgba(0, 13, 81, 0.22);
-
-  background: #f6f7fb;
-  color: #000d51;
 }
 
 .clients-header-tool svg {
