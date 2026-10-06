@@ -158,8 +158,8 @@ select throws_ok(
       'Cross-company Linked Contact'
     )
   $$,
-  '23514',
-  'linked contact profile must be a client in the same company',
+  '23503',
+  'insert or update on table "client_contacts" violates foreign key constraint "client_contacts_profile_membership_fkey"',
   'a contact cannot link a client profile from another company'
 );
 
@@ -245,8 +245,8 @@ select throws_ok(
       'Internal Profile Contact'
     )
   $$,
-  '23514',
-  'linked contact profile must be a client in the same company',
+  '23503',
+  'insert or update on table "client_contacts" violates foreign key constraint "client_contacts_profile_membership_fkey"',
   'an internal staff profile cannot be linked as a client contact profile'
 );
 

@@ -286,22 +286,21 @@ select is((select count(*) from public.roles), 5::bigint, 'service_role can exec
 
 select lives_ok(
   $$
-    insert into public.companies (id, name)
+    insert into public.companies (id, tenant_id, name)
     values
-      ('30000000-0000-0000-0000-000000000001', 'ACL Test Company'),
-      ('30000000-0000-0000-0000-000000000002', 'ACL Other Company')
+      ('30000000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Test Company'),
+      ('30000000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Other Company')
   $$,
-  'service_role can insert companies'
+  'service_role can insert companies with an explicit Tenant'
 );
 
 select lives_ok(
   $$
     update public.profiles
-    set role_id = (select id from public.roles where name = 'owner'),
-        company_id = '30000000-0000-0000-0000-000000000001'
+    set role_id = (select id from public.roles where name = 'owner')
     where id = '20000000-0000-0000-0000-000000000001'
   $$,
-  'service_role can perform trusted role and company profile administration'
+  'service_role can perform trusted role administration'
 );
 
 select lives_ok(
@@ -326,9 +325,10 @@ select is(
 
 select lives_ok(
   $$
-    insert into public.client_contacts (id, company_id, profile_id, name)
+    insert into public.client_contacts (id, tenant_id, company_id, profile_id, name)
     values (
       '35000000-0000-0000-0000-000000000001',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '10000000-0000-0000-0000-000000000001',
       'ACL Client Contact'
@@ -811,8 +811,8 @@ select throws_ok(
     set company_id = '30000000-0000-0000-0000-000000000002'
     where id = '10000000-0000-0000-0000-000000000001'
   $$,
-  '23514',
-  'linked contact profile must remain a client in the same company',
+  '23503',
+  'update or delete on table "tenant_memberships" violates foreign key constraint "client_contacts_profile_membership_fkey" on table "client_contacts"',
   'profile administration cannot move a linked contact profile to another company'
 );
 
@@ -823,7 +823,7 @@ select throws_ok(
     where id = '10000000-0000-0000-0000-000000000001'
   $$,
   '23514',
-  'linked contact profile must remain a client in the same company',
+  'new row for relation "tenant_memberships" violates check constraint "tenant_memberships_internal_has_no_company"',
   'profile administration cannot promote a linked client contact to an internal role'
 );
 

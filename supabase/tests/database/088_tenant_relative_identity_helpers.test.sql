@@ -111,7 +111,7 @@ from (values
   ('20000000-0000-0000-0000-000000000886', 'client',  null, null),
   ('20000000-0000-0000-0000-000000000887', 'admin',   null, now()),
   ('20000000-0000-0000-0000-000000000888', 'client',  '30000000-0000-0000-0000-000000000882', null),
-  ('20000000-0000-0000-0000-000000000889', 'staff',   '30000000-0000-0000-0000-000000000881', null),
+  ('20000000-0000-0000-0000-000000000889', 'staff',   null, null),
   ('20000000-0000-0000-0000-000000000890', 'admin',   null, null),
   ('20000000-0000-0000-0000-000000000891', 'client',  '30000000-0000-0000-0000-000000000881', null)
 ) as fixture(profile_id, role_name, company_id, archived_at)
@@ -307,9 +307,9 @@ select is(private.current_user_company_id(), '30000000-0000-0000-0000-0000000008
   'client resolves its Client from the membership');
 
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000889';
-select ok(private.is_internal_user(), 'staff holding a company_id is internal');
+select ok(private.is_internal_user(), 'staff is internal');
 select is(private.current_user_company_id(), null::uuid,
-  'an internal membership gains no client company context from company_id');
+  'an internal membership has no client company context');
 select is((select count(*) from private.current_store_client()), 0::bigint,
   'an internal membership is not a store client');
 

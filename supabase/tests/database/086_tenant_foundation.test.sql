@@ -30,8 +30,9 @@ select fk_ok('public', 'tenant_memberships', 'profile_id', 'public', 'profiles',
   'membership profile references profiles');
 select fk_ok('public', 'tenant_memberships', 'role_id', 'public', 'roles', 'id',
   'membership role references roles');
-select fk_ok('public', 'tenant_memberships', 'company_id', 'public', 'companies', 'id',
-  'membership company references the legacy Client table');
+select fk_ok('public', 'tenant_memberships', array['tenant_id', 'company_id'],
+  'public', 'companies', array['tenant_id', 'id'],
+  'membership company references a Client of the same Tenant (WL-1C.1)');
 select col_is_null('public', 'tenant_memberships', 'company_id',
   'company_id is nullable for unassigned client identities');
 
@@ -261,30 +262,22 @@ select is(
   'the aborted profile write left the profile unchanged'
 );
 
--- An internal profile may hold a company today (pgTAP 006). The mirror copies
--- it exactly; "company only for client" is a deferred WL-1C invariant.
-update public.profiles
-set company_id = '30000000-0000-0000-0000-000000000861'
-where id = '20000000-0000-0000-0000-000000000864';
-
-select is(
-  (select row(account_class, company_id)::text from public.tenant_memberships
-    where profile_id = '20000000-0000-0000-0000-000000000864'),
-  row('internal'::text, '30000000-0000-0000-0000-000000000861'::uuid)::text,
-  'an internal profile with a company is mirrored exactly, not normalized'
+-- WL-1C.1 enforces the WL-1A deferred invariant: an internal membership never
+-- holds a Client. The fail-closed mirror rejects the profile write itself.
+select throws_ok(
+  $$update public.profiles
+    set company_id = '30000000-0000-0000-0000-000000000861'
+    where id = '20000000-0000-0000-0000-000000000864'$$,
+  '23514',
+  'new row for relation "tenant_memberships" violates check constraint "tenant_memberships_internal_has_no_company"',
+  'an internal profile cannot hold a company (mirror fails closed)'
 );
 select is(
-  (select count(*) from pg_constraint
-    where conrelid = 'public.tenant_memberships'::regclass
-      and contype = 'c'
-      and pg_get_constraintdef(oid) like '%company_id%'),
-  0::bigint,
-  'company-only-for-client is deferred to WL-1C, not enforced in WL-1A'
+  (select company_id from public.profiles
+    where id = '20000000-0000-0000-0000-000000000864'),
+  null::uuid,
+  'the rejected internal profile write left the profile unchanged'
 );
-
-update public.profiles
-set company_id = null
-where id = '20000000-0000-0000-0000-000000000864';
 
 -- Deleting a Client nulls the profile and the membership together, as before.
 delete from public.companies where id = '30000000-0000-0000-0000-000000000861';
