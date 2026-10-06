@@ -8,6 +8,7 @@ import {
   CORRELATION_HEADER,
   createCorrelationId,
 } from "./domain/security/correlation-id";
+import { TENANT_SELECTOR_HEADER } from "./domain/tenancy/tenant-selector";
 
 export async function proxy(request: NextRequest) {
   const environment = readPublicEnvironment();
@@ -36,6 +37,9 @@ export async function proxy(request: NextRequest) {
   const forwardRequest = () => {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(CORRELATION_HEADER, correlationId);
+    // A browser-sent Tenant selector is never application input (D-6b). The
+    // outbound selector to PostgREST is set only from a server-resolved Tenant.
+    requestHeaders.delete(TENANT_SELECTOR_HEADER);
     return NextResponse.next({ request: { headers: requestHeaders } });
   };
 

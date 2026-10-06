@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PublicEnvironment } from "../env/index";
 import type { Database } from "./database.types";
+import { TENANT_SELECTOR_HEADER, type TenantSelector } from "../../domain/tenancy/tenant-selector";
 
 declare const userScopedClientBrand: unique symbol;
 declare const verifiedActorBrand: unique symbol;
@@ -17,14 +18,22 @@ export type VerifiedActor = {
 const accessTokens = new WeakMap<object, string>();
 const verifiedActors = new WeakSet<object>();
 
-/** Creates a user-context client whose requests are evaluated by database RLS. */
+/**
+ * Creates a user-context client whose requests are evaluated by database RLS.
+ * An optional server-resolved Tenant selector is sent as `x-wf-tenant`; the
+ * database still authorizes it against the user's membership.
+ */
 export function createUserSupabaseClient(
   environment: PublicEnvironment,
   accessToken: string,
+  tenantSelector?: TenantSelector,
 ): UserScopedClient {
+  const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (tenantSelector) headers[TENANT_SELECTOR_HEADER] = tenantSelector;
+
   const client = createClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    global: { headers },
   }) as UserScopedClient;
   accessTokens.set(client, accessToken);
   return client;
