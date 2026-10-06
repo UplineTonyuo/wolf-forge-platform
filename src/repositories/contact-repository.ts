@@ -42,6 +42,20 @@ export class ContactRepository {
     );
   }
 
+  async listForCompanies(companyIds: string[]): Promise<ClientContactRow[]> {
+    if (companyIds.length === 0) return [];
+
+    return unwrapMany(
+      await this.client
+        .from("client_contacts")
+        .select()
+        .in("company_id", companyIds)
+        .is("archived_at", null)
+        .order("is_primary", { ascending: false })
+        .order("name"),
+    );
+  }
+
   async update(id: string, input: UpdateContactInput): Promise<ClientContactRow> {
     return unwrapOne(
       await this.client.rpc("app_update_contact", { p_contact_id: id, p_patch: input }),

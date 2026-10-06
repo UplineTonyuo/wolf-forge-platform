@@ -4,6 +4,7 @@ export type NavigationItemId =
   | "tickets"
   | "reporting"
   | "clients"
+  | "companies"
   | "todo"
   | "invoices"
   | "subscriptions"
@@ -19,6 +20,7 @@ export type NavigationItem = {
   id: NavigationItemId;
   label: string;
   route: string;
+  module?: string;
 };
 
 export type NavigationCategory = {
@@ -41,6 +43,7 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "tickets", label: "Tickets", route: "/tickets" },
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
+      { id: "companies", label: "Companies", route: "/companies", module: "clients" },
       { id: "todo", label: "Operations", route: "/todo" },
     ],
   },
@@ -87,7 +90,7 @@ export function navigationForModules(
   return navigationCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => modules[item.id] === true),
+      items: category.items.filter((item) => modules[item.module ?? item.id] === true),
     }))
     .filter((category) => category.items.length > 0);
 }
@@ -110,6 +113,8 @@ export function activeNavigationRoute(pathname: string): string | undefined {
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "Operations";
   if (pathname === "/clients/new") return "New client";
+  if (pathname === "/companies/new") return "New company";
+  if (pathname.startsWith("/companies/")) return "Company";
   if (pathname === "/reporting/new") return "New report";
   if (pathname.startsWith("/reporting/")) return "Report";
   if (pathname.startsWith("/clients/")) return "Client";

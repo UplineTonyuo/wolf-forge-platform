@@ -2,6 +2,7 @@
 
 import {
   ListChecks,
+  Building2,
   Menu,
   X,
   FileText,
@@ -40,6 +41,7 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   projects: FolderKanban,
   tickets: TicketCheck,
   clients: UsersRound,
+  companies: Building2,
   todo: ListChecks,
   invoices: ReceiptText,
   subscriptions: HandCoins,

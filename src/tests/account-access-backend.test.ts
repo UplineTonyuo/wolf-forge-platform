@@ -251,6 +251,45 @@ describe("permission and provisioning service boundaries", () => {
     expect(authAdmin.deleteUser).toHaveBeenCalledWith(profileId);
   });
 
+  it("adds a second portal user to an existing Company without creating a second primary contact", async () => {
+    const authAdmin = {
+      createUser: vi.fn().mockResolvedValue({ id: profileId, email: "second@example.invalid" }),
+      deleteUser: vi.fn(),
+    };
+    const permissions = {
+      provisionClientAccountProfile: vi.fn().mockResolvedValue({ id: profileId }),
+    };
+    const companies = { create: vi.fn(), archive: vi.fn() };
+    const contacts = {
+      listForCompany: vi.fn().mockResolvedValue([{ id: "existing-primary", is_primary: true }]),
+      create: vi.fn().mockResolvedValue({ id: "new-contact" }),
+    };
+    const service = new AccountProvisioningService({
+      permissions: permissions as never,
+      companies: companies as never,
+      contacts: contacts as never,
+      authAdmin: authAdmin as never,
+    });
+
+    await service.provisionClientAccount(
+      {
+        email: "second@example.invalid",
+        temporary_password: "temporary-secret",
+        company_id: companyId,
+      },
+      await serverVerifiedActor(),
+    );
+
+    expect(companies.create).not.toHaveBeenCalled();
+    expect(contacts.listForCompany).toHaveBeenCalledWith(companyId);
+    expect(contacts.create).toHaveBeenCalledWith(expect.objectContaining({
+      company_id: companyId,
+      profile_id: profileId,
+      is_primary: false,
+    }));
+    expect(authAdmin.deleteUser).not.toHaveBeenCalled();
+  });
+
   it("classifies a duplicate account without leaking the auth admin failure", () => {
     const failure = new AuthAdminError({
       reason: "already_exists",

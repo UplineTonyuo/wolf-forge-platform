@@ -19,6 +19,7 @@ import {
   type ProvisionClientAccountState,
 } from "../../app/actions/client-account-provisioning";
 import { ACTIVATION_LINK_DAYS } from "../../lib/email/client-welcome-email";
+import { AnimatedSelect } from "../ui/animated-select";
 import styles from "./create-client-account-form.module.css";
 
 function SubmitButton() {
@@ -71,9 +72,17 @@ function FieldError({
 
 export function CreateClientAccountForm({
   welcomeEmailAvailable,
+  companies = [],
+  initialCompanyId,
 }: {
   welcomeEmailAvailable: boolean;
+  companies?: Array<{ id: string; name: string }>;
+  initialCompanyId?: string;
 }) {
+  const initialSelection = companies.some((company) => company.id === initialCompanyId)
+    ? initialCompanyId as string
+    : "new";
+  const [companyId, setCompanyId] = useState(initialSelection);
   const [
     sendWelcomeEmail,
     setSendWelcomeEmail,
@@ -120,9 +129,8 @@ export function CreateClientAccountForm({
         </h1>
 
         <p>
-          Create a real client login,
-          company record, and primary
-          contact in one flow.
+          Create a client login and contact,
+          then connect them to a new or existing Company.
         </p>
       </header>
 
@@ -258,22 +266,33 @@ export function CreateClientAccountForm({
         <div
           className={styles.field}
         >
-          <label htmlFor="client-company">
+          <label>
             Company
           </label>
 
-          <input
-            id="client-company"
-            name="company"
-            autoComplete="organization"
-            maxLength={200}
-            required
-            aria-invalid={
-              Boolean(
-                state.fieldErrors.company,
-              )
-            }
+          <AnimatedSelect
+            name="company_id"
+            label="Company"
+            menuLabel="Choose a Company"
+            value={companyId}
+            onChange={setCompanyId}
+            options={[
+              { value: "new", label: "Create a new Company" },
+              ...companies.map((company) => ({ value: company.id, label: company.name })),
+            ]}
           />
+
+          {companyId === "new" ? (
+            <input
+              id="client-company"
+              name="company"
+              aria-label="New Company name"
+              autoComplete="organization"
+              maxLength={200}
+              required
+              aria-invalid={Boolean(state.fieldErrors.company)}
+            />
+          ) : null}
 
           <FieldError>
             {

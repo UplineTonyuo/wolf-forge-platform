@@ -98,8 +98,10 @@ export async function createCompanyAction(
   }
 
   revalidatePath("/clients");
+  revalidatePath("/companies");
   revalidatePath(`/clients/${createdId}`);
-  redirect(`/clients/${createdId}?created=1`);
+  revalidatePath(`/companies/${createdId}`);
+  redirect(`/companies/${createdId}?created=1`);
 }
 
 export type CreateClientState = {

@@ -107,6 +107,11 @@ export async function provisionClientAccountAction(
       "company",
     );
 
+  const selectedCompanyId = text(formData, "company_id");
+  const requestedCompanyId = selectedCompanyId && selectedCompanyId !== "new"
+    ? selectedCompanyId
+    : null;
+
   const phone =
     optionalText(
       formData,
@@ -170,7 +175,7 @@ export async function provisionClientAccountAction(
       "Last name must be 100 characters or fewer.";
   }
 
-  if (!companyName) {
+  if (!requestedCompanyId && !companyName) {
     fieldErrors.company =
       "Enter a company name.";
   } else if (
@@ -309,7 +314,8 @@ export async function provisionClientAccountAction(
             sendWelcomeEmail
               ? undefined
               : password,
-          company_name: companyName,
+          company_id: requestedCompanyId ?? undefined,
+          company_name: requestedCompanyId ? undefined : companyName,
           phone,
           job_title: jobTitle,
 
@@ -407,6 +413,9 @@ export async function provisionClientAccountAction(
   revalidatePath(
     "/clients",
   );
+
+  revalidatePath("/companies");
+  revalidatePath(`/companies/${companyId}`);
 
   revalidatePath(
     `/clients/${companyId}`,

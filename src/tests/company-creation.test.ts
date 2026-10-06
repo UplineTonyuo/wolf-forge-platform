@@ -93,7 +93,7 @@ describe("createCompanyAction", () => {
         { error: null, fieldError: null, duplicate: null },
         formData("  QA Local Company Alpha  "),
       ),
-    ).rejects.toMatchObject({ url: `/clients/${companyId}?created=1` });
+    ).rejects.toMatchObject({ url: `/companies/${companyId}?created=1` });
 
     expect(spies.requireModuleAccess).toHaveBeenCalledWith("clients");
     expect(spies.create).toHaveBeenCalledWith(
@@ -103,7 +103,9 @@ describe("createCompanyAction", () => {
     expect(spies.get).toHaveBeenCalledWith(companyId);
     expect(revalidatePath.mock.calls).toEqual([
       ["/clients"],
+      ["/companies"],
       [`/clients/${companyId}`],
+      [`/companies/${companyId}`],
     ]);
     expect(spies.contactsCreate).not.toHaveBeenCalled();
     expect(spies.provisionClientAccount).not.toHaveBeenCalled();

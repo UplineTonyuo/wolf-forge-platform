@@ -39,6 +39,7 @@ const EXACT: Record<string, InternalSkeletonVariant> = {
   "/tickets": "tickets",
   "/reporting": "reporting",
   "/clients": "clients",
+  "/companies": "clients",
   "/todo": "operations",
   "/invoices": "invoices",
   "/subscriptions": "subscriptions",

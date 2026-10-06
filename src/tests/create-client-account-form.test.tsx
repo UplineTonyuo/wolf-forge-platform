@@ -35,4 +35,18 @@ describe("Add Client welcome email option", () => {
     expect(screen.getByText(/needs a connected gmail account/i)).toBeInTheDocument();
     expect(container.querySelector('input[name="temporary_password"]')).not.toBeNull();
   });
+
+  it("can target an existing Company without rendering a new Company field", () => {
+    const { container } = render(
+      <CreateClientAccountForm
+        welcomeEmailAvailable={false}
+        companies={[{ id: "company-1", name: "Acme" }]}
+        initialCompanyId="company-1"
+      />,
+    );
+
+    expect(container.querySelector('input[name="company_id"]')).toHaveValue("company-1");
+    expect(container.querySelector('input[name="company"]')).toBeNull();
+    expect(screen.getByRole("button", { name: "Company: Acme" })).toBeInTheDocument();
+  });
 });

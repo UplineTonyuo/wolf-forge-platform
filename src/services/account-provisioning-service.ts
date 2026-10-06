@@ -120,6 +120,8 @@ export class AccountProvisioningService {
         overrides,
       );
 
+      const existingContacts = await this.dependencies.contacts.listForCompany(companyId);
+
       await this.dependencies.contacts.create({
         request_id: parsed.contact_request_id ?? randomUUID(),
         company_id: companyId,
@@ -128,7 +130,7 @@ export class AccountProvisioningService {
         email: parsed.email,
         phone: parsed.phone ?? undefined,
         job_title: parsed.job_title ?? undefined,
-        is_primary: true,
+        is_primary: existingContacts.length === 0,
       });
 
       return { profile, companyId };
