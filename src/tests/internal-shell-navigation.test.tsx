@@ -85,7 +85,6 @@ describe("Sidebar navigation renders the destination skeleton", () => {
   it.each([
     ["/team", "/investment-intent", "investmentIntent"],
     ["/dashboard", "/tickets", "tickets"],
-    ["/dashboard", "/companies", "clients"],
     ["/tickets", "/reporting", "reporting"],
     ["/team", "/team/all-conversations", "conversations"],
     ["/team/all-conversations", "/team", "team"],

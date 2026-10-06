@@ -1,27 +1,36 @@
 .page { min-width: 0; }
-.headerActions { display: flex; flex-wrap: wrap; gap: 9px; }
-.primaryButton, .secondaryButton, .rowAction, .backLink { display: inline-flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none; }
+.primaryButton, .secondaryButton, .sectionAction, .backLink { display: inline-flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none; }
 .primaryButton, .secondaryButton { min-height: 40px; padding: 0 15px; border-radius: 9px; font: 600 12.5px/1 var(--wf-font-ui); cursor: pointer; }
 .primaryButton { border: 1px solid var(--wf-navy); color: #fff; background: var(--wf-navy); }
 .secondaryButton { border: 1px solid #d9d5cf; color: var(--wf-navy); background: #fff; }
 .primaryButton svg, .secondaryButton svg { width: 15px; height: 15px; }
-.primaryButton:focus-visible, .secondaryButton:focus-visible, .rowAction:focus-visible, .companyLink:focus-visible, .backLink:focus-visible, .mobileCard:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.primaryButton:focus-visible, .secondaryButton:focus-visible, .sectionAction:focus-visible, .companyLink:focus-visible, .backLink:focus-visible, .mobileCard:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
 
-.tableWrap { overflow-x: auto; border: 1px solid var(--wf-border); border-radius: 14px; background: #fff; }
-.table { width: 100%; min-width: 700px; border-collapse: collapse; }
+.detailPage :global(.page-header) { border-bottom: 0; }
+/* Inside the Tickets-style list surface (toolbar above, table below). */
+.tableWrap { margin: 8px 12px 12px; }
+.pushRight { margin-left: auto; }
+.noMatches { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; }
+.noMatches strong { color: var(--wf-navy); font-size: 14px; }
+.noMatches span { color: var(--wf-text-muted); font-size: 12px; }
+/* `div.` outranks the Tickets `.filterPanel` animation regardless of stylesheet order. */
+div.filterPanelClosing { animation: companyFilterOut 150ms var(--wf-ease) forwards; pointer-events: none; }
+@keyframes companyFilterOut { to { opacity: 0; transform: translateY(-4px) scale(0.99); } }
+.table { width: 100%; border-collapse: collapse; }
 .table th { height: 44px; padding: 0 18px; color: rgba(255, 255, 255, .78); background: var(--wf-navy); font-size: 11px; font-weight: 650; letter-spacing: .04em; text-align: left; text-transform: uppercase; }
 .table th:first-child { border-radius: 13px 0 0; }
-.table th:last-child { border-radius: 0 13px 0 0; }
+.table th:last-child { border-radius: 0 13px 0 0; text-align: right; }
 .table td { height: 66px; padding: 10px 18px; border-top: 1px solid #ece9e4; color: #555b67; font-size: 12.5px; }
-.table tbody tr { transition: background-color 140ms ease; }
+.table tbody tr { position: relative; transition: background-color 140ms ease; }
+/* The name link stretches over its row so the whole row opens the Company; the actions cell sits above it. */
+.companyLink::after { content: ""; position: absolute; inset: 0; }
+.actionsCell { position: relative; z-index: 1; width: 1%; }
 .companyLink { display: inline-flex; min-width: 0; align-items: center; gap: 10px; color: var(--wf-navy); font-weight: 650; text-decoration: none; }
 .companyLink svg { width: 18px; height: 18px; flex: 0 0 auto; color: #a17b24; }
 .companyLink span { overflow-wrap: anywhere; }
-.rowAction { color: var(--wf-navy); font-weight: 650; }
-.rowAction svg { width: 14px; height: 14px; }
 .muted { color: #746f68; }
 
-.avatarStack { display: flex; align-items: center; padding-left: 7px; }
+.avatarStack { position: relative; z-index: 1; width: fit-content; display: flex; align-items: center; padding-left: 7px; }
 .avatarItem, .avatarOverflow { position: relative; margin-left: -7px; border: 2px solid #fff; border-radius: 999px; }
 .avatarItem { display: inline-flex; }
 .avatarOverflow { width: 32px; height: 32px; display: grid; place-items: center; color: var(--wf-navy); background: #eeece7; font-size: 10px; font-weight: 700; }
@@ -40,7 +49,9 @@
 .identitySection dt svg { width: 14px; height: 14px; }
 .identitySection dd { margin: 7px 0 0; color: #202636; font-size: 13px; font-weight: 600; }
 .peopleSection { overflow: hidden; }
-.peopleSection > header { padding: 20px; border-bottom: 1px solid #e7e4df; }
+.peopleSection > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 20px; border-bottom: 1px solid #e7e4df; }
+.sectionAction { flex: 0 0 auto; min-height: 34px; padding: 0 12px; border: 1px solid #d9d5cf; border-radius: 8px; color: var(--wf-navy); background: #fff; font: 600 12px/1 var(--wf-font-ui); cursor: pointer; }
+.sectionAction svg { width: 14px; height: 14px; }
 .peopleSection > header p { max-width: 70ch; margin: 6px 0 0; color: #68645f; font-size: 12px; line-height: 1.5; }
 .peopleList { display: grid; }
 .personRow { min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(145px, auto); align-items: center; gap: 13px; padding: 15px 20px; border-bottom: 1px solid #ece9e4; }
@@ -91,15 +102,14 @@
   .primaryButton:hover { background: var(--wf-navy-hover); transform: translateY(-1px); }
   .secondaryButton:hover { border-color: #bdb8b0; background: #fbfaf8; }
   .table tbody tr:hover { background: #f8f7f4; }
-  .companyLink:hover, .rowAction:hover, .backLink:hover { color: var(--wf-navy-hover); }
+  .sectionAction:hover { background: #f4f2ef; }
+  .companyLink:hover, .backLink:hover { color: var(--wf-navy-hover); }
   .dialogHeader > button:hover { color: var(--wf-navy); background: #f4f2ef; }
 }
 
 @media (max-width: 767px) {
-  .headerActions { width: 100%; }
-  .headerActions > * { flex: 1 1 140px; }
   .tableWrap { display: none; }
-  .mobileList { display: grid; gap: 10px; }
+  .mobileList { display: grid; gap: 10px; padding: 12px; }
   .mobileCard { min-width: 0; display: grid; gap: 11px; padding: 15px; border: 1px solid var(--wf-border); border-radius: 12px; color: #555b67; background: #fff; text-decoration: none; }
   .mobileIdentity { display: flex; min-width: 0; align-items: center; gap: 9px; color: var(--wf-navy); }
   .mobileIdentity svg { width: 18px; height: 18px; flex: 0 0 auto; color: #a17b24; }
@@ -119,6 +129,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .backdrop, .dialog { animation: none; }
-  .table tbody tr, .primaryButton, .secondaryButton { transition: none; }
+  .backdrop, .dialog, div.filterPanelClosing { animation: none; }
+  .table tbody tr, .primaryButton, .secondaryButton, .sectionAction { transition: none; }
 }

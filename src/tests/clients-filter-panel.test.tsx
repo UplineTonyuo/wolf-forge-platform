@@ -82,13 +82,13 @@ describe("Clients filter", () => {
     expect(push).toHaveBeenCalledWith("/clients?q=acme");
   });
 
-  it("carries unrelated params such as `view` through untouched", () => {
-    params = new URLSearchParams("view=companies");
+  it("carries unrelated params such as `ref` through untouched", () => {
+    params = new URLSearchParams("ref=inbox");
     const { dialog } = openPanel();
     fireEvent.click(within(dialog).getByRole("button", { name: /^Lead/ }));
     apply(dialog);
 
-    expect(push).toHaveBeenCalledWith("/clients?view=companies&status=lead");
+    expect(push).toHaveBeenCalledWith("/clients?ref=inbox&status=lead");
   });
 
   it("clears search and Type together", () => {

@@ -1,25 +1,25 @@
 "use client";
 
-import { Building2, LoaderCircle, UserRoundPlus, X } from "lucide-react";
+import { LoaderCircle, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { addCompanyPersonAction, updateCompanyAction } from "../../app/actions/companies";
+import { RowActionMenu } from "../ui/row-action-menu";
 import { useAnimatedPopover } from "../ui/use-animated-popover";
 import styles from "./company-experience.module.css";
 
 type DialogKind = "person" | "company" | null;
 
+/** `company` renders the record's ellipsis menu (Edit company); `person` renders the People section's Add person button. */
 export function CompanyActions({
+  kind,
   companyId,
   companyName,
-  canAddPerson,
-  canEdit,
 }: {
+  kind: Exclude<DialogKind, null>;
   companyId: string;
   companyName: string;
-  canAddPerson: boolean;
-  canEdit: boolean;
 }) {
   const router = useRouter();
   const titleId = useId();
@@ -140,10 +140,11 @@ export function CompanyActions({
   ) : null;
 
   return (
-    <div className={styles.headerActions}>
-      {canAddPerson ? <button type="button" className={styles.primaryButton} onClick={(event) => open("person", event.currentTarget)}><UserRoundPlus aria-hidden="true" />Add person</button> : null}
-      {canEdit ? <button type="button" className={styles.secondaryButton} onClick={(event) => open("company", event.currentTarget)}><Building2 aria-hidden="true" />Edit company</button> : null}
+    <>
+      {kind === "person"
+        ? <button type="button" className={styles.sectionAction} onClick={(event) => open("person", event.currentTarget)}><Plus aria-hidden="true" />Add person</button>
+        : <RowActionMenu name={companyName} items={[{ label: "Edit company", onSelect: (trigger) => open("company", trigger) }]} />}
       {typeof document !== "undefined" && modal ? createPortal(modal, document.body) : null}
-    </div>
+    </>
   );
 }

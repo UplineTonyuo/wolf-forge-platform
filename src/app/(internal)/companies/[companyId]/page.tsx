@@ -43,8 +43,8 @@ export default async function CompanyDetailPage({
       <PageFrame
         title={company.name}
         description="Company record"
-        className={styles.page}
-        action={<CompanyActions companyId={company.id} companyName={company.name} canAddPerson={context.user.clients.create && context.user.clients.privateManage} canEdit={context.user.clients.edit} />}
+        className={`${styles.page} ${styles.detailPage}`}
+        action={context.user.clients.edit ? <CompanyActions kind="company" companyId={company.id} companyName={company.name} /> : null}
       >
         {query.created === "1" ? <div className={styles.success} role="status">{company.name} created. No login or subscription was created.</div> : null}
         <Link className={styles.backLink} href="/companies"><ArrowLeft aria-hidden="true" />Companies</Link>
@@ -58,7 +58,7 @@ export default async function CompanyDetailPage({
         </section>
 
         <section className={styles.peopleSection} aria-labelledby="company-people-heading">
-          <header><div><h2 id="company-people-heading">People{context.user.clients.privateManage ? ` (${people.length})` : ""}</h2><p>People linked to this business entity. Portal access is shown separately.</p></div></header>
+          <header><div><h2 id="company-people-heading">People{context.user.clients.privateManage ? ` (${people.length})` : ""}</h2><p>People linked to this business entity. Portal access is shown separately.</p></div>{context.user.clients.create && context.user.clients.privateManage ? <CompanyActions kind="person" companyId={company.id} companyName={company.name} /> : null}</header>
 
           {!context.user.clients.privateManage ? (
             <div className={styles.restricted}><ShieldCheck aria-hidden="true" /><div><strong>Private contact access required</strong><p>You can view the Company without loading private contact or wallet data.</p></div></div>
