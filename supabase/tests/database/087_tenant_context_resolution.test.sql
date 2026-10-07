@@ -54,11 +54,16 @@ select is(
   0::bigint,
   'no policy was added to the tenant tables'
 );
+-- WL-2 adds Tenant RLS one domain at a time; pin exactly which policies use it.
 select is(
-  (select count(*) from pg_policies
+  (select array_agg(tablename || '.' || policyname order by tablename, policyname) from pg_policies
     where coalesce(qual, '') ~ 'current_tenant_id' or coalesce(with_check, '') ~ 'current_tenant_id'),
-  0::bigint,
-  'no policy calls current_tenant_id() yet'
+  array[
+    'client_report_entries.client_report_entries_authorized_select',
+    'client_report_sections.client_report_sections_authorized_select',
+    'client_reports.client_reports_authorized_select'
+  ]::text[],
+  'only the WL-2.1 Client report policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')

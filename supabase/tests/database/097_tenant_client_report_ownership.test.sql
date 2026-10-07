@@ -140,11 +140,13 @@ select is(
 update fixture_subscription set b_id = (select id from public.app_create_subscription(
   gen_random_uuid(), (select payload from subscription_payload where tenant = 'b')));
 
+-- Since WL-2.1 the RPC refuses a foreign Client / Service before the insert;
+-- the composite keys behind it are proven by the trusted writes below.
 select throws_ok(
   $$select public.app_create_report_draft(gen_random_uuid(),
     (select payload from report_payload where tenant = 'b-wf-client'))$$,
   '23503',
-  'insert or update on table "client_reports" violates foreign key constraint "client_reports_company_id_fkey"',
+  'active client company is required',
   'a Tenant B report draft cannot be addressed to a Wolf Forge Client'
 );
 
@@ -152,7 +154,7 @@ select throws_ok(
   $$select public.app_create_report_draft(gen_random_uuid(),
     (select payload from report_payload where tenant = 'b-wf-service'))$$,
   '23503',
-  'insert or update on table "client_reports" violates foreign key constraint "client_reports_service_id_fkey"',
+  'active Reporting Service is required',
   'a Tenant B report draft cannot be tied to a Wolf Forge Service'
 );
 
