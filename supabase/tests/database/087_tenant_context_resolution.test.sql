@@ -69,6 +69,16 @@ select is(
     'coupon_discount_services.coupon_discount_services_authorized_internal_select',
     'coupon_redemptions.coupon_redemptions_authorized_internal_select',
     'coupons.coupons_authorized_internal_select',
+    'form_assignments.form_assignments_authorized_select',
+    'form_field_options.form_field_options_internal_select',
+    'form_files.form_files_internal_select',
+    'form_rules.form_rules_internal_select',
+    'form_service_links.form_service_links_internal_select',
+    'form_submission_values.form_submission_values_internal_select',
+    'form_submissions.form_submissions_authorized_select',
+    'form_version_fields.form_version_fields_internal_select',
+    'form_versions.form_versions_internal_select',
+    'forms.forms_internal_select',
     'invoice_payments.invoice_payments_authorized_internal_select',
     'invoice_refunds.invoice_refunds_authorized_internal_select',
     'invoices.invoices_authorized_internal_select',
@@ -82,7 +92,7 @@ select is(
     'subscription_payment_methods.subscription_payment_methods_internal_select',
     'wf_card_memberships.wf_card_memberships_authorized_select'
   ]::text[],
-  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice and WL-2.12 coupon policies call current_tenant_id()'
+  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice, WL-2.12 coupon and WL-2.14 Form policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')
