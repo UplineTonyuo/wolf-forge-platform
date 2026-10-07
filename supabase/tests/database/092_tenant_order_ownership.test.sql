@@ -91,8 +91,11 @@ values
   ('30000000-0000-0000-0000-000000000922', 'f0f0f0f0-0000-4000-8000-0000000009e1', 'B Order Client', 'client'),
   ('30000000-0000-0000-0000-000000000923', 'f0f0f0f0-0000-4000-8000-0000000009e2', 'C Order Client', 'client');
 
-insert into public.services (id, name)
-values ('59500000-0000-0000-0000-000000000001', 'Order Tenancy Service');
+insert into public.services (id, tenant_id, name)
+values
+  ('59500000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'WF Order Tenancy Service'),
+  ('59500000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-0000000009e1', 'B Order Tenancy Service'),
+  ('59500000-0000-0000-0000-000000000003', 'f0f0f0f0-0000-4000-8000-0000000009e2', 'C Order Tenancy Service');
 
 update public.profiles as profile
 set role_id = role.id,
@@ -124,7 +127,7 @@ values
   ('59600000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001',
    '30000000-0000-0000-0000-000000000921', '59500000-0000-0000-0000-000000000001', 'WF Order'),
   ('59600000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-0000000009e1',
-   '30000000-0000-0000-0000-000000000922', '59500000-0000-0000-0000-000000000001', 'B Order');
+   '30000000-0000-0000-0000-000000000922', '59500000-0000-0000-0000-000000000002', 'B Order');
 
 -- -----------------------------------------------------------------------------
 -- Normal Order creation takes the caller's Tenant
@@ -145,14 +148,14 @@ select is(
 select set_config('request.headers', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-0000000009e1"}', true);
 select is(
   (select tenant_id from public.app_create_order(gen_random_uuid(),
-    '30000000-0000-0000-0000-000000000922', '59500000-0000-0000-0000-000000000001', 'B created')),
+    '30000000-0000-0000-0000-000000000922', '59500000-0000-0000-0000-000000000002', 'B created')),
   'f0f0f0f0-0000-4000-8000-0000000009e1'::uuid,
   'a signed-in Order creation with the Tenant B selector lands in Tenant B'
 );
 
 select throws_ok(
   $$select public.app_create_order(gen_random_uuid(),
-    '30000000-0000-0000-0000-000000000921', '59500000-0000-0000-0000-000000000001', 'B created for WF Client')$$,
+    '30000000-0000-0000-0000-000000000921', '59500000-0000-0000-0000-000000000002', 'B created for WF Client')$$,
   '23503',
   'insert or update on table "orders" violates foreign key constraint "orders_company_id_fkey"',
   'a Tenant B Order created through app_create_order cannot name a Wolf Forge Client'
@@ -214,7 +217,7 @@ select throws_ok(
 select throws_ok(
   $$insert into public.orders (tenant_id, company_id, service_id, title)
     values ('f0f0f0f0-0000-4000-8000-0000000009e1', '30000000-0000-0000-0000-000000000921',
-      '59500000-0000-0000-0000-000000000001', 'x')$$,
+      '59500000-0000-0000-0000-000000000002', 'x')$$,
   '23503',
   'insert or update on table "orders" violates foreign key constraint "orders_company_id_fkey"',
   'a Tenant B Order cannot belong to a Wolf Forge Client'
@@ -223,7 +226,7 @@ select throws_ok(
 select throws_ok(
   $$insert into public.orders (tenant_id, company_id, service_id, assigned_to_profile_id, title)
     values ('f0f0f0f0-0000-4000-8000-0000000009e2', '30000000-0000-0000-0000-000000000923',
-      '59500000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000921', 'x')$$,
+      '59500000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000921', 'x')$$,
   '23503',
   'insert or update on table "orders" violates foreign key constraint "orders_assigned_to_profile_id_fkey"',
   'a Tenant C Order cannot be assigned to a Tenant B-only staff member'
@@ -232,7 +235,7 @@ select throws_ok(
 select throws_ok(
   $$insert into public.orders (tenant_id, company_id, service_id, assigned_to_profile_id, title)
     values ('f0f0f0f0-0000-4000-8000-0000000009e1', '30000000-0000-0000-0000-000000000922',
-      '59500000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000922', 'x')$$,
+      '59500000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000922', 'x')$$,
   '23503',
   'insert or update on table "orders" violates foreign key constraint "orders_assigned_to_profile_id_fkey"',
   'a Tenant B Order cannot be assigned to a Tenant C-only staff member'
@@ -244,11 +247,12 @@ select lives_ok(
   'a Tenant B Order can be assigned to a Tenant B internal member'
 );
 
+-- Both the Client and the Service key reject the move (093), so no message.
 select throws_ok(
   $$update public.orders set tenant_id = 'f0f0f0f0-0000-4000-8000-0000000009e1'
     where id = '59600000-0000-0000-0000-000000000001'$$,
   '23503',
-  'insert or update on table "orders" violates foreign key constraint "orders_company_id_fkey"',
+  null,
   'an Order cannot be moved to another Tenant while it references a Wolf Forge Client'
 );
 

@@ -148,7 +148,7 @@ select is(
     join pg_catalog.pg_attribute as parent_column
       on parent_column.attrelid = parent_table.oid
       and parent_column.attnum = constraint_row.confkey[1]
-    -- Single-column only; Tenant composite FKs are asserted in 089 and 092.
+    -- Single-column only; Tenant composite FKs are asserted in 089, 092 and 093.
     where constraint_row.contype = 'f'
       and cardinality(constraint_row.conkey) = 1
       and constraint_row.conrelid = any (
@@ -167,7 +167,6 @@ select is(
     'public.profiles.company_id', 'public.companies.id',
     'public.client_contacts.profile_id', 'public.profiles.id',
     'public.orders.tenant_id', 'public.tenants.id',
-    'public.orders.service_id', 'public.services.id',
     'public.order_tasks.order_id', 'public.orders.id',
     'public.order_tasks.assigned_to_profile_id', 'public.profiles.id',
     'public.activity_events.actor_profile_id', 'public.profiles.id'

@@ -348,8 +348,8 @@ select lives_ok(
 
 select lives_ok(
   $$
-    insert into public.services (id, name)
-    values ('40000000-0000-0000-0000-000000000001', 'ACL Test Service')
+    insert into public.services (id, tenant_id, name)
+    values ('40000000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Test Service')
   $$,
   'service_role can insert services'
 );
