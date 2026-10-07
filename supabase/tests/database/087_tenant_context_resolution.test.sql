@@ -65,15 +65,19 @@ select is(
     'client_report_sections.client_report_sections_authorized_select',
     'client_reports.client_reports_authorized_select',
     'companies.companies_internal_select',
+    'invoice_payments.invoice_payments_authorized_internal_select',
+    'invoice_refunds.invoice_refunds_authorized_internal_select',
     'organization_members.organization_members_private_select',
     'organizations.organizations_internal_select',
     'service_folders.service_folders_authenticated_select_active',
     'service_folders.service_folders_internal_select',
     'service_interests.service_interests_internal_select',
     'services.services_authenticated_select_active',
-    'services.services_internal_select'
+    'services.services_internal_select',
+    'subscription_payment_methods.subscription_payment_methods_internal_select',
+    'wf_card_memberships.wf_card_memberships_authorized_select'
   ]::text[],
-  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity and WL-2.9 Client / contact / Company policies call current_tenant_id()'
+  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company and WL-2.10 wallet / payment policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')
