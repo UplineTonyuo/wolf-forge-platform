@@ -174,16 +174,16 @@ select is(
 select throws_ok(
   $$select public.app_create_service(gen_random_uuid(),
     jsonb_build_object('name', 'B created in WF folder', 'folder_id', '59900000-0000-0000-0000-000000000001'))$$,
-  '23503',
-  'insert or update on table "services" violates foreign key constraint "services_folder_id_fkey"',
+  '23514',
+  'service folder must be active',
   'a Tenant B Service created through app_create_service cannot use a Wolf Forge folder'
 );
 
 select throws_ok(
   $$select public.app_create_service_folder(gen_random_uuid(),
     'B created under WF folder', null, '59900000-0000-0000-0000-000000000001', 0)$$,
-  '23503',
-  'insert or update on table "service_folders" violates foreign key constraint "service_folders_parent_id_fkey"',
+  '23514',
+  'service folder parent must be active',
   'a Tenant B folder created through app_create_service_folder cannot nest under a Wolf Forge folder'
 );
 
@@ -212,35 +212,38 @@ select is(
 -- Cross-Tenant catalog references are rejected even for trusted writes
 -- -----------------------------------------------------------------------------
 
+-- Since WL-2.7 the active-folder / folder-parent triggers reject a foreign
+-- folder like a missing one (23514) before the composite FK would.
+
 select throws_ok(
   $$insert into public.service_folders (tenant_id, parent_id, name)
     values ('f0f0f0f0-0000-4000-8000-0000000009f1', '59900000-0000-0000-0000-000000000001', 'x')$$,
-  '23503',
-  'insert or update on table "service_folders" violates foreign key constraint "service_folders_parent_id_fkey"',
+  '23514',
+  'service folder parent must be active',
   'a Tenant B folder cannot nest under a Wolf Forge folder'
 );
 
 select throws_ok(
   $$insert into public.service_folders (tenant_id, parent_id, name)
     values ('f0f0f0f0-0000-4000-8000-000000000001', '59900000-0000-0000-0000-000000000002', 'x')$$,
-  '23503',
-  'insert or update on table "service_folders" violates foreign key constraint "service_folders_parent_id_fkey"',
+  '23514',
+  'service folder parent must be active',
   'a Wolf Forge folder cannot nest under a Tenant B folder'
 );
 
 select throws_ok(
   $$insert into public.services (tenant_id, folder_id, name)
     values ('f0f0f0f0-0000-4000-8000-0000000009f1', '59900000-0000-0000-0000-000000000001', 'x')$$,
-  '23503',
-  'insert or update on table "services" violates foreign key constraint "services_folder_id_fkey"',
+  '23514',
+  'service folder must be active',
   'a Tenant B Service cannot sit in a Wolf Forge folder'
 );
 
 select throws_ok(
   $$update public.services set folder_id = '59900000-0000-0000-0000-000000000002'
     where id = '59800000-0000-0000-0000-000000000001'$$,
-  '23503',
-  'insert or update on table "services" violates foreign key constraint "services_folder_id_fkey"',
+  '23514',
+  'service folder must be active',
   'a Wolf Forge Service cannot be moved into a Tenant B folder'
 );
 

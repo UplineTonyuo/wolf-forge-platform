@@ -378,8 +378,8 @@ select throws_ok(
 );
 
 -- An authenticated database role without a user identity receives no tenant
--- data. Active services remain visible because their policy intentionally
--- applies to every authenticated request.
+-- data. Since WL-2.7 that includes active services: their policy requires the
+-- current Tenant, and a request without a user identity has none.
 reset role;
 set local role authenticated;
 set local "request.jwt.claim.sub" = '';
@@ -391,8 +391,8 @@ select is((select count(*) from public.orders), 0::bigint, 'missing auth.uid() r
 select is((select count(*) from public.order_tasks), 0::bigint, 'missing auth.uid() reveals no order tasks');
 select is(
   (select count(*) from public.services where id = '40000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'an authenticated request without auth.uid() can read active services by design'
+  0::bigint,
+  'an authenticated request without auth.uid() has no Tenant, so it reads no Services (WL-2.7)'
 );
 
 select * from finish();
