@@ -153,9 +153,9 @@ select throws_ok(
 select throws_ok(
   $$select public.app_create_invoice(gen_random_uuid(), jsonb_build_object(
     'company_id', '30000000-0000-0000-0000-000000000941', 'items', '[]'::jsonb))$$,
-  '23503',
-  'insert or update on table "invoices" violates foreign key constraint "invoices_company_id_fkey"',
-  'a Tenant B Invoice created through app_create_invoice cannot bill a Wolf Forge Client'
+  'P0002',
+  null,
+  'a Tenant B Invoice creation cannot bill a Wolf Forge Client (foreign company behaves as missing; the composite FK stays covered by the trusted-write tests)'
 );
 
 select set_config('request.headers', '{"x-wf-tenant":"garbage"}', true);
