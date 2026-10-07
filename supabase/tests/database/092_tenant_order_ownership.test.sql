@@ -227,8 +227,8 @@ select throws_ok(
   $$insert into public.orders (tenant_id, company_id, service_id, assigned_to_profile_id, title)
     values ('f0f0f0f0-0000-4000-8000-0000000009e2', '30000000-0000-0000-0000-000000000923',
       '59500000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000921', 'x')$$,
-  '23503',
-  'insert or update on table "orders" violates foreign key constraint "orders_assigned_to_profile_id_fkey"',
+  '23514',
+  'assignee must be an active internal profile',
   'a Tenant C Order cannot be assigned to a Tenant B-only staff member'
 );
 
@@ -236,8 +236,8 @@ select throws_ok(
   $$insert into public.orders (tenant_id, company_id, service_id, assigned_to_profile_id, title)
     values ('f0f0f0f0-0000-4000-8000-0000000009e1', '30000000-0000-0000-0000-000000000922',
       '59500000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000922', 'x')$$,
-  '23503',
-  'insert or update on table "orders" violates foreign key constraint "orders_assigned_to_profile_id_fkey"',
+  '23514',
+  'assignee must be an active internal profile',
   'a Tenant B Order cannot be assigned to a Tenant C-only staff member'
 );
 

@@ -287,8 +287,8 @@ select throws_ok(
   $$insert into public.tickets (tenant_id, company_id, assigned_to_profile_id, subject)
     values ('f0f0f0f0-0000-4000-8000-0000000009d2', '30000000-0000-0000-0000-000000000913',
       '20000000-0000-0000-0000-000000000911', 'x')$$,
-  '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_assigned_to_profile_id_fkey"',
+  '23514',
+  'assignee must be an active internal profile',
   'a Tenant C Ticket cannot be assigned to a Tenant B-only staff member'
 );
 
@@ -296,8 +296,8 @@ select throws_ok(
   $$insert into public.tickets (tenant_id, company_id, assigned_to_profile_id, subject)
     values ('f0f0f0f0-0000-4000-8000-0000000009d1', '30000000-0000-0000-0000-000000000912',
       '20000000-0000-0000-0000-000000000912', 'x')$$,
-  '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_assigned_to_profile_id_fkey"',
+  '23514',
+  'assignee must be an active internal profile',
   'a Tenant B Ticket cannot be assigned to a Tenant C-only staff member'
 );
 

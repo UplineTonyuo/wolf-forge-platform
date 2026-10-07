@@ -247,8 +247,8 @@ select throws_ok(
 select throws_ok(
   $$update public.services set assigned_to_profile_id = '20000000-0000-0000-0000-000000000932'
     where id = '59800000-0000-0000-0000-000000000002'$$,
-  '23503',
-  'insert or update on table "services" violates foreign key constraint "services_assigned_to_profile_id_fkey"',
+  '23514',
+  'assignee must be an active internal profile',
   'a Tenant B Service cannot be assigned to Wolf Forge-only staff'
 );
 
