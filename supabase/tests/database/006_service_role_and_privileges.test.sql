@@ -365,9 +365,10 @@ select lives_ok(
 
 select isnt_empty(
   $$
-    insert into public.orders (id, company_id, service_id, title)
+    insert into public.orders (id, tenant_id, company_id, service_id, title)
     values (
       '50000000-0000-0000-0000-000000000001',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'service_role Identity Order'
@@ -639,8 +640,9 @@ set local role service_role;
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, title, status)
+    insert into public.orders (tenant_id, company_id, service_id, title, status)
     values (
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Invalid Complete Order',
@@ -654,8 +656,9 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, title, status, completed_at)
+    insert into public.orders (tenant_id, company_id, service_id, title, status, completed_at)
     values (
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Invalid Pending Completed Order',
@@ -670,9 +673,10 @@ select throws_ok(
 
 select lives_ok(
   $$
-    insert into public.orders (id, company_id, service_id, title, status, completed_at)
+    insert into public.orders (id, tenant_id, company_id, service_id, title, status, completed_at)
     values (
       '50000000-0000-0000-0000-000000000003',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Valid Complete Order',
