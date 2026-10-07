@@ -110,10 +110,11 @@ select throws_ok(
   'archived internal profile cannot pass the supervisor helper'
 );
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
 values
-  ('7f100000-0000-4000-8000-000000000001', 'team_messages.supervise', false),
-  ('7f100000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+  (private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000001', 'team_messages.supervise', false),
+  (private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('7f100000-0000-4000-8000-000000000002');
 select ok(not public.app_has_permission('team_messages.supervise'), 'explicit deny overrides the admin preset');

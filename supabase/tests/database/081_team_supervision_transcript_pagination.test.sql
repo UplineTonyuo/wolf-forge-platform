@@ -410,8 +410,9 @@ select throws_ok(
 );
 reset role;
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
-values ('8f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
+values (private.wolf_forge_tenant_id(), '8f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('8f400000-0000-4000-8000-000000000002');
 set local role authenticated;
