@@ -60,16 +60,20 @@ select is(
     where coalesce(qual, '') ~ 'current_tenant_id' or coalesce(with_check, '') ~ 'current_tenant_id'),
   array[
     'activity_events.activity_events_internal_scoped_select',
+    'client_contacts.client_contacts_authorized_private_select',
     'client_report_entries.client_report_entries_authorized_select',
     'client_report_sections.client_report_sections_authorized_select',
     'client_reports.client_reports_authorized_select',
+    'companies.companies_internal_select',
+    'organization_members.organization_members_private_select',
+    'organizations.organizations_internal_select',
     'service_folders.service_folders_authenticated_select_active',
     'service_folders.service_folders_internal_select',
     'service_interests.service_interests_internal_select',
     'services.services_authenticated_select_active',
     'services.services_internal_select'
   ]::text[],
-  'only the WL-2.1 Client report, WL-2.7 Service and WL-2.8 activity policies call current_tenant_id()'
+  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity and WL-2.9 Client / contact / Company policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')
