@@ -182,7 +182,7 @@ select throws_ok(
   $$select public.app_create_ticket(gen_random_uuid(), jsonb_build_object(
     'company_id', '30000000-0000-0000-0000-000000000911', 'subject', 'B ticket for WF Client', 'message', 'Hello'))$$,
   '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_company_id_fkey"',
+  'active Ticket company is required',
   'a Tenant B Ticket created through app_create_ticket cannot name a Wolf Forge Client'
 );
 
