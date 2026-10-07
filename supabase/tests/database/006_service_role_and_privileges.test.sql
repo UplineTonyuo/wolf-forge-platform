@@ -1,6 +1,6 @@
 begin;
 
-select plan(78);
+select plan(79);
 
 -- Catalog-driven guardrail for current and future Wolf Forge public tables.
 -- Extension-owned relations and views are excluded; ordinary and partitioned
@@ -519,7 +519,7 @@ values (
   '70000000-0000-0000-0000-000000000002',
   '20000000-0000-0000-0000-000000000001',
   'order',
-  '50000000-0000-0000-0000-000000000002',
+  '50000000-0000-0000-0000-000000000001',
   'order.updated',
   'Trusted audit row for privilege assertions',
   now()
@@ -804,9 +804,16 @@ select throws_ok(
       'Later-phase entity test'
     )
   $$,
-  '23514',
-  'new row for relation "activity_events" violates check constraint "activity_events_entity_type_valid"',
-  'unsupported activity entity types remain rejected'
+  '42501',
+  'activity event Tenant cannot be derived',
+  'unsupported activity entity types remain rejected (WL-2.8: no Tenant can be derived for them)'
+);
+select ok(
+  exists (select 1 from pg_constraint
+    where conrelid = 'public.activity_events'::regclass and conname = 'activity_events_entity_type_valid'
+      and pg_get_constraintdef(oid) ~ '''order_task'''
+      and pg_get_constraintdef(oid) !~ 'external_accounting_export'),
+  'the activity entity type check constraint still exists behind the Tenant trigger'
 );
 
 select throws_ok(

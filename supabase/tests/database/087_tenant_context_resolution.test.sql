@@ -59,6 +59,7 @@ select is(
   (select array_agg(tablename || '.' || policyname order by tablename, policyname) from pg_policies
     where coalesce(qual, '') ~ 'current_tenant_id' or coalesce(with_check, '') ~ 'current_tenant_id'),
   array[
+    'activity_events.activity_events_internal_scoped_select',
     'client_report_entries.client_report_entries_authorized_select',
     'client_report_sections.client_report_sections_authorized_select',
     'client_reports.client_reports_authorized_select',
@@ -68,7 +69,7 @@ select is(
     'services.services_authenticated_select_active',
     'services.services_internal_select'
   ]::text[],
-  'only the WL-2.1 Client report and WL-2.7 Service policies call current_tenant_id()'
+  'only the WL-2.1 Client report, WL-2.7 Service and WL-2.8 activity policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')

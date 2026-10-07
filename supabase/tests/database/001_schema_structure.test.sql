@@ -169,7 +169,8 @@ select is(
     'public.orders.tenant_id', 'public.tenants.id',
     'public.order_tasks.order_id', 'public.orders.id',
     'public.order_tasks.assigned_to_profile_id', 'public.profiles.id',
-    'public.activity_events.actor_profile_id', 'public.profiles.id'
+    'public.activity_events.actor_profile_id', 'public.profiles.id',
+    'public.activity_events.tenant_id', 'public.tenants.id'
   ),
   'important Phase 1 foreign keys point to the intended parent columns'
 );
