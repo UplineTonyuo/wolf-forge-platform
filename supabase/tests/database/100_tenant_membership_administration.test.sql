@@ -60,6 +60,13 @@ from (values
 ) as fixture(profile_id, role_name, account_class, archived_at)
 join public.roles as role on role.name = fixture.role_name;
 
+-- D-275: C and D keep the default client role with no Client, so nothing
+-- provisions them into Wolf Forge implicitly; do it explicitly.
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), fixture.profile_id::uuid, 'client', role.id
+from (values ('20000000-0000-0000-0000-000000001008'), ('20000000-0000-0000-0000-000000001010')) as fixture(profile_id)
+join public.roles as role on role.name = 'client';
+
 -- Readback probes for the test only; callers cannot read these tables.
 create function pg_temp.m(p_tenant text, p_profile text)
 returns text

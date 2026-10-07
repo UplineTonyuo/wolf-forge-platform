@@ -76,10 +76,7 @@ insert into public.profile_permission_overrides (profile_id, permission_key, all
 values
   ('b1000000-0000-0000-0000-000000000002', 'services.view', false),
   ('b1000000-0000-0000-0000-000000000003', 'projects.view', false),
-  ('b1000000-0000-0000-0000-000000000004', 'tickets.view', false),
-  ('b2000000-0000-0000-0000-000000000002', 'forms.view', false),
-  ('b2000000-0000-0000-0000-000000000003', 'invoices.view', false),
-  ('b2000000-0000-0000-0000-000000000004', 'reporting.view', false);
+  ('b1000000-0000-0000-0000-000000000004', 'tickets.view', false);
 
 insert into public.companies (id, name, status)
 values
@@ -98,6 +95,14 @@ where id in (
 update public.profiles
 set company_id = 'b3000000-0000-0000-0000-00000000000b'
 where id = 'b2000000-0000-0000-0000-000000000005';
+
+-- D-275: the Client links above provision these clients into Wolf Forge, so
+-- their overrides follow them.
+insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+values
+  ('b2000000-0000-0000-0000-000000000002', 'forms.view', false),
+  ('b2000000-0000-0000-0000-000000000003', 'invoices.view', false),
+  ('b2000000-0000-0000-0000-000000000004', 'reporting.view', false);
 
 -- Catalogue fixtures. One private/inactive Service that must never reach a
 -- Services-denied actor, one active public Service that is the Store floor,

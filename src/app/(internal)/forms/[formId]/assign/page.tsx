@@ -17,10 +17,8 @@ export default async function AssignFormPage({ params }: PageProps<"/forms/[form
       const serviceIds = new Set((published?.service_links ?? []).map((link) => link.service_id));
       options = page.rows.filter((row) => serviceIds.has(row.serviceId)).map((row) => ({ id: row.id, label: `#${row.orderNumber} ${row.title}`, detail: `${row.companyName ?? "Client"} · ${row.serviceName ?? "Service"}` }));
     } else {
-      const roles = await context.client.from("roles").select("id, name").eq("name", "client").single();
-      const profiles = roles.data ? await context.client.from("profiles").select("id, display_name, company_id").eq("role_id", roles.data.id).is("archived_at", null).order("display_name") : { data: [] };
-      const companies = await context.services.companies.listActive();
-      options = (profiles.data ?? []).map((profile) => ({ id: profile.id, label: profile.display_name ?? "Client", detail: companies.find((company) => company.id === profile.company_id)?.name ?? "Company" }));
+      const candidates = await context.services.forms.listOnboardingCandidates();
+      options = candidates.map((candidate) => ({ id: candidate.profile_id, label: candidate.display_name ?? "Client", detail: candidate.company_name }));
     }
     return <PageFrame title={`Assign ${detail.form.name}`} description={detail.form.form_type === "intake" ? "Assign the published Intake Form to an eligible Project." : "Assign the published Onboarding Form to a client company."} action={<Link className="button-secondary" href={`/forms/${formId}`}><ArrowLeft aria-hidden="true" />Builder</Link>}><FormAssignments formId={formId} formType={detail.form.form_type} assignments={allAssignments.filter((assignment) => assignment.form_id === formId)} options={options} /></PageFrame>;
   } catch {

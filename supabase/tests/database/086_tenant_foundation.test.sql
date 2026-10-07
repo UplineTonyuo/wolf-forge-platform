@@ -189,11 +189,13 @@ select is((select count(*) from mirror_drift), 0::bigint, 'no drift after the ba
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values ('20000000-0000-0000-0000-000000000864', 'authenticated', 'authenticated', 'tenant-new@example.invalid', now(), now());
 
+-- D-275 (WL-2.15) replaces the WL-1A insert mirror: a new identity is not a
+-- member of any Tenant until it is explicitly provisioned.
 select is(
-  (select row(tenant_id, account_class, company_id)::text from public.tenant_memberships
+  (select count(*) from public.tenant_memberships
     where profile_id = '20000000-0000-0000-0000-000000000864'),
-  row(private.wolf_forge_tenant_id(), 'client'::text, null::uuid)::text,
-  'a new profile creates an unassigned client membership in the Wolf Forge tenant'
+  0::bigint,
+  'a new profile creates no Tenant membership'
 );
 
 update public.profiles
@@ -204,7 +206,7 @@ select is(
   (select company_id from public.tenant_memberships
     where profile_id = '20000000-0000-0000-0000-000000000864'),
   '30000000-0000-0000-0000-000000000861'::uuid,
-  'a profile company update updates the membership'
+  'a Wolf Forge Client link explicitly provisions the fresh identity into Wolf Forge'
 );
 
 update public.profiles

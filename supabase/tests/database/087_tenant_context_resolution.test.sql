@@ -117,6 +117,12 @@ set role_id = role.id
 from public.roles as role
 where profile.id = '20000000-0000-0000-0000-000000000871' and role.name = 'admin';
 
+-- D-275: provision 873 into Wolf Forge explicitly before archiving it.
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), '20000000-0000-0000-0000-000000000873', 'client', role_row.id
+from public.roles as role_row
+where role_row.name = 'client';
+
 update public.profiles set archived_at = now()
 where id = '20000000-0000-0000-0000-000000000873';
 

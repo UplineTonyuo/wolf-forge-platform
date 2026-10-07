@@ -295,6 +295,15 @@ export class FormRepository {
     return (result.data ?? []) as unknown as FormAssignmentSummary[];
   }
 
+  async listOnboardingCandidates(companyId?: string) {
+    const result = await this.client.rpc(
+      "app_list_onboarding_assignment_candidates",
+      companyId ? { p_company_id: companyId } : {},
+    );
+    if (result.error) throw mapDatabaseError(result.error, "Onboarding candidates");
+    return result.data ?? [];
+  }
+
   async getAssignedForm(id: string): Promise<AssignedFormDetail> {
     const result = await this.client.rpc("app_get_assigned_form_schema", { p_assignment_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Assigned Form");

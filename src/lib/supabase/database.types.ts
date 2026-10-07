@@ -5813,6 +5813,15 @@ export type Database = {
           updated_at: string
         }[]
       }
+      app_list_onboarding_assignment_candidates: {
+        Args: { p_company_id?: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          display_name: string
+          profile_id: string
+        }[]
+      }
       app_list_operational_assignees: {
         Args: never
         Returns: {

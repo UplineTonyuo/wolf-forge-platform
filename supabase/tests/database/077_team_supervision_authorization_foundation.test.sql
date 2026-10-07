@@ -30,6 +30,13 @@ or (
   and role_row.name = 'admin'
 );
 
+-- D-275: a new profile has no Tenant membership; this client is provisioned
+-- into Wolf Forge explicitly (no Client link).
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000005', 'client', role_row.id
+from public.roles as role_row
+where role_row.name = 'client';
+
 create or replace function pg_temp.become(p_user uuid)
 returns void
 language sql

@@ -153,29 +153,19 @@ export default async function ClientDetailPage({
     let eligibleProfiles: Array<{ id: string; label: string }> = [];
 
     if (context.user.forms.assign) {
-      const [forms, roleResult] = await Promise.all([
+      const [forms, candidates] = await Promise.all([
         context.services.forms.list(),
-        context.client.from("roles").select("id").eq("name", "client").single(),
+        context.services.forms.listOnboardingCandidates(companyId),
       ]);
 
       onboardingForms = forms
         .filter((form) => form.form_type === "onboarding" && form.status === "published")
         .map((form) => ({ id: form.id, name: form.name }));
 
-      if (roleResult.data) {
-        const profilesResult = await context.client
-          .from("profiles")
-          .select("id, display_name")
-          .eq("role_id", roleResult.data.id)
-          .eq("company_id", companyId)
-          .is("archived_at", null)
-          .order("display_name");
-
-        eligibleProfiles = (profilesResult.data ?? []).map((profile) => ({
-          id: profile.id,
-          label: profile.display_name ?? "Client",
-        }));
-      }
+      eligibleProfiles = candidates.map((candidate) => ({
+        id: candidate.profile_id,
+        label: candidate.display_name ?? "Client",
+      }));
     }
 
     const requestedHistoryLimit = Number(query.historyLimit ?? "20");

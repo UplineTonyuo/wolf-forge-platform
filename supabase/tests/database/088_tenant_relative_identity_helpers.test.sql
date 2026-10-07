@@ -118,6 +118,13 @@ from (values
 join public.roles as role on role.name = fixture.role_name
 where profile.id = fixture.profile_id::uuid;
 
+-- D-275: 886 keeps the default client role with no Client, so no compatibility
+-- field changed; provision it into Wolf Forge explicitly.
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), '20000000-0000-0000-0000-000000000886', 'client', role_row.id
+from public.roles as role_row
+where role_row.name = 'client';
+
 -- Overrides exercise both directions of the override path.
 create temporary table fx as
 select
