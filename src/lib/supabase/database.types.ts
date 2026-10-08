@@ -5244,6 +5244,7 @@ export type Database = {
         Returns: {
           account_class: string
           role_name: string
+          tenant_id: string
         }[]
       }
       app_current_user_modules: {

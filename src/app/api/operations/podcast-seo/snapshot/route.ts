@@ -1,5 +1,6 @@
 import { loadPodcastWorkflowSnapshotBundleOrNull } from "../../../../../services/podcast-workflow-service";
 import { getInternalActorContext } from "../../../../../lib/supabase/next-server";
+import { isWolfForgeTenant } from "../../../../../domain/tenancy/wolf-forge-tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,11 @@ export async function GET(request: Request): Promise<Response> {
   const context = await getInternalActorContext();
   if (!context) {
     return Response.json({ ok: false, error: "Session expired." }, { status: 401, headers: NO_STORE });
+  }
+
+  // Wolf Forge-only integration (D-285): refuse other Tenants before any cache read.
+  if (!isWolfForgeTenant(context.user.tenantId)) {
+    return Response.json({ ok: false, error: "Not found." }, { status: 404, headers: NO_STORE });
   }
 
   const month = new URL(request.url).searchParams.get("month");

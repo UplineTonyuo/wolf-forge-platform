@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { OffPageSeoWorkflowView } from "../../../../../components/operations/off-page-seo-workflow-view";
-import { getInternalContext } from "../../../../../lib/supabase/next-server";
+import { requireWolfForgeOperations } from "../../../../../lib/security/wolf-forge-operations";
 import { loadOffPageSeoWorkflow } from "../../../../../services/off-page-seo-workflow-service";
 
 export const metadata: Metadata = { title: "Operations — Off-page SEO" };
 
 export default async function OffPageSeoPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  await getInternalContext();
+  await requireWolfForgeOperations();
   const { month } = await searchParams;
   const result = await loadOffPageSeoWorkflow(month ?? null);
   if (result.state !== "ready") return <OffPageSeoWorkflowView state={result.state} items={[]} sourceTab={null} lastSyncedAt={null} />;

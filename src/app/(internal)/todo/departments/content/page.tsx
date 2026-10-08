@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { ContentWorkflowView } from "../../../../../components/operations/content-workflow-view";
-import { getInternalContext } from "../../../../../lib/supabase/next-server";
+import { requireWolfForgeOperations } from "../../../../../lib/security/wolf-forge-operations";
 import { loadContentWorkflow } from "../../../../../services/content-workflow-service";
 
 export const metadata: Metadata = { title: "Operations — Content" };
 
 export default async function ContentPage() {
-  await getInternalContext();
+  await requireWolfForgeOperations();
   const result = await loadContentWorkflow();
 
   if (result.state !== "ready") {

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { GmbManagementWorkflowView } from "../../../../../components/operations/gmb-management-workflow-view";
-import { getInternalContext } from "../../../../../lib/supabase/next-server";
+import { requireWolfForgeOperations } from "../../../../../lib/security/wolf-forge-operations";
 import { loadGmbManagementWorkflow } from "../../../../../services/gmb-management-workflow-service";
 
 export const metadata: Metadata = { title: "Operations — GMB Management" };
 
 export default async function GmbManagementPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  await getInternalContext();
+  await requireWolfForgeOperations();
   const { month } = await searchParams;
   const result = await loadGmbManagementWorkflow(month ?? null);
   if (result.state !== "ready") return <GmbManagementWorkflowView state={result.state} items={[]} sourceTab={null} lastSyncedAt={null} />;

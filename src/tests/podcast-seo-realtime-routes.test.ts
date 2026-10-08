@@ -25,7 +25,7 @@ vi.mock("../lib/supabase/next-server", () => ({
 describe("GET /api/operations/podcast-seo/version — no Origin header on a real same-origin GET", () => {
   it("succeeds for an authenticated caller, even with no Origin header", async () => {
     const { getInternalActorContext } = await import("../lib/supabase/next-server");
-    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
+    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" }, user: { tenantId: "f0f0f0f0-0000-4000-8000-000000000001" } } as never);
 
     const { GET } = await import("../app/api/operations/podcast-seo/version/route");
     const response = await GET();
@@ -48,7 +48,7 @@ describe("GET /api/operations/podcast-seo/version — no Origin header on a real
 
   it("marks the response private/no-store so no edge or browser cache can serve a stale version", async () => {
     const { getInternalActorContext } = await import("../lib/supabase/next-server");
-    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
+    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" }, user: { tenantId: "f0f0f0f0-0000-4000-8000-000000000001" } } as never);
 
     const { GET } = await import("../app/api/operations/podcast-seo/version/route");
     const response = await GET();
@@ -60,7 +60,7 @@ describe("GET /api/operations/podcast-seo/version — no Origin header on a real
 describe("GET /api/operations/podcast-seo/snapshot — no Origin header on a real same-origin GET", () => {
   it("succeeds for an authenticated caller, even with no Origin header", async () => {
     const { getInternalActorContext } = await import("../lib/supabase/next-server");
-    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
+    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" }, user: { tenantId: "f0f0f0f0-0000-4000-8000-000000000001" } } as never);
 
     const { GET } = await import("../app/api/operations/podcast-seo/snapshot/route");
     const response = await GET(new Request("http://localhost/api/operations/podcast-seo/snapshot"));
@@ -82,7 +82,7 @@ describe("GET /api/operations/podcast-seo/snapshot — no Origin header on a rea
 
   it("honors a ?month= query value, resolving it through the source's own allowlist rather than trusting it directly", async () => {
     const { getInternalActorContext } = await import("../lib/supabase/next-server");
-    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" } } as never);
+    vi.mocked(getInternalActorContext).mockResolvedValue({ actor: { id: "x" }, user: { tenantId: "f0f0f0f0-0000-4000-8000-000000000001" } } as never);
 
     const { GET } = await import("../app/api/operations/podcast-seo/snapshot/route");
     const response = await GET(new Request("http://localhost/api/operations/podcast-seo/snapshot?month=2026-07"));

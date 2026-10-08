@@ -16,7 +16,7 @@ const actor = { id: "20000000-0000-4000-8000-000000001501" } as VerifiedActor;
 
 const roles = ["owner", "admin", "manager", "staff", "client"].map((name) => ({ id: `role-${name}`, name }));
 
-type Membership = { account_class: string; role_name: string };
+type Membership = { account_class: string; role_name: string; tenant_id?: string };
 
 function fakeClient(input: {
   membership: Membership[] | null;
@@ -114,5 +114,14 @@ describe("internal-app access derives from the current Tenant membership", () =>
       fakeClient({ membership: internal("owner"), profileRole: "owner", profileArchived: true }),
       actor,
     )).toBeNull();
+  });
+
+  it("carries the database-validated current Tenant for Wolf Forge-only gates (D-285)", async () => {
+    const tenantB = "f0f0f0f0-0000-4000-8000-000000002201";
+    const user = await resolveInternalUser(
+      fakeClient({ membership: [{ account_class: "internal", role_name: "owner", tenant_id: tenantB }], profileRole: "owner" }),
+      actor,
+    );
+    expect(user?.tenantId).toBe(tenantB);
   });
 });

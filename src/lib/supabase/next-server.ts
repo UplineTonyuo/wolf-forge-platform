@@ -140,6 +140,8 @@ export type InternalUser = {
    */
   avatarUrl: string | null;
   role: "owner" | "admin" | "manager" | "staff";
+  /** The database-validated current Tenant of this membership (D-285 gates on it). */
+  tenantId: string;
   /**
    * Navigation visibility derived from public.permission_modules, so the rail
    * and the server-side rejection share one boundary. Never a substitute for it:
@@ -268,6 +270,7 @@ export async function resolveInternalUser(
     greetingName: canonicalGreetingName(profileResult.data.display_name),
     avatarUrl: profileResult.data.avatar_url,
     role: role as InternalUser["role"],
+    tenantId: membership.tenant_id,
     modules: toModuleAccessMap(
       modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
     ),
