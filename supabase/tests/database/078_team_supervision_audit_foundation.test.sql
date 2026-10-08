@@ -19,8 +19,9 @@ where profile_row.id = case role_row.name
   when 'client' then '7f200000-0000-4000-8000-000000000004'::uuid
 end;
 
-insert into public.team_conversations (id, conversation_key, created_by_profile_id, kind)
+insert into public.team_conversations (tenant_id, id, conversation_key, created_by_profile_id, kind)
 values (
+  private.wolf_forge_tenant_id(),
   '7f210000-0000-4000-8000-000000000001',
   '7f200000-0000-4000-8000-000000000001|7f200000-0000-4000-8000-000000000002',
   '7f200000-0000-4000-8000-000000000001',

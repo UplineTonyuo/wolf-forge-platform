@@ -114,10 +114,10 @@ function seedConversations() {
     "[**ChatGPT**](https://chatgpt.com/)",
   ];
   sql(`
-    insert into public.team_conversations (id,conversation_key,created_by_profile_id,kind,title,last_message_at)
+    insert into public.team_conversations (tenant_id,id,conversation_key,created_by_profile_id,kind,title,last_message_at)
     values
-      ('${directId}','${directKey}','${ids.alex}','direct',null,now()),
-      ('${groupId}','group:${groupId}','${ids.alex}','group','QA V24 Forward Room',now());
+      (private.wolf_forge_tenant_id(),'${directId}','${directKey}','${ids.alex}','direct',null,now()),
+      (private.wolf_forge_tenant_id(),'${groupId}','group:${groupId}','${ids.alex}','group','QA V24 Forward Room',now());
     insert into public.team_conversation_members (conversation_id,profile_id,last_read_at)
     values
       ('${directId}','${ids.alex}',now()),('${directId}','${ids.blair}',now()),

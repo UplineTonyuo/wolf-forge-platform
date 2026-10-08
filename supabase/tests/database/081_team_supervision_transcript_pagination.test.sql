@@ -35,28 +35,32 @@ or (profile_row.id = '8f400000-0000-4000-8000-000000000005' and role_row.name = 
 or (profile_row.id = '8f400000-0000-4000-8000-000000000007' and role_row.name = 'admin');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000001',
     '8f400000-0000-4000-8000-000000000004|8f400000-0000-4000-8000-000000000005',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:06:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000002',
     'group:8f410000-0000-4000-8000-000000000002',
     '8f400000-0000-4000-8000-000000000004', 'group', 'Page group',
     '2026-09-29 11:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000003',
     '8f400000-0000-4000-8000-000000000004|8f400000-0000-4000-8000-000000000006',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 11:01:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000004',
     '8f400000-0000-4000-8000-000000000001|8f400000-0000-4000-8000-000000000004',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,

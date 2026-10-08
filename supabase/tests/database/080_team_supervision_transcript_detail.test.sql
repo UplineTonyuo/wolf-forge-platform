@@ -35,22 +35,25 @@ or (profile_row.id = '7f400000-0000-4000-8000-000000000005' and role_row.name = 
 or (profile_row.id = '7f400000-0000-4000-8000-000000000007' and role_row.name = 'admin');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000001',
     '7f400000-0000-4000-8000-000000000004|7f400000-0000-4000-8000-000000000005',
     '7f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:04:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000002',
     'group:7f410000-0000-4000-8000-000000000002',
     '7f400000-0000-4000-8000-000000000004', 'group', 'Denied group',
     null, '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000003',
     '7f400000-0000-4000-8000-000000000004|7f400000-0000-4000-8000-000000000006',
     '7f400000-0000-4000-8000-000000000004', 'direct', null,

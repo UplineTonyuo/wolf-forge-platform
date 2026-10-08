@@ -86,8 +86,8 @@ values
 
 -- A Team conversation between the dual owner and WF-only staff (Team has no
 -- Tenant yet).
-insert into public.team_conversations (id, conversation_key, created_by_profile_id, kind)
-values ('c7000000-0000-4000-8000-000000001201',
+insert into public.team_conversations (tenant_id, id, conversation_key, created_by_profile_id, kind)
+values (private.wolf_forge_tenant_id(), 'c7000000-0000-4000-8000-000000001201',
   '20000000-0000-0000-0000-000000001205|20000000-0000-0000-0000-000000001209',
   '20000000-0000-0000-0000-000000001205', 'direct');
 insert into public.team_conversation_members (conversation_id, profile_id)

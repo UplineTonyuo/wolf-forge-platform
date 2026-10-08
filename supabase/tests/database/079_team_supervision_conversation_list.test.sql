@@ -41,40 +41,46 @@ or (profile_row.id = '7f300000-0000-4000-8000-000000000007' and role_row.name = 
 or (profile_row.id = '7f300000-0000-4000-8000-000000000008' and role_row.name = 'staff');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000001',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000005',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-28 12:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000002',
     'group:7f310000-0000-4000-8000-000000000002',
     '7f300000-0000-4000-8000-000000000004', 'group', 'Excluded group',
     '2026-09-29 12:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000003',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000006',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 11:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000004',
     '7f300000-0000-4000-8000-000000000001|7f300000-0000-4000-8000-000000000004',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000005',
     '7f300000-0000-4000-8000-000000000001|7f300000-0000-4000-8000-000000000002',
     '7f300000-0000-4000-8000-000000000001', 'direct', null,
     '2026-09-29 09:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000006',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000008',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
@@ -133,9 +139,10 @@ join synthetic_profiles as second_profile on first_profile.profile_id < second_p
 limit 105;
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, last_message_at, created_at
 )
 select
+  private.wolf_forge_tenant_id(),
   ('7f330000-0000-4000-8000-' || lpad(pair_number::text, 12, '0'))::uuid,
   first_id::text || '|' || second_id::text,
   first_id,

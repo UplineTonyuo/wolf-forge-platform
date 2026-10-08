@@ -68,8 +68,11 @@ join public.roles as role on role.name = fixture.role_name;
 -- (1403|1405); 1454 B staff + B client (1405|1411); 1455 B staff + archived B
 -- staff (1405|1412); 1456 WF staff + dual staff (1403|1408); 1457 B staff +
 -- dual staff (1405|1408).
-insert into public.team_conversations (id, conversation_key, created_by_profile_id, kind, last_message_at, created_at)
-select ('7f710000-0000-4000-8000-00000000' || c)::uuid,
+-- Conversation Tenant (WL-2.19): B for the B-only pairs, WF otherwise.
+insert into public.team_conversations (tenant_id, id, conversation_key, created_by_profile_id, kind, last_message_at, created_at)
+select case when c in ('1452', '1454', '1455', '1457')
+    then 'f0f0f0f0-0000-4000-8000-000000001401'::uuid else private.wolf_forge_tenant_id() end,
+  ('7f710000-0000-4000-8000-00000000' || c)::uuid,
   '20000000-0000-4000-8000-00000000' || a || '|20000000-0000-4000-8000-00000000' || b,
   ('20000000-0000-4000-8000-00000000' || a)::uuid, 'direct',
   '2026-10-08 12:00:00+00'::timestamptz - (c::integer - 1451) * interval '1 minute',
