@@ -398,17 +398,20 @@ select is(
 );
 set local role authenticated;
 
--- A Wolf Forge client brings its Wolf Forge Client and person to the Tenant B
--- Form: the Ticket would cross Tenants, so the whole submission rolls back.
+-- A Wolf Forge client on the Tenant B public Form has no Tenant B membership,
+-- so since WL-2.27 it submits as an anonymous guest: its Wolf Forge Client and
+-- person never reach the Tenant B submission or Ticket.
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000914';
-select throws_ok(
-  $$select public.app_submit_form(gen_random_uuid(), '59200000-0000-0000-0000-000000000002',
-    '{}'::jsonb, pg_temp.contact_values(2, 'wf-client-b'))$$,
-  '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_company_id_fkey"',
-  'a Tenant B Form submission carrying Wolf Forge client context is rejected'
-);
+insert into tkt_ids select 'wf-client-b', (public.app_submit_form(gen_random_uuid(),
+  '59200000-0000-0000-0000-000000000002', '{}'::jsonb, pg_temp.contact_values(2, 'wf-client-b'))).id;
 reset role;
+select is(
+  (select row(ticket.tenant_id, ticket.company_id, ticket.client_profile_id, ticket.created_by_profile_id)::text
+   from public.tickets as ticket
+   where ticket.source_form_submission_id = (select id from tkt_ids where label = 'wf-client-b')),
+  row('f0f0f0f0-0000-4000-8000-0000000009d1'::uuid, null::uuid, null::uuid, null::uuid)::text,
+  'a Tenant B Form submission carries no Wolf Forge client context'
+);
 set local "request.jwt.claim.sub" = '';
 set local "request.jwt.claim.role" = '';
 
