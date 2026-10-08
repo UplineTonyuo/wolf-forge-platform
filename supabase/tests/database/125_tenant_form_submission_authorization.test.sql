@@ -293,9 +293,9 @@ update public.tenants set status = 'suspended' where id = 'f0f0f0f0-0000-4000-80
 set local role authenticated;
 select pg_temp.act('2705', 'b');
 select is(pg_temp.sub('b-auth-v', 'suspended-auth'), '42501', 'a suspended Tenant grants its members nothing');
-select is(pg_temp.sub('b-order-v', 'suspended-public'), 'ok', 'a suspended Tenant''s public Form stays as open as for anonymous (pre-existing)');
+select is(pg_temp.sub('b-order-v', 'suspended-public'), '55000', 'a suspended Tenant''s public Form refuses its members too (WL-2.29, KI-138)');
 reset role;
-select is(pg_temp.who('suspended-public'), '-,-,-', 'a member of a suspended Tenant submits only as a guest');
+select is((select count(*) from ids where k = 'suspended-public'), 0::bigint, 'the refused suspended-Tenant submission stores nothing');
 update public.tenants set status = 'active' where id = 'f0f0f0f0-0000-4000-8000-000000002701';
 
 select * from finish();
