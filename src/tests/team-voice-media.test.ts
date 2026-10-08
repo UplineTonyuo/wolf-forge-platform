@@ -36,6 +36,14 @@ describe("Team voice media validation", () => {
     mockedParse.mockResolvedValueOnce({ format: { container: "WebM", codec: "Opus", duration: 2 } } as never);
     await expect(inspectTeamVoiceBytes({ bytes, objectSize: 4, objectMimeType: "audio/ogg", declaredMimeType: "audio/ogg", recordedDurationMs: 2000 })).rejects.toThrow("does not match");
   });
+
+  it("does not fall back for non-WebM containers when music-metadata reports no duration", async () => {
+    mockedParse.mockResolvedValueOnce({ format: { container: "ogg", codec: "Opus", duration: undefined } } as never);
+    await expect(inspectTeamVoiceBytes({
+      bytes, objectSize: 4, objectMimeType: "audio/ogg",
+      declaredMimeType: "audio/ogg", recordedDurationMs: 2000,
+    })).rejects.toThrow("not supported");
+  });
 });
 
 describe("Team voice retention configuration", () => {
