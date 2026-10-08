@@ -451,7 +451,9 @@ select pg_temp.act('2504', 'b');
 select ok(position('NOTIF B Project' in pg_temp.feed()) > 0,
   'global client + Tenant B internal lists its Tenant B internal notifications');
 select pg_temp.act('2505', 'b');
-select ok(position('NOTIF B' in pg_temp.feed()) = 0 and position('WL225' in pg_temp.feed()) = 0,
+-- Since WL-2.26 this identity legitimately lists its Tenant B client rows, so
+-- the check is on audience, not on Tenant B text.
+select is((select string_agg(title, ',') from public.app_list_my_notifications(100) where audience = 'internal'), null,
   'global internal + Tenant B client lists no Tenant B internal notification');
 select ok(position('LEGACY B' in pg_temp.feed()) = 0 and position('LEGACY ORPHAN' in pg_temp.feed()) = 0,
   'a client session never lists an internal row, Tenant-stamped or NULL');

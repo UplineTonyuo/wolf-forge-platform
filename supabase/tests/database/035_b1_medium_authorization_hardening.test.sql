@@ -381,6 +381,8 @@ select is(
 -- The remaining domains go through the two legacy emitters on purpose: those
 -- are the entry points the Reporting send RPCs and any future emitter still
 -- use, so proving the capability derivation there proves the whole class.
+-- Since WL-2.26 a client row needs a real subject to resolve its Tenant, so
+-- these synthetic events use the fixture Company as their subject.
 do $$
 begin
   perform private.emit_internal_notification(
@@ -401,21 +403,21 @@ begin
     'b3000000-0000-0000-0000-00000000000a',
     'b1-form-client', 'form', 'info',
     'New onboarding item', 'B1 form client body', '/account/onboarding',
-    'form_assignment', 'b6000000-0000-0000-0000-000000000005', null, now()
+    'company', 'b3000000-0000-0000-0000-00000000000a', null, now()
   );
 
   perform private.emit_company_client_notification(
     'b3000000-0000-0000-0000-00000000000a',
     'b1-report-client', 'report', 'info',
     'New SEO report from Wolf Forge', 'B1 report client body', '/account/reporting',
-    'client_report', 'b6000000-0000-0000-0000-000000000006', null, now()
+    'company', 'b3000000-0000-0000-0000-00000000000a', null, now()
   );
 
   perform private.emit_company_client_notification(
     'b3000000-0000-0000-0000-00000000000a',
     'b1-coupon-client', 'coupon', 'info',
     'B1 unmapped category', 'B1 coupon client body', '/account',
-    'coupon', 'b6000000-0000-0000-0000-000000000007', null, now()
+    'company', 'b3000000-0000-0000-0000-00000000000a', null, now()
   );
 end;
 $$;
