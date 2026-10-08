@@ -213,6 +213,78 @@ describe("the proxy resolves the Tenant from the verified host only", () => {
   });
 });
 
+describe("local LAN QA device gate (development only)", () => {
+  const LAN_IP = "192.168.1.95";
+
+  function enableLanQa() {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("LOCAL_QA_LAN_DEVICES", LAN_IP);
+    state.hosts[LAN_IP] = WF;
+  }
+
+  it("a LAN host with an explicitly approved device IP resolves to its verified Tenant", async () => {
+    enableLanQa();
+    const response = await route(`${LAN_IP}:3000`, { "x-forwarded-for": LAN_IP });
+    expect(response.status).toBe(200);
+    expect(forwarded(response)).toBe(WF);
+  });
+
+  it.each([
+    ["an unapproved IP", "203.0.113.9"],
+    ["a spoofed chain", `203.0.113.9, ${LAN_IP}`],
+  ])("a LAN host with %s is 404 before any Tenant lookup", async (_label, forwardedFor) => {
+    enableLanQa();
+    const response = await route(`${LAN_IP}:3000`, { "x-forwarded-for": forwardedFor });
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("This workspace is not available.");
+    expect(state.rpcCalls).toEqual([]);
+  });
+
+  it("an unapproved LAN peer claiming Host: localhost is 404 before the loopback shortcut", async () => {
+    // The peer address decides, never the claimed Host: loopback hosts skip
+    // tenant_domains verification, so a claimed one is not loopback evidence.
+    enableLanQa();
+    const response = await route("localhost:3000", { "x-forwarded-for": "203.0.113.9" });
+    expect(response.status).toBe(404);
+    expect(state.rpcCalls).toEqual([]);
+  });
+
+  it("a LAN host without x-forwarded-for is 404 (fail closed)", async () => {
+    enableLanQa();
+    expect((await route(`${LAN_IP}:3000`)).status).toBe(404);
+    expect(state.rpcCalls).toEqual([]);
+  });
+
+  it("a LAN host is 404 when the allowlist is empty even in development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    state.hosts[LAN_IP] = WF;
+    expect((await route(`${LAN_IP}:3000`, { "x-forwarded-for": LAN_IP })).status).toBe(404);
+    expect(state.rpcCalls).toEqual([]);
+  });
+
+  it("the developer's own machine is never gated, even without an allowlist", async () => {
+    // `next dev` fills x-forwarded-for from the socket, so a genuinely loopback
+    // request carries a loopback peer whatever host it claims.
+    vi.stubEnv("NODE_ENV", "development");
+    state.hosts["qa.wolf-forge.local"] = WF;
+    state.hosts[LAN_IP] = WF;
+    for (const host of ["localhost:3000", "qa.wolf-forge.local", `${LAN_IP}:3000`]) {
+      const response = await route(host, { "x-forwarded-for": "127.0.0.1" });
+      expect(forwarded(response)).toBe(WF);
+    }
+    expect(state.rpcCalls.filter((call) => call.name === "app_resolve_tenant_host")).toEqual([
+      { name: "app_resolve_tenant_host", selector: null, body: { p_host: "qa.wolf-forge.local" } },
+      { name: "app_resolve_tenant_host", selector: null, body: { p_host: LAN_IP } },
+    ]);
+  });
+
+  it("outside development the gate is inert and host routing is unchanged", async () => {
+    // NODE_ENV is left at vitest's default "test" and no allowlist is set.
+    state.hosts[LAN_IP] = WF;
+    expect(forwarded(await route(`${LAN_IP}:3000`))).toBe(WF);
+  });
+});
+
 describe("every user-client call site sends the host's Tenant", () => {
   const factories = [
     "getInternalContext",

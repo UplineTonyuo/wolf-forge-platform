@@ -16,6 +16,11 @@ function isLoopbackHostname(hostname: string): boolean {
   return LOOPBACK_HOSTNAMES.has(normalized.toLowerCase());
 }
 
+function isLoopbackPeer(forwardedFor: string | null): boolean {
+  const peer = forwardedFor?.split(",")[0]?.trim();
+  return peer === "127.0.0.1" || peer === "::1";
+}
+
 function isLoopbackAuthority(authority: string): boolean {
   if (
     !/^(?:(?:localhost|127\.0\.0\.1)(?::\d{1,5})?|\[::1\](?::\d{1,5})?|::1)$/i.test(
@@ -40,7 +45,29 @@ function requestHostIsLoopback(request: Request): boolean {
   if (forwardedHost && !isLoopbackAuthority(forwardedHost)) return false;
 
   try {
-    return isLoopbackHostname(new URL(request.url).hostname);
+    const urlHostname = new URL(request.url).hostname;
+    if (isLoopbackHostname(urlHostname)) return true;
+
+    /*
+     * `next dev --hostname 0.0.0.0` reports the unspecified bind address as the
+     * request URL's hostname even for requests that arrived on loopback. The
+     * bind address is not loopback evidence: a LAN peer reaches the same URL.
+     * Treat it as loopback only when the peer itself is loopback — `next dev`
+     * fills `x-forwarded-for` from the socket when the header is absent.
+     */
+    if (urlHostname === "0.0.0.0") return isLoopbackPeer(request.headers.get("x-forwarded-for"));
+
+    /*
+     * Known ceiling: in development `x-forwarded-for` is client-suppliable
+     * (`next dev` fills it from the socket only when absent), so the peer
+     * check above can be forged by a scripted LAN device — the same ceiling
+     * `lan-device-gate.ts` documents. A forged loopback peer here would
+     * auto-sign that device in via `ensureLocalQaSession`. Acceptable because
+     * the bypass is development-only, opt-in, and backed by the local
+     * synthetic database; there is no socket-based fix without a pairing
+     * mechanism.
+     */
+    return false;
   } catch {
     return false;
   }

@@ -92,6 +92,32 @@ describe("local UI QA bypass", () => {
     ).resolves.toBe(false);
   });
 
+  describe("unspecified bind address (next dev --hostname 0.0.0.0)", () => {
+    function bindRequest(forwardedFor?: string): Request {
+      const headers = new Headers({ host: "localhost:3000" });
+      if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
+      return new Request("http://0.0.0.0:3003/dashboard", { headers });
+    }
+
+    it("permits the developer's own machine when the peer is loopback", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest("127.0.0.1"))).resolves.toBe(true);
+      await expect(localUiQaBypassEnabled(bindRequest("::1"))).resolves.toBe(true);
+    });
+
+    it("denies a non-loopback LAN peer claiming a loopback Host (fail closed)", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest("192.168.1.95"))).resolves.toBe(false);
+    });
+
+    it("denies when the peer address is missing or malformed", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest())).resolves.toBe(false);
+      await expect(localUiQaBypassEnabled(bindRequest(""))).resolves.toBe(false);
+      await expect(localUiQaBypassEnabled(bindRequest("192.168.1.95:3000"))).resolves.toBe(false);
+    });
+  });
+
   it("rejects Preview and Production even when the flag and loopback host are present", async () => {
     vi.stubEnv("LOCAL_UI_QA_BYPASS", "true");
 

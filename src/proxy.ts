@@ -5,6 +5,7 @@ import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
 import { hardenAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
 import { ensureLocalQaSession } from "./lib/qa/local-ui-bypass";
+import { lanDeviceApproved } from "./lib/qa/lan-device-gate";
 import {
   CORRELATION_HEADER,
   createCorrelationId,
@@ -36,6 +37,15 @@ export async function proxy(request: NextRequest) {
    * proxy latency matters (disabling a host would then lag by its TTL).
    */
   const host = normalizeRequestHost(request.headers.get("host"));
+
+  // Local LAN QA (Instruction 03): a non-loopback peer in development requires
+  // explicit allowlisting before any Tenant lookup. Loopback and every
+  // production path are untouched (the gate itself checks the environment and
+  // returns true for them).
+  if (host && !lanDeviceApproved(request.headers.get("x-forwarded-for"), process.env)) {
+    return workspaceUnavailable(404);
+  }
+
   let tenantId: string | null = null;
   if (host && LOOPBACK_HOSTS.has(host) && process.env.VERCEL !== "1") {
     tenantId = WOLF_FORGE_TENANT_ID;
