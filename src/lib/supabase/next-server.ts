@@ -244,16 +244,19 @@ export async function resolveInternalUser(
   client: UserScopedClient,
   actor: VerifiedActor,
 ): Promise<InternalUser | null> {
-  const [profileResult, rolesResult, permissionsResult, modulesResult] = await Promise.all([
-    client.from("profiles").select("id, role_id, display_name, avatar_url, archived_at").eq("id", actor.id).single(),
-    client.from("roles").select("id, name"),
+  // Access and role come from the caller's membership in the current Tenant
+  // (WL-2.18), never from the global Wolf Forge compatibility profiles.role_id.
+  const [membershipResult, profileResult, permissionsResult, modulesResult] = await Promise.all([
+    client.rpc("app_current_tenant_membership"),
+    client.from("profiles").select("id, display_name, avatar_url, archived_at").eq("id", actor.id).single(),
     client.rpc("app_current_user_permissions"),
     client.rpc("app_current_user_modules"),
   ]);
 
+  const membership = membershipResult.error ? undefined : membershipResult.data?.[0];
+  const role = membership?.role_name;
+  if (membership?.account_class !== "internal" || !role || !internalRoleNames.has(role)) return null;
   if (profileResult.error || !profileResult.data || profileResult.data.archived_at) return null;
-  const role = rolesResult.data?.find((candidate) => candidate.id === profileResult.data.role_id)?.name;
-  if (!role || !internalRoleNames.has(role)) return null;
 
   const granted = new Set(
     permissionsResult.error ? [] : (permissionsResult.data ?? []).map((row) => row.permission_key),

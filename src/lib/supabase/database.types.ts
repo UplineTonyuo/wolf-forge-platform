@@ -5239,6 +5239,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_current_tenant_membership: {
+        Args: never
+        Returns: {
+          account_class: string
+          role_name: string
+        }[]
+      }
       app_current_user_modules: {
         Args: never
         Returns: {
