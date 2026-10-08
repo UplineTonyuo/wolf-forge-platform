@@ -2,7 +2,7 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { readPublicEnvironment } from "../env/public-env";
 import { readServerEnvironment } from "../env/server-env";
@@ -18,6 +18,7 @@ import { currentCorrelationId } from "../security/request-correlation";
 import { recordSecurityAuditEvent } from "../security/security-audit-log";
 import { recordSecurityEvent } from "../security/security-log";
 import { createUserSupabaseClient, verifyActor, type UserScopedClient, type VerifiedActor } from "./user-client";
+import { TENANT_SELECTOR_HEADER, toTenantSelector, type TenantSelector } from "../../domain/tenancy/tenant-selector";
 import { ActivityRepository } from "../../repositories/activity-repository";
 import { CompanyRepository } from "../../repositories/company-repository";
 import { OrganizationRepository } from "../../repositories/organization-repository";
@@ -182,11 +183,24 @@ export function readLocalFrontendEnvironment() {
   return readPublicEnvironment();
 }
 
+/**
+ * The Tenant `src/proxy.ts` resolved from the verified request host (WL-2.22b).
+ * The proxy overwrites any browser value, so this header is server-set. It
+ * throws when the header is absent or malformed: a request that somehow
+ * skipped the proxy must fail closed, never fall back to Wolf Forge.
+ */
+export async function requestTenantSelector(): Promise<TenantSelector> {
+  return toTenantSelector((await headers()).get(TENANT_SELECTOR_HEADER) ?? "");
+}
+
 export async function createNextServerSupabaseClient() {
   const environment = readLocalFrontendEnvironment();
   const cookieStore = await cookies();
 
   return createServerClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+    // The public Form RPCs check a signed-in actor against the current Tenant,
+    // so this client sends the host's Tenant too, never the Wolf Forge default.
+    global: { headers: { [TENANT_SELECTOR_HEADER]: await requestTenantSelector() } },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
@@ -437,7 +451,7 @@ export const getInternalContext = cache(async () => {
   }
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) {
     await recordContextRefusal({
@@ -565,6 +579,7 @@ export const getTeamActorContext = cache(async () => {
   const client = createUserSupabaseClient(
     readLocalFrontendEnvironment(),
     data.session.access_token,
+    await requestTenantSelector(),
   );
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) return null;
@@ -601,6 +616,7 @@ export const getTicketActorContext = cache(async () => {
   const client = createUserSupabaseClient(
     readLocalFrontendEnvironment(),
     data.session.access_token,
+    await requestTenantSelector(),
   );
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) return null;
@@ -634,7 +650,7 @@ export const getInternalActorContext = cache(async () => {
   if (error || !data.session) return null;
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) return null;
 
@@ -692,7 +708,7 @@ export const getSelfServiceContext = cache(async () => {
   }
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) {
     await recordContextRefusal({
@@ -725,7 +741,7 @@ export const getClientContext = cache(async () => {
   }
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token);
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
   const actor = await verifyActor(client).catch(() => null);
   if (!actor) {
     await recordContextRefusal({

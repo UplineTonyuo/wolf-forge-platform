@@ -40,18 +40,18 @@ describe("tenant selector", () => {
     expect(headers.get("authorization")).toBe("Bearer signed-token");
   });
 
-  it("is stripped from inbound browser requests by the proxy", async () => {
+  it("a browser value is replaced by the proxy with the host's Tenant (WL-2.22b)", async () => {
     vi.stubEnv("SUPABASE_URL", environment.SUPABASE_URL);
     vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", environment.SUPABASE_PUBLISHABLE_KEY);
     const { proxy } = await import("../proxy");
+    const forged = "f0f0f0f0-0000-4000-8000-000000002601";
 
     const response = await proxy(new NextRequest("http://localhost:3000/dashboard", {
-      headers: { [TENANT_SELECTOR_HEADER]: wolfForge, "x-other": "kept" },
+      headers: { host: "localhost:3000", [TENANT_SELECTOR_HEADER]: forged, "x-other": "kept" },
     }));
 
     const forwarded = response.headers.get("x-middleware-override-headers")?.split(",") ?? [];
     expect(forwarded).toContain("x-other");
-    expect(forwarded).not.toContain(TENANT_SELECTOR_HEADER);
-    expect(response.headers.has(`x-middleware-request-${TENANT_SELECTOR_HEADER}`)).toBe(false);
+    expect(response.headers.get(`x-middleware-request-${TENANT_SELECTOR_HEADER}`)).toBe(wolfForge);
   });
 });

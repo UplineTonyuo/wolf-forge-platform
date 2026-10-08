@@ -1,4 +1,5 @@
 ﻿import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
@@ -8,10 +9,45 @@ import {
   CORRELATION_HEADER,
   createCorrelationId,
 } from "./domain/security/correlation-id";
-import { TENANT_SELECTOR_HEADER } from "./domain/tenancy/tenant-selector";
+import { TENANT_SELECTOR_HEADER, toTenantSelector } from "./domain/tenancy/tenant-selector";
+import { LOOPBACK_HOSTS, normalizeRequestHost } from "./domain/tenancy/request-host";
+import { WOLF_FORGE_TENANT_ID } from "./domain/tenancy/wolf-forge-tenant";
+
+/** Neutral, uncached, unbranded: names no Tenant and sets no cookie. */
+function workspaceUnavailable(status: 404 | 503) {
+  return new NextResponse("This workspace is not available.", {
+    status,
+    headers: { "cache-control": "private, no-store, max-age=0" },
+  });
+}
 
 export async function proxy(request: NextRequest) {
   const environment = readPublicEnvironment();
+
+  /*
+   * WL-2.22b (KI-125). The request's Tenant comes from the `Host` header only,
+   * matched exactly against verified `tenant_domains` rows. `X-Forwarded-Host`,
+   * a browser `x-wf-tenant`, cookies and the body are never consulted. An
+   * unknown, unverified or disabled host is refused here, before any session
+   * work, with no Wolf Forge fallback. The result is a selector only: the
+   * database still requires an active membership in that active Tenant.
+   *
+   * ponytail: one anonymous RPC per request; add a short per-host cache if
+   * proxy latency matters (disabling a host would then lag by its TTL).
+   */
+  const host = normalizeRequestHost(request.headers.get("host"));
+  let tenantId: string | null = null;
+  if (host && LOOPBACK_HOSTS.has(host) && process.env.VERCEL !== "1") {
+    tenantId = WOLF_FORGE_TENANT_ID;
+  } else if (host) {
+    const { data, error } = await createClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    }).rpc("app_resolve_tenant_host", { p_host: host });
+    if (error) return workspaceUnavailable(503);
+    tenantId = data;
+  }
+  if (!tenantId) return workspaceUnavailable(404);
+  const tenantSelector = toTenantSelector(tenantId);
 
   /*
    * One correlation id per request, minted here because the proxy is the only
@@ -37,9 +73,9 @@ export async function proxy(request: NextRequest) {
   const forwardRequest = () => {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(CORRELATION_HEADER, correlationId);
-    // A browser-sent Tenant selector is never application input (D-6b). The
-    // outbound selector to PostgREST is set only from a server-resolved Tenant.
-    requestHeaders.delete(TENANT_SELECTOR_HEADER);
+    // A browser-sent Tenant selector is never application input (D-6b): it is
+    // overwritten with the Tenant resolved from the verified host above.
+    requestHeaders.set(TENANT_SELECTOR_HEADER, tenantSelector);
     return NextResponse.next({ request: { headers: requestHeaders } });
   };
 
@@ -82,6 +118,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // A request carrying a forged selector always passes through the proxy, so
+    // an excluded path can never deliver a browser value to server code.
+    { source: "/:path*", has: [{ type: "header", key: "x-wf-tenant" }] },
+  ],
 };
 

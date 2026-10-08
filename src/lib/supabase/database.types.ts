@@ -6463,6 +6463,10 @@ export type Database = {
         Args: { p_module_key: string }
         Returns: boolean
       }
+      app_resolve_tenant_host: {
+        Args: { p_host: string }
+        Returns: string | null
+      }
       app_restore_subscription_cycle: {
         Args: { p_cycle_id: string }
         Returns: {

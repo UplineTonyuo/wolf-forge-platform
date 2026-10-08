@@ -380,7 +380,7 @@ describe("team supervision entry-point boundary (source)", () => {
     const start = nextServer.indexOf("export const getInternalContext = cache(");
     const end = nextServer.indexOf("export const getTeamActorContext");
     const body = nextServer.slice(start, end);
-    expect(body).toMatch(/const client = createUserSupabaseClient\(environment, data\.session\.access_token\);/);
+    expect(body).toMatch(/const client = createUserSupabaseClient\(environment, data\.session\.access_token, await requestTenantSelector\(\)\);/);
     expect(body).toMatch(/teamSupervision: new TeamSupervisionService\(\{\s*repository: new TeamSupervisionRepository\(client\),/);
     expect(body).not.toMatch(/createTrustedServerClient/);
     // Only the internal context constructs it.

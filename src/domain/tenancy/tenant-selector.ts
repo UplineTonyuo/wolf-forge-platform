@@ -6,8 +6,9 @@
  * Tenant when `auth.uid()` holds an active membership in it.
  *
  * Two trust boundaries share this header name and must stay separate:
- *   - inbound browser -> Next.js: never trusted. `src/proxy.ts` deletes it so
- *     no server code can read a client-supplied value by mistake.
+ *   - inbound browser -> Next.js: never trusted. `src/proxy.ts` overwrites it
+ *     with the Tenant of the verified request host (WL-2.22b), so no server
+ *     code can read a client-supplied value by mistake.
  *   - outbound server -> PostgREST: set only from a Tenant the server resolved
  *     itself, through `createUserSupabaseClient(..., selector)`.
  */

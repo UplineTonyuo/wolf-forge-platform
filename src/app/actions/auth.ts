@@ -26,6 +26,7 @@ import {
   createNextServerSignInSupabaseClient,
   createNextServerSupabaseClient,
   readLocalFrontendEnvironment,
+  requestTenantSelector,
   resolveClientUser,
   resolveInternalUser,
 } from "../../lib/supabase/next-server";
@@ -43,6 +44,9 @@ const SIGN_IN_FAILURE_EVENTS: Record<
 };
 
 export async function signInAction(_state: LoginState, formData: FormData): Promise<LoginState> {
+  // The host's Tenant (WL-2.22b), read before any Auth work so a request
+  // without one fails closed instead of leaving a half-made session behind.
+  const tenantSelector = await requestTenantSelector();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
@@ -142,7 +146,11 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
   // login outage. The source/global risk history intentionally remains.
   await clearProtectedLoginPairFailures(protection.context).catch(() => undefined);
 
-  const client = createUserSupabaseClient(readLocalFrontendEnvironment(), data.session.access_token);
+  const client = createUserSupabaseClient(
+    readLocalFrontendEnvironment(),
+    data.session.access_token,
+    tenantSelector,
+  );
   const actor = await verifyActor(client).catch(() => null);
   const internalUser = actor ? await resolveInternalUser(client, actor) : null;
   if (resolveSignInSurface({ hasInternalUser: Boolean(internalUser), hasClientUser: false }) === "internal") {
