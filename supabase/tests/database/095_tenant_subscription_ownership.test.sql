@@ -142,9 +142,9 @@ select is(
 select throws_ok(
   $$select public.app_create_subscription(gen_random_uuid(),
     (select payload from subscription_payload where tenant = 'b-wf-client'))$$,
-  '23503',
-  'insert or update on table "subscriptions" violates foreign key constraint "subscriptions_company_id_fkey"',
-  'a Tenant B Subscription created through app_create_subscription cannot bill a Wolf Forge Client'
+  'P0002',
+  null,
+  'a Tenant B Subscription creation cannot reference a Wolf Forge Client company (foreign reads as missing)'
 );
 
 select throws_ok(

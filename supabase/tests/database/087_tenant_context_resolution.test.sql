@@ -89,10 +89,13 @@ select is(
     'service_interests.service_interests_internal_select',
     'services.services_authenticated_select_active',
     'services.services_internal_select',
+    'subscription_cycles.subscription_cycles_internal_select',
+    'subscription_dunning_attempts.subscription_dunning_attempts_internal_select',
+    'subscription_events.subscription_events_internal_select',
     'subscription_payment_methods.subscription_payment_methods_internal_select',
     'wf_card_memberships.wf_card_memberships_authorized_select'
   ]::text[],
-  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice, WL-2.12 coupon and WL-2.14 Form policies call current_tenant_id()'
+  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice, WL-2.12 coupon, WL-2.14 Form and WL-2.24 Subscription child policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')
