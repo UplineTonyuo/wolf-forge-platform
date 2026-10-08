@@ -12,7 +12,7 @@ import {
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
 import { AuthAdminError } from "../../lib/supabase/auth-admin";
-import { getAccountProvisioningService } from "../../lib/supabase/next-server";
+import { getAccountProvisioningService, requestTenantSelector } from "../../lib/supabase/next-server";
 
 export type ProvisionClientAccountState = {
   error: string | null;
@@ -396,6 +396,7 @@ export async function provisionClientAccountAction(
           randomUUID(),
           createClientWelcomeEmailDependencies(
             context.actor,
+            await requestTenantSelector(),
           ),
         );
     } catch {

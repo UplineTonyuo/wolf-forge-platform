@@ -6728,10 +6728,12 @@ export type Database = {
         Args: {
           p_actor_id: string
           p_profile_id: string
+          p_tenant_id: string
           p_request_id: string
           p_token_hash: string
         }
         Returns: {
+          canonical_host: string
           outcome: string
           recipient_email: string
           recipient_name: string
@@ -6746,7 +6748,7 @@ export type Database = {
         Returns: undefined
       }
       app_server_find_client_activation: {
-        Args: { p_token_hash: string }
+        Args: { p_token_hash: string; p_tenant_id: string }
         Returns: string
       }
       app_server_finish_client_welcome_email: {
@@ -6754,6 +6756,7 @@ export type Database = {
           p_actor_id: string
           p_failure_code?: string
           p_profile_id: string
+          p_tenant_id: string
           p_request_id: string
         }
         Returns: undefined
