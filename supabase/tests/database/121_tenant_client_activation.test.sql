@@ -3,8 +3,8 @@
 -- activation Tenant, the link's host is that Tenant's verified canonical
 -- host, and a link only spends on its own Tenant.
 --
--- WF = f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...000000002601,
--- Tenant C = ...000000002602 (has host rows but none verified).
+-- WF = f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...0000000121b1,
+-- Tenant C = ...0000000121c1 (has host rows but none verified).
 --
 -- 2801 B owner only; 2802 B client; 2803 WF owner + B client (dual);
 -- 2804 archived B client; 2805 WF client + B client (dual client);
@@ -20,13 +20,13 @@ from unnest(array['2801', '2802', '2803', '2804', '2805', '2806', '2807', '2808'
 
 insert into public.tenants (id, slug, display_name, status)
 values
-  ('f0f0f0f0-0000-4000-8000-000000002601', 'tenant-activation-b', 'Tenant Activation B', 'active'),
-  ('f0f0f0f0-0000-4000-8000-000000002602', 'tenant-activation-c', 'Tenant Activation C', 'active');
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', 'tenant-activation-b', 'Tenant Activation B', 'active'),
+  ('f0f0f0f0-0000-4000-8000-0000000121c1', 'tenant-activation-c', 'Tenant Activation C', 'active');
 
 insert into public.companies (id, tenant_id, name, status)
 values
-  ('c0000000-0000-4000-8000-000000002801', 'f0f0f0f0-0000-4000-8000-000000002601', 'ACTIVATION_B_CLIENT', 'client'),
-  ('c0000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-000000002602', 'ACTIVATION_C_CLIENT', 'client');
+  ('c0000000-0000-4000-8000-000000002801', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'ACTIVATION_B_CLIENT', 'client'),
+  ('c0000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121c1', 'ACTIVATION_C_CLIENT', 'client');
 
 insert into public.companies (id, name, status)
 values ('c0000000-0000-4000-8000-000000002803', 'ACTIVATION_WF_CLIENT', 'client');
@@ -49,23 +49,23 @@ insert into public.tenant_memberships (tenant_id, profile_id, account_class, rol
 select fixture.tenant_id::uuid, fixture.profile_id::uuid, fixture.account_class, role.id,
   fixture.company_id::uuid, fixture.archived_at::timestamptz
 from (values
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002801', 'internal', 'owner', null, null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002802', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002803', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002804', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', '2026-10-01'),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002805', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
-  ('f0f0f0f0-0000-4000-8000-000000002602', '20000000-0000-4000-8000-000000002807', 'internal', 'owner', null, null),
-  ('f0f0f0f0-0000-4000-8000-000000002602', '20000000-0000-4000-8000-000000002808', 'client', 'client', 'c0000000-0000-4000-8000-000000002802', null)
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', '20000000-0000-4000-8000-000000002801', 'internal', 'owner', null, null),
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', '20000000-0000-4000-8000-000000002802', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', '20000000-0000-4000-8000-000000002803', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', '20000000-0000-4000-8000-000000002804', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', '2026-10-01'),
+  ('f0f0f0f0-0000-4000-8000-0000000121b1', '20000000-0000-4000-8000-000000002805', 'client', 'client', 'c0000000-0000-4000-8000-000000002801', null),
+  ('f0f0f0f0-0000-4000-8000-0000000121c1', '20000000-0000-4000-8000-000000002807', 'internal', 'owner', null, null),
+  ('f0f0f0f0-0000-4000-8000-0000000121c1', '20000000-0000-4000-8000-000000002808', 'client', 'client', 'c0000000-0000-4000-8000-000000002802', null)
 ) as fixture(tenant_id, profile_id, account_class, role_name, company_id, archived_at)
 join public.roles as role on role.name = fixture.role_name;
 
 insert into public.tenant_domains (host, tenant_id, verified_at, disabled_at)
 values
-  ('activation-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', now(), null),
-  ('unverified-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', null, null),
-  ('disabled-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', now(), now()),
-  ('unverified-c.test', 'f0f0f0f0-0000-4000-8000-000000002602', null, null),
-  ('disabled-c.test', 'f0f0f0f0-0000-4000-8000-000000002602', now(), now());
+  ('activation-b.test', 'f0f0f0f0-0000-4000-8000-0000000121b1', now(), null),
+  ('unverified-b.test', 'f0f0f0f0-0000-4000-8000-0000000121b1', null, null),
+  ('disabled-b.test', 'f0f0f0f0-0000-4000-8000-0000000121b1', now(), now()),
+  ('unverified-c.test', 'f0f0f0f0-0000-4000-8000-0000000121c1', null, null),
+  ('disabled-c.test', 'f0f0f0f0-0000-4000-8000-0000000121c1', now(), now());
 
 -- Shape and lock-down.
 select col_is_pk('private', 'client_welcome_emails', array['profile_id', 'tenant_id'],
@@ -95,11 +95,11 @@ select is(private.profile_has_permission('20000000-0000-4000-8000-000000002801',
 set local role service_role;
 
 select results_eq(
-  $$select outcome, recipient_email, recipient_name, canonical_host from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-000000002601', 'e5300000-0000-4000-8000-000000002801', repeat('a', 64))$$,
+  $$select outcome, recipient_email, recipient_name, canonical_host from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5300000-0000-4000-8000-000000002801', repeat('a', 64))$$,
   $$values ('claimed'::text, 'tenant-activation-2802@example.invalid'::text, null::text, 'activation-b.test'::text)$$,
   'a Tenant B owner claims in Tenant B and gets Tenant B''s verified canonical host'
 );
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000002601'),
+select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'),
   '20000000-0000-4000-8000-000000002802'::uuid, 'the Tenant B link resolves in Tenant B');
 
 select results_eq(
@@ -112,13 +112,13 @@ select is(public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-00
 
 select ok(
   public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001') is null
-    and public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000002601') is null,
+    and public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1') is null,
   'a Tenant B link never resolves in Wolf Forge, nor a Wolf Forge link in Tenant B'
 );
 
 -- A dual-Tenant identity owns one record per Tenant, each with its own link.
 select is(
-  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002803', 'f0f0f0f0-0000-4000-8000-000000002601', 'e5300000-0000-4000-8000-000000002803', repeat('c', 64))),
+  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002803', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5300000-0000-4000-8000-000000002803', repeat('c', 64))),
   'claimed', 'the dual identity claims its Tenant B link independently'
 );
 reset role;
@@ -133,10 +133,10 @@ select is(public.app_server_find_client_activation(repeat('c', 64), 'f0f0f0f0-00
 -- A client in BOTH Tenants still owns two links, and each spends only on its
 -- own Tenant's host, even though the membership check alone would pass.
 select is(
-  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002805', 'f0f0f0f0-0000-4000-8000-000000002601', 'e5300000-0000-4000-8000-000000002805', repeat('e', 64))),
+  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002805', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5300000-0000-4000-8000-000000002805', repeat('e', 64))),
   'claimed', 'a dual client claims its Tenant B link independently'
 );
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000002601'),
+select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'),
   '20000000-0000-4000-8000-000000002805'::uuid, 'the dual client''s Tenant B link resolves in Tenant B');
 select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid,
   'the dual client''s Tenant B link does not resolve in Wolf Forge even though the client exists there too');
@@ -144,10 +144,10 @@ select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-00
 -- A membership archived after the send kills the link too: find re-checks it.
 reset role;
 update public.tenant_memberships set archived_at = now()
-where tenant_id = 'f0f0f0f0-0000-4000-8000-000000002601'
+where tenant_id = 'f0f0f0f0-0000-4000-8000-0000000121b1'
   and profile_id = '20000000-0000-4000-8000-000000002805';
 set local role service_role;
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000002601'), null::uuid,
+select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
   'a link stops resolving when the client membership is archived after the send');
 
 select throws_ok(
@@ -159,11 +159,11 @@ select throws_ok(
   'P0002', null, 'a Wolf Forge sender cannot welcome a Tenant-B-only client in Wolf Forge'
 );
 select throws_ok(
-  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-000000002601', gen_random_uuid(), repeat('f', 64))$$,
+  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid(), repeat('f', 64))$$,
   'P0002', null, 'a Tenant B sender cannot welcome a Tenant-C-only client in Tenant B'
 );
 select throws_ok(
-  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002804', 'f0f0f0f0-0000-4000-8000-000000002601', gen_random_uuid(), repeat('f', 64))$$,
+  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002804', 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid(), repeat('f', 64))$$,
   'P0002', null, 'an archived membership is never a welcome recipient'
 );
 select throws_ok(
@@ -177,7 +177,7 @@ select throws_ok(
 
 -- No verified host: the send is refused and nothing is written.
 select is(
-  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002807', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-000000002602', 'e5300000-0000-4000-8000-000000002804', repeat('d', 64))),
+  (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002807', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-0000000121c1', 'e5300000-0000-4000-8000-000000002804', repeat('d', 64))),
   'no_verified_host', 'a Tenant whose hosts are unverified or disabled sends nothing'
 );
 reset role;
@@ -186,11 +186,11 @@ select is(
   0::bigint, 'the refused claim wrote no record and no link'
 );
 
-update public.tenants set status = 'suspended' where id = 'f0f0f0f0-0000-4000-8000-000000002602';
+update public.tenants set status = 'suspended' where id = 'f0f0f0f0-0000-4000-8000-0000000121c1';
 set local role service_role;
 
 select throws_ok(
-  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002807', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-000000002602', gen_random_uuid(), repeat('f', 64))$$,
+  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002807', '20000000-0000-4000-8000-000000002808', 'f0f0f0f0-0000-4000-8000-0000000121c1', gen_random_uuid(), repeat('f', 64))$$,
   '42501', null, 'a suspended Tenant refuses the claim'
 );
 
@@ -201,12 +201,12 @@ select lives_ok(
 );
 reset role;
 select is(
-  (select status from private.client_welcome_emails where profile_id = '20000000-0000-4000-8000-000000002802' and tenant_id = 'f0f0f0f0-0000-4000-8000-000000002601'),
+  (select status from private.client_welcome_emails where profile_id = '20000000-0000-4000-8000-000000002802' and tenant_id = 'f0f0f0f0-0000-4000-8000-0000000121b1'),
   'sending', 'the Tenant B record is untouched by a Wolf Forge finish'
 );
 set local role service_role;
 select lives_ok(
-  $$select public.app_server_finish_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-000000002601', 'e5300000-0000-4000-8000-000000002801', null)$$,
+  $$select public.app_server_finish_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5300000-0000-4000-8000-000000002801', null)$$,
   'the finish under the claimed Tenant records the send'
 );
 
@@ -215,7 +215,7 @@ reset role;
 update private.client_welcome_emails set activation_expires_at = now() - interval '1 second'
 where profile_id = '20000000-0000-4000-8000-000000002802';
 set local role service_role;
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000002601'), null::uuid,
+select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
   'an expired Tenant B link resolves to nothing');
 reset role;
 update private.client_welcome_emails set activation_expires_at = now() + interval '1 day'
@@ -225,15 +225,15 @@ select lives_ok(
   $$select public.app_server_complete_client_activation('20000000-0000-4000-8000-000000002802', repeat('a', 64))$$,
   'the Tenant B link completes activation'
 );
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000002601'), null::uuid,
+select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
   'a spent Tenant B link cannot be used again');
 
 reset role;
 update public.tenants set status = 'archived', archived_at = now()
-where id = 'f0f0f0f0-0000-4000-8000-000000002601';
+where id = 'f0f0f0f0-0000-4000-8000-0000000121b1';
 set local role service_role;
 select throws_ok(
-  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-000000002601', gen_random_uuid(), repeat('f', 64))$$,
+  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid(), repeat('f', 64))$$,
   '42501', null, 'an archived Tenant refuses the claim'
 );
 

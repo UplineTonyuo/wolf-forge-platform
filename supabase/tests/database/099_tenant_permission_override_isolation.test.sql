@@ -123,12 +123,19 @@ select lives_ok(
 );
 
 -- Wolf Forge equivalence: with only Wolf Forge rows for these profiles, the
--- Tenant-relative check equals the previous global-override formula.
+-- Tenant-relative check equals the previous global-override formula. Profiles
+-- with no Wolf Forge membership (D-275, e.g. Local QA Tenant B identities)
+-- never had a Wolf Forge mirror to be equivalent to.
 select is(
   (select count(*) from public.profiles as profile_row
     cross join public.permissions as permission
     where profile_row.archived_at is null
       and profile_row.id <> '20000000-0000-0000-0000-000000000993'
+      and exists (
+        select 1 from public.tenant_memberships as membership_row
+        where membership_row.profile_id = profile_row.id
+          and membership_row.tenant_id = private.wolf_forge_tenant_id()
+      )
       and private.profile_has_permission(profile_row.id, permission.permission_key) is distinct from coalesce((
         select case when preset_row.key = 'owner' then true else coalesce(
           (select o.allowed from public.profile_permission_overrides as o

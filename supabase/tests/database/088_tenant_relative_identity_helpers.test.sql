@@ -146,12 +146,28 @@ delete from public.tenant_memberships where profile_id = '20000000-0000-0000-000
 
 select ok((select staff_extra_key is not null and manager_denied_key is not null from fx),
   'override fixtures found suitable permission keys');
+-- Compared profiles: every fixture except 890, plus every existing profile
+-- with a Wolf Forge membership. A profile that belongs only to another Tenant
+-- (D-275, e.g. the persistent Local QA Tenant B identities) has no Wolf Forge
+-- mirror, so the pre-WL-1B profile-based helpers never described it.
+create temporary table compared_subjects as
+select profile_row.id from public.profiles as profile_row
+where profile_row.id <> '20000000-0000-0000-0000-000000000890'
+  and (profile_row.id::text like '20000000-0000-0000-0000-00000000088_'
+    or profile_row.id = '20000000-0000-0000-0000-000000000891'
+    or exists (
+      select 1 from public.tenant_memberships as membership_row
+      where membership_row.profile_id = profile_row.id
+        and membership_row.tenant_id = private.wolf_forge_tenant_id()
+    ));
+grant select on compared_subjects to authenticated;
+
 select ok(
   not exists (
     select 1 from public.profiles as profile_row
     left join public.tenant_memberships as membership_row
       on membership_row.profile_id = profile_row.id and membership_row.tenant_id = private.wolf_forge_tenant_id()
-    where profile_row.id <> '20000000-0000-0000-0000-000000000890'
+    where profile_row.id in (select id from compared_subjects)
       and (membership_row.id is null
         or membership_row.role_id is distinct from profile_row.role_id
         or membership_row.company_id is distinct from profile_row.company_id
@@ -180,7 +196,7 @@ begin
     ) as c(label, headers)
   loop
     for subject in
-      select id from public.profiles where id <> '20000000-0000-0000-0000-000000000890'
+      select id from compared_subjects
     loop
       perform set_config('request.jwt.claim.role', 'authenticated', true);
       perform set_config('request.jwt.claim.sub', subject.id::text, true);
@@ -257,7 +273,7 @@ begin
     perform set_config('request.headers', '', true);
 
     for subject in
-      select id from public.profiles where id <> '20000000-0000-0000-0000-000000000890'
+      select id from compared_subjects
     loop
       insert into mismatch
       select context.label, subject.id, 'target: ' || coalesce(permission.permission_key, '(class/preset)')

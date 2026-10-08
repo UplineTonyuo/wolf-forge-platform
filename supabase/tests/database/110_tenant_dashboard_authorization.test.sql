@@ -8,6 +8,17 @@ select plan(34);
 -- WF = f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...000000001901,
 -- empty Tenant C = ...000000001902.
 
+-- Wolf Forge Companies that already exist in the dashboard windows (the
+-- persistent Local QA client Company, or any recent local data), counted
+-- before the fixtures are inserted. now() is fixed for the transaction.
+create temporary table wf_companies_before as
+select
+  count(*) filter (where created_at >= now() - interval '2 hours' and created_at < now() + interval '1 hour') as current_count,
+  count(*) filter (where created_at >= now() - interval '4 hours' and created_at < now() - interval '2 hours') as previous_count
+from public.companies
+where tenant_id = private.wolf_forge_tenant_id();
+grant select on wf_companies_before to authenticated;
+
 -- -----------------------------------------------------------------------------
 -- Fixtures (rolled back)
 -- -----------------------------------------------------------------------------
@@ -221,9 +232,9 @@ select is((pg_temp.dash() #>> '{paid_orders,current}')::bigint, 2::bigint,
   'WF paid orders count only WF orders');
 select is((pg_temp.dash() #>> '{paid_orders,previous}')::bigint, 0::bigint,
   'no WF paid orders in the previous window');
-select is((pg_temp.dash() #>> '{clients,created,current}')::bigint, 1::bigint,
+select is((pg_temp.dash() #>> '{clients,created,current}')::bigint, 1 + (select current_count from wf_companies_before),
   'WF companies created counts only WF companies');
-select is((pg_temp.dash() #>> '{clients,created,previous}')::bigint, 1::bigint,
+select is((pg_temp.dash() #>> '{clients,created,previous}')::bigint, 1 + (select previous_count from wf_companies_before),
   'WF previous companies created counts only the WF previous company');
 select is((pg_temp.dash() #>> '{clients,converted,current}')::bigint, 1::bigint,
   'WF conversions count only WF status events');

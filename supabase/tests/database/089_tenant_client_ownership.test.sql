@@ -6,11 +6,21 @@ select plan(24);
 -- Tenant boundary. Wolf Forge (WF) = f0f0f0f0-0000-4000-8000-000000000001,
 -- Tenant B = f0f0f0f0-0000-4000-8000-0000000009b1.
 
+-- Pre-existing = created before any other Tenant existed. Rows a later Tenant
+-- legitimately owns (the persistent Local QA Tenant B) are not backfill
+-- output. On a database with only Wolf Forge this is the whole-table count.
+create temporary table first_foreign_tenant as
+select coalesce(min(created_at), 'infinity') as created_at from public.tenants where id <> private.wolf_forge_tenant_id();
+
 select is(
-  (select count(*) from public.companies where tenant_id <> private.wolf_forge_tenant_id())
-  + (select count(*) from public.client_contacts where tenant_id <> private.wolf_forge_tenant_id())
-  + (select count(*) from public.organizations where tenant_id <> private.wolf_forge_tenant_id())
-  + (select count(*) from public.organization_members where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.companies where tenant_id <> private.wolf_forge_tenant_id()
+    and created_at < (select created_at from first_foreign_tenant))
+  + (select count(*) from public.client_contacts where tenant_id <> private.wolf_forge_tenant_id()
+    and created_at < (select created_at from first_foreign_tenant))
+  + (select count(*) from public.organizations where tenant_id <> private.wolf_forge_tenant_id()
+    and created_at < (select created_at from first_foreign_tenant))
+  + (select count(*) from public.organization_members where tenant_id <> private.wolf_forge_tenant_id()
+    and created_at < (select created_at from first_foreign_tenant)),
   0::bigint,
   'every pre-existing row was backfilled to the Wolf Forge Tenant'
 );

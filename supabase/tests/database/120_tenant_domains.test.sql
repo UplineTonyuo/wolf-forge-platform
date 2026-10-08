@@ -4,8 +4,8 @@ select plan(47);
 
 -- WL-2.22b (KI-125): verified request host -> Tenant selector. The host map
 -- only selects; membership in the database still authorizes. WF =
--- f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...000000002601, Tenant C
--- = ...000000002602 (suspended later).
+-- f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...0000000120b1, Tenant C
+-- = ...0000000120c1 (suspended later).
 --
 -- 2601 B staff only; 2602 B client only; 2603 WF owner + B client (dual);
 -- 2604 WF owner only; 2605 archived B staff membership; 2606 no membership;
@@ -17,11 +17,11 @@ from unnest(array['2601', '2602', '2603', '2604', '2605', '2606', '2607']) as n;
 
 insert into public.tenants (id, slug, display_name, status)
 values
-  ('f0f0f0f0-0000-4000-8000-000000002601', 'tenant-domains-b', 'Tenant Domains B', 'active'),
-  ('f0f0f0f0-0000-4000-8000-000000002602', 'tenant-domains-c', 'Tenant Domains C', 'active');
+  ('f0f0f0f0-0000-4000-8000-0000000120b1', 'tenant-domains-b', 'Tenant Domains B', 'active'),
+  ('f0f0f0f0-0000-4000-8000-0000000120c1', 'tenant-domains-c', 'Tenant Domains C', 'active');
 
 insert into public.companies (id, tenant_id, name, status)
-values ('c0000000-0000-4000-8000-000000002601', 'f0f0f0f0-0000-4000-8000-000000002601', 'TENANT_DOMAINS_B_CLIENT', 'client');
+values ('c0000000-0000-4000-8000-000000002601', 'f0f0f0f0-0000-4000-8000-0000000120b1', 'TENANT_DOMAINS_B_CLIENT', 'client');
 
 update public.profiles as profile
 set role_id = role.id
@@ -33,20 +33,20 @@ insert into public.tenant_memberships (tenant_id, profile_id, account_class, rol
 select fixture.tenant_id::uuid, fixture.profile_id::uuid, fixture.account_class, role.id,
   fixture.company_id::uuid, fixture.archived_at::timestamptz
 from (values
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002601', 'internal', 'staff', null, null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002602', 'client', 'client', 'c0000000-0000-4000-8000-000000002601', null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002603', 'client', 'client', 'c0000000-0000-4000-8000-000000002601', null),
-  ('f0f0f0f0-0000-4000-8000-000000002601', '20000000-0000-4000-8000-000000002605', 'internal', 'staff', null, '2026-10-01'),
-  ('f0f0f0f0-0000-4000-8000-000000002602', '20000000-0000-4000-8000-000000002607', 'internal', 'staff', null, null)
+  ('f0f0f0f0-0000-4000-8000-0000000120b1', '20000000-0000-4000-8000-000000002601', 'internal', 'staff', null, null),
+  ('f0f0f0f0-0000-4000-8000-0000000120b1', '20000000-0000-4000-8000-000000002602', 'client', 'client', 'c0000000-0000-4000-8000-000000002601', null),
+  ('f0f0f0f0-0000-4000-8000-0000000120b1', '20000000-0000-4000-8000-000000002603', 'client', 'client', 'c0000000-0000-4000-8000-000000002601', null),
+  ('f0f0f0f0-0000-4000-8000-0000000120b1', '20000000-0000-4000-8000-000000002605', 'internal', 'staff', null, '2026-10-01'),
+  ('f0f0f0f0-0000-4000-8000-0000000120c1', '20000000-0000-4000-8000-000000002607', 'internal', 'staff', null, null)
 ) as fixture(tenant_id, profile_id, account_class, role_name, company_id, archived_at)
 join public.roles as role on role.name = fixture.role_name;
 
 insert into public.tenant_domains (host, tenant_id, verified_at, disabled_at)
 values
-  ('tenant-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', now(), null),
-  ('unverified-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', null, null),
-  ('disabled-b.test', 'f0f0f0f0-0000-4000-8000-000000002601', now(), now()),
-  ('tenant-c.test', 'f0f0f0f0-0000-4000-8000-000000002602', now(), null);
+  ('tenant-b.test', 'f0f0f0f0-0000-4000-8000-0000000120b1', now(), null),
+  ('unverified-b.test', 'f0f0f0f0-0000-4000-8000-0000000120b1', null, null),
+  ('disabled-b.test', 'f0f0f0f0-0000-4000-8000-0000000120b1', now(), now()),
+  ('tenant-c.test', 'f0f0f0f0-0000-4000-8000-0000000120c1', now(), null);
 
 -- Acts as p_actor with the selector the proxy would forward for p_host. The
 -- lookup runs as the anon role the proxy uses.
@@ -123,7 +123,7 @@ select ok(not has_function_privilege('service_role', 'public.app_resolve_tenant_
 
 set local role authenticated;
 select throws_ok($$ insert into public.tenant_domains (host, tenant_id, verified_at)
-  values ('attacker.test', 'f0f0f0f0-0000-4000-8000-000000002601', now()) $$, '42501', null,
+  values ('attacker.test', 'f0f0f0f0-0000-4000-8000-0000000120b1', now()) $$, '42501', null,
   'a signed-in user cannot register a host');
 select throws_ok($$ update public.tenant_domains set verified_at = now() where host = 'unverified-b.test' $$,
   '42501', null, 'a signed-in user cannot verify a host');
@@ -142,7 +142,7 @@ select throws_ok($$ insert into public.tenant_domains (host, tenant_id) values (
   '23505', null, 'a host maps to exactly one Tenant');
 
 -- Resolution.
-select is(pg_temp.resolve_as_anon('tenant-b.test'), 'f0f0f0f0-0000-4000-8000-000000002601'::uuid, 'verified host -> Tenant B');
+select is(pg_temp.resolve_as_anon('tenant-b.test'), 'f0f0f0f0-0000-4000-8000-0000000120b1'::uuid, 'verified host -> Tenant B');
 select is(pg_temp.resolve_as_anon('unverified-b.test'), null, 'unverified host -> nothing');
 select is(pg_temp.resolve_as_anon('disabled-b.test'), null, 'disabled host -> nothing');
 select is(pg_temp.resolve_as_anon('unknown.test'), null, 'unknown host -> nothing');
@@ -156,13 +156,13 @@ select is(pg_temp.resolve_as_anon('wolf-forge-platform-git-main-wolf-forge.verce
 
 -- Access follows the host's Tenant; membership decides.
 select pg_temp.on_host('2601', 'tenant-b.test');
-select is(pg_temp.t(), 'internal:staff@f0f0f0f0-0000-4000-8000-000000002601', 'B staff on B host -> B internal');
+select is(pg_temp.t(), 'internal:staff@f0f0f0f0-0000-4000-8000-0000000120b1', 'B staff on B host -> B internal');
 select pg_temp.on_host('2602', 'tenant-b.test');
-select is(pg_temp.t(), 'client:client@f0f0f0f0-0000-4000-8000-000000002601', 'B client on B host -> B client');
+select is(pg_temp.t(), 'client:client@f0f0f0f0-0000-4000-8000-0000000120b1', 'B client on B host -> B client');
 select is((select company_id from public.app_get_client_account_context()), 'c0000000-0000-4000-8000-000000002601'::uuid,
   'B client on B host -> B client portal account');
 select pg_temp.on_host('2603', 'tenant-b.test');
-select is(pg_temp.t(), 'client:client@f0f0f0f0-0000-4000-8000-000000002601', 'dual user on B host -> B client');
+select is(pg_temp.t(), 'client:client@f0f0f0f0-0000-4000-8000-0000000120b1', 'dual user on B host -> B client');
 select pg_temp.on_host('2603', 'wolf-forge-platform-woad.vercel.app');
 select is(pg_temp.t(), 'internal:owner@f0f0f0f0-0000-4000-8000-000000000001', 'dual user on WF host -> WF owner');
 select pg_temp.on_host('2604', 'tenant-b.test');
@@ -176,23 +176,23 @@ select is(pg_temp.t(), '', 'archived B membership -> denied');
 select pg_temp.on_host('2606', 'tenant-b.test');
 select is(pg_temp.t(), '', 'no membership -> no row (existing unassigned behavior)');
 select pg_temp.on_host('2607', 'tenant-c.test');
-select is(pg_temp.t(), 'internal:staff@f0f0f0f0-0000-4000-8000-000000002602', 'C staff on C host while active');
+select is(pg_temp.t(), 'internal:staff@f0f0f0f0-0000-4000-8000-0000000120c1', 'C staff on C host while active');
 
 reset role;
-update public.tenants set status = 'suspended' where id = 'f0f0f0f0-0000-4000-8000-000000002602';
+update public.tenants set status = 'suspended' where id = 'f0f0f0f0-0000-4000-8000-0000000120c1';
 select is(pg_temp.resolve_as_anon('tenant-c.test'), null, 'suspended Tenant host -> nothing');
 set local role authenticated;
-select set_config('request.headers', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000002602"}', true);
+select set_config('request.headers', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-0000000120c1"}', true);
 select is(pg_temp.t(), '', 'suspended Tenant selector -> denied even if sent directly');
 reset role;
 
-update public.tenants set status = 'archived', archived_at = now() where id = 'f0f0f0f0-0000-4000-8000-000000002602';
+update public.tenants set status = 'archived', archived_at = now() where id = 'f0f0f0f0-0000-4000-8000-0000000120c1';
 select is(pg_temp.resolve_as_anon('tenant-c.test'), null, 'archived Tenant host -> nothing');
 
 update public.tenant_domains set disabled_at = now() where host = 'tenant-b.test';
 select is(pg_temp.resolve_as_anon('tenant-b.test'), null, 'disabling a verified host stops resolution');
 
-select throws_ok($$ delete from public.tenants where id = 'f0f0f0f0-0000-4000-8000-000000002601' $$, '23503', null,
+select throws_ok($$ delete from public.tenants where id = 'f0f0f0f0-0000-4000-8000-0000000120b1' $$, '23503', null,
   'a Tenant with mapped hosts cannot be deleted out from under them');
 
 select * from finish();

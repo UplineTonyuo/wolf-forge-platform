@@ -1,6 +1,6 @@
 begin;
 
-select plan(48);
+select plan(49);
 
 -- -----------------------------------------------------------------------------
 -- Structure
@@ -57,7 +57,15 @@ select is(
 -- Seed
 -- -----------------------------------------------------------------------------
 
-select is((select count(*) from public.tenants), 1::bigint, 'exactly one tenant is seeded');
+-- The migration seeds one Tenant. Count Tenants created no later than the
+-- Wolf Forge seed, so Tenants added afterwards (other suites, the persistent
+-- Local QA Tenant B) do not make this a whole-database count.
+select is(
+  (select count(*) from public.tenants
+    where created_at <= (select created_at from public.tenants where id = private.wolf_forge_tenant_id())),
+  1::bigint,
+  'exactly one tenant is seeded'
+);
 select is(
   (select id from public.tenants where slug = 'wolf-forge'),
   private.wolf_forge_tenant_id(),
@@ -79,13 +87,27 @@ select throws_ok(
 -- Backfill: profiles that exist before the mirror runs
 -- -----------------------------------------------------------------------------
 
+-- The WL-1A mirror is the Wolf Forge membership of each profile that does not
+-- belong only to another Tenant. Since D-275 Tenant-only identities (869
+-- below, and the persistent Local QA Tenant B identities) legitimately exist:
+-- the backfill must not claim them, and the mirror checks exclude them.
+
 alter table public.profiles disable trigger profiles_mirror_tenant_membership;
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('20000000-0000-0000-0000-000000000861', 'authenticated', 'authenticated', 'tenant-admin@example.invalid', now(), now()),
   ('20000000-0000-0000-0000-000000000862', 'authenticated', 'authenticated', 'tenant-client@example.invalid', now(), now()),
-  ('20000000-0000-0000-0000-000000000863', 'authenticated', 'authenticated', 'tenant-archived@example.invalid', now(), now());
+  ('20000000-0000-0000-0000-000000000863', 'authenticated', 'authenticated', 'tenant-archived@example.invalid', now(), now()),
+  ('20000000-0000-0000-0000-000000000869', 'authenticated', 'authenticated', 'tenant-other-only@example.invalid', now(), now());
+
+insert into public.tenants (id, slug, display_name, status)
+values ('f0f0f0f0-0000-4000-8000-0000000086b1', 'foundation-other-tenant', 'Foundation Other Tenant', 'active');
+
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select 'f0f0f0f0-0000-4000-8000-0000000086b1', '20000000-0000-0000-0000-000000000869', 'internal', role.id
+from public.roles as role
+where role.name = 'staff';
 
 insert into public.companies (id, name, status)
 values ('30000000-0000-0000-0000-000000000861', 'Tenant Foundation Client', 'client');
@@ -119,6 +141,11 @@ select is(
     )),
   'the backfill creates one membership for each profile that lacks one'
 );
+select ok(
+  not exists (select 1 from public.tenant_memberships
+    where profile_id = '20000000-0000-0000-0000-000000000869' and tenant_id = private.wolf_forge_tenant_id()),
+  'the backfill never claims an identity that belongs only to another Tenant (D-275)'
+);
 select is(
   private.backfill_wolf_forge_tenant_memberships(),
   0::bigint,
@@ -127,10 +154,24 @@ select is(
 
 alter table public.profiles enable trigger profiles_mirror_tenant_membership;
 
+-- Profiles the Wolf Forge mirror describes: every profile except those that
+-- belong only to other Tenants.
+create temporary view wf_mirrored_profiles as
+select profile_row.*
+from public.profiles as profile_row
+where exists (
+    select 1 from public.tenant_memberships as membership_row
+    where membership_row.profile_id = profile_row.id and membership_row.tenant_id = private.wolf_forge_tenant_id()
+  )
+  or not exists (
+    select 1 from public.tenant_memberships as membership_row
+    where membership_row.profile_id = profile_row.id
+  );
+
 create temporary view mirror_drift as
 select profile_row.id
-from public.profiles as profile_row
-full join public.tenant_memberships as membership_row
+from wf_mirrored_profiles as profile_row
+full join (select * from public.tenant_memberships where tenant_id = private.wolf_forge_tenant_id()) as membership_row
   on membership_row.profile_id = profile_row.id
 left join public.permission_presets as preset_row
   on preset_row.role_id = profile_row.role_id
@@ -143,20 +184,20 @@ where membership_row.id is null
   or membership_row.account_class is distinct from preset_row.account_class;
 
 select is(
-  (select count(*) from public.tenant_memberships),
-  (select count(*) from public.profiles),
-  'membership count equals profile count'
+  (select count(*) from public.tenant_memberships where tenant_id = private.wolf_forge_tenant_id()),
+  (select count(*) from wf_mirrored_profiles),
+  'Wolf Forge membership count equals mirrored profile count'
 );
 select is(
   (select count(*) from public.profiles as profile_row
-    join public.tenant_memberships as membership_row on membership_row.profile_id = profile_row.id
+    join (select * from public.tenant_memberships where tenant_id = private.wolf_forge_tenant_id()) as membership_row on membership_row.profile_id = profile_row.id
     where membership_row.role_id is distinct from profile_row.role_id),
   0::bigint,
   'every membership matches its profile role_id'
 );
 select is(
   (select count(*) from public.profiles as profile_row
-    join public.tenant_memberships as membership_row on membership_row.profile_id = profile_row.id
+    join (select * from public.tenant_memberships where tenant_id = private.wolf_forge_tenant_id()) as membership_row on membership_row.profile_id = profile_row.id
     where membership_row.company_id is distinct from profile_row.company_id),
   0::bigint,
   'every membership matches its profile company_id'
