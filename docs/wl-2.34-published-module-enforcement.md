@@ -2,6 +2,10 @@
 
 Base: 4215269. Local only; no saved draft publication or effective policy seeded.
 
+Phase 1 evidence below is historical. [Phase 2 Investment Intent](wl-2.34-investment-intent-enforcement.md)
+extends this same published authority; only Reporting and Intent are optional,
+and the other seven modules remain mandatory.
+
 ## Canonical architecture audit
 
 public.permission_modules defines account-class/navigation entries. private.white_label_modules is the nine-module subset. Projects, Subscriptions, Coupons and Investment Intent require Services. Existing membership/preset/override resolution is retained.

@@ -798,6 +798,10 @@ select is(
     from public.notifications
     where entity_type = 'service_interest'
       and company_id = '71000000-0000-0000-0000-00000000000a'
+      and recipient_profile_id in (
+        '70000000-0000-0000-0000-000000000004',
+        '70000000-0000-0000-0000-000000000005'
+      )
   ),
   4::bigint,
   'a re-add inside the cooldown advances the intent without manufacturing a second signal'

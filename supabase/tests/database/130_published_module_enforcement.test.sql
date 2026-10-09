@@ -164,11 +164,11 @@ select pg_temp.act(1);
 select throws_ok(format('select private.publish_tenant_modules(%L::uuid,2,%L::text[],%L)',
  'f0f0f0f0-0000-4000-8000-000000003401',array_remove(s.enabled,c.module_key),'omit '||c.module_key),
  '22023',null,'writer rejects omission of '||c.module_key)
-from private.white_label_modules c cross join module_sets s where c.module_key<>'reporting';
+from private.white_label_modules c cross join module_sets s where c.module_key not in ('reporting','investment_intent');
 select throws_ok(format('insert into private.tenant_module_publications(tenant_id,revision,module_keys,published_by,reason) values (%L::uuid,3,%L::text[],%L::uuid,%L)',
  'f0f0f0f0-0000-4000-8000-000000003401',array_remove(s.enabled,c.module_key),'20000000-0000-4000-8000-000000003401','omit '||c.module_key),
  '22023',null,'table trigger rejects omission of '||c.module_key)
-from private.white_label_modules c cross join module_sets s where c.module_key<>'reporting';
+from private.white_label_modules c cross join module_sets s where c.module_key not in ('reporting','investment_intent');
 select pg_temp.act(3);
 set local role authenticated;
 select pg_temp.act(5);

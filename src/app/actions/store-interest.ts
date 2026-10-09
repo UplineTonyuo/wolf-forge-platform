@@ -60,6 +60,7 @@ export async function updateInvestmentIntentStatusAction(input: {
 }): Promise<UpdateInvestmentIntentStatusResult> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("investment_intent");
     await context.services.investmentIntent.setStatus(
       { intentId: input.intentId, status: input.status },
       context.actor,
