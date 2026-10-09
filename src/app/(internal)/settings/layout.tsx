@@ -18,7 +18,9 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 
   if (denied) redirect("/");
 
-  const showWhiteLabel = await localUiQaBypassEnabled();
+  // Presentation only; the page re-checks both. A failed check hides the entry.
+  const showWhiteLabel =
+    (await localUiQaBypassEnabled()) && (await context.services.permissions.isPlatformAdmin().catch(() => false));
 
   return (
     <div className="settings-page-layout">

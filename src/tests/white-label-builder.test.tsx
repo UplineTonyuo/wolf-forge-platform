@@ -6,12 +6,13 @@ import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { gate, notFound, requireModuleAccess } = vi.hoisted(() => ({
+const { gate, notFound, requireModuleAccess, isPlatformAdmin } = vi.hoisted(() => ({
   gate: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
   requireModuleAccess: vi.fn(),
+  isPlatformAdmin: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -22,9 +23,10 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: gate }));
 vi.mock("../lib/supabase/next-server", () => ({
-  getInternalContext: async () => ({ services: { permissions: { requireModuleAccess } } }),
+  getInternalContext: async () => ({ services: { permissions: { requireModuleAccess, isPlatformAdmin } } }),
 }));
 
+import SettingsLayout from "../app/(internal)/settings/layout";
 import WhiteLabelSettingsPage from "../app/(internal)/settings/white-label/page";
 import { SettingsNavigation } from "../components/settings/settings-navigation";
 import { WhiteLabelBuilder } from "../components/white-label/white-label-builder";
@@ -162,10 +164,28 @@ describe("White Label builder", () => {
 });
 
 describe("White Label route and Settings entry", () => {
-  it("the page does not exist outside the local QA gate", async () => {
+  it("the page does not exist outside the local QA gate, even for a Platform Admin", async () => {
     gate.mockResolvedValue(false);
+    isPlatformAdmin.mockResolvedValue(true);
     await expect(WhiteLabelSettingsPage()).rejects.toThrow("NEXT_NOT_FOUND");
     expect(requireModuleAccess).not.toHaveBeenCalled();
+    expect(isPlatformAdmin).not.toHaveBeenCalled();
+  });
+
+  it("inside the gate a Settings-capable Tenant owner without the entitlement gets notFound", async () => {
+    gate.mockResolvedValue(true);
+    requireModuleAccess.mockResolvedValue(true);
+    isPlatformAdmin.mockResolvedValue(false);
+    await expect(WhiteLabelSettingsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(isPlatformAdmin).toHaveBeenCalledOnce();
+  });
+
+  it("inside the gate a Platform Admin session gets the preview", async () => {
+    gate.mockResolvedValue(true);
+    requireModuleAccess.mockResolvedValue(true);
+    isPlatformAdmin.mockResolvedValue(true);
+    render(await WhiteLabelSettingsPage());
+    expect(screen.getByRole("form", { name: "White Label preview settings" })).toBeInTheDocument();
   });
 
   it("inside the gate the page still requires Settings access", async () => {
@@ -186,9 +206,28 @@ describe("White Label route and Settings entry", () => {
     expect(screen.getByRole("link", { name: "General" })).toHaveAttribute("href", "/settings/general");
   });
 
-  it("the Settings layout derives the entry only from the server-side local QA gate", () => {
-    const source = readFileSync(resolve(import.meta.dirname, "../app/(internal)/settings/layout.tsx"), "utf8");
-    expect(source).toContain("const showWhiteLabel = await localUiQaBypassEnabled();");
-    expect(source).toContain('requireModuleAccess("settings")');
+  async function layoutShowsWhiteLabel(): Promise<boolean> {
+    // SettingsLayout -> div -> PageFrame -> SettingsShell
+    const tree = (await SettingsLayout({ children: null })) as React.ReactElement<{ children: React.ReactElement<{ children: React.ReactElement<{ showWhiteLabel: boolean }> }> }>;
+    return tree.props.children.props.children.props.showWhiteLabel;
+  }
+
+  it("the Settings layout shows the entry only for the local QA gate AND a Platform Admin", async () => {
+    requireModuleAccess.mockResolvedValue(true);
+
+    gate.mockResolvedValue(false);
+    isPlatformAdmin.mockResolvedValue(true);
+    expect(await layoutShowsWhiteLabel()).toBe(false);
+    expect(isPlatformAdmin).not.toHaveBeenCalled();
+
+    gate.mockResolvedValue(true);
+    isPlatformAdmin.mockResolvedValue(false);
+    expect(await layoutShowsWhiteLabel()).toBe(false);
+
+    isPlatformAdmin.mockRejectedValue(new Error("DATABASE_ERROR"));
+    expect(await layoutShowsWhiteLabel()).toBe(false);
+
+    isPlatformAdmin.mockResolvedValue(true);
+    expect(await layoutShowsWhiteLabel()).toBe(true);
   });
 });

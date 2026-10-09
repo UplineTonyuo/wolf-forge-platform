@@ -145,7 +145,9 @@ async function readLocalQaCredentials(): Promise<LocalQaCredentials | null> {
  * sign-in call itself fails (e.g. local Supabase is stopped) — in every one
  * of those cases the ordinary getSession()/verifyActor()/resolveInternalUser()
  * path downstream behaves exactly as it would with the bypass disabled
- * entirely, up to and including redirecting to `/login`.
+ * entirely, up to and including redirecting to `/login`. The same holds when
+ * the QA identity turns out to hold the Platform Admin entitlement: the new
+ * session is signed out again before the request continues.
  */
 export async function ensureLocalQaSession(
   supabase: SupabaseClient<Database>,
@@ -156,7 +158,17 @@ export async function ensureLocalQaSession(
   const credentials = await readLocalQaCredentials();
   if (!credentials) return;
 
-  await supabase.auth.signInWithPassword(credentials).catch(() => {
-    // Local Supabase is stopped, or the QA account/password is stale.
-  });
+  const signedIn = await supabase.auth.signInWithPassword(credentials).catch(() => null);
+  // Local Supabase is stopped, or the QA account/password is stale.
+  if (!signedIn?.data.session) return;
+
+  /*
+   * Passwordless auto-login must never carry the global Platform Admin
+   * entitlement (WL-2.32). If the QA account holds it, or the check cannot
+   * run, drop the session it just created: fail closed, back to /login.
+   */
+  const check = await Promise.resolve(supabase.rpc("app_is_platform_admin")).catch(() => null);
+  if (!check || check.error || check.data !== false) {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  }
 }

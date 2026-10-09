@@ -5591,6 +5591,10 @@ export type Database = {
         Args: { p_message_id: string }
         Returns: undefined
       }
+      app_is_platform_admin: {
+        Args: never
+        Returns: boolean
+      }
       app_issue_invoice: {
         Args: { p_invoice_id: string }
         Returns: {

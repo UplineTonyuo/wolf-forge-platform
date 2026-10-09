@@ -8,9 +8,12 @@ import { getInternalContext } from "../../../../lib/supabase/next-server";
 export const metadata: Metadata = { title: "White Label" };
 
 /*
- * WL-2.31: no Platform Admin control plane exists yet, so this is a local
- * QA-only, unsaved preview on synthetic configuration. It reads and writes no
- * Tenant data. Outside the local QA gate the route does not exist.
+ * WL-2.31 / WL-2.32: a local QA-only, unsaved preview on synthetic
+ * configuration. It reads and writes no Tenant data. The route exists only
+ * inside the local QA gate AND for a session whose identity holds the global
+ * Platform Admin entitlement (app_is_platform_admin, never a Tenant role).
+ * It stays local-only until real White Label management and its deployment
+ * conditions are approved.
  */
 export default async function WhiteLabelSettingsPage() {
   if (!(await localUiQaBypassEnabled())) notFound();
@@ -18,6 +21,7 @@ export default async function WhiteLabelSettingsPage() {
   // Layout and page render concurrently; keep the same Settings boundary here.
   const context = await getInternalContext();
   await context.services.permissions.requireModuleAccess("settings");
+  if (!(await context.services.permissions.isPlatformAdmin())) notFound();
 
   return (
     <div>

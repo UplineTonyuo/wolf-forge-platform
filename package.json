@@ -16,6 +16,7 @@
     "setup:frontend": "tsx scripts/setup-phase3a-local.ts",
     "qa:local-login": "tsx scripts/qa-local-login.ts",
     "qa:tenants": "tsx scripts/qa-local-tenants.ts",
+    "qa:platform-admin": "tsx scripts/qa-local-platform-admin.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
