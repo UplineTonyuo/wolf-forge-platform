@@ -106,11 +106,13 @@ export function WhiteLabelBuilder({
   onStateChange: setState,
   readOnly = false,
   children,
+  controls,
 }: {
   state: WhiteLabelPreviewState;
   onStateChange: Dispatch<SetStateAction<WhiteLabelPreviewState>>;
   readOnly?: boolean;
   children?: ReactNode;
+  controls?: ReactNode;
 }) {
   const [device, setDevice] = useState<Device>("desktop");
   const id = useId();
@@ -129,7 +131,7 @@ export function WhiteLabelBuilder({
       {children}
 
       <div className={styles.layout}>
-        <form className={styles.controls} aria-label="White Label preview settings" onSubmit={(event) => event.preventDefault()}>
+        {controls ?? <form className={styles.controls} aria-label="White Label preview settings" onSubmit={(event) => event.preventDefault()}>
           <fieldset className={styles.group} disabled={readOnly}>
             <legend>Identity</legend>
             <label className={styles.field} htmlFor={`${id}-name`}>
@@ -214,7 +216,7 @@ export function WhiteLabelBuilder({
               Dashboard, Clients, Team, All Conversations and Settings are always part of a workspace. Operations stays Wolf Forge-only.
             </p>
           </fieldset>
-        </form>
+        </form>}
 
         <section className={styles.previewPanel} aria-labelledby={`${id}-preview`}>
           <div className={styles.previewHeader}>

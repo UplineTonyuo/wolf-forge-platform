@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, LoaderCircle } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getWhiteLabelDraftAction, saveWhiteLabelDraftAction } from "../../app/actions/white-label";
 import {
   draftModuleKeys,
@@ -13,6 +13,7 @@ import type { WhiteLabelPreviewState } from "../../domain/white-label/preview";
 import { AnimatedSelect } from "../ui/animated-select";
 import settings from "../settings/settings-foundation.module.css";
 import { WhiteLabelBuilder } from "./white-label-builder";
+import { WhiteLabelDraftReview } from "./white-label-draft-review";
 import styles from "./white-label-builder.module.css";
 
 type Status =
@@ -47,6 +48,15 @@ export function WhiteLabelDraftEditor({
   const [state, setState] = useState(initialDraft?.state ?? null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [pendingTenantId, setPendingTenantId] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const reviewButton = useRef<HTMLButtonElement>(null);
+  const restoreReviewFocus = useRef(false);
+  useEffect(() => {
+    if (!reviewing && restoreReviewFocus.current) {
+      reviewButton.current?.focus();
+      restoreReviewFocus.current = false;
+    }
+  }, [reviewing]);
   // Only the newest load may update the screen (a slow Tenant A response
   // must not land after the user switched to Tenant B).
   const latestLoad = useRef(0);
@@ -60,6 +70,7 @@ export function WhiteLabelDraftEditor({
   async function load(nextTenantId: string) {
     const request = ++latestLoad.current;
     setPendingTenantId(null);
+    setReviewing(false);
     setTenantId(nextTenantId);
     setDraft(null);
     setState(null);
@@ -161,6 +172,15 @@ export function WhiteLabelDraftEditor({
             {revisionLabel}
           </span>
           <button
+            ref={reviewButton}
+            type="button"
+            className="button-secondary"
+            disabled={!draft || !state || busy || reviewing || Boolean(pendingTenantId)}
+            onClick={() => setReviewing(true)}
+          >
+            Review Draft
+          </button>
+          <button
             type="button"
             className="button-primary"
             disabled={!draft || readOnly || busy || !dirty}
@@ -234,6 +254,16 @@ export function WhiteLabelDraftEditor({
             if (status.kind === "saved" || status.kind === "invalid") setStatus({ kind: "idle" });
           }}
           readOnly={readOnly || status.kind === "saving"}
+          controls={reviewing ? <WhiteLabelDraftReview
+            draft={draft}
+            state={state}
+            hasChanges={dirty}
+            busy={busy}
+            onBack={() => {
+              restoreReviewFocus.current = true;
+              setReviewing(false);
+            }}
+          /> : undefined}
         />
       ) : status.kind !== "loading" && !tenantId ? (
         <div className={styles.emptyState}>
