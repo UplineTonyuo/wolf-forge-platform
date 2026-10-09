@@ -4,6 +4,7 @@ import {
   Bell,
   Building2,
   CreditCard,
+  Palette,
   Plug,
   ShieldCheck,
   UsersRound,
@@ -21,12 +22,16 @@ export const SETTINGS_NAV_ITEMS = [
   { id: "security", label: "Security", route: "/settings/security", icon: ShieldCheck },
 ] as const;
 
-export function SettingsNavigation() {
+// Local QA-only preview (WL-2.31); the layout decides server-side whether it shows.
+const WHITE_LABEL_NAV_ITEM = { id: "white-label", label: "White Label", route: "/settings/white-label", icon: Palette };
+
+export function SettingsNavigation({ showWhiteLabel = false }: { showWhiteLabel?: boolean }) {
   const pathname = usePathname();
+  const items = showWhiteLabel ? [...SETTINGS_NAV_ITEMS, WHITE_LABEL_NAV_ITEM] : SETTINGS_NAV_ITEMS;
 
   return (
     <nav className={styles.navigation} aria-label="Settings sections">
-      {SETTINGS_NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const current = pathname === item.route;
         const Icon = item.icon;
         return (
@@ -45,10 +50,10 @@ export function SettingsNavigation() {
   );
 }
 
-export function SettingsShell({ children }: { children: React.ReactNode }) {
+export function SettingsShell({ children, showWhiteLabel }: { children: React.ReactNode; showWhiteLabel?: boolean }) {
   return (
     <div className={styles.shell}>
-      <SettingsNavigation />
+      <SettingsNavigation showWhiteLabel={showWhiteLabel} />
       <div className={styles.content}>{children}</div>
     </div>
   );

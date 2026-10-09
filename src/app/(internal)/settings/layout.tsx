@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { SettingsShell } from "../../../components/settings/settings-navigation";
 import { PageFrame } from "../../../components/ui/page-frame";
 import { toClientSafeError } from "../../../lib/errors/application-error";
+import { localUiQaBypassEnabled } from "../../../lib/qa/local-ui-bypass";
 import { getInternalContext } from "../../../lib/supabase/next-server";
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -17,13 +18,15 @@ export default async function SettingsLayout({ children }: { children: React.Rea
 
   if (denied) redirect("/");
 
+  const showWhiteLabel = await localUiQaBypassEnabled();
+
   return (
     <div className="settings-page-layout">
       <PageFrame
         title="Settings"
         description="Workspace configuration, access boundaries, and external provider readiness."
       >
-        <SettingsShell>{children}</SettingsShell>
+        <SettingsShell showWhiteLabel={showWhiteLabel}>{children}</SettingsShell>
       </PageFrame>
     </div>
   );

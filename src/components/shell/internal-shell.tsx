@@ -35,7 +35,7 @@ import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
 
-const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
+export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
   projects: FolderKanban,
   tickets: TicketCheck,
