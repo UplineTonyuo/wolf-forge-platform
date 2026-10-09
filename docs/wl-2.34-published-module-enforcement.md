@@ -26,7 +26,7 @@ Eight non-pilot modules are not complete audited enforcement slices. Both publis
 
 Business RPCs: app_send_client_report, app_list_my_client_reports, app_get_my_client_report, app_mark_client_report_read, app_count_my_unread_reports, app_create_report_draft, app_save_report_draft, app_send_report_draft, app_discard_report_draft, app_list_internal_reports, app_get_internal_report, app_get_report_send_status, app_list_reporting_service_options, app_list_reported_one_time_deliverables.
 
-The two report-send-anytime grant/revoke RPCs manage existing permissions, not report data; they cannot override disabled policy. ReportingRepository uses user-scoped RPCs only. All five pages already require the correct account-class module. Legacy send checks reports.send without a module call. Central profile_has_permission_in_tenant narrowing closes it, report direct RLS, unread count, notification readers and explicit-Tenant notification fanout. Receipt RLS and historical activity's admin shortcut need additional predicates. The recipient action and Send Reporting quick link need module checks. Notifications have no API table grants. No Reporting API route or background production caller was found.
+The two report-send-anytime grant/revoke RPCs manage existing permissions, not report data; they cannot override disabled policy. ReportingRepository uses user-scoped RPCs only. All five pages already require the correct account-class module. The legacy send RPC checks reports.send without a module call; the recovered migration narrows that permission through profile_has_permission_in_tenant. Both send server actions also check the Reporting module before consuming the durable send quota. The migration covers report direct RLS, unread count, notification readers, explicit-Tenant notification fanout, receipts and historical activity's admin shortcut. The recipient action and Send Reporting quick link have module guards. Notifications have no API table grants. No Reporting API route or background production caller was found. Database enforcement remains unverified on the restored workstation.
 
 ## Published authority
 
@@ -36,8 +36,18 @@ Active Tenant with no row retains existing authorized behavior. Invalid/unknown 
 
 ## White Label 404 QA issue
 
-Read-only diagnosis: port 3000 serves Wolf-Forge-Loading-Skeletons-20261007, which has neither the White Label source route nor an entry in its dev manifest. No server for this checkout was initially running. This explains the current port 3000 404; the historical manual URL is uncorrelated. Normal login alone does not establish Platform Admin entitlement, non-Quick-Access identity or development/opt-in/loopback gate eligibility. Browser PASS requires real entitled login on this checkout with all gates preserved.
+Historical pre-reinstall diagnosis (not re-verified on this workstation): port 3000 served Wolf-Forge-Loading-Skeletons-20261007, which had neither the White Label source route nor an entry in its dev manifest. No server for this checkout was initially running. This explained that port 3000 404; the historical manual URL is uncorrelated. Normal login alone does not establish Platform Admin entitlement, non-Quick-Access identity or development/opt-in/loopback gate eligibility. Browser PASS requires real entitled login on this checkout with all gates preserved.
 
 ## Verification
 
 Pending. No claim of completion until focused/full pgTAP, mutation checks, app checks, real route/browser coverage and three independent final reviews.
+
+### Database-independent checkpoint — 2026-10-09, Codex
+
+- Fixed both send actions consuming the durable send quota before a Reporting module preflight. Four new action tests reproduced the missing guards before the fix and passed afterward. Existing mutation RPC authorization remains authoritative, including policy changes after preflight.
+- Passed 9 focused Vitest files / 140 tests with `npm test -- --maxWorkers=2` (published-module actions/navigation, Reporting service/domain/send window, White Label drafts/actions/builder, internal navigation and Operations navigation). These unit tests use existing application mocks; they do not prove database authorization.
+- `npm run typecheck` and `npm run lint` passed. The first typecheck lacked generated Next `PageProps`; documented `next typegen` generated ignored route types, then typecheck passed without changing application types.
+- Source review confirmed activity entity `client_report` matches the current constraint, parent-Tenant resolver, Reporting writer and pgTAP fixture. SQL was not executed. No standalone PostgreSQL parser is installed, so this is source consistency review, not SQL syntax or runtime validation.
+- Independent read-only security and diff reviews found no blocking issue in the action change; both explicitly excluded database verification.
+- Blocked/deferred: migration replay/application, focused pgTAP 130, regression/full pgTAP, database mutation tests, live grants/RLS/RPC/Tenant/publication checks, DB lint, authenticated browser/direct-access QA and final database security review. The original local database and QA records were not restored. KI-106's historical failures are not a baseline for this machine. Docker/WSL setup is deferred; no hosted target was used.
+- WL-2.34 remains recovered WIP. WL-2.33 remains the latest completed milestone. No Production changes, push or deployment.

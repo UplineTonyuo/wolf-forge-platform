@@ -44,6 +44,7 @@ export async function sendClientReportAction(input: {
 }): Promise<SendClientReportResult> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
 
     await enforceServerCostLimit({
       actorId: context.actor.id,
@@ -317,6 +318,7 @@ export async function sendReportDraftAction(input: {
 }): Promise<SaveReportDraftResult> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
 
     await enforceServerCostLimit({
       actorId: context.actor.id,
