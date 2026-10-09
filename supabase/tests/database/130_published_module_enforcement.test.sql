@@ -149,6 +149,28 @@ select is((select count(*) from public.app_list_my_notifications()),1::bigint,'c
 select is(public.app_mark_all_notifications_read(),1,'re-enabled client can mark all');
 
 select is((select count(*) from public.client_report_reads where report_id='e7340000-0000-4000-8000-000000003402'),1::bigint,'historical client receipt restored');
+-- Isolate membership denial from disabled-policy denial for the global entitlement.
+select pg_temp.act(6);
+select throws_ok($$select public.app_require_module_access('reporting')$$,'42501',null,'enabled Reporting does not give Platform Admin without membership module access');
+select throws_ok($$select * from public.app_list_internal_reports()$$,'42501',null,'enabled Reporting does not give Platform Admin without membership RPC access');
+select throws_ok($$select public.app_get_internal_report('e7340000-0000-4000-8000-000000003402')$$,'42501',null,'enabled Reporting does not give Platform Admin without membership report detail');
+select is((select count(*) from public.client_reports),0::bigint,'enabled Reporting Platform Admin without membership direct reports empty');
+select is((select count(*) from public.client_report_sections),0::bigint,'enabled Reporting Platform Admin without membership direct sections empty');
+select is((select count(*) from public.client_report_entries),0::bigint,'enabled Reporting Platform Admin without membership direct entries empty');
+select is((select count(*) from public.client_report_reads),0::bigint,'enabled Reporting Platform Admin without membership direct receipts empty');
+reset role;
+select is(private.profile_has_permission_in_tenant('20000000-0000-4000-8000-000000003406','f0f0f0f0-0000-4000-8000-000000003401','reports.send'),false,'enabled explicit Tenant permission engine rejects Platform Admin without membership');
+select pg_temp.act(1);
+select throws_ok(format('select private.publish_tenant_modules(%L::uuid,2,%L::text[],%L)',
+ 'f0f0f0f0-0000-4000-8000-000000003401',array_remove(s.enabled,c.module_key),'omit '||c.module_key),
+ '22023',null,'writer rejects omission of '||c.module_key)
+from private.white_label_modules c cross join module_sets s where c.module_key<>'reporting';
+select throws_ok(format('insert into private.tenant_module_publications(tenant_id,revision,module_keys,published_by,reason) values (%L::uuid,3,%L::text[],%L::uuid,%L)',
+ 'f0f0f0f0-0000-4000-8000-000000003401',array_remove(s.enabled,c.module_key),'20000000-0000-4000-8000-000000003401','omit '||c.module_key),
+ '22023',null,'table trigger rejects omission of '||c.module_key)
+from private.white_label_modules c cross join module_sets s where c.module_key<>'reporting';
+select pg_temp.act(3);
+set local role authenticated;
 select pg_temp.act(5);
 select throws_ok($$select public.app_require_module_access('reporting')$$,'42501',null,'enabled module never grants staff new permissions');
 select pg_temp.act(2,'f0f0f0f0-0000-4000-8000-000000000001');
