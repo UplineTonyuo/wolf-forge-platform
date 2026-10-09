@@ -42,8 +42,8 @@ select is(
 
 select is(
   (select count(*) from private.security_audit_event_codes),
-  8::bigint,
-  'exactly eight codes are selected as auditable'
+  9::bigint,
+  'exactly nine codes are selected as auditable'
 );
 
 select is(
@@ -53,12 +53,13 @@ select is(
       'auth.login.unassigned',
       'authorization.context.denied',
       'authorization.team_supervision.read',
+      'authorization.white_label.draft_saved',
       'integration.gmail.connected',
       'integration.gmail.disconnected',
       'integration.gmail.reauthorization_required',
       'integration.gmail.disconnect_failed'
     )),
-  8::bigint,
+  9::bigint,
   'the seeded vocabulary matches SECURITY_AUDIT_EVENT_CODES exactly'
 );
 
@@ -191,14 +192,14 @@ reset role;
 -- Counts are taken back as the operator: the writer deliberately cannot read
 -- what it wrote, which the privilege assertions above already established.
 select is(
-  (select count(*) from public.security_audit_events),
+  (select count(*) from public.security_audit_events where correlation_id = repeat('a', 32)),
   1::bigint,
   'the trusted writer can append'
 );
 
 select ok(
   (select occurred_at > now() - interval '5 seconds'
-    from public.security_audit_events limit 1),
+    from public.security_audit_events where correlation_id = repeat('a', 32)),
   'occurred_at is forced to database time regardless of caller'
 );
 

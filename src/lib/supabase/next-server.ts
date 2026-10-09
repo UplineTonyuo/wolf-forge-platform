@@ -37,6 +37,7 @@ import { FormRepository } from "../../repositories/form-repository";
 import { TicketRepository } from "../../repositories/ticket-repository";
 import { ProjectConversationRepository } from "../../repositories/project-conversation-repository";
 import { PermissionRepository } from "../../repositories/permission-repository";
+import { WhiteLabelRepository } from "../../repositories/white-label-repository";
 import { ProfileRepository } from "../../repositories/profile-repository";
 import { IntegrationRepository } from "../../repositories/integration-repository";
 import { TaskRepository } from "../../repositories/task-repository";
@@ -45,6 +46,7 @@ import { TeamSupervisionRepository } from "../../repositories/team-supervision-r
 import { canonicalGreetingName } from "../../domain/profile/greeting";
 import { AccountProvisioningService } from "../../services/account-provisioning-service";
 import { PermissionService } from "../../services/permission-service";
+import { WhiteLabelService } from "../../services/white-label-service";
 import { ProfileService } from "../../services/profile-service";
 import { IntegrationService } from "../../services/integration-service";
 import { AuthAdminAdapter } from "./auth-admin";
@@ -513,6 +515,8 @@ export const getInternalContext = cache(async () => {
       orders: new OrderService({ repository: new OrderRepository(client) }),
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
+      // Platform Admin-only White Label drafts (WL-2.33); every RPC re-checks the entitlement.
+      whiteLabel: new WhiteLabelService({ repository: new WhiteLabelRepository(client) }),
       profile: new ProfileService({ repository: new ProfileRepository(client) }),
       integrations: new IntegrationService({
         repository: new IntegrationRepository(client),

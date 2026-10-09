@@ -1,0 +1,291 @@
+/** @vitest-environment jsdom */
+
+import "@testing-library/jest-dom/vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { getDraftAction, saveDraftAction } = vi.hoisted(() => ({ getDraftAction: vi.fn(), saveDraftAction: vi.fn() }));
+vi.mock("../app/actions/white-label", () => ({
+  getWhiteLabelDraftAction: getDraftAction,
+  saveWhiteLabelDraftAction: saveDraftAction,
+}));
+vi.mock("next/navigation", () => ({ usePathname: () => "/settings/white-label" }));
+
+import { WhiteLabelDraftEditor } from "../components/white-label/white-label-draft-editor";
+import {
+  draftModuleKeys,
+  draftProblem,
+  modulesFromKeys,
+  saveWhiteLabelDraftSchema,
+  type WhiteLabelDraft,
+  type WhiteLabelTenant,
+} from "../domain/white-label/draft";
+import { SYNTHETIC_PREVIEW_STATE, WHITE_LABEL_MODULES } from "../domain/white-label/preview";
+import { WhiteLabelRepository } from "../repositories/white-label-repository";
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+const WF: WhiteLabelTenant = { id: "f0f0f0f0-0000-4000-8000-000000000001", slug: "wolf-forge", displayName: "Wolf Forge", status: "active", draftRevision: null };
+const B: WhiteLabelTenant = { id: "f0f0f0f0-0000-4000-8000-000000002601", slug: "tenant-b", displayName: "Tenant B", status: "active", draftRevision: 2 };
+const SUSPENDED: WhiteLabelTenant = { id: "f0f0f0f0-0000-4000-8000-000000002699", slug: "tenant-s", displayName: "Tenant S", status: "suspended", draftRevision: null };
+
+function draftFor(tenant: WhiteLabelTenant, displayName: string, revision: number): WhiteLabelDraft {
+  return {
+    tenantId: tenant.id,
+    tenantStatus: tenant.status,
+    state: { ...SYNTHETIC_PREVIEW_STATE, displayName },
+    revision,
+    updatedAt: revision ? "2026-10-09T00:00:00.000Z" : null,
+  };
+}
+
+function deferred<T>() {
+  let resolveValue!: (value: T) => void;
+  const promise = new Promise<T>((done) => (resolveValue = done));
+  return { promise, resolve: resolveValue };
+}
+
+function chooseTenant(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: /^Tenant:/ }));
+  fireEvent.click(screen.getByRole("option", { name: new RegExp(`^${name}`) }));
+}
+
+const nameInput = () => screen.getByLabelText("Workspace display name");
+const saveButton = () => screen.getByRole("button", { name: /Save Draft|Saving/ });
+
+describe("White Label draft rules", () => {
+  it("accepts a valid draft and stores modules as a sorted set", () => {
+    expect(draftProblem(SYNTHETIC_PREVIEW_STATE)).toBeNull();
+    expect(draftModuleKeys({ tickets: true, services: true, todo: true, unknown: true })).toEqual(["services", "tickets"]);
+    expect(modulesFromKeys(["services"])).toMatchObject({ services: true, projects: false });
+  });
+
+  it("refuses blank, long and control-character names, and bad colors", () => {
+    expect(draftProblem({ ...SYNTHETIC_PREVIEW_STATE, displayName: "  " })).toMatch(/Enter/);
+    expect(draftProblem({ ...SYNTHETIC_PREVIEW_STATE, displayName: "x".repeat(61) })).toMatch(/60/);
+    expect(draftProblem({ ...SYNTHETIC_PREVIEW_STATE, displayName: "A\u0007B" })).toMatch(/cannot be shown/);
+    expect(draftProblem({ ...SYNTHETIC_PREVIEW_STATE, primaryColor: "red" })).toMatch(/colors/);
+  });
+
+  it("refuses a module without the module it requires", () => {
+    const modules = { ...SYNTHETIC_PREVIEW_STATE.modules, services: false };
+    expect(draftProblem({ ...SYNTHETIC_PREVIEW_STATE, modules })).toBe("Projects needs Services. Turn Services on, or turn Projects off.");
+  });
+
+  it("the server schema rejects Operations, unknown modules, extra fields and invalid dependencies", () => {
+    const valid = {
+      tenantId: B.id,
+      expectedRevision: 2,
+      displayName: "Acme",
+      primaryColor: "#000d51",
+      accentColor: "#a8832e",
+      moduleKeys: ["services", "projects"],
+    };
+    expect(saveWhiteLabelDraftSchema.safeParse(valid).success).toBe(true);
+    for (const bad of [
+      { ...valid, moduleKeys: ["todo"] },
+      { ...valid, moduleKeys: ["dashboard"] },
+      { ...valid, moduleKeys: ["projects"] },
+      { ...valid, primaryColor: "#00f" },
+      { ...valid, tenantId: "wolf-forge" },
+      { ...valid, expectedRevision: -1 },
+      { ...valid, role: "platform_admin" },
+    ]) {
+      expect(saveWhiteLabelDraftSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("the client catalog matches the database catalog exactly (keys and dependencies)", () => {
+    const sql = readFileSync(resolve(import.meta.dirname, "../../supabase/migrations/20261010090000_white_label_drafts.sql"), "utf8");
+    const seeded = [...sql.matchAll(/\('([a-z_]+)', (?:null|'([a-z_]+)')\)/g)].map(([, key, requires]) => [key, requires ?? null] as const);
+    const client = WHITE_LABEL_MODULES.map((entry) => [entry.id, entry.requires[0] ?? null] as const);
+    expect(new Map(seeded)).toEqual(new Map(client));
+    expect(client.map(([id]) => id)).not.toContain("todo");
+  });
+});
+
+describe("White Label draft editor", () => {
+  it("requires an explicit Tenant before anything can be saved", () => {
+    render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={null} />);
+    expect(screen.getByText("Choose a Tenant")).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    expect(getDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("saves only through the server and reports success only after it confirms", async () => {
+    const save = deferred<unknown>();
+    saveDraftAction.mockReturnValue(save.promise);
+    render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    expect(saveButton()).toBeDisabled();
+
+    fireEvent.change(nameInput(), { target: { value: "  Bravo Labs " } });
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    fireEvent.click(saveButton());
+
+    expect(saveDraftAction).toHaveBeenCalledExactlyOnceWith({
+      tenantId: B.id,
+      expectedRevision: 2,
+      displayName: "Bravo Labs",
+      primaryColor: SYNTHETIC_PREVIEW_STATE.primaryColor,
+      accentColor: SYNTHETIC_PREVIEW_STATE.accentColor,
+      moduleKeys: draftModuleKeys(SYNTHETIC_PREVIEW_STATE.modules),
+    });
+    expect(saveButton()).toHaveTextContent("Saving");
+    expect(screen.queryByText(/Draft saved/)).toBeNull();
+    expect(screen.getByRole("group", { name: "Identity" })).toBeDisabled();
+
+    await act(async () => save.resolve({ ok: true, data: { revision: 3, updatedAt: "2026-10-09T01:00:00.000Z" } }));
+    expect(screen.getByText(/Draft saved · revision 3/)).toBeInTheDocument();
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    expect(screen.getByTestId("draft-revision")).toHaveTextContent("Draft revision 3");
+  });
+
+  it("a failed save keeps the changes, never claims success, and can be retried", async () => {
+    saveDraftAction.mockResolvedValueOnce({ ok: false, error: { code: "DATABASE_ERROR", message: "x" } });
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "Bravo Labs" } });
+    await act(async () => fireEvent.click(saveButton()));
+
+    expect(screen.getByText(/could not be saved. Your changes are still here/)).toBeInTheDocument();
+    expect(screen.queryByText(/Draft saved/)).toBeNull();
+    expect(nameInput()).toHaveValue("Bravo Labs");
+
+    saveDraftAction.mockResolvedValueOnce({ ok: true, data: { revision: 3, updatedAt: "2026-10-09T01:00:00.000Z" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Try again" })));
+    expect(saveDraftAction).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/Draft saved · revision 3/)).toBeInTheDocument();
+  });
+
+  it("a lost response (network failure) is a retryable failure, not a crash", async () => {
+    saveDraftAction.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "Bravo Labs" } });
+    await act(async () => fireEvent.click(saveButton()));
+
+    expect(screen.getByText(/could not be saved/)).toBeInTheDocument();
+    expect(screen.queryByText(/Draft saved/)).toBeNull();
+    expect(nameInput()).toHaveValue("Bravo Labs");
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("a stale revision is an explicit conflict; loading the latest discards local edits", async () => {
+    saveDraftAction.mockResolvedValue({ ok: false, error: { code: "CONFLICT", message: "x" } });
+    getDraftAction.mockResolvedValue({ ok: true, data: draftFor(B, "Theirs", 3) });
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "Mine" } });
+    await act(async () => fireEvent.click(saveButton()));
+
+    expect(screen.getByText(/Someone else saved this Tenant's draft/)).toBeInTheDocument();
+    expect(nameInput()).toHaveValue("Mine");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Load latest/ })));
+    expect(getDraftAction).toHaveBeenCalledWith(B.id);
+    expect(nameInput()).toHaveValue("Theirs");
+  });
+
+  it("an invalid dependency is reported and never sent", async () => {
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Services/ }));
+    await act(async () => fireEvent.click(saveButton()));
+    expect(screen.getByText(/Projects needs Services/)).toBeInTheDocument();
+    expect(saveDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("warns before switching Tenants with unsaved changes and never carries them over", async () => {
+    getDraftAction.mockResolvedValue({ ok: true, data: draftFor(WF, "Wolf Forge", 0) });
+    render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "Bravo edited" } });
+
+    chooseTenant("Wolf Forge");
+    expect(screen.getByText(/unsaved changes to Tenant B/)).toBeInTheDocument();
+    expect(getDraftAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(nameInput()).toHaveValue("Bravo edited");
+
+    chooseTenant("Wolf Forge");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Discard and switch" })));
+    expect(getDraftAction).toHaveBeenCalledExactlyOnceWith(WF.id);
+    expect(nameInput()).toHaveValue("Wolf Forge");
+    expect(screen.getByTestId("draft-revision")).toHaveTextContent("No draft saved yet");
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+  });
+
+  it("a slow response for the previous Tenant never replaces the current one", async () => {
+    const slowWf = deferred<unknown>();
+    getDraftAction.mockImplementation((id: string) =>
+      id === WF.id ? slowWf.promise : Promise.resolve({ ok: true, data: draftFor(B, "Bravo", 2) }),
+    );
+    render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={null} />);
+    chooseTenant("Wolf Forge");
+    await act(async () => chooseTenant("Tenant B"));
+    expect(nameInput()).toHaveValue("Bravo");
+
+    await act(async () => slowWf.resolve({ ok: true, data: draftFor(WF, "Wolf Forge", 0) }));
+    expect(nameInput()).toHaveValue("Bravo");
+    expect(screen.getByRole("button", { name: /^Tenant:/ })).toHaveAccessibleName("Tenant: Tenant B");
+  });
+
+  it("a suspended Tenant's draft is read-only", () => {
+    render(<WhiteLabelDraftEditor tenants={[SUSPENDED]} initialDraft={draftFor(SUSPENDED, "Tenant S", 0)} />);
+    expect(screen.getByRole("group", { name: "Identity" })).toBeDisabled();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText(/suspended, so its draft is read-only/)).toBeInTheDocument();
+  });
+
+  it("losing access while open shows a refusal, not stale data", async () => {
+    getDraftAction.mockResolvedValue({ ok: false, error: { code: "PERMISSION_DENIED", message: "x" } });
+    render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={draftFor(B, "Bravo", 2)} />);
+    chooseTenant("Wolf Forge");
+    await act(async () => {});
+    expect(screen.getByText(/not available to you/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Workspace display name")).toBeNull();
+  });
+});
+
+describe("White Label repository", () => {
+  function repositoryReturning(result: unknown) {
+    const rpc = vi.fn().mockResolvedValue(result);
+    return { repository: new WhiteLabelRepository({ rpc } as never), rpc };
+  }
+  const input = {
+    tenantId: B.id,
+    expectedRevision: 2,
+    displayName: "Acme",
+    primaryColor: "#000d51",
+    accentColor: "#a8832e",
+    moduleKeys: ["services"],
+  };
+
+  it.each([
+    [{ code: "WF409" }, "CONFLICT"],
+    [{ code: "55000" }, "VALIDATION_ERROR"],
+    [{ code: "42501" }, "PERMISSION_DENIED"],
+    [{ code: "P0002" }, "NOT_FOUND"],
+    [{ code: "23514" }, "VALIDATION_ERROR"],
+  ])("maps save error %o to %s", async (error, code) => {
+    const { repository } = repositoryReturning({ data: null, error });
+    await expect(repository.saveDraft(input)).rejects.toMatchObject({ code });
+  });
+
+  it("never reports an unconfirmed write as saved", async () => {
+    const { repository } = repositoryReturning({ data: [], error: null });
+    await expect(repository.saveDraft(input)).rejects.toMatchObject({ code: "DATABASE_ERROR" });
+  });
+
+  it("sends exactly the validated values to the save RPC", async () => {
+    const { repository, rpc } = repositoryReturning({ data: [{ revision: 3, updated_at: "t", already_applied: false }], error: null });
+    await expect(repository.saveDraft(input)).resolves.toEqual({ revision: 3, updatedAt: "t" });
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("app_save_white_label_draft", {
+      p_tenant_id: B.id,
+      p_expected_revision: 2,
+      p_display_name: "Acme",
+      p_primary_color: "#000d51",
+      p_accent_color: "#a8832e",
+      p_module_keys: ["services"],
+    });
+  });
+});

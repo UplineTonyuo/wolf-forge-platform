@@ -1,10 +1,9 @@
 "use client";
 
-import { FileText, Info, Monitor, Smartphone } from "lucide-react";
+import { FileText, Monitor, Smartphone } from "lucide-react";
 import { useId, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import {
-  SYNTHETIC_PREVIEW_STATE,
   WHITE_LABEL_MODULES,
   contrastWithWhite,
   moduleAvailable,
@@ -101,8 +100,18 @@ function Brand({ name }: { name: string }) {
   );
 }
 
-export function WhiteLabelBuilder() {
-  const [state, setState] = useState<WhiteLabelPreviewState>(SYNTHETIC_PREVIEW_STATE);
+/** Controlled: the draft editor owns the state; `children` render above the controls. */
+export function WhiteLabelBuilder({
+  state,
+  onStateChange: setState,
+  readOnly = false,
+  children,
+}: {
+  state: WhiteLabelPreviewState;
+  onStateChange: Dispatch<SetStateAction<WhiteLabelPreviewState>>;
+  readOnly?: boolean;
+  children?: ReactNode;
+}) {
   const [device, setDevice] = useState<Device>("desktop");
   const id = useId();
 
@@ -117,20 +126,11 @@ export function WhiteLabelBuilder() {
 
   return (
     <div className={styles.builder}>
-      <div className={settings.callout} role="note">
-        <Info aria-hidden="true" />
-        <div>
-          <strong>Local preview — not saved</strong>
-          <p>
-            A synthetic Tenant for reviewing the builder. Nothing here is saved, published or applied to any Tenant, and
-            module access is still decided by the server.
-          </p>
-        </div>
-      </div>
+      {children}
 
       <div className={styles.layout}>
         <form className={styles.controls} aria-label="White Label preview settings" onSubmit={(event) => event.preventDefault()}>
-          <fieldset className={styles.group}>
+          <fieldset className={styles.group} disabled={readOnly}>
             <legend>Identity</legend>
             <label className={styles.field} htmlFor={`${id}-name`}>
               <span>Workspace display name</span>
@@ -142,10 +142,10 @@ export function WhiteLabelBuilder() {
                 onChange={(event) => setState((current) => ({ ...current, displayName: event.target.value }))}
               />
             </label>
-            <p className={styles.hint}>The preview uses the name&apos;s initials. Logo upload needs Tenant branding storage first.</p>
+            <p className={styles.hint}>The preview uses the name&apos;s initials. Logo upload comes in a later phase.</p>
           </fieldset>
 
-          <fieldset className={styles.group}>
+          <fieldset className={styles.group} disabled={readOnly}>
             <legend>Appearance</legend>
             <div className={styles.colors}>
               {(
@@ -177,7 +177,7 @@ export function WhiteLabelBuilder() {
             </p>
           </fieldset>
 
-          <fieldset className={styles.group}>
+          <fieldset className={styles.group} disabled={readOnly}>
             <legend>Modules</legend>
             <div className={styles.moduleList}>
               {WHITE_LABEL_MODULES.map((module) => {

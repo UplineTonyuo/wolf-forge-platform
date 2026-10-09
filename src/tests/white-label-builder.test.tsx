@@ -4,15 +4,19 @@ import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { gate, notFound, requireModuleAccess, isPlatformAdmin } = vi.hoisted(() => ({
+const { gate, quickAccess, notFound, requireModuleAccess, isPlatformAdmin, listTenants, getDraft } = vi.hoisted(() => ({
   gate: vi.fn(),
+  quickAccess: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
   requireModuleAccess: vi.fn(),
   isPlatformAdmin: vi.fn(),
+  listTenants: vi.fn(),
+  getDraft: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -21,10 +25,14 @@ vi.mock("next/navigation", () => ({
   notFound,
   redirect: vi.fn(),
 }));
-vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: gate }));
+vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: gate, isLocalQuickAccessSession: quickAccess }));
 vi.mock("../lib/supabase/next-server", () => ({
-  getInternalContext: async () => ({ services: { permissions: { requireModuleAccess, isPlatformAdmin } } }),
+  getInternalContext: async () => ({
+    client: {},
+    services: { permissions: { requireModuleAccess, isPlatformAdmin }, whiteLabel: { listTenants, getDraft } },
+  }),
 }));
+vi.mock("../app/actions/white-label", () => ({ getWhiteLabelDraftAction: vi.fn(), saveWhiteLabelDraftAction: vi.fn() }));
 
 import SettingsLayout from "../app/(internal)/settings/layout";
 import WhiteLabelSettingsPage from "../app/(internal)/settings/white-label/page";
@@ -37,7 +45,30 @@ import {
   moduleAvailable,
   normalizeHexColor,
   previewNavigationModules,
+  type WhiteLabelPreviewState,
 } from "../domain/white-label/preview";
+
+function Builder({ readOnly = false }: { readOnly?: boolean }) {
+  const [state, setState] = useState<WhiteLabelPreviewState>(SYNTHETIC_PREVIEW_STATE);
+  return <WhiteLabelBuilder state={state} onStateChange={setState} readOnly={readOnly} />;
+}
+
+const noSearch = { searchParams: Promise.resolve({}) };
+
+const TENANT_B = {
+  id: "f0f0f0f0-0000-4000-8000-000000002601",
+  slug: "tenant-b",
+  displayName: "Tenant B",
+  status: "active" as const,
+  draftRevision: 3,
+};
+const DRAFT_B = {
+  tenantId: TENANT_B.id,
+  tenantStatus: "active" as const,
+  state: { ...SYNTHETIC_PREVIEW_STATE, displayName: "Bravo Draft" },
+  revision: 3,
+  updatedAt: "2026-10-09T00:00:00.000Z",
+};
 
 afterEach(() => {
   cleanup();
@@ -77,7 +108,7 @@ describe("White Label preview domain", () => {
 
 describe("White Label builder", () => {
   it("toggling a module updates the preview navigation, honouring dependencies", () => {
-    render(<WhiteLabelBuilder />);
+    render(<Builder />);
     expect(shown("tickets")).toBe(true);
     fireEvent.click(screen.getByRole("checkbox", { name: /Tickets/ }));
     expect(shown("tickets")).toBe(false);
@@ -93,7 +124,7 @@ describe("White Label builder", () => {
   });
 
   it("never renders Operations and keeps core modules visible", () => {
-    render(<WhiteLabelBuilder />);
+    render(<Builder />);
     expect(previewEntry("todo")).toBeNull();
     expect(screen.queryByText("Operations", { selector: "span" })).toBeNull();
     expect(screen.queryByRole("checkbox", { name: /Operations/ })).toBeNull();
@@ -101,7 +132,7 @@ describe("White Label builder", () => {
   });
 
   it("appearance changes update the preview colors and warn on low contrast", () => {
-    render(<WhiteLabelBuilder />);
+    render(<Builder />);
     const frame = screen.getByTestId("preview-frame");
     fireEvent.change(screen.getByLabelText(/Accent color/), { target: { value: "#22aa55" } });
     expect(frame.style.getPropertyValue("--preview-accent")).toBe("#22aa55");
@@ -115,14 +146,14 @@ describe("White Label builder", () => {
   });
 
   it("the display name updates the preview", () => {
-    render(<WhiteLabelBuilder />);
+    render(<Builder />);
     fireEvent.change(screen.getByLabelText("Workspace display name"), { target: { value: "Acme Labs" } });
     expect(screen.getByTestId("preview-brand-name")).toHaveTextContent("Acme Labs");
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Welcome to Acme Labs");
   });
 
   it("switching device keeps the same configuration", () => {
-    render(<WhiteLabelBuilder />);
+    render(<Builder />);
     fireEvent.change(screen.getByLabelText("Workspace display name"), { target: { value: "Acme Labs" } });
     fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#123456" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /Invoices/ }));
@@ -141,8 +172,8 @@ describe("White Label builder", () => {
     expect(shown("invoices")).toBe(false);
   });
 
-  it("is labelled, says it is unsaved, and offers no save or publish action", () => {
-    render(<WhiteLabelBuilder />);
+  it("is labelled and the builder itself offers no save or publish action", () => {
+    render(<Builder />);
     const form = screen.getByRole("form", { name: "White Label preview settings" });
     for (const legend of ["Identity", "Appearance", "Modules"]) {
       expect(within(form).getByRole("group", { name: legend })).toBeInTheDocument();
@@ -150,9 +181,16 @@ describe("White Label builder", () => {
     expect(screen.getByRole("group", { name: "Preview device" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Preview navigation" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Preview navigation" })).toBeNull();
-    expect(screen.getByText(/not saved/i)).toBeInTheDocument();
     const buttons = screen.getAllByRole("button").map((button) => button.textContent);
     expect(buttons).toEqual(["Desktop", "Mobile"]);
+  });
+
+  it("read-only disables every control but keeps the preview", () => {
+    render(<Builder readOnly />);
+    for (const legend of ["Identity", "Appearance", "Modules"]) {
+      expect(screen.getByRole("group", { name: legend })).toBeDisabled();
+    }
+    expect(screen.getByRole("button", { name: "Mobile" })).toBeEnabled();
   });
 
   it("builder source performs no network or database call", () => {
@@ -167,31 +205,63 @@ describe("White Label route and Settings entry", () => {
   it("the page does not exist outside the local QA gate, even for a Platform Admin", async () => {
     gate.mockResolvedValue(false);
     isPlatformAdmin.mockResolvedValue(true);
-    await expect(WhiteLabelSettingsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(requireModuleAccess).not.toHaveBeenCalled();
     expect(isPlatformAdmin).not.toHaveBeenCalled();
   });
 
   it("inside the gate a Settings-capable Tenant owner without the entitlement gets notFound", async () => {
     gate.mockResolvedValue(true);
+    quickAccess.mockResolvedValue(false);
     requireModuleAccess.mockResolvedValue(true);
     isPlatformAdmin.mockResolvedValue(false);
-    await expect(WhiteLabelSettingsPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("NEXT_NOT_FOUND");
     expect(isPlatformAdmin).toHaveBeenCalledOnce();
+    expect(listTenants).not.toHaveBeenCalled();
   });
 
-  it("inside the gate a Platform Admin session gets the preview", async () => {
+  it("inside the gate a Platform Admin gets the Tenant selector and no draft until a Tenant is chosen", async () => {
     gate.mockResolvedValue(true);
+    quickAccess.mockResolvedValue(false);
     requireModuleAccess.mockResolvedValue(true);
     isPlatformAdmin.mockResolvedValue(true);
-    render(await WhiteLabelSettingsPage());
-    expect(screen.getByRole("form", { name: "White Label preview settings" })).toBeInTheDocument();
+    listTenants.mockResolvedValue([TENANT_B]);
+    render(await WhiteLabelSettingsPage(noSearch));
+    expect(screen.getByText("Choose a Tenant")).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "White Label preview settings" })).toBeNull();
+    expect(getDraft).not.toHaveBeenCalled();
+  });
+
+  it("?tenant= opens that Tenant's draft only when it is a listed Tenant", async () => {
+    gate.mockResolvedValue(true);
+    quickAccess.mockResolvedValue(false);
+    requireModuleAccess.mockResolvedValue(true);
+    isPlatformAdmin.mockResolvedValue(true);
+    listTenants.mockResolvedValue([TENANT_B]);
+    getDraft.mockResolvedValue(DRAFT_B);
+    render(await WhiteLabelSettingsPage({ searchParams: Promise.resolve({ tenant: TENANT_B.id }) }));
+    expect(getDraft).toHaveBeenCalledExactlyOnceWith(TENANT_B.id);
+    expect(screen.getByLabelText("Workspace display name")).toHaveValue("Bravo Draft");
+    cleanup();
+
+    getDraft.mockClear();
+    render(await WhiteLabelSettingsPage({ searchParams: Promise.resolve({ tenant: "11111111-1111-4111-8111-111111111111" }) }));
+    expect(getDraft).not.toHaveBeenCalled();
+  });
+
+  it("inside the gate the passwordless Quick Access session gets notFound even with the entitlement", async () => {
+    gate.mockResolvedValue(true);
+    quickAccess.mockResolvedValue(true);
+    requireModuleAccess.mockResolvedValue(true);
+    isPlatformAdmin.mockResolvedValue(true);
+    await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(listTenants).not.toHaveBeenCalled();
   });
 
   it("inside the gate the page still requires Settings access", async () => {
     gate.mockResolvedValue(true);
     requireModuleAccess.mockRejectedValueOnce(new Error("PERMISSION_DENIED"));
-    await expect(WhiteLabelSettingsPage()).rejects.toThrow("PERMISSION_DENIED");
+    await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("PERMISSION_DENIED");
     expect(requireModuleAccess).toHaveBeenCalledWith("settings");
   });
 

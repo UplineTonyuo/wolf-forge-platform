@@ -127,6 +127,9 @@ export const SECURITY_EVENTS = {
   /** A supervisor successfully accessed privileged Team conversation content. */
   "authorization.team_supervision.read": { category: "authorization", severity: "info" },
 
+  /** A Platform Admin saved a Tenant's White Label draft (WL-2.33). Nothing is published. */
+  "authorization.white_label.draft_saved": { category: "authorization", severity: "info" },
+
   /** A capability/permission gate refused a specific operation. */
   "authorization.capability.denied": { category: "authorization", severity: "warn" },
 

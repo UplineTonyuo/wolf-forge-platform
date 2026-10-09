@@ -5559,6 +5559,19 @@ export type Database = {
           membership_price_cents: number
         }[]
       }
+      app_get_white_label_draft: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          accent_color: string
+          display_name: string
+          module_keys: string[]
+          primary_color: string
+          revision: number
+          tenant_id: string
+          tenant_status: string
+          updated_at: string | null
+        }[]
+      }
       app_grant_report_send_anytime: {
         Args: { p_profile_id: string }
         Returns: {
@@ -6040,6 +6053,16 @@ export type Database = {
           subject: string
           ticket_id: string
           updated_at: string
+        }[]
+      }
+      app_list_white_label_tenants: {
+        Args: never
+        Returns: {
+          display_name: string
+          draft_revision: number | null
+          slug: string
+          status: string
+          tenant_id: string
         }[]
       }
       app_login_rate_limit_preflight: {
@@ -6569,6 +6592,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_save_white_label_draft: {
+        Args: {
+          p_accent_color: string
+          p_display_name: string
+          p_expected_revision: number
+          p_module_keys: string[]
+          p_primary_color: string
+          p_tenant_id: string
+        }
+        Returns: {
+          already_applied: boolean
+          revision: number
+          updated_at: string
+        }[]
       }
       app_schedule_subscription_cancellation: {
         Args: { p_reason?: string; p_subscription_id: string }

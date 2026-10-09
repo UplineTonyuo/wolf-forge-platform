@@ -17,7 +17,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
 }));
 
-import { ensureLocalQaSession, localUiQaBypassEnabled } from "../lib/qa/local-ui-bypass";
+import { ensureLocalQaSession, isLocalQuickAccessSession, localUiQaBypassEnabled } from "../lib/qa/local-ui-bypass";
 
 beforeEach(() => {
   readRequestHeaders.mockResolvedValue(new Headers({ host: "localhost:3000" }));
@@ -256,5 +256,19 @@ describe("ensureLocalQaSession", () => {
 
     expect(rpc).toHaveBeenCalledExactlyOnceWith("app_is_platform_admin");
     expect(signOut).not.toHaveBeenCalled();
+  });
+});
+
+describe("isLocalQuickAccessSession", () => {
+  it("matches the Quick Access identity by the verified email and fails closed without one", async () => {
+    mockReadFile.mockResolvedValue(JSON.stringify({ email: "QA-Local@wolf-forge.local", password: "x" }));
+    await expect(isLocalQuickAccessSession({ email: "qa-local@wolf-forge.local" })).resolves.toBe(true);
+    await expect(isLocalQuickAccessSession({ email: null })).resolves.toBe(true);
+    await expect(isLocalQuickAccessSession({ email: "admin@wolf-forge.local" })).resolves.toBe(false);
+  });
+
+  it("is false when no Quick Access credentials exist", async () => {
+    mockReadFile.mockRejectedValue(new Error("ENOENT"));
+    await expect(isLocalQuickAccessSession({ email: null })).resolves.toBe(false);
   });
 });

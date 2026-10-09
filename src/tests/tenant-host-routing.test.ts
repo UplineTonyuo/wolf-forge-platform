@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { TENANT_SELECTOR_HEADER } from "../domain/tenancy/tenant-selector";
 import { normalizeRequestHost } from "../domain/tenancy/request-host";
@@ -286,6 +286,9 @@ describe("local LAN QA device gate (development only)", () => {
 });
 
 describe("every user-client call site sends the host's Tenant", () => {
+  // The cold import of next-server can exceed the 5 s test timeout on a loaded full run.
+  beforeAll(() => import("../lib/supabase/next-server"), 30_000);
+
   const factories = [
     "getInternalContext",
     "getInternalActorContext",

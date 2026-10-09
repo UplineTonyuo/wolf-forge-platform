@@ -172,3 +172,19 @@ export async function ensureLocalQaSession(
     await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
   }
 }
+
+/**
+ * True when the signed-in session belongs to the passwordless Quick Access
+ * identity (WL-2.33, D-297). `ensureLocalQaSession` only refuses the Platform
+ * Admin entitlement when it mints a session, so an already-running Quick
+ * Access session would carry a later grant; Platform Admin surfaces call this
+ * on every request and refuse it. Takes the server-verified actor, whose
+ * email comes from the verified token. Fails closed: an actor without an
+ * email counts as Quick Access while the credentials file exists.
+ */
+export async function isLocalQuickAccessSession(actor: { readonly email: string | null }): Promise<boolean> {
+  const credentials = await readLocalQaCredentials();
+  if (!credentials) return false;
+  if (!actor.email) return true;
+  return actor.email.toLowerCase() === credentials.email.toLowerCase();
+}
