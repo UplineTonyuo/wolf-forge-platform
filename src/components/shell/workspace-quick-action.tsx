@@ -224,7 +224,7 @@ export function WorkspaceQuickAction({
             * in one click; the job is now a structured report rather than a
             * bare link.
             */}
-          <Link
+          {user.modules.reporting && <Link
             href="/reporting/new"
             className={styles.option}
             onClick={closePanel}
@@ -259,7 +259,7 @@ export function WorkspaceQuickAction({
               }
               aria-hidden="true"
             />
-          </Link>
+          </Link>}
 
           <Link
             href="/accounts/member/new"

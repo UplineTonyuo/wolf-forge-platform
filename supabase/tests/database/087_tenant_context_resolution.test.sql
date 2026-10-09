@@ -62,6 +62,7 @@ select is(
     'activity_events.activity_events_internal_scoped_select',
     'client_contacts.client_contacts_authorized_private_select',
     'client_report_entries.client_report_entries_authorized_select',
+    'client_report_reads.client_report_reads_select_own',
     'client_report_sections.client_report_sections_authorized_select',
     'client_reports.client_reports_authorized_select',
     'companies.companies_internal_select',
@@ -95,7 +96,7 @@ select is(
     'subscription_payment_methods.subscription_payment_methods_internal_select',
     'wf_card_memberships.wf_card_memberships_authorized_select'
   ]::text[],
-  'only the WL-2.1 Client report, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice, WL-2.12 coupon, WL-2.14 Form and WL-2.24 Subscription child policies call current_tenant_id()'
+  'only the WL-2.34 Client report / receipt, WL-2.7 Service, WL-2.8 activity, WL-2.9 Client / contact / Company, WL-2.10 wallet / payment, WL-2.11 invoice, WL-2.12 coupon, WL-2.14 Form and WL-2.24 Subscription child policies call current_tenant_id()'
 );
 select ok(
   not has_table_privilege('authenticated', 'public.tenant_memberships', 'select')

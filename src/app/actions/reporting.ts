@@ -135,6 +135,7 @@ export async function listReportServiceChoicesAction(input: {
 export async function listReportRecipientsAction(): Promise<ReportRecipient[]> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
     const companies = await context.services.companies.listActive();
     return companies.map((company) => ({ id: company.id, name: company.name }));
   } catch {
