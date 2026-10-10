@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttentionPill } from "../../../../components/account/ui/attention-pill";
 import { TicketClientConversation } from "../../../../components/tickets/ticket-client-conversation";
+import { TicketAccessBoundary } from "../../../../components/tickets/ticket-access-boundary";
 import styles from "../../../../components/tickets/tickets.module.css";
 import { ticketAttention } from "../../../../domain/client-portal/attention";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
@@ -37,7 +38,7 @@ export default async function ClientMessageDetailPage({
     const repliesDisabled = ticket.status === "closed" || Boolean(ticket.archived_at);
 
     return (
-      <div className="portal-page">
+      <TicketAccessBoundary key={ticket.id}><div className="portal-page">
         <Link href="/account/messages" className="portal-back">
           <ArrowLeft aria-hidden={true} />
           All messages
@@ -99,7 +100,7 @@ export default async function ClientMessageDetailPage({
             </dl>
           </aside>
         </div>
-      </div>
+      </div></TicketAccessBoundary>
     );
   } catch (error) {
     // A conversation outside the account is refused by the database, so it

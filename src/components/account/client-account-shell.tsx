@@ -62,6 +62,7 @@ export function ClientAccountShell({
             companyName={user.companyName}
             avatarUrl={avatarUrl}
             canMessage={user.modules.portal_tickets === true}
+            projectsAvailable={user.modules.portal_projects === true}
             notificationSoundEnabled={notificationSoundEnabled}
           />
 

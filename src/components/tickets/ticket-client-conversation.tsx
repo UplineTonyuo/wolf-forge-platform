@@ -9,6 +9,7 @@ import { TicketConversation } from "./ticket-conversation";
 import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
+import { useTicketUnavailableBoundary } from "./ticket-access-boundary";
 
 /**
  * The client Ticket conversation — the same chat surface as the staff one
@@ -44,14 +45,16 @@ export function TicketClientConversation({
   viewerProfileId: string;
   repliesDisabled: boolean;
 }) {
-  useClientConversationPresence("ticket", ticketId);
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const onUnavailable = useTicketUnavailableBoundary();
   const conversation = useTicketConversationMessages({
     ticketId,
     serverMessages: messages,
     mode: "client",
     viewerProfileId,
+    onUnavailable,
   });
+  useClientConversationPresence("ticket", ticketId, !conversation.unavailable);
 
   /* A local reaction wakes the lane too, so the two views converge on the
      same authoritative aggregate rather than each trusting its own click. */
@@ -60,6 +63,8 @@ export function TicketClientConversation({
     if (result.ok) conversation.wake();
     return result;
   };
+
+  if (conversation.unavailable) return <p role="alert">This conversation is unavailable.</p>;
 
   return (
     <div className={styles.orderConversationSurface}>

@@ -75,9 +75,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const safe = toClientSafeError(error);
     return Response.json(
-      { ok: false, error: safe.message },
+      { ok: false, error: safe.message, code: safe.code },
       {
-        status: safe.code === "NOT_FOUND" ? 404 : safe.code === "RATE_LIMITED" ? 429 : 400,
+        status: safe.code === "PERMISSION_DENIED" ? 403 : safe.code === "NOT_FOUND" ? 404 : safe.code === "RATE_LIMITED" ? 429 : 400,
         headers: { "cache-control": "private, no-store, max-age=0" },
       },
     );

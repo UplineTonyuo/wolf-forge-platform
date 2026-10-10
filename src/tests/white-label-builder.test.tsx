@@ -128,7 +128,9 @@ describe("White Label builder", () => {
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
-    expect(screen.getByText(/Published configurations currently require all modules except/)).toBeInTheDocument();
+    expect(screen.getByText(/Reporting, Investment Intent, Projects and Tickets are optional for publication/)).toBeInTheDocument();
+    expect(screen.getByText(/Published Projects requires Tickets/)).toBeInTheDocument();
+    expect(screen.getByText(/Archived unresolved Tickets stay in history and are inaccessible/)).toBeInTheDocument();
   });
   it("toggling a module updates the preview navigation, honouring dependencies", () => {
     render(<Builder />);

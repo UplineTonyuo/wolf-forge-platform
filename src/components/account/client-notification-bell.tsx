@@ -25,6 +25,8 @@ import {
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
 import { shouldRingForUnread } from "../../domain/notifications/ring";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
+import { notificationVisibleWithModules } from "../../domain/notifications/visibility";
 import {
   playNotificationChime,
   unlockNotificationAudio,
@@ -81,6 +83,8 @@ function NotificationCategoryIcon({
 export function ClientNotificationBell({
   soundEnabled = true,
   inCommandBar = false,
+  ticketsAvailable = true,
+  projectsAvailable = true,
 }: {
   /**
    * The account's own notification_sound_enabled preference, read server-side
@@ -93,7 +97,13 @@ export function ClientNotificationBell({
    * command bar. Notification behaviour, counts and the panel are untouched.
    */
   inCommandBar?: boolean;
+  ticketsAvailable?: boolean;
+  projectsAvailable?: boolean;
 } = {}) {
+  const projectsAvailableRef = useRef(projectsAvailable);
+  useEffect(() => { projectsAvailableRef.current = projectsAvailable; }, [projectsAvailable]);
+  const ticketsAvailableRef = useRef(ticketsAvailable);
+  useEffect(() => { ticketsAvailableRef.current = ticketsAvailable; }, [ticketsAvailable]);
   const rootRef =
     useRef<HTMLDivElement>(
       null,
@@ -200,12 +210,18 @@ export function ClientNotificationBell({
     );
 
   const [
-    notifications,
+    cachedNotifications,
     setNotifications,
   ] =
     useState<
       WalletNotificationItem[]
     >([]);
+  const cacheGeneration = useRef(0);
+  useTicketCacheRevocation(() => {
+    setNotifications((items) => items.filter((item) => notificationVisibleWithModules(item, false, true)));
+    setRinging(false);
+  }, cacheGeneration);
+  const notifications = cachedNotifications.filter((item) => notificationVisibleWithModules(item, ticketsAvailable, projectsAvailable));
 
   const noteIncoming =
     useCallback(
@@ -213,6 +229,8 @@ export function ClientNotificationBell({
         items:
           WalletNotificationItem[],
       ) => {
+        items = items.filter((item) => notificationVisibleWithModules(item, ticketsAvailableRef.current, projectsAvailableRef.current));
+        const generation = cacheGeneration.current;
         const nextIds =
           new Set(
             items.map(
@@ -290,12 +308,13 @@ export function ClientNotificationBell({
         }
 
         incoming.forEach(
-          (_, index) => {
+          (item, index) => {
             const startTimer =
               window.setTimeout(
                 () => {
                   if (
-                    soundEnabledRef.current
+                    soundEnabledRef.current && notificationVisibleWithModules(item, ticketsAvailableRef.current, projectsAvailableRef.current)
+                    && (generation === cacheGeneration.current || notificationVisibleWithModules(item, false, true))
                   ) {
                     playNotificationChime();
                   }
@@ -336,6 +355,7 @@ export function ClientNotificationBell({
           setLoading(true);
         }
 
+        const generation = cacheGeneration.current;
         try {
           const result =
             await getClientNotificationsAction();
@@ -348,12 +368,14 @@ export function ClientNotificationBell({
           }
 
           if (result.ok) {
+            const items = generation === cacheGeneration.current ? result.notifications
+              : result.notifications.filter((item) => notificationVisibleWithModules(item, false, true));
             noteIncoming(
-              result.notifications,
+              items,
             );
 
             setNotifications(
-              result.notifications,
+              items,
             );
 
             setError(null);

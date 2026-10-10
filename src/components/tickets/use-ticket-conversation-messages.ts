@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ticketConversationFingerprint } from "../../domain/tickets/live-scheduler";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
 import { useTicketLiveSync } from "./use-ticket-live-sync";
+import { notifyTicketAccessUnavailable } from "./ticket-access-boundary";
 
 /**
  * The one place a Ticket conversation's transcript is assembled, shared by the
@@ -31,12 +33,23 @@ export function useTicketConversationMessages({
   serverMessages,
   mode,
   viewerProfileId,
+  onUnavailable,
 }: {
   ticketId: string;
   serverMessages: TicketDetailMessage[];
   mode: "admin" | "client";
   viewerProfileId?: string | null;
+  onUnavailable?: () => void;
 }) {
+  const router = useRouter();
+  const [deniedTicketId, setDeniedTicketId] = useState<string | null>(null);
+  const unavailable = deniedTicketId === ticketId;
+  const deny = useCallback(() => {
+    setDeniedTicketId(ticketId);
+    notifyTicketAccessUnavailable(ticketId);
+    onUnavailable?.();
+    router.refresh();
+  }, [ticketId, onUnavailable, router]);
   const [override, setOverride] = useState<TicketDetailMessage[] | null>(null);
   const [overrideBase, setOverrideBase] = useState(serverMessages);
 
@@ -93,9 +106,10 @@ export function useTicketConversationMessages({
 
   const { wake } = useTicketLiveSync({
     ticketId,
-    active: true,
+    active: !unavailable,
     getFingerprint,
     onMessages: applyLive,
+    onUnavailable: deny,
   });
 
   const optimistic = useOptimisticTicketMessages(canonical, { mode, viewerProfileId });
@@ -111,7 +125,8 @@ export function useTicketConversationMessages({
   };
 
   return {
-    messages: optimistic.messages,
+    messages: unavailable ? [] : optimistic.messages,
+    unavailable,
     addOptimistic: optimistic.addOptimistic,
     retry: optimistic.retry,
     settle,

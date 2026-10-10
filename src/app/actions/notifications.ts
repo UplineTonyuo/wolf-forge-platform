@@ -29,6 +29,7 @@ export type WalletNotificationItem = {
   href: string;
   kind: "credit" | "debit";
   category: NotificationCategory;
+  entityType?: string | null;
   audience: "internal" | "client";
   readAt: string | null;
 };
@@ -81,6 +82,7 @@ function normalizeRows(
           ? "debit"
           : "credit",
       category: row.category,
+      entityType: row.entity_type,
       audience: row.audience,
       readAt: row.read_at,
     }),

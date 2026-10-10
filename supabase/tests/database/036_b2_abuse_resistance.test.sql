@@ -1067,7 +1067,7 @@ alter table public.notifications drop constraint notifications_category_valid;
 alter table public.notifications add constraint notifications_category_valid check (
   category = any (array[
     'project', 'client', 'form', 'coupon', 'ticket',
-    'payment', 'wallet', 'store', 'report', 'undecided'
+    'payment', 'wallet', 'store', 'report', 'team', 'undecided'
   ])
 );
 

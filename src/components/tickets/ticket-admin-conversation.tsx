@@ -41,6 +41,7 @@ export function TicketAdminConversation({
   repliesDisabled,
   headerActions,
   contactName = null,
+  onUnavailable,
 }: {
   ticketId: string;
   heading: ReactNode;
@@ -53,6 +54,7 @@ export function TicketAdminConversation({
   headerActions?: ReactNode;
   /** Ticket's client/contact display name, for the composer's placeholder. */
   contactName?: string | null;
+  onUnavailable?: () => void;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
   const conversation = useTicketConversationMessages({
@@ -60,6 +62,7 @@ export function TicketAdminConversation({
     serverMessages: messages,
     mode: "admin",
     viewerProfileId,
+    onUnavailable,
   });
 
   /* A local reaction wakes the lane too, so the two views converge on the
@@ -69,6 +72,8 @@ export function TicketAdminConversation({
     if (result.ok) conversation.wake();
     return result;
   };
+
+  if (conversation.unavailable) return <p role="alert">This conversation is unavailable.</p>;
 
   return (
     <div className={`${styles.orderConversationSurface} ${styles.ticketAdminSurface} ticket-admin-surface-marker`}>

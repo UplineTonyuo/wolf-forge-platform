@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { applyTeamJitter, teamBackoffIntervalMs } from "../../domain/team/live-scheduler";
 import { listTicketSummariesAction } from "../../app/actions/tickets";
 import type { TicketSummary } from "../../domain/tickets/schema";
+import { notifyTicketAccessUnavailable } from "../tickets/ticket-access-boundary";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 
 /**
  * One list-level poller for the Inbox drawer's Tickets pane.
@@ -21,10 +23,18 @@ import type { TicketSummary } from "../../domain/tickets/schema";
  */
 const TICKET_INBOX_LIST_INTERVAL_MS = 8_000;
 
-export function useTicketInboxList(active: boolean) {
+export function useTicketInboxList(active: boolean, onUnavailable?: () => void) {
   const [tickets, setTickets] = useState<TicketSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  const cacheGeneration = useRef(0);
+  useTicketCacheRevocation(() => {
+    setTickets([]);
+    setUnavailable(true);
+    setError("Tickets are unavailable.");
+    setLoaded(true);
+  }, cacheGeneration);
 
   const activeRef = useRef(active);
   useEffect(() => {
@@ -65,13 +75,27 @@ export function useTicketInboxList(active: boolean) {
   const run = useCallback(async () => {
     if (disposedRef.current || inFlightRef.current || suspended()) return;
     inFlightRef.current = true;
+    const generation = cacheGeneration.current;
     const result = await listTicketSummariesAction();
     inFlightRef.current = false;
     if (disposedRef.current) return;
+    if (generation !== cacheGeneration.current) {
+      schedule(applyTeamJitter(TICKET_INBOX_LIST_INTERVAL_MS));
+      return;
+    }
 
     if (!result.ok) {
       failureCountRef.current += 1;
       setError(result.error);
+      if (result.code === "PERMISSION_DENIED" || result.code === "NOT_FOUND") {
+        setTickets([]);
+        setUnavailable(true);
+        setLoaded(true);
+        clearTimer();
+        notifyTicketAccessUnavailable();
+        onUnavailable?.();
+        return;
+      }
       schedule(applyTeamJitter(teamBackoffIntervalMs(failureCountRef.current)));
       return;
     }
@@ -79,9 +103,10 @@ export function useTicketInboxList(active: boolean) {
     failureCountRef.current = 0;
     setTickets(result.data);
     setError(null);
+    setUnavailable(false);
     setLoaded(true);
     schedule(applyTeamJitter(TICKET_INBOX_LIST_INTERVAL_MS));
-  }, [schedule, suspended]);
+  }, [schedule, suspended, clearTimer, onUnavailable]);
 
   useEffect(() => {
     runRef.current = run;
@@ -123,5 +148,5 @@ export function useTicketInboxList(active: boolean) {
     };
   }, [clearTimer]);
 
-  return { tickets, loaded, error, refreshNow };
+  return { tickets: active ? tickets : [], loaded, error, unavailable, refreshNow };
 }

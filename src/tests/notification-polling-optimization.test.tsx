@@ -132,7 +132,7 @@ describe("Internal notification chime honours the stored sound preference", () =
 
     // The only chime call sits inside the preference guard.
     expect([...bar.matchAll(/playNotificationChime\(\)/g)]).toHaveLength(1);
-    expect(bar).toContain("if (\n                    soundEnabledRef.current\n                  ) {\n                    playNotificationChime();");
+    expect(bar).toContain("if (\n                    soundEnabledRef.current && notificationVisibleWithModules(item, ticketsAvailableRef.current, projectsAvailableRef.current)\n                    && (generation === cacheGeneration.current || notificationVisibleWithModules(item, false, true))\n                  ) {\n                    playNotificationChime();");
     expect(bar).toContain("const soundEnabledRef =\n    useRef(\n      notificationSoundEnabled,\n    );");
     expect(bar).toContain("notificationSoundEnabled?: boolean;");
   });

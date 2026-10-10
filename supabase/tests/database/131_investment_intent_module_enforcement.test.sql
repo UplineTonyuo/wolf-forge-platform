@@ -234,7 +234,7 @@ select throws_ok($$select private.publish_tenant_modules('f0f0f0f0-0000-4000-800
 select throws_ok(format('select private.publish_tenant_modules(%L::uuid,2,%L::text[],%L)',
 'f0f0f0f0-0000-4000-8000-000000003501',array_remove(s.enabled,c.module_key),'invalid'),
 '22023',null,'remaining module mandatory: '||c.module_key)
-from private.white_label_modules c cross join module_sets s where c.module_key not in ('reporting','investment_intent','projects');
+from private.white_label_modules c cross join module_sets s where c.module_key not in ('reporting','investment_intent','projects','tickets');
 select throws_ok($$update private.tenant_module_publications set reason='rewrite' where tenant_id='f0f0f0f0-0000-4000-8000-000000003501'$$,'55000',null,'historical publications immutable');
 select pg_temp.act(3);
 set local role authenticated;

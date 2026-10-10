@@ -6,8 +6,10 @@ import { setClientConversationPresenceAction } from "../../app/actions/notificat
 export function useClientConversationPresence(
   conversationType: "ticket" | "project",
   conversationId: string,
+  active = true,
 ) {
   useEffect(() => {
+    if (!active) return;
     const update = () => void setClientConversationPresenceAction(
       conversationType,
       conversationId,
@@ -23,5 +25,5 @@ export function useClientConversationPresence(
       window.removeEventListener("focus", update);
       void setClientConversationPresenceAction(conversationType, conversationId, false);
     };
-  }, [conversationId, conversationType]);
+  }, [conversationId, conversationType, active]);
 }

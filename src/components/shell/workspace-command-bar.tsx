@@ -34,6 +34,8 @@ import {
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
 import { shouldRingForUnread } from "../../domain/notifications/ring";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
+import { notificationVisibleWithModules } from "../../domain/notifications/visibility";
 import {
   playNotificationChime,
   unlockNotificationAudio,
@@ -126,6 +128,12 @@ export function WorkspaceCommandBar({
    * mount -- regardless of which one is visible at the current breakpoint.
    */
   const chat = useTeamMessagesChat(user);
+  const projectsAvailable = user.modules?.projects === true;
+  const projectsAvailableRef = useRef(projectsAvailable);
+  useEffect(() => { projectsAvailableRef.current = projectsAvailable; }, [projectsAvailable]);
+  const ticketsAvailable = user.modules?.tickets === true && user.tickets?.view === true;
+  const ticketsAvailableRef = useRef(ticketsAvailable);
+  useEffect(() => { ticketsAvailableRef.current = ticketsAvailable; }, [ticketsAvailable]);
 
   const triggerRef =
     useRef<HTMLButtonElement>(null);
@@ -141,11 +149,12 @@ export function WorkspaceCommandBar({
     );
 
   const [
-    notifications,
+    cachedNotifications,
     setNotifications,
   ] = useState<
     WalletNotificationItem[]
   >([]);
+  const notifications = cachedNotifications.filter((item) => notificationVisibleWithModules(item, ticketsAvailable, projectsAvailable));
 
   const [
     notificationsOpen,
@@ -177,6 +186,12 @@ export function WorkspaceCommandBar({
     notificationRinging,
     setNotificationRinging,
   ] = useState(false);
+
+  const cacheGeneration = useRef(0);
+  useTicketCacheRevocation(() => {
+    setNotifications((items) => items.filter((item) => notificationVisibleWithModules(item, false, true)));
+    setNotificationRinging(false);
+  }, cacheGeneration);
 
   const notificationSeenIdsRef =
     useRef<Set<string>>(
@@ -222,6 +237,8 @@ export function WorkspaceCommandBar({
         items:
           WalletNotificationItem[],
       ) => {
+        items = items.filter((item) => notificationVisibleWithModules(item, ticketsAvailableRef.current, projectsAvailableRef.current));
+        const generation = cacheGeneration.current;
         const nextIds =
           new Set(
             items.map(
@@ -303,7 +320,7 @@ export function WorkspaceCommandBar({
         }
 
         incoming.forEach(
-          (_, index) => {
+          (item, index) => {
             const startTimer =
               window.setTimeout(
                 () => {
@@ -314,7 +331,8 @@ export function WorkspaceCommandBar({
                    * value rather than the one captured when it was set.
                    */
                   if (
-                    soundEnabledRef.current
+                    soundEnabledRef.current && notificationVisibleWithModules(item, ticketsAvailableRef.current, projectsAvailableRef.current)
+                    && (generation === cacheGeneration.current || notificationVisibleWithModules(item, false, true))
                   ) {
                     playNotificationChime();
                   }
@@ -357,6 +375,7 @@ export function WorkspaceCommandBar({
           );
         }
 
+        const generation = cacheGeneration.current;
         try {
           const result =
             await getWalletNotificationsAction();
@@ -369,12 +388,14 @@ export function WorkspaceCommandBar({
           }
 
           if (result.ok) {
+            const items = generation === cacheGeneration.current ? result.notifications
+              : result.notifications.filter((item) => notificationVisibleWithModules(item, false, true));
             noteIncomingNotifications(
-              result.notifications,
+              items,
             );
 
             setNotifications(
-              result.notifications,
+              items,
             );
 
             setNotificationsError(
@@ -932,7 +953,7 @@ export function WorkspaceCommandBar({
         data-scrolled={scrolled}
       >
         {mobileNavigation}
-        <GlobalSearch />
+        <GlobalSearch ticketsAvailable={ticketsAvailable} projectsAvailable={projectsAvailable} />
         {/*
           Secondary utilities stay in the collapsible rail. The notification
           bell sits outside so unread counts remain visible at rest (KI-059),

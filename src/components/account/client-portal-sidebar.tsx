@@ -14,6 +14,8 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { signOutAction } from "../../app/actions/auth";
@@ -66,6 +68,8 @@ export function ClientPortalSidebar({
   displayName: string | null;
 }) {
   const pathname = usePathname();
+  const [revokedCategories, setRevokedCategories] = useState<PortalNavigationCategory[] | null>(null);
+  useTicketCacheRevocation(() => setRevokedCategories(categories));
   const drawer = usePortalDrawer();
   const drawerOpen = drawer?.open ?? false;
 
@@ -134,7 +138,7 @@ export function ClientPortalSidebar({
                     >
                       <Icon aria-hidden={true} />
                       <span>{item.label}</span>
-                      <NavCount item={item} />
+                      {item.id !== "portal_tickets" || revokedCategories !== categories ? <NavCount item={item} /> : null}
                     </Link>
                   );
                 })}

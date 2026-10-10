@@ -43,6 +43,7 @@ import { TicketAdminConversation } from "../tickets/ticket-admin-conversation";
 import { TicketInspector } from "../tickets/ticket-inspector";
 import { TeamTicketsPane } from "./team-tickets-pane";
 import { useTicketInboxList } from "./use-ticket-inbox-list";
+import { notifyTicketAccessUnavailable } from "../tickets/ticket-access-boundary";
 import type {
   TeamConversationCapability,
   TeamConversationDetailRow,
@@ -640,8 +641,15 @@ export function TeamMessagesDrawer({
     syncBackground,
   });
 
+  const clearTicketAccess = useCallback(() => {
+    setActiveTicketId(null);
+    setTicketDetail(null);
+    setTicketAssignees([]);
+    setTicketInspectorOpen(false);
+  }, []);
   const ticketInboxList = useTicketInboxList(
     open && pane === "tickets" && ticketCapabilities.view,
+    clearTicketAccess,
   );
 
   const activeTicketIdRef = useRef(activeTicketId);
@@ -661,12 +669,16 @@ export function TeamMessagesDrawer({
     const result = await getTicketInboxConversationAction(ticketId);
     if (activeTicketIdRef.current !== ticketId) return;
     if (!result.ok) {
+      if (result.code === "PERMISSION_DENIED" || result.code === "NOT_FOUND") {
+        notifyTicketAccessUnavailable(ticketId);
+        clearTicketAccess();
+      }
       setTicketDetail(null);
       setTicketDetailError(result.error);
       return;
     }
     setTicketDetail(result.data);
-  }, []);
+  }, [clearTicketAccess]);
 
   useEffect(() => {
     if (!open || pane !== "tickets" || !activeTicketId) return;
@@ -1787,6 +1799,7 @@ export function TeamMessagesDrawer({
                   </button>
                 </div>
                 <TicketAdminConversation
+                  onUnavailable={clearTicketAccess}
                   ticketId={activeTicketDetail.ticket.id}
                   heading={activeTicketDetail.ticket.subject}
                   contactName={activeTicketDetail.client_name ?? activeTicketDetail.company_name}

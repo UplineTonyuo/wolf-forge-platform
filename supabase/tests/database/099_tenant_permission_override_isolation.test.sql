@@ -37,9 +37,12 @@ select is(
 );
 
 select is(
-  (select count(*) from public.profile_permission_overrides where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.profile_permission_overrides as override_row
+    where not exists (select 1 from public.tenant_memberships as membership
+      where membership.tenant_id = override_row.tenant_id
+        and membership.profile_id = override_row.profile_id)),
   0::bigint,
-  'every pre-existing override was backfilled to the Wolf Forge Tenant'
+  'every stored override belongs to its authoritative Tenant membership'
 );
 
 select ok(

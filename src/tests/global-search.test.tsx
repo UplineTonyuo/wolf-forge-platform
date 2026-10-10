@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as search from "../app/actions/global-search";
 import { GlobalSearch } from "../components/shell/global-search";
+import { notifyTicketAccessUnavailable } from "../components/tickets/ticket-access-boundary";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -62,6 +63,44 @@ function ghost(container: HTMLElement) {
 }
 
 describe("Global search: Ticket results", () => {
+  it("invalidates Ticket cache on a confirmed denial before permission refresh and rejects the earlier response", async () => {
+    vi.mocked(search.globalSearchAction).mockResolvedValue({ ok: true, results: [ticket, project] });
+    const view = render(<GlobalSearch />);
+    await type("WF-TKT");
+    let resolve!: (value: search.GlobalSearchResponse) => void;
+    vi.mocked(search.globalSearchAction).mockImplementation(() => new Promise((done) => { resolve = done; }));
+    await type("WF-TKT-0");
+    act(() => notifyTicketAccessUnavailable(ticket.id));
+    expect(view.container.textContent).not.toContain(ticket.title);
+    expect(resultTitle(project.title)).toBeInTheDocument();
+    await act(async () => { resolve({ ok: true, results: [ticket, project] }); });
+    expect(view.container.textContent).not.toContain(ticket.title);
+  });
+  it("hides cached Projects alongside Tickets when the published dependency disables both", async () => {
+    vi.mocked(search.globalSearchAction).mockResolvedValue({ ok: true, results: [project, ticket] });
+    const view = render(<GlobalSearch ticketsAvailable projectsAvailable />);
+    await type("Adva");
+    expect(resultTitle(project.title)).toBeInTheDocument();
+    view.rerender(<GlobalSearch ticketsAvailable={false} projectsAvailable={false} />);
+    expect(view.container.textContent).not.toContain(project.title);
+    expect(view.container.textContent).not.toContain(ticket.title);
+    expect(ghost(view.container)).toBe("");
+  });
+  it("hides cached Ticket titles, snippets and completion when access changes during a stalled search", async () => {
+    vi.mocked(search.globalSearchAction).mockResolvedValue({ ok: true, results: [ticket, project] });
+    const view = render(<GlobalSearch ticketsAvailable />);
+    const input = await type("WF-TKT-0001");
+    expect(ghost(view.container)).toBe("88");
+    vi.mocked(search.globalSearchAction).mockImplementation(() => new Promise(() => {}));
+    fireEvent.change(input, { target: { value: "WF-TKT-000" } });
+    view.rerender(<GlobalSearch ticketsAvailable={false} />);
+    expect(view.container.textContent).not.toContain(ticket.title);
+    expect(view.container.textContent).not.toContain(ticket.subtitle);
+    expect(ghost(view.container)).toBe("");
+    expect(resultTitle(project.title)).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(push).toHaveBeenCalledWith(project.href));
+  });
   it("renders a Ticket as its own result type and routes to the Ticket page", async () => {
     vi.mocked(search.globalSearchAction).mockResolvedValue({ ok: true, results: [ticket] });
     render(<GlobalSearch />);

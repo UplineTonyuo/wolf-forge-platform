@@ -34,6 +34,7 @@ import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
+import { TicketAccessBoundary } from "../tickets/ticket-access-boundary";
 
 export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
@@ -112,6 +113,7 @@ export function InternalShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const ticketRoute = pathname === "/tickets" || pathname.startsWith("/tickets/");
   const router = useRouter();
   const navigationCategories = navigationForModules(user.modules);
   const mobileDrawerRef = useRef<HTMLDialogElement>(null);
@@ -256,7 +258,13 @@ export function InternalShell({
         />
 
         <main className="workspace-route-stage">
-          {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : children}
+          {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : ticketRoute ? (
+            user.tickets.view ? (
+              <TicketAccessBoundary key={pathname} ticketId={pathname.split("/")[2]} listenForModuleDenial>
+                {children}
+              </TicketAccessBoundary>
+            ) : <p role="alert">This conversation is unavailable.</p>
+          ) : children}
         </main>
       </div>
       </div>

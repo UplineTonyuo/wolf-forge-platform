@@ -45,6 +45,7 @@ function CommandBarActions({
   companyName,
   avatarUrl,
   canMessage,
+  projectsAvailable = true,
   notificationSoundEnabled,
   onCompose,
 }: {
@@ -52,6 +53,7 @@ function CommandBarActions({
   companyName: string;
   avatarUrl: string | null;
   canMessage: boolean;
+  projectsAvailable?: boolean;
   notificationSoundEnabled: boolean;
   onCompose: () => void;
 }) {
@@ -92,7 +94,7 @@ function CommandBarActions({
 
         <ClientCalendarAction />
 
-        <ClientNotificationBell soundEnabled={notificationSoundEnabled} inCommandBar />
+        <ClientNotificationBell soundEnabled={notificationSoundEnabled} ticketsAvailable={canMessage} projectsAvailable={projectsAvailable} inCommandBar />
 
         {/*
          * The + and the avatar read as one distinct pair — the account's
@@ -129,6 +131,7 @@ export function ClientCommandBar(props: {
   companyName: string;
   avatarUrl: string | null;
   canMessage: boolean;
+  projectsAvailable?: boolean;
   notificationSoundEnabled: boolean;
 }) {
   const router = useRouter();
