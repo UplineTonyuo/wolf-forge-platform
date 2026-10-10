@@ -51,9 +51,13 @@ select is(
 );
 
 select is(
-  (select count(*) from public.subscriptions where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.subscriptions subscription
+    left join public.companies company on company.id = subscription.company_id
+    left join public.services service on service.id = subscription.service_id
+    where company.tenant_id is distinct from subscription.tenant_id
+      or service.tenant_id is distinct from subscription.tenant_id),
   0::bigint,
-  'every pre-existing Subscription was backfilled to the Wolf Forge Tenant'
+  'every existing Subscription retains its Company and Service Tenant ownership'
 );
 
 -- -----------------------------------------------------------------------------

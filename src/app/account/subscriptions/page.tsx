@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { SubscriptionHistoryBoundary } from "../../../components/subscriptions/subscription-history-boundary";
 import { redirect } from "next/navigation";
 import { ClientSubscriptionsList } from "../../../components/subscriptions/client-subscriptions";
 import { toClientSafeError } from "../../../lib/errors/application-error";
-import { readClientSubscriptions } from "../../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "Subscriptions" };
@@ -15,8 +15,8 @@ export default async function ClientSubscriptionsPage() {
   let summaries = null;
 
   try {
-    await services.permissions.requireModuleAccess("portal_subscriptions");
-    summaries = await readClientSubscriptions();
+    summaries = await services.subscriptions.list();
+    await services.subscriptions.workEnabled();
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "PERMISSION_DENIED") denied = true;
@@ -36,5 +36,5 @@ export default async function ClientSubscriptionsPage() {
     );
   }
 
-  return <ClientSubscriptionsList summaries={summaries ?? []} />;
+  return <SubscriptionHistoryBoundary key={(summaries ?? []).map((row) => `${row.subscription_id}:${row.status}`).join(",")} states={(summaries ?? []).map((row) => `${row.subscription_id}:${row.status}`)} ids={(summaries ?? []).map((row) => row.subscription_id)} audience="client"><ClientSubscriptionsList summaries={summaries ?? []} /></SubscriptionHistoryBoundary>;
 }

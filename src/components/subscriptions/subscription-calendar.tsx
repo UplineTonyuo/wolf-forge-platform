@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { SubscriptionCalendarResult } from "../../app/actions/subscription-calendar";
+import { SubscriptionHistoryBoundary } from "./subscription-history-boundary";
 import {
   addMonthsToMonthKey,
   buildSubscriptionCalendarMonth,
@@ -404,6 +405,18 @@ export function SubscriptionCalendarModal({
   const [sources, setSources] = useState<SubscriptionCalendarSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadEpoch = useRef<symbol | null>(null);
+
+  const refreshSources = useCallback(() => {
+    const epoch = Symbol();
+    loadEpoch.current = epoch;
+    void loadSources().then((result) => {
+      if (epoch !== loadEpoch.current || !result.ok) return;
+      setSources(result.sources);
+      setError(null);
+      setLoading(false);
+    }).catch(() => undefined);
+  }, [loadSources]);
 
   const requestClose = useCallback(() => {
     setClosing(true);
@@ -411,23 +424,51 @@ export function SubscriptionCalendarModal({
   }, [onClose]);
 
   useEffect(() => {
-    let active = true;
+    const epoch = Symbol();
+    loadEpoch.current = epoch;
 
     void loadSources().then((result) => {
-      if (!active) return;
+      if (epoch !== loadEpoch.current) return;
       setSources(result.ok ? result.sources : []);
       setError(result.ok ? null : result.error);
+      setLoading(false);
+    }).catch(() => {
+      if (epoch !== loadEpoch.current) return;
+      setError("Subscription calendar could not be loaded.");
       setLoading(false);
     });
 
     return () => {
-      active = false;
+      loadEpoch.current = null;
     };
   }, [loadSources]);
 
   useEffect(() => {
+    const panel = dialogRef.current;
+    const returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") requestClose();
+      if (event.key === "Escape") {
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panel) return;
+      const controls = Array.from(panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls.at(-1);
+      const active = document.activeElement;
+      const outside = active === panel || !panel.contains(active);
+      if (!first || !last) {
+        event.preventDefault();
+        panel.focus();
+      } else if (event.shiftKey && (active === first || outside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || outside)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -436,6 +477,7 @@ export function SubscriptionCalendarModal({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       document.body.classList.remove("wf-subscription-calendar-open");
+      if (returnFocusTo?.isConnected) returnFocusTo.focus({ preventScroll: true });
     };
   }, [requestClose]);
 
@@ -469,12 +511,18 @@ export function SubscriptionCalendarModal({
           <X size={17} aria-hidden="true" />
         </button>
 
-        <SubscriptionCalendarPanel
+        <SubscriptionHistoryBoundary
+          key={sources.map((source) => `${source.subscriptionId}:${source.status}`).join(",")}
+          ids={sources.map((source) => source.subscriptionId)}
+          states={sources.map((source) => `${source.subscriptionId}:${source.status}`)}
+          audience={perspective === "owner" ? "internal" : "client"}
+          onRefresh={refreshSources}
+        ><SubscriptionCalendarPanel
           perspective={perspective}
           sources={sources}
           loading={loading}
           error={error}
-        />
+        /></SubscriptionHistoryBoundary>
       </section>
     </div>
   );

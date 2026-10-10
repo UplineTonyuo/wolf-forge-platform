@@ -6959,6 +6959,7 @@ export type Database = {
         Returns: string
       }
       app_store_purchase_projects_enabled: { Args: never; Returns: boolean }
+      app_subscriptions_work_enabled: { Args: never; Returns: boolean }
       app_submit_form: {
         Args: {
           p_context: Json

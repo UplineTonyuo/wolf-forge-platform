@@ -81,7 +81,7 @@ select ok(not private.published_module_set_valid(array[['services'],['projects']
 select ok(not has_table_privilege('authenticated','public.tickets','select'),'direct Ticket API grant stays revoked');
 grant select on public.tickets to authenticated;
 select ok(not private.published_module_set_valid(array_remove(s.enabled,c.module_key)), 'mandatory module: '||c.module_key)
-from private.white_label_modules c cross join module_sets s where c.module_key not in ('projects','tickets','reporting','investment_intent');
+from private.white_label_modules c cross join module_sets s where c.module_key not in ('projects','tickets','reporting','investment_intent','subscriptions');
 select pg_temp.act(3);
 set local role authenticated;
 select lives_ok($$select public.app_require_module_access('projects')$$, 'no publication preserves owner Projects');

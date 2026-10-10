@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
+import { SubscriptionHistoryBoundary } from "../../../../components/subscriptions/subscription-history-boundary";
 import { SubscriptionActions } from "../../../../components/subscriptions/subscription-actions";
 import { SubscriptionDetailView, type SubscriptionInvoiceView } from "../../../../components/subscriptions/subscription-detail";
 import { SubscriptionStatusBadge } from "../../../../components/subscriptions/subscription-status-badge";
@@ -26,13 +27,14 @@ export default async function SubscriptionDetailPage({ params, searchParams }: {
     const invoiceIds = new Set(detail.cycles.flatMap((cycle) => cycle.invoice_id ? [cycle.invoice_id] : []));
     const invoices: SubscriptionInvoiceView[] = invoiceSummaries.filter(({ invoice }) => invoiceIds.has(invoice.id)).map(({ invoice, financials }) => ({ id: invoice.id, invoiceNumber: invoice.invoice_number, status: invoice.status, presentationState: financials.presentation_state, totalCents: invoice.total_cents, currency: invoice.currency, dueAt: invoice.due_at }));
 
-    return <PageFrame className={styles.detailPage} title={summary.service_name} description={<span className={styles.detailHeading}><span>{summary.company_name}</span><span><strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong> / {summary.interval_count === 1 ? summary.interval_unit : `${summary.interval_count} ${summary.interval_unit}s`} · {formatSubscriptionInterval(summary.interval_unit, summary.interval_count)}</span></span>} action={<div className={styles.headerAction}><SubscriptionStatusBadge status={summary.status} /><SubscriptionActions subscriptionId={subscriptionId} status={summary.status} capabilities={context.user.subscriptions} /></div>}>
+    return <SubscriptionHistoryBoundary key={summary.status} states={[`${subscriptionId}:${summary.status}`]} ids={[subscriptionId]} audience="internal"><PageFrame className={styles.detailPage} title={summary.service_name} description={<span className={styles.detailHeading}><span>{summary.company_name}</span><span><strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong> / {summary.interval_count === 1 ? summary.interval_unit : `${summary.interval_count} ${summary.interval_unit}s`} · {formatSubscriptionInterval(summary.interval_unit, summary.interval_count)}</span></span>} action={<div className={styles.headerAction}><SubscriptionStatusBadge status={summary.status} /><SubscriptionActions subscriptionId={subscriptionId} status={summary.status} capabilities={context.user.subscriptions} /></div>}>
       {query.created ? <SuccessToast title="Subscription created." detail="The current plan uses a Service snapshot." /> : null}
       {query.saved ? <SuccessToast title="New plan version created." detail="Historical terms remain unchanged." /> : null}
       <SubscriptionDetailView detail={detail} summary={summary} invoices={invoices} />
-    </PageFrame>;
+    </PageFrame></SubscriptionHistoryBoundary>;
   } catch (error) {
     if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    if (toClientSafeError(error).code === "PERMISSION_DENIED") forbidden();
     throw error;
   }
 }

@@ -32,7 +32,7 @@ export const WHITE_LABEL_MODULES: WhiteLabelModule[] = [
   { id: "forms", label: "Forms", description: "Public, intake and onboarding Forms.", recommendation: "recommended", recommendationLabel: "Recommended for intake", defaultEnabled: true, requires: [] },
 ];
 
-export const WHITE_LABEL_DRAFT_GUIDANCE = "Recommendations guide draft and preview choices. You can select any module. Reporting, Investment Intent, Projects and Tickets are optional for publication; the other five modules are required. Published Projects requires Tickets. Projects can be disabled only when no unfinished Projects remain; Tickets only when every non-archived Ticket is closed. Archived unresolved Tickets stay in history and are inaccessible while Tickets is disabled.";
+export const WHITE_LABEL_DRAFT_GUIDANCE = "Recommendations guide draft and preview choices. You can select any module. Reporting, Investment Intent, Projects, Tickets and Subscriptions are optional for publication; Services, Invoices, Forms and Coupons are required. Published Projects requires Tickets; Subscriptions requires Services and Invoices. Projects can be disabled only when no unfinished Projects remain; Tickets only when every non-archived Ticket is closed. Archived unresolved Tickets stay in history and are inaccessible while Tickets is disabled. Subscriptions can be disabled only after every plan is canceled, including archived plans. Authorized canceled history and existing Invoice access remain available.";
 
 const CORE_MODULES: NavigationItemId[] = ["dashboard", "clients", "team", "team_supervision", "settings"];
 

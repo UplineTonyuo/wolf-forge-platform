@@ -3,9 +3,13 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { SubscriptionCalendarPanel } from "../components/subscriptions/subscription-calendar";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+const visibility = vi.hoisted(() => ({ read: vi.fn(), router: { refresh: vi.fn() } }));
+vi.mock("../app/actions/subscriptions", () => ({ loadSubscriptionVisibilityAction: visibility.read }));
+vi.mock("next/navigation", () => ({ useRouter: () => visibility.router }));
+import { SubscriptionCalendarModal, SubscriptionCalendarPanel } from "../components/subscriptions/subscription-calendar";
+import type { SubscriptionCalendarResult } from "../app/actions/subscription-calendar";
 import {
   buildSubscriptionCalendarMonth,
   planItemNetCents,
@@ -20,6 +24,7 @@ import { SubscriptionCalendarService } from "../services/subscription-calendar-s
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 /* jsdom serves import.meta.url over http, so the source tree is resolved from the project root. */
@@ -71,6 +76,38 @@ const annualSource = ownerSource({
   startedOn: "2025-08-24",
   items: [{ name: "Enterprise SEO Retainer", quantity: 1, netAmountCents: 240_000 }],
   amountCents: 240_000,
+});
+
+it("rejects an old Calendar feed after current denial even if the refresh fails", async () => {
+  let resolveOld!: (result: SubscriptionCalendarResult) => void;
+  const oldFeed = new Promise<SubscriptionCalendarResult>((resolve) => { resolveOld = resolve; });
+  const loadSources = vi.fn()
+    .mockReturnValueOnce(oldFeed)
+    .mockRejectedValue(new Error("Transient transport failure"));
+  visibility.read.mockResolvedValueOnce({ ok: false, denied: true })
+    .mockResolvedValue({ ok: false, denied: false });
+
+  render(<SubscriptionCalendarModal perspective="owner" loadSources={loadSources} onClose={vi.fn()} />);
+  await screen.findByRole("alert");
+  await waitFor(() => expect(loadSources).toHaveBeenCalledTimes(2));
+  await act(async () => { resolveOld({ ok: true, sources: [ownerSource()] }); });
+
+  expect(screen.getByRole("alert")).toHaveTextContent("no longer available");
+  expect(screen.queryByText("Recurring revenue calendar")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /^Close$/ })).toBeInTheDocument();
+});
+
+it("returns Calendar focus to its opener after closing", async () => {
+  const opener = document.createElement("button");
+  document.body.append(opener);
+  opener.focus();
+  visibility.read.mockResolvedValue({ ok: true, ids: [], states: [] });
+  const loadSources = vi.fn(async (): Promise<SubscriptionCalendarResult> => ({ ok: true, sources: [] }));
+  const { unmount } = render(<SubscriptionCalendarModal perspective="client" loadSources={loadSources} onClose={vi.fn()} />);
+  await waitFor(() => expect(screen.getByRole("dialog")).toHaveFocus());
+  unmount();
+  expect(opener).toHaveFocus();
+  opener.remove();
 });
 
 describe("subscription calendar money", () => {
