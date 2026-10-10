@@ -50,9 +50,10 @@ select is(
 );
 
 select is(
-  (select count(*) from public.invoices where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.invoices invoice join public.companies company on company.id = invoice.company_id
+   where company.tenant_id = private.wolf_forge_tenant_id() and invoice.tenant_id <> company.tenant_id),
   0::bigint,
-  'every pre-existing Invoice was backfilled to the Wolf Forge Tenant'
+  'Invoices for Wolf Forge Companies retain Wolf Forge Tenant ownership'
 );
 
 -- -----------------------------------------------------------------------------

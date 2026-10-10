@@ -46,12 +46,16 @@ export default async function ClientStoreServicePage({
      * of an eligible one-time Service needs only a sufficient balance.
      */
     try {
-      const wallet = await services.wallets.getForCompany(context.user.companyId);
+      const [wallet, projectsEnabled] = await Promise.all([
+        services.wallets.getForCompany(context.user.companyId),
+        services.wfCard.storePurchaseProjectsEnabled(),
+      ]);
 
       purchaseOffer = resolveStorePurchaseOffer({
         service,
         balanceCents: wallet.balance_cents,
         walletCurrency: wallet.currency,
+        projectsEnabled,
       });
     } catch {
       purchaseOffer = null;

@@ -6958,6 +6958,7 @@ export type Database = {
         Args: { p_other_profile_id: string }
         Returns: string
       }
+      app_store_purchase_projects_enabled: { Args: never; Returns: boolean }
       app_submit_form: {
         Args: {
           p_context: Json

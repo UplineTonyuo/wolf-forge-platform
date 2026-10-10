@@ -32,7 +32,7 @@ export const WHITE_LABEL_MODULES: WhiteLabelModule[] = [
   { id: "forms", label: "Forms", description: "Public, intake and onboarding Forms.", recommendation: "recommended", recommendationLabel: "Recommended for intake", defaultEnabled: true, requires: [] },
 ];
 
-export const WHITE_LABEL_DRAFT_GUIDANCE = "Recommendations guide draft and preview choices. You can select any module. Published configurations currently require all modules except Reporting and Investment Intent.";
+export const WHITE_LABEL_DRAFT_GUIDANCE = "Recommendations guide draft and preview choices. You can select any module. Published configurations currently require all modules except Reporting, Investment Intent and Projects. Projects can be disabled only when no unfinished Projects remain.";
 
 const CORE_MODULES: NavigationItemId[] = ["dashboard", "clients", "team", "team_supervision", "settings"];
 

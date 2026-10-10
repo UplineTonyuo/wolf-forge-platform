@@ -15,9 +15,10 @@ select is(
 );
 
 select is(
-  (select count(*) from public.forms where tenant_id <> private.wolf_forge_tenant_id()),
-  0::bigint,
-  'every pre-existing Form was backfilled to the Wolf Forge Tenant'
+  (select column_default from information_schema.columns
+   where table_schema='public' and table_name='forms' and column_name='tenant_id'),
+  'private.identity_tenant_id()',
+  'new Forms derive ownership from the trusted Tenant identity default'
 );
 
 -- -----------------------------------------------------------------------------

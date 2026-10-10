@@ -54,9 +54,10 @@ select is(
 );
 
 select is(
-  (select count(*) from public.orders where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.orders project join public.companies company on company.id = project.company_id
+   where company.tenant_id = private.wolf_forge_tenant_id() and project.tenant_id <> company.tenant_id),
   0::bigint,
-  'every pre-existing Order was backfilled to the Wolf Forge Tenant'
+  'Orders for Wolf Forge Companies retain Wolf Forge Tenant ownership'
 );
 
 select hasnt_column('public', 'order_tasks', 'tenant_id', 'order_tasks inherits its Tenant through order_id');

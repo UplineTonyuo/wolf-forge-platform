@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
    * that stays true on a framework upgrade too.
    */
   ...(process.env.NODE_ENV !== "production"
-    ? { allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.95", "qa.wolf-forge.local", "qa-b.wolf-forge.local", "qa-intent.wolf-forge.local"] }
+    ? { allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.1.95", "qa.wolf-forge.local", "qa-b.wolf-forge.local", "qa-intent.wolf-forge.local", "qa-projects.wolf-forge.local"] }
     : {}),
 
   /**

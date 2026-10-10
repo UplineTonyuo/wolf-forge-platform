@@ -79,7 +79,7 @@ export function PurchaseWithBalance({
     if (!done?.ok) return;
     const timer = window.setTimeout(() => {
       router.refresh();
-      router.push("/account/projects");
+      router.push(done.destinationHref);
     }, outroMs);
     return () => window.clearTimeout(timer);
   }, [done, router]);
@@ -231,15 +231,15 @@ export function PurchaseWithBalance({
                 <strong className={styles.outroTitle}>Purchase confirmed</strong>
 
                 <p className={styles.outroBody}>
-                  <b>{done.serviceName}</b> has been added to your Wolf Forge services.
+                  {done.replayed ? <>Your earlier purchase of <b>{done.serviceName}</b> is confirmed.</> : <><b>{done.serviceName}</b> has been added to your Wolf Forge services.</>}
                 </p>
 
                 <p className={styles.outroNote}>
-                  The Wolf Forge team has been notified and will begin fulfillment.
+                  {done.replayed ? "You have not been charged again." : "The Wolf Forge team has been notified and will begin fulfillment."}
                 </p>
 
                 <span className={styles.outroSweep} aria-hidden={true} />
-                <span className={styles.outroReturn}>Taking you to your projects…</span>
+                <span className={styles.outroReturn}>{done.destinationHref?.startsWith("/account/invoices/") ? "Opening your receipt…" : "Taking you to your projects…"}</span>
               </div>
             </div>,
             document.body,

@@ -66,6 +66,7 @@ beforeEach(() => {
     walletBalanceCents: 60500,
     serviceName: "Platinum SEO Success Blueprint",
     replayed: false,
+    destinationHref: "/account/projects",
   });
 
   if (!("randomUUID" in globalThis.crypto)) {
@@ -114,6 +115,11 @@ describe("resolveStorePurchaseOffer", () => {
     balanceCents: 210000,
     walletCurrency: "USD",
   };
+
+  it("refuses a new purchase when published Projects is disabled", () => {
+    expect(resolveStorePurchaseOffer({ service: service(), ...base, projectsEnabled: false }))
+      .toMatchObject({ purchasable: false, reason: "projects_disabled" });
+  });
 
   it("offers a purchase and computes what is left", () => {
     const result = resolveStorePurchaseOffer({ service: service(), ...base });
@@ -278,7 +284,7 @@ describe("PurchaseWithBalance", () => {
       ok: true,
       orderId: "o-1", orderNumber: 1,
       amountCents: 149500, currency: "USD", walletBalanceCents: 60500,
-      serviceName: "Platinum SEO Success Blueprint", replayed: false,
+      serviceName: "Platinum SEO Success Blueprint", replayed: false, destinationHref: "/account/projects",
     });
   });
 
@@ -352,6 +358,20 @@ describe("PurchaseWithBalance", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
+  it("confirms a historical retry without implying another charge and opens its receipt", async () => {
+    purchaseServiceWithBalanceAction.mockResolvedValue({ ok: true, serviceName: "Earlier service", replayed: true, destinationHref: "/account/invoices/receipt-1" });
+    vi.useFakeTimers();
+    try {
+      renderControl();
+      fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
+      await vi.waitFor(() => expect(screen.getByText("You have not been charged again.")).toBeInTheDocument());
+      expect(screen.getByText(/Your earlier purchase/)).toBeInTheDocument();
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(push).toHaveBeenCalledWith("/account/invoices/receipt-1");
+    } finally { vi.useRealTimers(); }
+  });
+
   it("re-enables Confirm after a failure so the client can retry", async () => {
     purchaseServiceWithBalanceAction.mockResolvedValue({
       ok: false, code: "PURCHASE_FAILED", error: "Something went wrong.",
@@ -388,6 +408,16 @@ describe("StoreServiceDetail", () => {
       />,
     );
   }
+
+  it("explains disabled Projects without a purchase dialog and keeps the cart available", () => {
+    renderDetail(resolveStorePurchaseOffer({ service: service(), balanceCents: 210000, walletCurrency: "USD", projectsEnabled: false }));
+    expect(screen.getByText("New service purchases are unavailable while Projects is disabled.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Add to cart/i }));
+    expect(screen.getByRole("button", { name: /In your cart/i })).toBeInTheDocument();
+    expect(purchaseServiceWithBalanceAction).not.toHaveBeenCalled();
+  });
 
   it("offers Purchase, Add to Cart and Talk to Team with no membership signal", () => {
     renderDetail();
