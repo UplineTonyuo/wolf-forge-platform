@@ -25,8 +25,9 @@ select is(
     where private.notification_category_permission(
             notification_row.audience, notification_row.category
           ) is null
-       or not private.profile_has_permission(
+       or not private.profile_has_permission_in_tenant(
             notification_row.recipient_profile_id,
+            coalesce(notification_row.tenant_id, private.wolf_forge_tenant_id()),
             private.notification_category_permission(
               notification_row.audience, notification_row.category
             )

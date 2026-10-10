@@ -800,7 +800,7 @@ set local "request.jwt.claim.sub" = '2a000000-0000-0000-0000-000000000001';
 select ok((select count(*) = 0 from public.app_list_due_subscription_work(100) where work_type = 'operator_action' and subscription_id = (select id from subscription_test_ids where label = 'void-safe')), 'recovered invalidated cycle does not remain poison operator work');
 reset role;
 select ok((select count(*) >= 1 from public.activity_events where entity_type = 'subscription' and entity_id = (select id from subscription_test_ids where label = 'main')), 'subscription mutations also participate in the shared activity architecture');
-select is((select count(*) from public.services), 59::bigint, 'Services remain exactly 59');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), 59::bigint, 'Wolf Forge Services remain exactly 59');
 select ok(to_regclass('public.coupons') is not null and to_regprocedure('public.app_validate_coupon(text,jsonb,numeric)') is not null, 'Coupons architecture remains intact');
 select ok(to_regclass('public.wf_card_memberships') is not null and to_regprocedure('public.app_pay_invoice_with_wallet(uuid,uuid,text)') is not null, 'WF Card invoice settlement architecture remains intact');
 

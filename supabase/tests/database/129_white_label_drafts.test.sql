@@ -1,6 +1,7 @@
 begin;
 
-select plan(111);
+select plan(118);
+create temp table publications_before as select coalesce(jsonb_agg(to_jsonb(p) order by tenant_id,revision),'[]'::jsonb) data from private.tenant_module_publications p;
 
 -- WL-2.33 (KI-146 / D-298): per-Tenant White Label DRAFTS are read and
 -- written only through Platform Admin RPCs, validated in the database,
@@ -159,7 +160,7 @@ select is(
   (select row(display_name, primary_color, accent_color, module_keys, revision, updated_at is null)
    from public.app_get_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201')),
   row('White Label Tenant B'::text, '#000d51'::text, '#a8832e'::text,
-      array['coupons', 'forms', 'investment_intent', 'invoices', 'projects', 'reporting', 'services', 'subscriptions', 'tickets'],
+      array['forms', 'invoices', 'projects', 'reporting', 'services', 'tickets'],
       0, true),
   '1b. without a draft, the read returns revision 0 and the documented defaults');
 reset role;
@@ -398,5 +399,23 @@ select is(
      (select md5(string_agg(p::text, ',' order by p.id)) from public.profiles as p))),
   '24. Tenant records (including their real display names) and profiles are unchanged');
 
+select pg_temp.act('3201');
+select ok(not private.published_module_set_valid(array['forms','invoices','projects','reporting','services','tickets']),
+  'recommended draft defaults do not weaken publication requirements');
+select throws_ok($$select private.publish_tenant_modules('f0f0f0f0-0000-4000-8000-000000003201',0,array['forms','invoices','projects','reporting','services','tickets'],'Draft defaults are not publication')$$,
+  '22023',null,'trusted publication writer rejects draft-only defaults');
+set local role authenticated;
+select lives_ok($$select * from public.app_save_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201',4,'Explicit all modules','#000d51','#a8832e',array['coupons','forms','investment_intent','invoices','projects','reporting','services','subscriptions','tickets'])$$,
+  'all nine modules remain selectable and saveable');
+select is((select module_keys from public.app_get_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201')),
+  array['coupons','forms','investment_intent','invoices','projects','reporting','services','subscriptions','tickets'],
+  'saved modules override recommendations exactly');
+select lives_ok($$select * from public.app_save_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201',5,'Explicit empty modules','#000d51','#a8832e','{}'::text[])$$,
+  'explicit empty saved module set is valid draft data');
+select is((select module_keys from public.app_get_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201')),'{}'::text[],
+  'an empty saved selection never falls back to new defaults');
+reset role;
+select is((select coalesce(jsonb_agg(to_jsonb(p) order by tenant_id,revision),'[]'::jsonb) from private.tenant_module_publications p),
+  (select data from publications_before),'draft default reads and saves leave publications unchanged');
 select * from finish();
 rollback;

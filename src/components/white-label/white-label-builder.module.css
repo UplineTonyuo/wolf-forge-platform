@@ -20,6 +20,14 @@
 .colorField small { color: var(--wf-text-muted); font-size: 12px; overflow-wrap: anywhere; }
 
 .moduleList { display: grid; }
+.moduleGuidance { margin: 0 0 12px; color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; }
+.moduleRow { min-width: 0; gap: 14px; padding: 14px 12px; }
+.moduleRow > span { min-width: 0; overflow-wrap: anywhere; }
+.moduleRow input { flex: 0 0 18px; }
+.moduleRow strong { font-size: 13px; }
+.moduleRow small { font-size: 12px; line-height: 1.5; }
+.moduleRow .moduleRecommendation { font-weight: 600; line-height: 1.5; }
+.moduleRow .moduleRecommendation[data-recommendation="recommended"] { color: var(--wf-navy); }
 
 .previewPanel { min-width: 0; display: grid; gap: 12px; position: sticky; top: 16px; }
 .previewHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }

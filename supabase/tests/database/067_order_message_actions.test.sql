@@ -27,8 +27,8 @@ update public.profiles set role_id = (select id from public.roles where name = '
 where id = 'f0000000-0000-4000-8000-000000000006';
 
 insert into public.orders (id, company_id, service_id, title) values
-  ('f0200000-0000-4000-8000-000000000001', 'f0100000-0000-4000-8000-000000000001', (select id from public.services where archived_at is null limit 1), 'Message action order'),
-  ('f0200000-0000-4000-8000-000000000002', 'f0100000-0000-4000-8000-000000000002', (select id from public.services where archived_at is null limit 1), 'Other order');
+  ('f0200000-0000-4000-8000-000000000001', 'f0100000-0000-4000-8000-000000000001', (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Message action order'),
+  ('f0200000-0000-4000-8000-000000000002', 'f0100000-0000-4000-8000-000000000002', (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Other order');
 insert into public.tickets (id, company_id, client_profile_id, order_id, subject, created_by_profile_id) values
   ('f0300000-0000-4000-8000-000000000001', 'f0100000-0000-4000-8000-000000000001', 'f0000000-0000-4000-8000-000000000002', 'f0200000-0000-4000-8000-000000000001', 'Message actions', 'f0000000-0000-4000-8000-000000000001'),
   ('f0300000-0000-4000-8000-000000000002', 'f0100000-0000-4000-8000-000000000002', 'f0000000-0000-4000-8000-000000000003', 'f0200000-0000-4000-8000-000000000002', 'Other message', 'f0000000-0000-4000-8000-000000000001');

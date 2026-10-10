@@ -59,6 +59,13 @@ const nameInput = () => screen.getByLabelText("Workspace display name");
 const saveButton = () => screen.getByRole("button", { name: /Save Draft|Saving/ });
 
 describe("White Label draft rules", () => {
+  it("keeps frontend starting selections in parity with the forward SQL fallback", () => {
+    const sql = readFileSync(resolve(import.meta.dirname, "../../supabase/migrations/20261010120000_white_label_recommended_draft_defaults.sql"), "utf8");
+    const fallback = sql.match(/catalog\.module_key in \(([^)]+)\)/)?.[1] ?? "";
+    const keys = [...fallback.matchAll(/'([a-z_]+)'/g)].map((match) => match[1]).sort();
+    expect(keys).toEqual(["forms", "invoices", "projects", "reporting", "services", "tickets"]);
+    expect(draftModuleKeys(SYNTHETIC_PREVIEW_STATE.modules)).toEqual(keys);
+  });
   it("accepts a valid draft and stores modules as a sorted set", () => {
     expect(draftProblem(SYNTHETIC_PREVIEW_STATE)).toBeNull();
     expect(draftModuleKeys({ tickets: true, services: true, todo: true, unknown: true })).toEqual(["services", "tickets"]);
@@ -110,6 +117,19 @@ describe("White Label draft rules", () => {
 });
 
 describe("White Label draft editor", () => {
+  it("loads saved selections exactly and saves explicit non-recommended choices", async () => {
+    const saved = draftFor(B, "Existing saved configuration", 2);
+    saved.state.modules = modulesFromKeys(["services", "subscriptions", "coupons", "investment_intent"]);
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={saved} />);
+    for (const label of ["Subscriptions", "Coupons", "Investment Intent"]) expect(screen.getByRole("checkbox", { name: label })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Reporting" })).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Forms" }));
+    saveDraftAction.mockResolvedValue({ ok: true, data: { revision: 3, updatedAt: "2026-10-10T00:00:00.000Z" } });
+    await act(async () => fireEvent.click(saveButton()));
+    expect(saveDraftAction).toHaveBeenCalledWith(expect.objectContaining({ moduleKeys: ["coupons", "forms", "investment_intent", "services", "subscriptions"] }));
+    expect(screen.queryByText("Unsaved changes")).toBeNull();
+  });
   it("requires an explicit Tenant before anything can be saved", () => {
     render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={null} />);
     expect(screen.getByText("Choose a Tenant")).toBeInTheDocument();
@@ -261,7 +281,7 @@ describe("White Label draft review", () => {
     expect(within(review).getByText("Proposed workspace")).toBeInTheDocument();
     expect(within(review).getByText("#123456")).toBeInTheDocument();
     expect(within(review).getByText("#654321")).toBeInTheDocument();
-    expect(within(review).getByText("8 enabled · 1 disabled in this draft.")).toBeInTheDocument();
+    expect(within(review).getByText("5 enabled · 4 disabled in this draft.")).toBeInTheDocument();
     expect(within(review).getByText("Enabled → Disabled")).toBeInTheDocument();
     expect(within(review).getByText(/Compared with loaded draft revision 2/)).toBeInTheDocument();
     expect(within(review).getByRole("heading", { name: "Review draft" })).toHaveFocus();
@@ -286,6 +306,7 @@ describe("White Label draft review", () => {
 
   it("shows existing dependency and contrast warnings while retaining invalid edits", () => {
     render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} />);
+    for (const label of ["Subscriptions", "Coupons", "Investment Intent"]) fireEvent.click(screen.getByRole("checkbox", { name: label }));
     fireEvent.click(screen.getByRole("checkbox", { name: /^Services/ }));
     fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#ffffff" } });
     openReview();

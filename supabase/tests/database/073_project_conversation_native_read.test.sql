@@ -29,11 +29,11 @@ update public.profiles set role_id = (select id from public.roles where name = '
 
 insert into public.orders (id, company_id, service_id, title, assigned_to_profile_id) values
 ('fc200000-0000-0000-0000-000000000001', 'fc100000-0000-0000-0000-000000000001',
-  (select id from public.services where archived_at is null limit 1), 'Native read Project',
+  (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Native read Project',
   'fc000000-0000-0000-0000-000000000005');
 insert into public.orders (id, company_id, service_id, title) values
 ('fc200000-0000-0000-0000-000000000002', 'fc100000-0000-0000-0000-000000000001',
-  (select id from public.services where archived_at is null limit 1), 'Second Project, same company');
+  (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Second Project, same company');
 
 -- 1. function exists
 select has_function('public', 'app_get_project_conversation', array['uuid'], 'app_get_project_conversation exists');

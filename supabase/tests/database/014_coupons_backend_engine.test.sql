@@ -677,8 +677,8 @@ select ok(
   'coupon creation accepts no caller-supplied actor identity'
 );
 
-select is((select count(*) from public.services), 59::bigint, 'Services remain exactly 59');
-select is((select count(*) from public.services where description is not null and btrim(description) <> ''), 59::bigint, 'Service descriptions remain 59 of 59');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), 59::bigint, 'Wolf Forge Services remain exactly 59');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id() and description is not null and btrim(description) <> ''), 59::bigint, 'Wolf Forge Service descriptions remain 59 of 59');
 
 select * from finish();
 rollback;

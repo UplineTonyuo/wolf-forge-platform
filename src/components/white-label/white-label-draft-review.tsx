@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { draftProblem, type WhiteLabelDraft } from "../../domain/white-label/draft";
-import { WHITE_LABEL_MODULES, contrastWithWhite, moduleAvailable, type WhiteLabelPreviewState } from "../../domain/white-label/preview";
+import { WHITE_LABEL_DRAFT_GUIDANCE, WHITE_LABEL_MODULES, contrastWithWhite, moduleAvailable, type WhiteLabelPreviewState } from "../../domain/white-label/preview";
 import styles from "./white-label-builder.module.css";
 
 export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack }: {
@@ -78,6 +78,7 @@ export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack }
         {problem ? <p className={styles.warning}>{problem}</p> : <p className={styles.hint}>No draft validation issues found.</p>}
         {lowContrast ? <p className={styles.warning}>Sidebar text may be hard to read on this primary color. Choose a darker color.</p> : null}
         <p className={styles.hint}>These are draft choices, not published CRM behavior. Reviewing applies nothing and does not verify runtime module access.</p>
+        <p className={styles.hint}>{WHITE_LABEL_DRAFT_GUIDANCE}</p>
       </section>
     </section>
   );

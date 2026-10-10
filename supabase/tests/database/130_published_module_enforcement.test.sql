@@ -66,7 +66,7 @@ select is((select count(*) from public.client_reports where id='e7340000-0000-40
 reset role;
 select pg_temp.act(1);
 select lives_ok($$select * from public.app_save_white_label_draft('f0f0f0f0-0000-4000-8000-000000003401',0,'Draft Only','#000000','#ffffff',array['services'])$$,'saving a fixture draft publishes nothing');
-select is((select count(*) from private.tenant_module_publications),0::bigint,'draft save creates no publication');
+select is((select count(*) from private.tenant_module_publications where tenant_id in ('f0f0f0f0-0000-4000-8000-000000003401','f0f0f0f0-0000-4000-8000-000000003402')),0::bigint,'draft save creates no fixture Tenant publication');
 select pg_temp.act(3);
 set local role authenticated;
 select lives_ok($$select public.app_require_module_access('reporting')$$,'disabled Reporting draft never changes runtime');

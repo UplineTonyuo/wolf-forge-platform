@@ -139,10 +139,9 @@ export function WhiteLabelDraftEditor({
       <div className={settings.callout} role="note">
         <Info aria-hidden="true" />
         <div>
-          <strong>Draft only — not published</strong>
+          <strong>Draft only</strong>
           <p>
-            Saving stores a draft for the chosen Tenant. Nothing is published or applied: the Tenant&apos;s workspace and
-            module access stay exactly as they are until publishing exists.
+            Saving stores this Tenant&apos;s draft. Its workspace and module access stay unchanged.
           </p>
         </div>
       </div>

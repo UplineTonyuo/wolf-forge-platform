@@ -1,15 +1,14 @@
 import type { NavigationItemId } from "../../components/shell/nav-registry";
 
-/*
- * White Label builder, Phase 1: an unsaved, local-only preview. Nothing here
- * is persisted or read by any authorization path; the server-side module
- * gate (app_require_module_access / permission_modules) stays authoritative.
- */
+// Builder preferences are draft data; published module access remains server-authoritative.
 
 export type WhiteLabelModule = {
   id: NavigationItemId;
   label: string;
   description: string;
+  recommendation: "recommended" | "specialized" | "not_recommended";
+  recommendationLabel: string;
+  defaultEnabled: boolean;
   /** Modules whose records this one cannot exist without (NOT NULL FKs). */
   requires: NavigationItemId[];
 };
@@ -22,16 +21,18 @@ export type WhiteLabelModule = {
  * - todo (Operations): Wolf Forge-only (D-285), never a White Label module.
  */
 export const WHITE_LABEL_MODULES: WhiteLabelModule[] = [
-  { id: "services", label: "Services", description: "Catalogue of what the Tenant sells.", requires: [] },
-  { id: "projects", label: "Projects", description: "Client delivery work. Every Project is for a Service.", requires: ["services"] },
-  { id: "tickets", label: "Tickets", description: "Client support requests and conversations.", requires: [] },
-  { id: "reporting", label: "Reporting", description: "Client reports sent from the workspace.", requires: [] },
-  { id: "invoices", label: "Invoices", description: "Billing documents and payments.", requires: [] },
-  { id: "subscriptions", label: "Subscriptions", description: "Recurring Service plans. Every Subscription is for a Service.", requires: ["services"] },
-  { id: "coupons", label: "Coupons", description: "Discounts that apply to Services.", requires: ["services"] },
-  { id: "investment_intent", label: "Investment Intent", description: "Client buying interest in Services.", requires: ["services"] },
-  { id: "forms", label: "Forms", description: "Public, intake and onboarding Forms.", requires: [] },
+  { id: "services", label: "Services", description: "Catalogue of what the Tenant sells.", recommendation: "recommended", recommendationLabel: "Recommended", defaultEnabled: true, requires: [] },
+  { id: "projects", label: "Projects", description: "Client delivery work for Services.", recommendation: "recommended", recommendationLabel: "Recommended for service delivery", defaultEnabled: true, requires: ["services"] },
+  { id: "tickets", label: "Tickets", description: "Client support requests and conversations.", recommendation: "recommended", recommendationLabel: "Recommended for support", defaultEnabled: true, requires: [] },
+  { id: "reporting", label: "Reporting", description: "Client reports sent from the workspace.", recommendation: "recommended", recommendationLabel: "Recommended", defaultEnabled: true, requires: [] },
+  { id: "invoices", label: "Invoices", description: "Billing documents and payments.", recommendation: "recommended", recommendationLabel: "Recommended for billing", defaultEnabled: true, requires: [] },
+  { id: "subscriptions", label: "Subscriptions", description: "Enable for recurring plans or memberships.", recommendation: "specialized", recommendationLabel: "Specialized: recurring plans only", defaultEnabled: false, requires: ["services"] },
+  { id: "coupons", label: "Coupons", description: "Enable for promotional discount campaigns. Otherwise, leave off to avoid extra discount and redemption complexity.", recommendation: "not_recommended", recommendationLabel: "Not recommended", defaultEnabled: false, requires: ["services"] },
+  { id: "investment_intent", label: "Investment Intent", description: "Enable only for a separate workflow to track customer buying-interest signals.", recommendation: "not_recommended", recommendationLabel: "Not recommended for most Tenants", defaultEnabled: false, requires: ["services"] },
+  { id: "forms", label: "Forms", description: "Public, intake and onboarding Forms.", recommendation: "recommended", recommendationLabel: "Recommended for intake", defaultEnabled: true, requires: [] },
 ];
+
+export const WHITE_LABEL_DRAFT_GUIDANCE = "Recommendations guide draft and preview choices. You can select any module. Published configurations currently require all modules except Reporting and Investment Intent.";
 
 const CORE_MODULES: NavigationItemId[] = ["dashboard", "clients", "team", "team_supervision", "settings"];
 
@@ -46,7 +47,7 @@ export const SYNTHETIC_PREVIEW_STATE: WhiteLabelPreviewState = {
   displayName: "Northwind Studio",
   primaryColor: "#000d51",
   accentColor: "#a8832e",
-  modules: Object.fromEntries(WHITE_LABEL_MODULES.map((entry) => [entry.id, true])),
+  modules: Object.fromEntries(WHITE_LABEL_MODULES.map((entry) => [entry.id, entry.defaultEnabled])),
 };
 
 /** A module is available only when it is selected and everything it requires is. */

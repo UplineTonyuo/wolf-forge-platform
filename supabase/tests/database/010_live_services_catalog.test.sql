@@ -38,9 +38,9 @@ select private.seed_wolf_forge_services_catalog();
 select private.seed_wolf_forge_services_catalog();
 
 select is(
-  (select count(*) from public.services where archived_at is null),
+  (select count(*) from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id()),
   59::bigint,
-  'double seeding leaves exactly 59 active local services'
+  'double seeding leaves exactly 59 active Wolf Forge catalog services'
 );
 
 select is(

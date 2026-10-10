@@ -84,6 +84,14 @@ function shown(id: string): boolean {
 }
 
 describe("White Label preview domain", () => {
+  it("defines the approved recommendation and starting selection for all nine modules", () => {
+    expect(WHITE_LABEL_MODULES.map(({ id, recommendation, defaultEnabled }) => [id, recommendation, defaultEnabled])).toEqual([
+      ["services", "recommended", true], ["projects", "recommended", true], ["tickets", "recommended", true],
+      ["reporting", "recommended", true], ["invoices", "recommended", true], ["subscriptions", "specialized", false],
+      ["coupons", "not_recommended", false], ["investment_intent", "not_recommended", false], ["forms", "recommended", true],
+    ]);
+    expect(WHITE_LABEL_MODULES.every((module) => module.recommendationLabel && module.description)).toBe(true);
+  });
   it("never offers or shows Operations", () => {
     expect(WHITE_LABEL_MODULES.map(({ id }) => id)).not.toContain("todo");
     expect(previewNavigationModules({ ...SYNTHETIC_PREVIEW_STATE.modules, todo: true }).todo).toBe(false);
@@ -107,12 +115,29 @@ describe("White Label preview domain", () => {
 });
 
 describe("White Label builder", () => {
+  it("starts with six choices and lets every non-default module be selected in both previews", () => {
+    render(<Builder />);
+    expect(screen.getAllByRole("checkbox").filter((entry) => (entry as HTMLInputElement).checked)).toHaveLength(6);
+    for (const label of ["Subscriptions", "Coupons", "Investment Intent"]) {
+      const checkbox = screen.getByRole("checkbox", { name: label });
+      expect(checkbox).not.toBeChecked();
+      expect(checkbox).toHaveAccessibleDescription(/Enable/);
+      fireEvent.click(checkbox);
+      expect(checkbox).toBeChecked();
+    }
+    for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
+    for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
+    expect(screen.getByText(/Published configurations currently require all modules except/)).toBeInTheDocument();
+  });
   it("toggling a module updates the preview navigation, honouring dependencies", () => {
     render(<Builder />);
     expect(shown("tickets")).toBe(true);
     fireEvent.click(screen.getByRole("checkbox", { name: /Tickets/ }));
     expect(shown("tickets")).toBe(false);
     expect(previewEntry("tickets")).toHaveAttribute("aria-hidden", "true");
+
+    for (const label of ["Subscriptions", "Coupons", "Investment Intent"]) fireEvent.click(screen.getByRole("checkbox", { name: label }));
 
     fireEvent.click(screen.getByRole("checkbox", { name: /^Services/ }));
     expect(shown("projects")).toBe(false);

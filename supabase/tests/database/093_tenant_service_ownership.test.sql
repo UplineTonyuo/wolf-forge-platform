@@ -73,11 +73,14 @@ select is(
 );
 
 select is(
-  (select count(*) from public.services where tenant_id <> private.wolf_forge_tenant_id())
-  + (select count(*) from public.service_folders where tenant_id <> private.wolf_forge_tenant_id())
-  + (select count(*) from public.service_interests where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.services s join private.wayfront_service_catalog_sources source on source.service_id=s.id
+   where s.tenant_id <> private.wolf_forge_tenant_id())
+  + (select count(*) from public.service_folders f join private.wayfront_service_folder_sources source on source.folder_id=f.id
+     where f.tenant_id <> private.wolf_forge_tenant_id())
+  + (select count(*) from public.service_interests i join public.companies c on c.id=i.company_id
+     where c.tenant_id = private.wolf_forge_tenant_id() and i.tenant_id <> private.wolf_forge_tenant_id()),
   0::bigint,
-  'every pre-existing Service, folder and store interest was backfilled to the Wolf Forge Tenant'
+  'captured Wolf Forge catalog and Wolf Forge Client interests retain Wolf Forge ownership'
 );
 
 -- -----------------------------------------------------------------------------

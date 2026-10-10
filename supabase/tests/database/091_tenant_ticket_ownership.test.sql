@@ -25,9 +25,10 @@ select is(
 );
 
 select is(
-  (select count(*) from public.tickets where tenant_id <> private.wolf_forge_tenant_id()),
+  (select count(*) from public.tickets t join public.companies c on c.id=t.company_id
+   where c.tenant_id = private.wolf_forge_tenant_id() and t.tenant_id <> private.wolf_forge_tenant_id()),
   0::bigint,
-  'every pre-existing Ticket was backfilled to the Wolf Forge Tenant'
+  'existing Wolf Forge Client Tickets belong to the Wolf Forge Tenant'
 );
 
 -- -----------------------------------------------------------------------------

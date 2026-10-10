@@ -918,7 +918,7 @@ select ok(
   and (select count(*) >= 1 from public.activity_events where entity_type = 'form_submission' and action = 'form.submission_corrected'),
   'meaningful Form lifecycle, assignment, submission, and correction activity is recorded'
 );
-select is((select count(*) from public.services), 59::bigint, 'Forms preserves the current 59-Service catalog baseline');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), 59::bigint, 'Forms preserves the Wolf Forge 59-Service catalog baseline');
 select ok(
   to_regclass('public.invoices') is not null
   and to_regclass('public.subscriptions') is not null

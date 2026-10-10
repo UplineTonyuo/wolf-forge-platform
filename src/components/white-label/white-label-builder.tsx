@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import type { CSSProperties, Dispatch, ReactNode, SetStateAction } from "react";
 import {
   WHITE_LABEL_MODULES,
+  WHITE_LABEL_DRAFT_GUIDANCE,
   contrastWithWhite,
   moduleAvailable,
   normalizeHexColor,
@@ -181,6 +182,7 @@ export function WhiteLabelBuilder({
 
           <fieldset className={styles.group} disabled={readOnly}>
             <legend>Modules</legend>
+            <p className={styles.moduleGuidance}>{WHITE_LABEL_DRAFT_GUIDANCE}</p>
             <div className={styles.moduleList}>
               {WHITE_LABEL_MODULES.map((module) => {
                 const checked = state.modules[module.id] === true;
@@ -189,18 +191,23 @@ export function WhiteLabelBuilder({
                   .map((required) => WHITE_LABEL_MODULES.find((entry) => entry.id === required)?.label)
                   .join(", ");
                 return (
-                  <label key={module.id} className={settings.preferenceRow} htmlFor={`${id}-module-${module.id}`}>
+                  <label key={module.id} className={`${settings.preferenceRow} ${styles.moduleRow}`} htmlFor={`${id}-module-${module.id}`}>
                     <span>
-                      <strong>{module.label}</strong>
-                      <small id={`${id}-module-${module.id}-help`}>
-                        {blocked ? `Hidden until ${requires} is on.` : module.description}
+                      <strong id={`${id}-module-${module.id}-label`}>{module.label}</strong>
+                      <small id={`${id}-module-${module.id}-recommendation`} className={styles.moduleRecommendation} data-recommendation={module.recommendation}>
+                        {module.recommendationLabel}
                       </small>
+                      <small id={`${id}-module-${module.id}-help`}>
+                        {module.description}
+                      </small>
+                      {requires ? <small id={`${id}-module-${module.id}-dependency`}>{blocked ? `Hidden until ${requires} is on.` : `Requires ${requires}.`}</small> : null}
                     </span>
                     <input
                       id={`${id}-module-${module.id}`}
                       type="checkbox"
                       checked={checked}
-                      aria-describedby={`${id}-module-${module.id}-help`}
+                      aria-labelledby={`${id}-module-${module.id}-label`}
+                      aria-describedby={`${id}-module-${module.id}-recommendation ${id}-module-${module.id}-help${requires ? ` ${id}-module-${module.id}-dependency` : ""}`}
                       onChange={(event) =>
                         setState((current) => ({
                           ...current,
