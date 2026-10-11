@@ -292,7 +292,20 @@ export class FormRepository {
   async listAssignments(): Promise<FormAssignmentSummary[]> {
     const result = await this.client.rpc("app_list_assigned_forms");
     if (result.error) throw mapDatabaseError(result.error, "Form assignments");
-    return (result.data ?? []) as unknown as FormAssignmentSummary[];
+    const workEnabled = await this.workEnabled();
+    return ((result.data ?? []) as unknown as FormAssignmentSummary[]).map((assignment) => ({ ...assignment, work_enabled: workEnabled }));
+  }
+
+  async workEnabled(): Promise<boolean> {
+    const result = await this.client.rpc("app_forms_work_enabled");
+    if (result.error) throw mapDatabaseError(result.error, "Forms availability");
+    return result.data === true;
+  }
+
+  async getAssignmentHistory(id: string): Promise<FormAssignmentSummary> {
+    const result = await this.client.rpc("app_get_form_assignment_history", { p_assignment_id: id });
+    if (result.error) throw mapDatabaseError(result.error, "Form assignment history");
+    return result.data as unknown as FormAssignmentSummary;
   }
 
   async listOnboardingCandidates(companyId?: string) {

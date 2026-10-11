@@ -243,10 +243,9 @@ select is((select status from public.form_assignments where id = (select v from 
 set local role anon;
 set local "request.jwt.claim.role" = 'anon';
 select pg_temp.act(null, null);
-select is((public.app_submit_form('72000000-0000-4000-8000-000000002901', (select v from ids where k = 'b-contact-v'), '{}'::jsonb,
-    '[{"field_key":"58000000-0000-4000-8000-000000002901","value":"anon-replay-seed"},{"field_key":"58000000-0000-4000-8000-000000002902","value":"anon-replay-seed message"}]'::jsonb)).id,
-  (select v from ids where k = 'anon-replay-seed'),
-  'replaying a request id accepted while active returns that same row, not a new one');
+select throws_ok($replay$select public.app_submit_form('72000000-0000-4000-8000-000000002901', (select v from ids where k = 'b-contact-v'), '{}'::jsonb,
+    '[{"field_key":"58000000-0000-4000-8000-000000002901","value":"anon-replay-seed"},{"field_key":"58000000-0000-4000-8000-000000002902","value":"anon-replay-seed message"}]'::jsonb)$replay$,
+  '42501',null,'accepted guest replay is refused after owning Tenant suspension');
 reset role;
 select is(pg_temp.fx(), (select v from fx_snap where k = 'before-b'), 'the replay writes nothing');
 

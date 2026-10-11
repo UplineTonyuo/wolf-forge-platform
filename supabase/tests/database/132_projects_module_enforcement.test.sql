@@ -81,7 +81,7 @@ select ok(not private.published_module_set_valid(array[['services'],['projects']
 select ok(not has_table_privilege('authenticated','public.tickets','select'),'direct Ticket API grant stays revoked');
 grant select on public.tickets to authenticated;
 select ok(not private.published_module_set_valid(array_remove(s.enabled,c.module_key)), 'mandatory module: '||c.module_key)
-from private.white_label_modules c cross join module_sets s where c.module_key not in ('projects','tickets','reporting','investment_intent','subscriptions');
+from private.white_label_modules c cross join module_sets s where c.module_key not in ('projects','tickets','reporting','investment_intent','subscriptions','forms','invoices');
 select pg_temp.act(3);
 set local role authenticated;
 select lives_ok($$select public.app_require_module_access('projects')$$, 'no publication preserves owner Projects');
@@ -294,7 +294,7 @@ select is(pg_temp.economic_snapshot(),(select data from economic_before),'accept
 select throws_ok($$select * from public.app_purchase_service_with_balance((select request_id from fixture_ids where kind='purchase'),'e7360000-0000-4000-8000-000000003602')$$,'23505',null,'altered payload cannot replay');
 select throws_ok($$select * from public.app_purchase_service_with_balance((select request_id from fixture_ids where kind='purchase'),'e7360000-0000-4000-8000-000000003601','PROJECTSQA')$$,'23505',null,'altered coupon cannot replay');
 select is((select count(*) from public.invoices where id=(select invoice_id from accepted_purchase)),1::bigint,'financial invoice remains accessible');
-select lives_ok($$select public.app_get_assigned_form_schema((select id from fixture_ids where kind='intake_assignment'))$$,'existing intake assignment remains readable');
+select throws_ok($$select public.app_get_assigned_form_schema((select id from fixture_ids where kind='intake_assignment'))$$,'42501',null,'NULL-assignee Intake remains denied to clients while Projects OFF');
 select lives_ok($$select public.app_get_ticket_detail((select id from fixture_ids where kind='plain_ticket'))$$,'ordinary support detail remains available');
 select lives_ok($$select public.app_reply_to_ticket(gen_random_uuid(),(select id from fixture_ids where kind='plain_ticket'),'Allowed ordinary support')$$,'ordinary support reply preserved');
 reset role;

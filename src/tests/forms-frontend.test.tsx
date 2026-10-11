@@ -21,6 +21,7 @@ vi.mock("../app/actions/forms", () => ({
   createFormAction: vi.fn(), saveFormDraftAction: vi.fn(), publishFormAction: vi.fn(),
   archiveFormAction: vi.fn(), assignFormAction: vi.fn(), submitAssignedFormAction: vi.fn(),
   submitPublicFormAction: vi.fn(), correctFormSubmissionAction: vi.fn(),
+  loadFormCollectionAvailability: vi.fn().mockResolvedValue(true),
 }));
 
 beforeAll(() => {
@@ -28,6 +29,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(actions.loadFormCollectionAvailability).mockResolvedValue(true);
   vi.mocked(actions.createFormAction).mockResolvedValue({ ok: true, data: { id: "form-new" } });
   vi.mocked(actions.saveFormDraftAction).mockResolvedValue({ ok: true, data: { version: 2 } });
   vi.mocked(actions.publishFormAction).mockResolvedValue({ ok: true, data: { version: 2 } });
@@ -266,6 +268,48 @@ describe("renderer and safety", () => {
     fireEvent.click(submit); fireEvent.click(submit);
     await waitFor(() => expect(screen.getByText("Submitted")).toBeInTheDocument());
     expect(actions.submitPublicFormAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes stale collection controls when the current Form becomes unavailable", async () => {
+    vi.mocked(actions.loadFormCollectionAvailability).mockResolvedValue(false);
+    render(<FormRenderer mode="public" schema={schema()} />);
+    await waitFor(() => expect(screen.getByText("Form collection is unavailable")).toBeInTheDocument());
+    expect(actions.loadFormCollectionAvailability).toHaveBeenCalledWith(schema().canonical_key, schema().form_version_id);
+    expect(screen.queryByRole("button", { name: "Submit Form" })).not.toBeInTheDocument();
+    expect(actions.submitPublicFormAction).not.toHaveBeenCalled();
+  });
+
+  it("validates and focuses a required custom choice before sending a response", () => {
+    render(<FormRenderer mode="public" schema={schema([
+      { stable_field_key: fieldB, sort_order: 1, field_type: "data-dropdown", label: "Required priority", placeholder: null, help_html: null, default_value: null, required: true, settings: {}, options: [{ option_id: optionA, value: "normal", label: "Normal", sort_order: 0, metadata: {} }], services: [] },
+    ])} />);
+    fireEvent.change(screen.getByLabelText(/Your name/), { target: { value: "Jane" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    expect(screen.getByText("Choose a value for Required priority.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Required priority:/ })).toHaveFocus();
+    expect(actions.submitPublicFormAction).not.toHaveBeenCalled();
+  });
+
+  it("retains the accepted acknowledgement through a later availability change", async () => {
+    render(<FormRenderer mode="public" schema={schema()} />);
+    fireEvent.change(screen.getByLabelText(/Your name/), { target: { value: "Jane" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await waitFor(() => expect(screen.getByText("Submitted")).toBeInTheDocument());
+    vi.mocked(actions.loadFormCollectionAvailability).mockResolvedValue(false);
+    fireEvent(window, new Event("focus"));
+    await waitFor(() => expect(actions.loadFormCollectionAvailability).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("Submitted")).toBeInTheDocument();
+    expect(actions.submitPublicFormAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits an unanswered optional date without losing the supplied required answer", async () => {
+    render(<FormRenderer mode="public" schema={schema([
+      { stable_field_key: fieldB, sort_order: 1, field_type: "date", label: "Optional date", placeholder: null, help_html: null, default_value: null, required: false, settings: {}, options: [], services: [] },
+    ])} />);
+    fireEvent.change(screen.getByLabelText(/Your name/), { target: { value: "Jane" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await waitFor(() => expect(actions.submitPublicFormAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.submitPublicFormAction).mock.calls[0]?.[0].values).toEqual([{ field_key: fieldA, value: "Jane" }]);
   });
 });
 

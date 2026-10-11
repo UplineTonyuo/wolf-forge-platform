@@ -287,6 +287,7 @@ export type FormPublishedSchema = {
 };
 
 export type FormAssignmentSummary = {
+  work_enabled?: boolean;
   assignment_id: string;
   form_id: string;
   form_type: "intake" | "onboarding";

@@ -7,6 +7,9 @@ import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
 export default async function AssignFormPage({ params }: PageProps<"/forms/[formId]/assign">) {
   const [{ formId }, context] = await Promise.all([params, getInternalContext()]);
+  if (!context.user.forms.assign || !await context.services.forms.workEnabled()) {
+    return <PageFrame title="Form assignment unavailable" description="New assignments require current collection access."><p>Outstanding assignments are retained.</p></PageFrame>;
+  }
   try {
     const [detail, allAssignments] = await Promise.all([context.services.forms.get(formId), context.services.forms.listAssignments()]);
     if (detail.form.form_type !== "intake" && detail.form.form_type !== "onboarding") notFound();

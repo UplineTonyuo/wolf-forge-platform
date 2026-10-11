@@ -4332,6 +4332,8 @@ export type Database = {
         }
       }
       app_invoices_work_enabled: { Args: never; Returns: boolean }
+      app_forms_work_enabled: { Args: never; Returns: boolean }
+      app_get_form_assignment_history: { Args: { p_assignment_id: string }; Returns: Json }
       app_add_organization_member: {
         Args: { p_contact_id: string; p_organization_id: string }
         Returns: {

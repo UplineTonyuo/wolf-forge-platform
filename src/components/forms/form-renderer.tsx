@@ -1,8 +1,10 @@
 "use client";
 
 import { CheckCircle2, FileLock2, LoaderCircle, ShieldAlert } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
-import { submitAssignedFormAction, submitPublicFormAction } from "../../app/actions/forms";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { loadFormCollectionAvailability, submitAssignedFormAction, submitPublicFormAction } from "../../app/actions/forms";
+import { AnimatedSelect } from "../ui/animated-select";
+import { DatePicker } from "../ui/date-picker";
 import type { FormPublishedSchema, SubmitFormInput } from "../../domain/forms/schema";
 import type { Json } from "../../lib/supabase/database.types";
 import { sanitizeFormHtml } from "../../lib/forms/presentation";
@@ -61,15 +63,16 @@ function FieldControl({
     const choices = field.field_type === "dropdown"
       ? field.services.map((service) => ({ id: service.service_id, label: service.name }))
       : field.options.map((option) => ({ id: option.option_id, label: option.label }));
-    return <select {...common} value={stringValue} onChange={(event) => onChange(event.currentTarget.value)}><option value="">Select an option</option>{choices.map((choice) => <option key={choice.id} value={choice.id}>{choice.label}</option>)}</select>;
+    return <AnimatedSelect name={field.stable_field_key} label={field.label} menuLabel={field.label} value={stringValue} onChange={onChange} disabled={disabled} required={field.required} options={[{ value: "", label: "Select an option" }, ...choices.map((choice) => ({ value: choice.id, label: choice.label }))]} />;
   }
+  if (field.field_type === "date") return <fieldset disabled={disabled}><DatePicker name={field.stable_field_key} label={field.label} menuLabel={field.label} value={stringValue} onChange={onChange} required={field.required} /></fieldset>;
   if (["data-option-group", "optgroup"].includes(field.field_type)) {
     const choices = field.field_type === "optgroup"
       ? field.services.map((service) => ({ id: service.service_id, label: service.name }))
       : field.options.map((option) => ({ id: option.option_id, label: option.label }));
     return <div className={styles.optionGroup}>{choices.map((choice) => <label key={choice.id}><input type="radio" name={field.stable_field_key} value={choice.id} checked={stringValue === choice.id} disabled={disabled} onChange={() => onChange(choice.id)} /><span>{choice.label}</span></label>)}</div>;
   }
-  return <input {...common} type={field.field_type === "email" ? "email" : field.field_type === "date" ? "date" : field.field_type === "phone" ? "tel" : "text"} value={stringValue} onChange={(event) => onChange(event.currentTarget.value)} />;
+  return <input {...common} type={field.field_type === "email" ? "email" : field.field_type === "phone" ? "tel" : "text"} value={stringValue} onChange={(event) => onChange(event.currentTarget.value)} />;
 }
 
 export function FormRenderer({
@@ -88,14 +91,46 @@ export function FormRenderer({
   const [result, setResult] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const readonly = mode === "preview" || mode === "readonly" || completed || result != null;
+  const [available, setAvailable] = useState(true);
+  useEffect(() => {
+    if (mode !== "assigned" && mode !== "public") return;
+    let disposed = false;
+    let checking = false;
+    async function check() {
+      if (checking || document.visibilityState === "hidden") return;
+      checking = true;
+      try {
+        const enabled = await loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id);
+        if (!disposed) setAvailable(enabled);
+      } finally { checking = false; }
+    }
+    void check();
+    const timer = window.setInterval(() => { void check(); }, 15000);
+    window.addEventListener("focus", check);
+    return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("focus", check); };
+  }, [mode, schema.canonical_key, schema.form_version_id]);
+  const readonly = mode === "preview" || mode === "readonly" || completed || result != null || !available;
   const fields = useMemo(() => [...schema.fields].sort((a, b) => a.sort_order - b.sort_order), [schema.fields]);
 
   function submit() {
     if (readonly || pending) return;
+    const missingChoice = fields.find((field) => field.required
+      && ["date", "dropdown", "data-dropdown"].includes(field.field_type)
+      && isFormFieldVisible(field.stable_field_key, schema.rules, answers)
+      && !answers[field.stable_field_key]);
+    if (missingChoice) {
+      setError(`Choose a value for ${missingChoice.label}.`);
+      document.getElementsByName(missingChoice.stable_field_key).item(0)
+        ?.parentElement?.querySelector<HTMLButtonElement>("button")?.focus();
+      return;
+    }
     setError(null);
     const values: SubmitFormInput["values"] = fields
       .filter((field) => !structuralTypes.has(field.field_type) && isFormFieldVisible(field.stable_field_key, schema.rules, answers))
+      .filter((field) => {
+        const answer = answers[field.stable_field_key];
+        return field.required || (answer !== undefined && answer !== null && answer !== "");
+      })
       .map((field) => ({ field_key: field.stable_field_key, value: (answers[field.stable_field_key] ?? null) as SubmitFormInput["values"][number]["value"] }));
     const input: SubmitFormInput = {
       request_id: requestId,
@@ -108,7 +143,10 @@ export function FormRenderer({
       const response = mode === "assigned"
         ? await submitAssignedFormAction(input)
         : await submitPublicFormAction(input);
-      if (!response.ok) setError(response.error);
+      if (!response.ok) {
+        setError(response.error);
+        setAvailable(await loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id));
+      }
       else setResult(response.data);
     });
   }
@@ -116,6 +154,8 @@ export function FormRenderer({
   if (result || completed) {
     return <section className={styles.formComplete}><CheckCircle2 aria-hidden="true" /><h2>{completed ? "Completed" : "Submitted"}</h2><p>Your responses are safely recorded against Form Version {schema.version_number}.</p></section>;
   }
+
+  if (!available) return <section className={styles.formComplete} role="status"><FileLock2 aria-hidden="true" /><h2>Form collection is unavailable</h2><p>Outstanding requests and previously submitted responses are retained.</p></section>;
 
   return (
     <form className={styles.renderer} onSubmit={(event) => { event.preventDefault(); submit(); }}>

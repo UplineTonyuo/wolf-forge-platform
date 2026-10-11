@@ -645,9 +645,10 @@ select throws_ok(
     jsonb_build_array(jsonb_build_object('field_key', '54000000-0000-0000-0000-000000000001', 'value', 'Spoofed context')),
     '[]'
   )$$,
-  '42501', 'Form Order context cannot be spoofed',
-  'Intake Order context cannot be spoofed'
+  '42501', 'Form assignment access is denied',
+  'NULL-assignee Intake cannot be submitted even with spoofed Order context'
 );
+set local "request.jwt.claim.sub" = '2b000000-0000-0000-0000-000000000001';
 select lives_ok(
   $$insert into form_test_ids values (
     'intake-submission-a',
@@ -659,7 +660,7 @@ select lives_ok(
       '[]'
     )).id
   )$$,
-  'Client A submits assigned Intake Form in the correct Order scope'
+  'authorized internal owner submits NULL-assignee Intake in the correct Order scope'
 );
 reset role;
 select ok(

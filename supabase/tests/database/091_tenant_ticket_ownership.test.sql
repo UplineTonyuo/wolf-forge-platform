@@ -427,16 +427,16 @@ select is(
 -- The same holds for trusted writes that skip app_submit_form.
 select throws_ok(
   $$select pg_temp.trusted_contact_submission(2, '30000000-0000-0000-0000-000000000911', null)$$,
-  '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_company_id_fkey"',
+  '23514',
+  'Form Company mismatch',
   'a trusted Tenant B Form submission with a Wolf Forge Client cannot create a Ticket'
 );
 
 select throws_ok(
   $$select pg_temp.trusted_contact_submission(2, '30000000-0000-0000-0000-000000000912',
     '20000000-0000-0000-0000-000000000914')$$,
-  '23503',
-  'insert or update on table "tickets" violates foreign key constraint "tickets_client_profile_id_fkey"',
+  '23514',
+  'Form assignee mismatch',
   'a trusted Tenant B Form submission naming a person without a Tenant B membership cannot create a Ticket'
 );
 

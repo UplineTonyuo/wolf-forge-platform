@@ -76,7 +76,6 @@ select is(
     'form_rules.form_rules_internal_select',
     'form_service_links.form_service_links_internal_select',
     'form_submission_values.form_submission_values_internal_select',
-    'form_submissions.form_submissions_authorized_select',
     'form_version_fields.form_version_fields_internal_select',
     'form_versions.form_versions_internal_select',
     'forms.forms_internal_select',

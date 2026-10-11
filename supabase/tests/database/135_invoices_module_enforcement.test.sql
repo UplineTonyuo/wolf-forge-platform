@@ -102,7 +102,7 @@ reset role;
 select ok(private.published_module_set_valid((select disabled from module_sets)),'six optional modules: Invoice OFF supported');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'invoices') from module_sets)),'Subscriptions ON requires Invoices');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'services') from module_sets)),'Services mandatory');
-select ok(not private.published_module_set_valid((select array_remove(enabled,'forms') from module_sets)),'Forms mandatory');
+select ok(private.published_module_set_valid((select array_remove(enabled,'forms') from module_sets)),'Forms independently optional');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'coupons') from module_sets)),'Coupons mandatory');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'tickets') from module_sets)),'Projects still needs Tickets');
 select ok(not private.published_module_set_valid((select enabled||array['invoices'] from module_sets)),'duplicates invalid');

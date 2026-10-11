@@ -54,6 +54,19 @@ beforeAll(() => {
 
 const NOW = new Date("2026-08-18T00:00:00.000Z");
 
+it("preserves paused assignment status while removing actionable reminders", () => {
+  const paused = assignment({ work_enabled: false });
+  const model = composeClientOnboarding([paused]);
+  expect(model.groups[0]!.items[0]!.action).toBe("Paused");
+  expect(model.outstanding).toHaveLength(0);
+  expect(model.progress).toEqual({ completed: 0, total: 1 });
+  expect(paused.status).toBe("assigned");
+  render(<ClientOnboardingView onboarding={model} />);
+  expect(screen.getByText("Collection paused")).toBeInTheDocument();
+  expect(screen.getByText(/Outstanding requests are retained/)).toBeInTheDocument();
+  expect(screen.queryByText(/caught up/)).not.toBeInTheDocument();
+});
+
 function assignment(overrides: Partial<FormAssignmentSummary> = {}): FormAssignmentSummary {
   return {
     assignment_id: "assignment-1",
