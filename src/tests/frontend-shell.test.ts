@@ -5,13 +5,13 @@ describe("Phase 3A navigation registry", () => {
   it("renders the complete Phase 3A.1 sidebar structure", () => {
     expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Marketing", "Setup"]);
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.label))).toEqual([
-      "Dashboard", "Projects", "Tickets", "Reporting", "Clients", "Operations", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "All Conversations", "Settings",
+      "Dashboard", "Projects", "Tickets", "Reporting", "Clients", "Operations", "White Label", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "All Conversations", "Settings",
     ]);
   });
 
   it("routes every sidebar item", () => {
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.route))).toEqual([
-      "/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings",
+      "/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/white-label", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings",
     ]);
   });
 
@@ -38,9 +38,8 @@ describe("Phase 3A navigation registry", () => {
 });
 
 describe("navigation derived from real module access", () => {
-  /** Each destination is gated by the module key of the same id. */
-  it("uses the module gate for every navigation destination", () => {
-    const ids = navigationCategories.flatMap((category) => category.items.map((item) => item.id));
+  it("uses Tenant module gates for CRM destinations and excludes the global admin entry", () => {
+    const ids = navigationCategories.flatMap((category) => category.items.filter((item) => item.id !== "white_label").map((item) => item.id));
     const granted = Object.fromEntries(navigationCategories.flatMap((category) => category.items.map((item) => [item.id, true])));
 
     expect(navigationForModules(granted).flatMap((category) => category.items.map((item) => item.id))).toEqual(ids);

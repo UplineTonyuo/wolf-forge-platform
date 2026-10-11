@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-12",
+  "agent": "Codex",
+  "result": "BLOCKED",
+  "branch": "feat/white-label-builder-studio-20261012",
+  "head": "adad483cb23e3fc8c98c399ee2034f8b45ad1017",
+  "featureCommit": null,
+  "blocker": "Coordinator dedicated Builder V2 QA handoff not found; exact environment identity, ports, credentials provenance and Tenant A/B fixture ownership remain unverified.",
+  "existingLocalBackend": "http://127.0.0.1:54321",
+  "existingLocalBackendUsed": false,
+  "authenticatedRequests": 0,
+  "draftWrites": 0,
+  "checks": {
+    "focusedVitest": {
+      "status": "PASS",
+      "exitCode": 0,
+      "files": 5,
+      "tests": 72,
+      "command": "npx.cmd vitest run src/tests/white-label-builder.test.tsx src/tests/white-label-drafts.test.tsx src/tests/white-label-studio-shell.test.tsx src/tests/frontend-shell.test.ts src/tests/white-label-draft-actions.test.ts"
+    },
+    "typecheck": { "status": "PASS", "exitCode": 0, "command": "npm.cmd run typecheck" },
+    "lint": { "status": "PASS", "exitCode": 0, "command": "npm.cmd run lint" },
+    "secrets": { "status": "PASS", "exitCode": 0, "findings": 0, "trackedFiles": 1662, "command": "npm.cmd run security:secrets", "scope": "Final rerun includes staged acceptance evidence and updated handoff." },
+    "stagedWhitespace": { "status": "PASS", "exitCode": 0 },
+    "build": { "status": "DEFERRED", "reason": "Environment verification prerequisite is incomplete." },
+    "liveAcceptanceGroups1Through10": { "status": "BLOCKED", "reason": "Dedicated QA handoff missing." }
+  },
+  "freshScreenshots": [],
+  "historicalScreenshots": "Existing PNGs in this directory are historical only and were unstaged, preserving files on disk.",
+  "applicationSourceChangesThisAttempt": [],
+  "canonicalMemoryUpdated": false,
+  "parallelBranchesChanged": false,
+  "databasesChanged": false,
+  "nextAction": "Provide coordinator handoff path; verify the dedicated target and fixtures before resuming live acceptance."
+}

@@ -1,0 +1,95 @@
+{
+  "project": "Wolf-Forge-Builder-QA-20261012",
+  "origin": "http://127.0.0.1:3015",
+  "startedAt": "2026-10-11T22:00:03.683Z",
+  "before": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "Builder QA Lost Response",
+      "primary_color": "#173c32",
+      "accent_color": "#d2b777",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 6,
+      "updated_at": "2026-10-11T21:56:40.72988+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 1,
+      "updated_at": "2026-10-11T19:57:12.758468+00:00"
+    }
+  },
+  "attempts": [],
+  "widths": [],
+  "checks": {
+    "activeHoverContrast": {
+      "foreground": "rgb(255, 255, 255)",
+      "background": "rgb(118, 118, 118)",
+      "ratio": 4.542224959605253
+    },
+    "keyboardNavigationAndVisibleFocus": true,
+    "noDraftWrites": true
+  },
+  "pageErrors": [],
+  "consoleErrors": [
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "after": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "Builder QA Lost Response",
+      "primary_color": "#173c32",
+      "accent_color": "#d2b777",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 6,
+      "updated_at": "2026-10-11T21:56:40.72988+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 1,
+      "updated_at": "2026-10-11T19:57:12.758468+00:00"
+    },
+    "runtime": {
+      "publications": 0,
+      "invoices": 0,
+      "walletTransactions": 0
+    }
+  },
+  "result": "PASS"
+}

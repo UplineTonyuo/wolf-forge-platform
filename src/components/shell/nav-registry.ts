@@ -16,7 +16,7 @@ export type NavigationItemId =
   | "settings";
 
 export type NavigationItem = {
-  id: NavigationItemId;
+  id: NavigationItemId | "white_label";
   label: string;
   route: string;
 };
@@ -42,6 +42,7 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
       { id: "todo", label: "Operations", route: "/todo" },
+      { id: "white_label", label: "White Label", route: "/white-label" },
     ],
   },
   {
@@ -73,21 +74,16 @@ export const navigationCategories: NavigationCategory[] = [
   },
 ];
 
-/**
- * Visibility comes from public.permission_modules through
- * app_current_user_modules(), so the rail can never drift from the capability
- * that actually gates a screen. Every navigation id is also a module key.
- *
- * This is presentation only. app_require_module_access() and the RPC boundary
- * stay authoritative, so a typed URL is still rejected for a hidden module.
- */
+// CRM entries follow Tenant module grants; White Label uses a separate server-derived admin flag.
+// Presentation grants nothing: routes, actions and database boundaries remain authoritative.
 export function navigationForModules(
   modules: Record<string, boolean>,
+  showWhiteLabel = false,
 ): NavigationCategory[] {
   return navigationCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => modules[item.id] === true),
+      items: category.items.filter((item) => item.id === "white_label" ? showWhiteLabel : modules[item.id] === true),
     }))
     .filter((category) => category.items.length > 0);
 }

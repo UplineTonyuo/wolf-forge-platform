@@ -11,7 +11,7 @@ vi.mock("../app/actions/white-label", () => ({
   getWhiteLabelDraftAction: getDraftAction,
   saveWhiteLabelDraftAction: saveDraftAction,
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/settings/white-label" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/white-label", useRouter: () => ({ push: vi.fn() }) }));
 
 import { WhiteLabelDraftEditor } from "../components/white-label/white-label-draft-editor";
 import {
@@ -117,6 +117,69 @@ describe("White Label draft rules", () => {
 });
 
 describe("White Label draft editor", () => {
+  it("invalid custom hex blocks Review and Save rather than silently saving the previous color", () => {
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} />);
+    fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#bad!" } });
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Review Draft" })).toBeDisabled();
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Forest Premium" }));
+    expect(saveButton()).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Review Draft" })).toBeEnabled();
+    expect(saveDraftAction).not.toHaveBeenCalled();
+  });
+  it("replays an uncertain save exactly and preserves edits made after its lost response", async () => {
+    saveDraftAction.mockRejectedValueOnce(new TypeError("lost response"));
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "First change" } });
+    await act(async () => fireEvent.click(saveButton()));
+    const original = saveDraftAction.mock.calls[0]?.[0];
+    expect(original).toBeDefined();
+    fireEvent.change(nameInput(), { target: { value: "Newer change" } });
+    saveDraftAction.mockResolvedValueOnce({ ok: true, data: { revision: 3, updatedAt: "2026-10-12T00:00:00.000Z" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Try again" })));
+    expect(saveDraftAction.mock.calls[1]?.[0]).toEqual(original);
+    expect(nameInput()).toHaveValue("Newer change");
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+    saveDraftAction.mockResolvedValueOnce({ ok: true, data: { revision: 4, updatedAt: "2026-10-12T01:00:00.000Z" } });
+    await act(async () => fireEvent.click(saveButton()));
+    expect(saveDraftAction).toHaveBeenLastCalledWith(expect.objectContaining({ expectedRevision: 3, displayName: "Newer change" }));
+  });
+  it("does not send concurrent Save clicks before React commits its busy state", async () => {
+    const save = deferred<unknown>();
+    saveDraftAction.mockReturnValue(save.promise);
+    render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} />);
+    fireEvent.change(nameInput(), { target: { value: "Changed" } });
+    const button = saveButton();
+    act(() => { fireEvent.click(button); fireEvent.click(button); });
+    expect(saveDraftAction).toHaveBeenCalledOnce();
+    await act(async () => save.resolve({ ok: true, data: { revision: 3, updatedAt: "2026-10-12T00:00:00.000Z" } }));
+  });
+  it("closes the mobile drawer before departure confirmation and returns focus to its trigger", () => {
+    render(<><button aria-controls="mobile-navigation">Open navigation</button><dialog open><a href="/dashboard">Mobile departure</a></dialog><WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} /></>);
+    const drawer = screen.getByRole("dialog") as HTMLDialogElement;
+    drawer.close = vi.fn(() => { drawer.open = false; });
+    fireEvent.change(nameInput(), { target: { value: "Unsaved" } });
+    fireEvent.click(screen.getByRole("link", { name: "Mobile departure" }));
+    expect(drawer.close).toHaveBeenCalledOnce();
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Open navigation" })).toHaveFocus();
+  });
+  it("warns before an app-link departure and Escape restores the link's focus", () => {
+    render(<><a href="/dashboard">Dashboard departure</a><WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} /></>);
+    fireEvent.change(nameInput(), { target: { value: "Unsaved" } });
+    const link = screen.getByRole("link", { name: "Dashboard departure" });
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    act(() => { link.dispatchEvent(click); });
+    expect(click.defaultPrevented).toBe(true);
+    const keep = screen.getByRole("button", { name: "Keep editing" });
+    expect(keep).toHaveFocus();
+    fireEvent.keyDown(keep, { key: "Escape" });
+    expect(link).toHaveFocus();
+    expect(nameInput()).toHaveValue("Unsaved");
+    expect(screen.queryByRole("button", { name: "Discard and leave" })).toBeNull();
+  });
   it("loads saved selections exactly and saves explicit non-recommended choices", async () => {
     const saved = draftFor(B, "Existing saved configuration", 2);
     saved.state.modules = modulesFromKeys(["services", "subscriptions", "coupons", "investment_intent"]);
@@ -157,7 +220,7 @@ describe("White Label draft editor", () => {
     });
     expect(saveButton()).toHaveTextContent("Saving");
     expect(screen.queryByText(/Draft saved/)).toBeNull();
-    expect(screen.getByRole("group", { name: "Identity" })).toBeDisabled();
+    expect(screen.getByRole("group", { name: "Workspace identity" })).toBeDisabled();
 
     await act(async () => save.resolve({ ok: true, data: { revision: 3, updatedAt: "2026-10-09T01:00:00.000Z" } }));
     expect(screen.getByText(/Draft saved · revision 3/)).toBeInTheDocument();
@@ -251,7 +314,7 @@ describe("White Label draft editor", () => {
 
   it("a suspended Tenant's draft is read-only", () => {
     render(<WhiteLabelDraftEditor tenants={[SUSPENDED]} initialDraft={draftFor(SUSPENDED, "Tenant S", 0)} />);
-    expect(screen.getByRole("group", { name: "Identity" })).toBeDisabled();
+    expect(screen.getByRole("group", { name: "Workspace identity" })).toBeDisabled();
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText(/suspended, so its draft is read-only/)).toBeInTheDocument();
   });
@@ -272,8 +335,8 @@ describe("White Label draft review", () => {
   it("compares unsaved identity, colors and modules with the loaded draft without server calls", () => {
     render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded workspace", 2)} />);
     fireEvent.change(nameInput(), { target: { value: "Proposed workspace" } });
-    fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#123456" } });
-    fireEvent.change(screen.getByLabelText(/Accent color/), { target: { value: "#654321" } });
+    fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#123456" } });
+    fireEvent.change(screen.getByLabelText("Accent color"), { target: { value: "#654321" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /^Reporting/ }));
     openReview();
     const review = screen.getByRole("region", { name: "White Label Draft Review" });
@@ -308,7 +371,7 @@ describe("White Label draft review", () => {
     render(<WhiteLabelDraftEditor tenants={[B]} initialDraft={draftFor(B, "Loaded", 2)} />);
     for (const label of ["Subscriptions", "Coupons", "Investment Intent"]) fireEvent.click(screen.getByRole("checkbox", { name: label }));
     fireEvent.click(screen.getByRole("checkbox", { name: /^Services/ }));
-    fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#ffffff" } });
+    fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#ffffff" } });
     openReview();
     const review = screen.getByRole("region", { name: "White Label Draft Review" });
     expect(within(review).getByText("Projects needs Services. Turn Services on, or turn Projects off.")).toBeInTheDocument();
@@ -317,7 +380,7 @@ describe("White Label draft review", () => {
     expect(within(review).getByText(/Sidebar text may be hard to read/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to editing" }));
     expect(screen.getByRole("checkbox", { name: /^Services/ })).not.toBeChecked();
-    expect(screen.getByLabelText(/Primary color/)).toHaveValue("#ffffff");
+    expect(screen.getByLabelText("Primary color")).toHaveValue("#ffffff");
   });
 
   it("labels loaded defaults and an unchanged draft without implying publication", () => {

@@ -34,8 +34,10 @@ vi.mock("../lib/supabase/next-server", () => ({
 }));
 vi.mock("../app/actions/white-label", () => ({ getWhiteLabelDraftAction: vi.fn(), saveWhiteLabelDraftAction: vi.fn() }));
 
-import SettingsLayout from "../app/(internal)/settings/layout";
-import WhiteLabelSettingsPage from "../app/(internal)/settings/white-label/page";
+import WhiteLabelSettingsPage from "../app/(internal)/white-label/page";
+import LegacyWhiteLabelPage from "../app/(internal)/settings/white-label/page";
+import { redirect } from "next/navigation";
+import { navigationForModules, activeNavigationRoute } from "../components/shell/nav-registry";
 import { SettingsNavigation } from "../components/settings/settings-navigation";
 import { WhiteLabelBuilder } from "../components/white-label/white-label-builder";
 import {
@@ -163,13 +165,13 @@ describe("White Label builder", () => {
   it("appearance changes update the preview colors and warn on low contrast", () => {
     render(<Builder />);
     const frame = screen.getByTestId("preview-frame");
-    fireEvent.change(screen.getByLabelText(/Accent color/), { target: { value: "#22aa55" } });
+    fireEvent.change(screen.getByLabelText("Accent color"), { target: { value: "#22aa55" } });
     expect(frame.style.getPropertyValue("--preview-accent")).toBe("#22aa55");
     expect(screen.getByRole("status")).toBeEmptyDOMElement();
-    expect(frame.style.getPropertyValue("--preview-on-accent")).toBe("var(--wf-navy)");
-    fireEvent.change(screen.getByLabelText(/Accent color/), { target: { value: "#7a1030" } });
-    expect(frame.style.getPropertyValue("--preview-on-accent")).toBe("#fff");
-    fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#f0f0f0" } });
+    expect(frame.style.getPropertyValue("--preview-on-accent")).toBe("#000d51");
+    fireEvent.change(screen.getByLabelText("Accent color"), { target: { value: "#7a1030" } });
+    expect(frame.style.getPropertyValue("--preview-on-accent")).toBe("#ffffff");
+    fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#f0f0f0" } });
     expect(frame.style.getPropertyValue("--preview-primary")).toBe("#f0f0f0");
     expect(screen.getByRole("status")).toHaveTextContent(/hard to read/);
   });
@@ -184,7 +186,7 @@ describe("White Label builder", () => {
   it("switching device keeps the same configuration", () => {
     render(<Builder />);
     fireEvent.change(screen.getByLabelText("Workspace display name"), { target: { value: "Acme Labs" } });
-    fireEvent.change(screen.getByLabelText(/Primary color/), { target: { value: "#123456" } });
+    fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#123456" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /Invoices/ }));
 
     const mobile = screen.getByRole("button", { name: "Mobile" });
@@ -204,28 +206,29 @@ describe("White Label builder", () => {
   it("is labelled and the builder itself offers no save or publish action", () => {
     render(<Builder />);
     const form = screen.getByRole("form", { name: "White Label preview settings" });
-    for (const legend of ["Identity", "Appearance", "Modules"]) {
+    for (const legend of [/Workspace identity/, /Brand colors/, /Modules/]) {
       expect(within(form).getByRole("group", { name: legend })).toBeInTheDocument();
     }
     expect(screen.getByRole("group", { name: "Preview device" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Preview navigation" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Preview navigation" })).toBeNull();
-    const buttons = screen.getAllByRole("button").map((button) => button.textContent);
-    expect(buttons).toEqual(["Desktop", "Mobile"]);
+    expect(screen.getByRole("button", { name: "Desktop" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mobile" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Save Draft|Publish|Activate/ })).toBeNull();
   });
 
   it("read-only disables every control but keeps the preview", () => {
     render(<Builder readOnly />);
-    for (const legend of ["Identity", "Appearance", "Modules"]) {
+    for (const legend of [/Workspace identity/, /Brand colors/, /Modules/]) {
       expect(screen.getByRole("group", { name: legend })).toBeDisabled();
     }
     expect(screen.getByRole("button", { name: "Mobile" })).toBeEnabled();
   });
 
   it("builder source performs no network or database call", () => {
-    for (const file of ["../components/white-label/white-label-builder.tsx", "../domain/white-label/preview.ts"]) {
+    for (const file of ["../components/white-label/white-label-builder.tsx", "../components/white-label/white-label-preview.tsx", "../components/white-label/white-label-color-controls.tsx", "../domain/white-label/preview.ts"]) {
       const source = readFileSync(resolve(import.meta.dirname, file), "utf8");
-      expect(source).not.toMatch(/fetch\(|supabase|\.rpc\(|localStorage|"use server"/i);
+      expect(source).not.toMatch(/fetch\(|supabase|\.rpc\(|localStorage|"use server"|useRouter|next\/link|window\.location/i);
     }
   });
 });
@@ -287,46 +290,45 @@ describe("White Label route and Settings entry", () => {
     expect(listTenants).not.toHaveBeenCalled();
   });
 
-  it("inside the gate the page still requires Settings access", async () => {
+  it("the studio retains the original Settings boundary alongside Platform Admin authority", async () => {
     gate.mockResolvedValue(true);
+    quickAccess.mockResolvedValue(false);
+    isPlatformAdmin.mockResolvedValue(true);
+    listTenants.mockResolvedValue([]);
+    render(await WhiteLabelSettingsPage(noSearch));
+    expect(requireModuleAccess).toHaveBeenCalledWith("settings");
+    expect(screen.getByRole("heading", { name: "White Label Studio" })).toBeInTheDocument();
     requireModuleAccess.mockRejectedValueOnce(new Error("PERMISSION_DENIED"));
     await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("PERMISSION_DENIED");
-    expect(requireModuleAccess).toHaveBeenCalledWith("settings");
   });
 
-  it("the Settings entry shows only when the layout enables it", () => {
-    const { unmount } = render(<SettingsNavigation />);
+  it("Settings no longer offers White Label", () => {
+    render(<SettingsNavigation />);
     expect(screen.queryByRole("link", { name: "White Label" })).toBeNull();
-    unmount();
-    render(<SettingsNavigation showWhiteLabel />);
-    const link = screen.getByRole("link", { name: "White Label" });
-    expect(link).toHaveAttribute("href", "/settings/white-label");
-    expect(link).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "General" })).toHaveAttribute("href", "/settings/general");
   });
 
-  async function layoutShowsWhiteLabel(): Promise<boolean> {
-    // SettingsLayout -> div -> PageFrame -> SettingsShell
-    const tree = (await SettingsLayout({ children: null })) as React.ReactElement<{ children: React.ReactElement<{ children: React.ReactElement<{ showWhiteLabel: boolean }> }> }>;
-    return tree.props.children.props.children.props.showWhiteLabel;
-  }
-
-  it("the Settings layout shows the entry only for the local QA gate AND a Platform Admin", async () => {
+  it("legacy bookmarks redirect only after authorization and preserve a listed Tenant", async () => {
     requireModuleAccess.mockResolvedValue(true);
-
-    gate.mockResolvedValue(false);
-    isPlatformAdmin.mockResolvedValue(true);
-    expect(await layoutShowsWhiteLabel()).toBe(false);
-    expect(isPlatformAdmin).not.toHaveBeenCalled();
-
     gate.mockResolvedValue(true);
-    isPlatformAdmin.mockResolvedValue(false);
-    expect(await layoutShowsWhiteLabel()).toBe(false);
-
-    isPlatformAdmin.mockRejectedValue(new Error("DATABASE_ERROR"));
-    expect(await layoutShowsWhiteLabel()).toBe(false);
-
+    quickAccess.mockResolvedValue(false);
     isPlatformAdmin.mockResolvedValue(true);
-    expect(await layoutShowsWhiteLabel()).toBe(true);
+    listTenants.mockResolvedValue([TENANT_B]);
+    await LegacyWhiteLabelPage({ searchParams: Promise.resolve({ tenant: TENANT_B.id }) });
+    expect(redirect).toHaveBeenLastCalledWith(`/white-label?tenant=${TENANT_B.id}`);
+    await LegacyWhiteLabelPage({ searchParams: Promise.resolve({ tenant: "https://evil.test" }) });
+    expect(redirect).toHaveBeenLastCalledWith("/white-label");
+    vi.mocked(redirect).mockClear();
+    isPlatformAdmin.mockResolvedValue(false);
+    await expect(LegacyWhiteLabelPage(noSearch)).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("Activity visibility cannot be forged with a Tenant module key", () => {
+    expect(navigationForModules({ white_label: true }).flatMap((group) => group.items)).toEqual([]);
+    const categories = navigationForModules({}, true);
+    expect(categories).toEqual([{ id: "activity", label: "Activity", items: [{ id: "white_label", label: "White Label", route: "/white-label" }] }]);
+    expect(activeNavigationRoute("/white-label")).toBe("/white-label");
+    expect(previewNavigationModules({})).not.toHaveProperty("white_label");
   });
 });

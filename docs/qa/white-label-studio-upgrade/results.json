@@ -1,0 +1,184 @@
+{
+  "project": "Wolf-Forge-Builder-QA-20261012",
+  "origin": "http://127.0.0.1:3015",
+  "startedAt": "2026-10-11T21:55:33.132Z",
+  "before": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft A",
+      "primary_color": "#000000",
+      "accent_color": "#ffffff",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 3,
+      "updated_at": "2026-10-11T21:02:25.343557+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 1,
+      "updated_at": "2026-10-11T19:57:12.758468+00:00"
+    }
+  },
+  "attempts": [
+    {
+      "operation": "UI draft save",
+      "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "expectedRevision": 3
+    },
+    {
+      "operation": "conflict winner UI save",
+      "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "expectedRevision": 4
+    },
+    {
+      "operation": "stale UI save must refuse",
+      "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "expectedRevision": 4
+    },
+    {
+      "operation": "same-admin exact accepted replay",
+      "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "expectedRevision": 4
+    },
+    {
+      "operation": "UI save with response loss after server acceptance",
+      "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "expectedRevision": 5
+    }
+  ],
+  "widths": [
+    {
+      "width": 320,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 360,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 390,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 430,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 768,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 1280,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    },
+    {
+      "width": 1440,
+      "noOverflow": true,
+      "desktopInteraction": true,
+      "mobileInteraction": true,
+      "reviewFocus": true,
+      "dropdownEscape": true
+    }
+  ],
+  "checks": {
+    "colorTemplates": true,
+    "customHexAndPicker": true,
+    "dependencyFallback": true,
+    "saveReloadRefreshReview": true,
+    "staleConflict": true,
+    "exactReplay": true,
+    "lostResponseReplayKeepsNewerEdits": true,
+    "tenantIsolationAndDraftOnlyRuntime": true,
+    "staffDenied": true,
+    "reducedMotion": true
+  },
+  "pageErrors": [],
+  "consoleErrors": [
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: net::ERR_FAILED",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy."
+  ],
+  "after": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "Builder QA Lost Response",
+      "primary_color": "#173c32",
+      "accent_color": "#d2b777",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 6,
+      "updated_at": "2026-10-11T21:56:40.72988+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 1,
+      "updated_at": "2026-10-11T19:57:12.758468+00:00"
+    },
+    "runtime": {
+      "publications": 0,
+      "invoices": 0,
+      "walletTransactions": 0
+    }
+  },
+  "result": "PASS"
+}

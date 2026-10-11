@@ -4,13 +4,16 @@ import { useEffect, useRef } from "react";
 import { draftProblem, type WhiteLabelDraft } from "../../domain/white-label/draft";
 import { WHITE_LABEL_DRAFT_GUIDANCE, WHITE_LABEL_MODULES, contrastWithWhite, moduleAvailable, type WhiteLabelPreviewState } from "../../domain/white-label/preview";
 import styles from "./white-label-builder.module.css";
+import { colorContrast } from "../../domain/white-label/colors";
 
-export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack }: {
+export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack, onSave, canSave }: {
   draft: WhiteLabelDraft;
   state: WhiteLabelPreviewState;
   hasChanges: boolean;
   busy: boolean;
   onBack: () => void;
+  onSave: () => void;
+  canSave: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
@@ -76,10 +79,14 @@ export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack }
       <section className={styles.reviewChecks} aria-label="Draft checks">
         <h3>Draft checks</h3>
         {problem ? <p className={styles.warning}>{problem}</p> : <p className={styles.hint}>No draft validation issues found.</p>}
-        {lowContrast ? <p className={styles.warning}>Sidebar text may be hard to read on this primary color. Choose a darker color.</p> : null}
+        {lowContrast ? <p className={styles.warning}>Sidebar text may be hard to read in white. The preview adapts its text; a darker primary color keeps the familiar brand treatment.</p> : null}
+        {colorContrast(state.primaryColor, state.accentColor) < 3 ? <p className={styles.warning}>Primary and accent colors are very similar. Choose more contrast so active navigation is easy to distinguish.</p> : null}
         <p className={styles.hint}>These are draft choices, not published CRM behavior. Reviewing applies nothing and does not verify runtime module access.</p>
-        <p className={styles.hint}>{WHITE_LABEL_DRAFT_GUIDANCE}</p>
+        <details className={styles.disclosure}><summary>Publication rules and financial safeguards</summary><ul className={styles.safeguards}>{WHITE_LABEL_DRAFT_GUIDANCE.split(". ").map((rule) => <li key={rule}>{rule.endsWith(".") ? rule : `${rule}.`}</li>)}</ul></details>
       </section>
+      <div className={styles.reviewActions}>
+        <button type="button" className="button-primary" disabled={!canSave} onClick={onSave}>Save reviewed draft</button>
+      </div>
     </section>
   );
 }

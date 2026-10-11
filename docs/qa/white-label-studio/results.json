@@ -1,0 +1,61 @@
+{
+  "results": [
+    {
+      "width": 320,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 360,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 390,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 430,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 768,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 1280,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    },
+    {
+      "width": 1440,
+      "overflow": false,
+      "dropdownEscape": true,
+      "reviewFocusReturn": true
+    }
+  ],
+  "errors": [
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy."
+  ],
+  "failedResponses": [],
+  "oldRouteRedirect": true,
+  "brandingParity": true,
+  "reducedMotion": true,
+  "allNineChoices": true,
+  "mobileDepartureWarning": true,
+  "tenantSwitchWarning": true,
+  "keyboardFocus": true,
+  "draftWrites": false
+}

@@ -1,5 +1,6 @@
 ﻿import { InternalShell } from "../../components/shell/internal-shell";
 import { getInternalContext } from "../../lib/supabase/next-server";
+import { isLocalQuickAccessSession, localUiQaBypassEnabled } from "../../lib/qa/local-ui-bypass";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,15 @@ export default async function InternalLayout({ children }: { children: React.Rea
    * both. A failed read falls back to sound on, matching the column default.
    */
   const profile = await context.services.profile.getMine().catch(() => null);
+  const showWhiteLabel = (await localUiQaBypassEnabled()) &&
+    !(await isLocalQuickAccessSession(context.actor)) &&
+    context.user.modules.settings === true &&
+    (await context.services.permissions.isPlatformAdmin().catch(() => false));
 
   return (
     <InternalShell
       user={context.user}
+      showWhiteLabel={showWhiteLabel}
       notificationSoundEnabled={profile?.notificationSoundEnabled ?? true}
     >
       {children}
