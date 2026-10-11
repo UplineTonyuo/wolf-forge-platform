@@ -1,3 +1,5 @@
+import { FinancialVisibilityBoundary } from "../../../components/invoices/financial-visibility-boundary";
+import { invoiceVisibility, financialAuthority, financialIdentity } from "../../../domain/invoices/visibility";
 import { Eye, Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -36,7 +38,8 @@ export default async function InvoicesPage({
   const [{ state, q }, context] = await Promise.all([searchParams, getInternalContext()]);
   const activeFilter = filters.some(([value]) => value === state) ? state ?? "all" : "all";
   const search = q?.trim() ?? "";
-  const invoices = await context.services.invoices.list();
+  const [invoices, workEnabled] = await Promise.all([context.services.invoices.list(), context.services.invoices.workEnabled()]);
+  const signature = invoiceVisibility(invoices, workEnabled, context.user.invoices, financialIdentity(context.user));
 
   const byState = activeFilter === "all"
     ? invoices
@@ -55,14 +58,14 @@ export default async function InvoicesPage({
 
   const activeLabel = filters.find(([value]) => value === activeFilter)?.[1] ?? "matching";
 
-  const addInvoice = context.user.invoices.manage ? (
+  const addInvoice = workEnabled && context.user.invoices.manage ? (
     <Link className={`button-primary ${adminList.actionButton}`} href="/invoices/new">
       <Plus aria-hidden="true" />Add Invoice
     </Link>
   ) : undefined;
 
   return (
-    <PageFrame title="Invoices">
+    <FinancialVisibilityBoundary key={financialAuthority("internal", signature)} signature={signature} scope="internal"><PageFrame title="Invoices" description={workEnabled ? undefined : "Invoices is disabled. Authorized issued history remains available as read-only."}>
       <div className={styles.pageEnter}>
         <ListToolbar
           label="Invoice status filters"
@@ -80,7 +83,7 @@ export default async function InvoicesPage({
               search
                 ? `Nothing matches “${search}” by client name or invoice number.`
                 : activeFilter === "all"
-                  ? "Create invoices for client Services and custom work."
+                  ? workEnabled ? "Create invoices for client Services and custom work." : "No authorized issued Invoice history is available."
                   : "Invoices appear here as they reach this state."
             }
             action={activeFilter === "all" && !search ? addInvoice : undefined}
@@ -91,7 +94,7 @@ export default async function InvoicesPage({
               <table className={`${styles.invoiceTable} ${adminList.table}`}>
                 <thead><tr><th>Client</th><th>Total</th><th>Status</th><th>Created</th><th>Paid</th><th>Number</th><th>Actions</th></tr></thead>
                 <tbody>{visible.map((summary) => {
-                  const canEdit = context.user.invoices.manage && ["draft", "unpaid", "payment_pending"].includes(summary.invoice.status);
+                  const canEdit = workEnabled && context.user.invoices.manage && ["draft", "unpaid", "payment_pending"].includes(summary.invoice.status);
                   return <tr key={summary.invoice.id}><td><strong>{summary.clientName}</strong>{summary.invoice.billing_reason ? <small>{summary.invoice.billing_reason.replaceAll("_", " ")}</small> : null}</td><td>{formatCurrencyCents(summary.invoice.total_cents, summary.invoice.currency)}</td><td><InvoiceStatusBadge state={summary.financials.presentation_state} /></td><td>{formatDate(summary.invoice.created_at)}</td><td>{summary.paidAt ? formatDate(summary.paidAt) : "—"}</td><td><span className={styles.invoiceNumber}>{numberLabel(summary.invoice.invoice_number)}</span></td><td><div className={styles.rowActions}><Link href={`/invoices/${summary.invoice.id}`}><Eye aria-hidden="true" />View</Link>{canEdit ? <Link href={`/invoices/${summary.invoice.id}/edit`}><Pencil aria-hidden="true" />Edit</Link> : null}</div></td></tr>;
                 })}</tbody>
               </table>
@@ -100,6 +103,6 @@ export default async function InvoicesPage({
           </>
         )}
       </div>
-    </PageFrame>
+    </PageFrame></FinancialVisibilityBoundary>
   );
 }

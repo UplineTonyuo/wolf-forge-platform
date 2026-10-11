@@ -47,6 +47,10 @@ export class CompanyWalletService {
     );
   }
 
+  listMyHistory() {
+    return this.dependencies.repository.listMyHistory();
+  }
+
   async adjust(
     input: unknown,
     actor: UserMutationActor,

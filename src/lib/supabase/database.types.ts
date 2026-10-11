@@ -4267,6 +4267,71 @@ export type Database = {
       }
     }
     Functions: {
+      app_list_my_wallet_history: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount_cents: number
+          balance_after_cents: number
+          created_at: string
+          currency: string
+          id: string
+          reason: string
+          source: string
+        }[]
+      }
+      app_find_invoice_item_by_order_id: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          fulfillment_status: string
+          id: string
+          invoice_id: string
+          is_taxable: boolean
+          line_subtotal_cents: number | null
+          name: string
+          order_id: string | null
+          position: number
+          quantity: number
+          service_id: string | null
+          unit_discount_cents: number
+          unit_price_cents: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoice_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_list_invoice_items: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          fulfillment_status: string
+          id: string
+          invoice_id: string
+          is_taxable: boolean
+          line_subtotal_cents: number | null
+          name: string
+          order_id: string | null
+          position: number
+          quantity: number
+          service_id: string | null
+          unit_discount_cents: number
+          unit_price_cents: number
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoice_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      app_invoices_work_enabled: { Args: never; Returns: boolean }
       app_add_organization_member: {
         Args: { p_contact_id: string; p_organization_id: string }
         Returns: {

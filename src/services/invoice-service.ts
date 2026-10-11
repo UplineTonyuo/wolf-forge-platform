@@ -13,6 +13,7 @@ export class InvoiceService {
   constructor(private readonly dependencies: ServiceDependencies<InvoiceRepository>) {}
 
   list() { return this.dependencies.repository.list(); }
+  workEnabled() { return this.dependencies.repository.workEnabled(); }
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   findItemByOrderId(orderId: unknown) {
     return this.dependencies.repository.findItemByOrderId(parseInput(uuidSchema, orderId));

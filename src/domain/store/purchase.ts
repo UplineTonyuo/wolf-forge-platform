@@ -21,6 +21,7 @@ import type { StoreServiceView } from "../services/store-projections";
  */
 
 export type StorePurchaseBlockedReason =
+  | "invoices_disabled"
   | "projects_disabled"
   | "recurring"
   | "unpriced"
@@ -56,6 +57,7 @@ export function resolveStorePurchaseOffer({
   balanceCents,
   walletCurrency,
   projectsEnabled = true,
+  invoicesEnabled = true,
 }: {
   service: Pick<StoreServiceView, "amount" | "currency" | "recurring">;
   /**
@@ -66,9 +68,14 @@ export function resolveStorePurchaseOffer({
   balanceCents: number | null;
   walletCurrency: string | null;
   projectsEnabled?: boolean;
+  invoicesEnabled?: boolean;
 }): StorePurchaseOffer {
   const priceCents = toPriceCents(service.amount);
   const currency = service.currency;
+
+  if (!invoicesEnabled) {
+    return { purchasable: false, reason: "invoices_disabled", priceCents, currency, balanceCents, shortfallCents: null };
+  }
 
   if (!projectsEnabled) {
     return { purchasable: false, reason: "projects_disabled", priceCents, currency, balanceCents, shortfallCents: null };
@@ -134,6 +141,8 @@ export function resolveStorePurchaseOffer({
 /** The one line the Store shows when it cannot offer the button. */
 export function storePurchaseBlockedLabel(reason: StorePurchaseBlockedReason): string {
   switch (reason) {
+    case "invoices_disabled":
+      return "New service purchases are unavailable while Invoices is disabled. Your wallet balance remains available.";
     case "projects_disabled":
       return "New service purchases are unavailable while Projects is disabled.";
     case "recurring":

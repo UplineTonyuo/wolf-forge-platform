@@ -90,7 +90,7 @@ function railsFor({
   });
 }
 
-function renderPage(options: Parameters<typeof railsFor>[0] = {}) {
+function renderPage(options: Parameters<typeof railsFor>[0] = {}, workEnabled = true) {
   const wallet = resolveWalletFunding({
     membershipStatus: options.membershipStatus ?? "active",
     balanceCents: options.balanceCents ?? 50_000,
@@ -102,6 +102,7 @@ function renderPage(options: Parameters<typeof railsFor>[0] = {}) {
       rails={railsFor(options)}
       wallet={wallet}
       holderName="Jane Client"
+      workEnabled={workEnabled}
     />,
   );
 }
@@ -286,7 +287,23 @@ describe("client payment method page", () => {
   it("states the membership gate instead of silently offering a rail that would fail", () => {
     renderPage({ membershipStatus: "inactive" });
 
-    expect(screen.getByText(/WF Card membership unlocks the wallet/u)).toBeInTheDocument();
+    expect(screen.getByText(/WF Card membership unlocks wallet payments/u)).toBeInTheDocument();
+  });
+
+  it("retains the wallet balance while OFF and explains that new Invoice work is unavailable", () => {
+    renderPage({ membershipStatus: "inactive" }, false);
+    expect(screen.getByText(/Invoices is disabled\. Your wallet balance and history remain available/u)).toBeInTheDocument();
+    expect(screen.getByText(/Your recorded wallet balance remains yours/u)).toBeInTheDocument();
+    expect(screen.queryByText(/activate it from an open invoice/u)).not.toBeInTheDocument();
+    expect(screen.getAllByText("$500.00").length).toBeGreaterThan(0);
+  });
+
+  it("does not offer instant settlement or method selection to an active member while OFF", () => {
+    renderPage({ membershipStatus: "active" }, false);
+    expect(screen.getByText("recorded balance")).toBeInTheDocument();
+    expect(screen.queryByText(/Settle any invoice instantly/u)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Change payment method/u })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to invoices" })).toHaveAttribute("href", "/account/invoices");
   });
 
   it("lists PayPal and Bank Transfer with their real, non-working states", () => {

@@ -17,8 +17,8 @@ import { getClientContext, getInternalContext } from "../../lib/supabase/next-se
 export type StorePurchaseActionResult =
   | {
       ok: true;
-      orderId: string;
-      orderNumber: number;
+      orderId: string | null;
+      orderNumber: number | null;
       amountCents: number;
       currency: string;
       walletBalanceCents: number;
@@ -35,6 +35,7 @@ export type StorePurchaseActionResult =
         | "NOT_PRICED"
         | "RATE_LIMITED"
         | "PROJECTS_DISABLED"
+        | "INVOICES_DISABLED"
         | "PURCHASE_FAILED";
       error: string;
     };
@@ -99,7 +100,9 @@ export async function purchaseServiceWithBalanceAction(input: {
      * because the only authoritative copy of those lives inside the database
      * transaction that just rolled back.
      */
-    const denial = raw.includes("WF_PROJECTS_DISABLED")
+    const denial = raw.includes("WF_INVOICES_DISABLED")
+      ? ({ code: "INVOICES_DISABLED", reason: "invoices_disabled", error: "New service purchases are unavailable while Invoices is disabled. Your wallet balance remains available." } as const)
+      : raw.includes("WF_PROJECTS_DISABLED")
       ? ({ code: "PROJECTS_DISABLED", reason: "projects_disabled", error: "New service purchases are unavailable while Projects is disabled." } as const)
       : raw.includes("WF_CARD_INSUFFICIENT_BALANCE")
       ? ({ code: "INSUFFICIENT_BALANCE", reason: "insufficient_balance", error: "Your Wolf Forge Balance no longer covers this investment." } as const)

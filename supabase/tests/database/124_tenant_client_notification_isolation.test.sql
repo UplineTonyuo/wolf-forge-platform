@@ -403,8 +403,8 @@ reset role;
 select is(pg_temp.snap('20000000-0000-4000-8000-000000002601', 'f0f0f0f0-0000-4000-8000-0000000124b1'),
   (select v from fixture_snaps where k = 'b-2601'),
   'Wolf Forge mark-one and mark-all left every Tenant B row byte-identical');
-select ok((select read_at is not null from public.notifications where id = 'e6b00000-0000-4000-8000-000000002602'),
-  'KI-136: the NULL orphan client row was listed and marked from Wolf Forge');
+select ok((select read_at is null from public.notifications where id = 'e6b00000-0000-4000-8000-000000002602'),
+  'unresolved financial orphan stays unmarked from Wolf Forge');
 
 set local role authenticated;
 select pg_temp.act('2601', 'b');
@@ -415,8 +415,8 @@ select ok(position('CNOTIF B Project' in pg_temp.feed()) > 0
 select ok(position('CNOTIF WF' in pg_temp.feed()) = 0
   and position('e6900000-0000-4000-8000-000000002601' in pg_temp.feed()) = 0,
   'the dual client lists no Wolf Forge client notification in Tenant B');
-select ok(position('CLEGACY ORPHAN' in pg_temp.feed()) > 0,
-  'KI-136: the NULL orphan client row is also listed in Tenant B (documented residual)');
+select ok(position('CLEGACY ORPHAN' in pg_temp.feed()) = 0,
+  'unresolved financial orphan stays hidden in Tenant B');
 select ok(pg_temp.unread() > 0, 'the Tenant B badge is untouched by the Wolf Forge mark-all');
 select is(public.app_mark_notification_read((select v::uuid from fixture_snaps where k = 'wf-row')), false,
   'a foreign Wolf Forge id cannot be marked from Tenant B');
@@ -437,8 +437,8 @@ select pg_temp.act('2603', 'wf');
 select is((select count(*) from public.app_list_my_notifications(100) where audience = 'client'), 0::bigint,
   'the same person as Wolf Forge staff lists no client notification, its NULL client orphan included');
 select pg_temp.act('2603', 'b');
-select ok(position('CLEGACY STAFF ORPHAN' in pg_temp.feed()) > 0,
-  'KI-136: that NULL client orphan stays visible to its recipient in a client session');
+select ok(position('CLEGACY STAFF ORPHAN' in pg_temp.feed()) = 0,
+  'unresolved financial orphan stays hidden in a client session');
 
 select pg_temp.act('2604', 'b');
 select is((select count(*) from public.app_list_my_notifications(100) where audience = 'client'), 0::bigint,

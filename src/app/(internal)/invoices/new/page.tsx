@@ -1,3 +1,5 @@
+import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
+import { invoiceWorkVisibility, financialAuthority, financialIdentity } from "../../../../domain/invoices/visibility";
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { forbidden } from "next/navigation";
@@ -15,7 +17,8 @@ export default async function NewInvoicePage({
   searchParams: Promise<{ companyId?: string }>;
 }) {
   const context = await getInternalContext();
-  if (!context.user.invoices.manage) forbidden();
+  if (!context.user.invoices.manage || !await context.services.invoices.workEnabled()) forbidden();
+  const signature = invoiceWorkVisibility(true, context.user.invoices, undefined, financialIdentity(context.user));
   const { companyId } = await searchParams;
   const [companies, services, folders] = await Promise.all([
     context.services.companies.listActive(),
@@ -32,5 +35,5 @@ export default async function NewInvoicePage({
     folderId: service.folder_id,
     folderName: service.folder_id ? folderNames.get(service.folder_id) ?? null : null,
   }));
-  return <PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} defaultCompanyId={companyId} /></PageFrame>;
+  return <FinancialVisibilityBoundary key={financialAuthority("internal-work", signature)} signature={signature} scope="internal-work"><PageFrame title="Add Invoice"><InvoiceForm mode="create" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} defaultCompanyId={companyId} /></PageFrame></FinancialVisibilityBoundary>;
 }

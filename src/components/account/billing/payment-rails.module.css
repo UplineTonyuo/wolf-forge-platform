@@ -581,3 +581,8 @@
   /* The selected dot still appears; it just is not animated into place. */
   .option[data-selected="true"] .radio::after { transform: scale(1); }
 }
+.walletHistory { list-style: none; padding: 0; margin: 1rem 0; }
+.walletHistory li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 1.5rem; padding: 1rem 0; border-bottom: 1px solid var(--wf-border); }
+.walletHistory li > div { min-width: 0; overflow-wrap: anywhere; }
+.walletHistory small { display: block; margin-top: .25rem; }
+.walletHistory p { margin: .25rem 0; }

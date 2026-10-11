@@ -36,6 +36,10 @@ export class CompanyWalletRepository {
       UserMutationClient,
   ) {}
 
+  async listMyHistory(limit = 50) {
+    return unwrapMany(await this.client.rpc("app_list_my_wallet_history", { p_limit: limit }));
+  }
+
   async getForCompany(
     companyId: string,
   ): Promise<CompanyWalletRow> {

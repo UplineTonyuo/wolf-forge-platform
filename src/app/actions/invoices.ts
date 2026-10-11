@@ -21,11 +21,18 @@ function denied(message: string): InvoiceActionState {
 
 function actionError(error: unknown): InvoiceActionState {
   const safe = toClientSafeError(error);
-  return { error: safe.message, fieldErrors: {} };
+  return { error: invoiceErrorMessage(error, safe.message), fieldErrors: {} };
+}
+
+function invoiceErrorMessage(error: unknown, fallback: string) {
+  const raw = error instanceof Error ? `${error.message} ${JSON.stringify(error.cause ?? "")}` : "";
+  return raw.includes("WF_INVOICES_DISABLED")
+    ? "Invoices is disabled. Financial history is read-only; re-enable Invoices for new financial work."
+    : fallback;
 }
 
 function mutationError(error: unknown): InvoiceMutationResult {
-  return { ok: false, error: toClientSafeError(error).message };
+  return { ok: false, error: invoiceErrorMessage(error, toClientSafeError(error).message) };
 }
 
 export async function createInvoiceAction(
@@ -104,10 +111,6 @@ export async function recordInvoicePaymentAction(
       amount_cents: amountCents,
       payment_method: paymentMethod,
     });
-    const detail = await context.services.invoices.get(invoiceId);
-    if (input.amount_cents > detail.financials.balance_due_cents) {
-      return { ok: false, error: "Payment cannot exceed the remaining balance." };
-    }
     await context.services.invoices.recordPayment(invoiceId, input, context.actor);
   } catch (error) {
     return mutationError(error);
@@ -133,9 +136,6 @@ export async function refundInvoiceAction(
       amount_cents: amountCents,
       reason,
     });
-    const detail = await context.services.invoices.get(invoiceId);
-    const refundable = detail.financials.gross_paid_cents - detail.financials.successful_refunds_cents;
-    if (input.amount_cents > refundable) return { ok: false, error: "Refund cannot exceed the refundable amount." };
     await context.services.invoices.refund(invoiceId, input, context.actor);
   } catch (error) {
     return mutationError(error);

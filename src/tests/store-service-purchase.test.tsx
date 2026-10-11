@@ -121,6 +121,16 @@ describe("resolveStorePurchaseOffer", () => {
       .toMatchObject({ purchasable: false, reason: "projects_disabled" });
   });
 
+  it("refuses new purchases while Invoices is OFF without hiding the wallet balance", () => {
+    const result = resolveStorePurchaseOffer({ service: service(), ...base, invoicesEnabled: false });
+    expect(result).toMatchObject({ purchasable: false, reason: "invoices_disabled", balanceCents: 210000 });
+    render(<StoreServiceDetail service={service()} folderName={null} backHref="/account/store" purchaseOffer={result} />);
+    expect(screen.queryByRole("button", { name: "Purchase with Wolf Forge Balance" })).not.toBeInTheDocument();
+    expect(screen.getByText(storePurchaseBlockedLabel("invoices_disabled"))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Add to cart/i })).toBeEnabled();
+    expect(purchaseServiceWithBalanceAction).not.toHaveBeenCalled();
+  });
+
   it("offers a purchase and computes what is left", () => {
     const result = resolveStorePurchaseOffer({ service: service(), ...base });
     expect(result.purchasable).toBe(true);
@@ -453,5 +463,28 @@ describe("StoreServiceDetail", () => {
     expect(
       screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("accepted purchases during offer refresh", () => {
+  it.each([200000, 0])("preserves confirmation after balance becomes %i", async (balanceCents) => {
+    const view = render(<PurchaseWithBalance serviceId="s-1" serviceName="Synthetic service" offer={offer()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Purchase with Wolf Forge Balance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));
+    await screen.findByText("Purchase confirmed");
+    const refreshed = resolveStorePurchaseOffer({ service: service(), balanceCents, walletCurrency: "USD" });
+    view.rerender(<PurchaseWithBalance serviceId="s-1" serviceName="Synthetic service" offer={refreshed} />);
+    expect(screen.getByText("Purchase confirmed")).toBeInTheDocument();
+    expect(purchaseServiceWithBalanceAction).toHaveBeenCalledTimes(1);
+  });
+  it("reuses the decision request after an uncertain transport response", async () => {
+    purchaseServiceWithBalanceAction.mockRejectedValueOnce(new Error("Connection lost"));
+    render(<PurchaseWithBalance serviceId="s-1" serviceName="Synthetic service" offer={offer()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Purchase with Wolf Forge Balance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));
+    await screen.findByText("Purchase confirmed");
+    expect(purchaseServiceWithBalanceAction.mock.calls[0]![0].requestId).toBe(purchaseServiceWithBalanceAction.mock.calls[1]![0].requestId);
   });
 });

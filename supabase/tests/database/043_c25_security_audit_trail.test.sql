@@ -314,21 +314,24 @@ where id = 'c2500000-0000-0000-0000-000000000001';
 
 select is(
   (select count(*) from public.security_audit_events
-    where event_code = 'authorization.context.denied'),
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'),
   1::bigint,
   'de-provisioning an audited account does not destroy the record of what happened'
 );
 
 select is(
   (select target_actor_id from public.security_audit_events
-    where event_code = 'authorization.context.denied'),
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'),
   null,
   'only the actor reference clears, through the declared referential action'
 );
 
 select throws_ok(
   $$update public.security_audit_events set metadata = '{"forged":true}'::jsonb
-    where event_code = 'authorization.context.denied'$$,
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'$$,
   '55000', 'security audit events are append-only',
   'and the surviving row still cannot be edited by anyone'
 );

@@ -70,6 +70,16 @@ function latestSettledAt(payments: InvoicePaymentRow[], invoiceId: string) {
 export class InvoiceRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  async workEnabled(): Promise<boolean> {
+    const result = await this.client.rpc("app_invoices_work_enabled");
+    if (result.error) throw mapDatabaseError(result.error, "Invoice availability");
+    return result.data === true;
+  }
+
+  private async listItems(invoiceId: string): Promise<InvoiceItemRow[]> {
+    return unwrapMany(await this.client.rpc("app_list_invoice_items", { p_invoice_id: invoiceId })) as InvoiceItemRow[];
+  }
+
   private async getFinancials(invoiceId: string): Promise<InvoiceFinancials> {
     const result = await this.client.rpc("app_get_invoice_financials", { p_invoice_id: invoiceId });
     if (result.error) throw mapDatabaseError(result.error, "Invoice financials");
@@ -100,16 +110,16 @@ export class InvoiceRepository {
 
   /** invoice_items_order_unique guarantees at most one row per order. */
   async findItemByOrderId(orderId: string): Promise<InvoiceItemRow | null> {
-    const result = await this.client.from("invoice_items").select().eq("order_id", orderId).maybeSingle();
+    const result = await this.client.rpc("app_find_invoice_item_by_order_id", { p_order_id: orderId });
     if (result.error) throw mapDatabaseError(result.error, "Invoice item");
-    return (result.data as InvoiceItemRow | null) ?? null;
+    return result.data?.id ? result.data as InvoiceItemRow : null;
   }
 
   async getById(id: string): Promise<InvoiceDetail> {
     const [invoiceResult, companyResult, itemResult, paymentResult, refundResult, activityResult, financials] = await Promise.all([
       this.client.from("invoices").select().eq("id", id).is("archived_at", null).single(),
       this.client.from("companies").select().is("archived_at", null),
-      this.client.from("invoice_items").select().eq("invoice_id", id).order("position"),
+      this.listItems(id),
       this.client.from("invoice_payments").select().eq("invoice_id", id).order("created_at", { ascending: false }),
       this.client.from("invoice_refunds").select().eq("invoice_id", id).order("created_at", { ascending: false }),
       this.client.from("activity_events").select().eq("entity_type", "invoice").eq("entity_id", id).order("created_at", { ascending: false }),
@@ -122,7 +132,7 @@ export class InvoiceRepository {
       invoice,
       clientName: companies.find((company) => company.id === invoice.company_id)?.name ?? "Unknown client",
       financials,
-      items: unwrapMany(itemResult) as InvoiceItemRow[],
+      items: itemResult,
       payments: unwrapMany(paymentResult) as InvoicePaymentRow[],
       refunds: unwrapMany(refundResult) as InvoiceRefundRow[],
       activity: unwrapMany(activityResult) as ActivityEventRow[],
@@ -150,7 +160,7 @@ export class InvoiceRepository {
     const [invoiceResult, companyResult, itemResult, financials] = await Promise.all([
       this.client.from("invoices").select().eq("id", id).is("archived_at", null).single(),
       this.client.from("companies").select().is("archived_at", null),
-      this.client.from("invoice_items").select().eq("invoice_id", id).order("position"),
+      this.listItems(id),
       this.getFinancials(id),
     ]);
     const invoice = unwrapOne(invoiceResult, "Invoice") as InvoiceRow;
@@ -160,7 +170,7 @@ export class InvoiceRepository {
       invoice,
       clientName: companies.find((company) => company.id === invoice.company_id)?.name ?? "Client",
       financials,
-      items: unwrapMany(itemResult) as InvoiceItemRow[],
+      items: itemResult,
     };
   }
 

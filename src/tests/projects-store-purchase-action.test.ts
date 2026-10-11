@@ -16,6 +16,13 @@ beforeEach(() => {
   mocks.purchase.mockResolvedValue({ orderId: "order", invoiceId: "invoice", orderNumber: 1, amountCents: 1000, currency: "USD", walletBalanceCents: 99000, serviceName: "Synthetic service", replayed: false });
 });
 describe("Store Projects boundary", () => {
+  it("reports Invoice OFF as an expected refusal while retaining authoritative exact replay", async () => {
+    mocks.purchase.mockRejectedValueOnce(new Error("WF_INVOICES_DISABLED"));
+    expect(await purchaseServiceWithBalanceAction(input)).toMatchObject({ ok: false, code: "INVOICES_DISABLED" });
+    expect(mocks.event).toHaveBeenCalledWith(expect.objectContaining({ failureClass: "expected", metadata: { action: "store.purchase", reason: "invoices_disabled" } }));
+    mocks.purchase.mockResolvedValueOnce({ invoiceId: "invoice", replayed: true });
+    expect(await purchaseServiceWithBalanceAction(input)).toMatchObject({ ok: true, destinationHref: "/account/invoices/invoice" });
+  });
   it("retains the Store gate and leaves purchase/replay decisions to the authoritative RPC", async () => {
     expect(await purchaseServiceWithBalanceAction(input)).toMatchObject({ ok: true, destinationHref: "/account/projects" });
     expect(mocks.gate.mock.calls).toEqual([["portal_store"]]);

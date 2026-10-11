@@ -40,7 +40,7 @@ function newRequestId(): string {
 export function PurchaseWithBalance({
   serviceId,
   serviceName,
-  offer,
+  offer: currentOffer,
 }: {
   serviceId: string;
   serviceName: string;
@@ -51,6 +51,9 @@ export function PurchaseWithBalance({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<StorePurchaseActionResult | null>(null);
+
+  const [decisionOffer, setDecisionOffer] = useState<Extract<StorePurchaseOffer, { purchasable: true }> | null>(null);
+  const offer = (open || pending || done?.ok) && decisionOffer ? decisionOffer : currentOffer;
 
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -108,6 +111,8 @@ export function PurchaseWithBalance({
   }
 
   const openConfirm = () => {
+    if (!offer.purchasable) return;
+    setDecisionOffer(offer);
     requestIdRef.current = newRequestId();
     setError(null);
     setOpen(true);
@@ -127,7 +132,15 @@ export function PurchaseWithBalance({
     setPending(true);
     setError(null);
 
-    const result = await purchaseServiceWithBalanceAction({ serviceId, requestId });
+    let result: StorePurchaseActionResult;
+    try {
+      result = await purchaseServiceWithBalanceAction({ serviceId, requestId });
+    } catch {
+      submittingRef.current = false;
+      setPending(false);
+      setError("The response could not be confirmed. Retry this purchase to check the same request.");
+      return;
+    }
 
     if (!result.ok) {
       // Failure stays exactly here. No outro, no navigation, no success state.
