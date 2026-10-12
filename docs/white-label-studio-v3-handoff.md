@@ -2,7 +2,7 @@
 
 Date: 2026-10-12. Agent: Codex. Assigned branch: `feat/white-label-builder-studio-20261012`.
 
-Acceptance: PASS within the verification limits below. The local feature commit is recorded in the following documentation checkpoint. Starting HEAD is `137ab7f34a8d160f99f6a163e86416fba44fcdea`; completed V2 implementation is `01e9d7cdadf868b4a8ad600dae333374fef275ee`.
+Acceptance: PASS within the verification limits below. Local feature commit: `d4579ae1aa2297379dda8c63194511c3aaba0f4a`. This documentation checkpoint records that accepted implementation; no production source changed afterward. Starting HEAD is `137ab7f34a8d160f99f6a163e86416fba44fcdea`; completed V2 implementation is `01e9d7cdadf868b4a8ad600dae333374fef275ee`.
 
 ## Startup and isolation
 
@@ -53,7 +53,7 @@ Seven widths were exercised with all nine modules selected, open six-option menu
 
 Long names, dependency details keyboard opening/Escape, contrast warnings and Mobile previews at 320/390 remained readable with natural scrolling. Actual browser zoom shortcuts had no effect through the connector; 720x450 equivalent reflow was verified without horizontal overflow and is explicitly not an actual 200% zoom pass. No independent screen-reader execution is claimed.
 
-After the final build, Chrome disconnected before an additional Settings/All Conversations reachability recheck in the bounded sidebar. The complete 28-destination interaction pass preceded that CSS bound; subsequent seven-width Projects/Tickets checks and independent screenshots used the final CSS. The extra post-build check and a fresh live-tab handoff are not claimed. This does not replace the recorded authenticated acceptance evidence.
+After the final build and guarded synchronization, Chrome reconnected with the genuine Platform Admin session. An additional 1440x900 check enabled all nine modules locally and successfully opened Settings and All Conversations through the bounded sidebar. Both changed only the simulated view and retained `/white-label?tenant=<A>`. The real screenshot showed the last navigation items reachable within the scrolled sidebar. Local edits were discarded through the departure dialog; the manager again showed persisted A revision 13 / seven modules and B revision 3 / three modules. The temporary viewport override was reset and the authenticated manager tab was left open. No additional draft save was made.
 
 Original A/B name/colors/module keys were restored through normal revision-aware UI saves. Final A revision 13 and B revision 3 preserve the advanced audit/concurrency history. The System Tenant remains byte-identical at revision zero. Only the temporary synthetic client identity/company was removed; the two original identities, credentials and fixtures remain. Final guarded readback asserts original draft content and runtime invariance: zero publications, invoices and wallet transactions, unchanged nine effective module grants per active QA Tenant. Safe result projections are included under `docs/qa/white-label-studio-v3`; credentials and raw logs remain private.
 
