@@ -10,7 +10,7 @@ import styles from "./white-label-builder.module.css";
 
 function Brand({ name }: { name: string }) {
   const initials = name.trim().split(/\s+/).slice(0, 2).map((word) => word[0] ?? "").join("").toUpperCase() || "WL";
-  return <div className={styles.brand}><span className={styles.monogram} aria-hidden="true">{initials}</span><div><strong data-testid="preview-brand-name">{name || "Untitled workspace"}</strong><span>Simulated workspace</span></div></div>;
+  return <div className={styles.brand}><span className={styles.monogram} aria-hidden="true">{initials}</span><div><strong data-testid="preview-brand-name">{name || "Untitled workspace"}</strong><span>Simulated</span></div></div>;
 }
 
 export function WhiteLabelPreview({ state, device }: { state: WhiteLabelPreviewState; device: "desktop" | "mobile" }) {
@@ -61,7 +61,7 @@ export function WhiteLabelPreview({ state, device }: { state: WhiteLabelPreviewS
       </div>
       <section key={`${active}-${detail}`} className={styles.previewContent} aria-label="Simulated view" aria-live="polite">
         {active === "dashboard" ? <div className={styles.cards}>{WHITE_LABEL_MODULES.filter((entry) => moduleAvailable(state.modules, entry.id)).map((entry) => (
-          <button type="button" key={entry.id} className={styles.card} onClick={() => open(entry.id)} aria-label={`Explore ${entry.label} preview`}><span>{entry.label}</span><span className={styles.cardDescription}>{entry.description}</span></button>
+          <button type="button" key={entry.id} className={styles.card} onClick={() => open(entry.id)} aria-label={`Explore ${entry.label} preview`}><span>{entry.label}</span><span className={styles.cardDescription}>{({subscriptions:"Recurring plans and memberships.",coupons:"Promotional discount campaigns.",investment_intent:"Customer buying-interest signals."} as Record<string,string>)[entry.id] ?? entry.description}</span></button>
         ))}</div> : <div className={styles.simulatedView}>
           <h4>{detail ? `Sample ${title.toLowerCase()} item` : title}</h4>
           <p>{selectedModule?.description ?? `Workspace ${title.toLowerCase()} tools.`}</p>

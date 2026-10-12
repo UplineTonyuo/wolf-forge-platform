@@ -1,6 +1,6 @@
 "use client";
 
-import { Monitor, Smartphone } from "lucide-react";
+import { FileText, Info, Monitor, Smartphone } from "lucide-react";
 import { useId, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import {
@@ -11,7 +11,7 @@ import {
 } from "../../domain/white-label/preview";
 import { WhiteLabelColorControls } from "./white-label-color-controls";
 import { WhiteLabelPreview } from "./white-label-preview";
-import settings from "../settings/settings-foundation.module.css";
+import { navigationIcons } from "../shell/internal-shell";
 import styles from "./white-label-builder.module.css";
 
 type Device = "desktop" | "mobile";
@@ -44,8 +44,8 @@ export function WhiteLabelBuilder({
 
       <div className={styles.layout}>
         {controls ?? <form className={styles.controls} aria-label="White Label preview settings" onSubmit={(event) => event.preventDefault()}>
-          <fieldset className={styles.group} disabled={readOnly}>
-            <legend>Workspace identity</legend>
+          <fieldset className={`${styles.group} ${styles.identityGroup}`} disabled={readOnly}>
+            <legend className="sr-only">Workspace identity</legend>
             <label className={styles.field} htmlFor={`${id}-name`}>
               <span>Workspace display name</span>
               <input
@@ -56,14 +56,12 @@ export function WhiteLabelBuilder({
                 onChange={(event) => setState((current) => ({ ...current, displayName: event.target.value }))}
               />
             </label>
-            <p className={styles.hint}>Shown in the preview with your workspace initials.</p>
           </fieldset>
 
           <WhiteLabelColorControls state={state} onStateChange={setState} readOnly={readOnly} onValidityChange={onColorValidityChange} />
 
           <fieldset className={styles.group} disabled={readOnly}>
             <legend>Modules · {WHITE_LABEL_MODULES.filter((module) => state.modules[module.id]).length} of 9 selected</legend>
-            <p className={styles.moduleGuidance}>Recommendations are guidance. All nine modules are selectable; dependency warnings explain what the preview can show.</p>
             <div className={styles.moduleList}>
               {WHITE_LABEL_MODULES.map((module) => {
                 const checked = state.modules[module.id] === true;
@@ -71,17 +69,14 @@ export function WhiteLabelBuilder({
                 const requires = module.requires
                   .map((required) => WHITE_LABEL_MODULES.find((entry) => entry.id === required)?.label)
                   .join(", ");
+                const Icon = navigationIcons[module.id] ?? FileText;
                 return (
-                  <label key={module.id} className={`${settings.preferenceRow} ${styles.moduleRow}`} htmlFor={`${id}-module-${module.id}`}>
-                    <span>
+                  <div key={module.id} className={styles.moduleTile} data-enabled={checked}>
+                  <label className={styles.moduleRow} htmlFor={`${id}-module-${module.id}`}>
+                    <Icon aria-hidden={true} />
+                    <span className={styles.moduleText}>
                       <strong id={`${id}-module-${module.id}-label`}>{module.label}</strong>
-                      <small id={`${id}-module-${module.id}-recommendation`} className={styles.moduleRecommendation} data-recommendation={module.recommendation}>
-                        {module.recommendationLabel}
-                      </small>
-                      <small id={`${id}-module-${module.id}-help`}>
-                        {module.description}
-                      </small>
-                      {requires ? <small id={`${id}-module-${module.id}-dependency`}>{blocked ? `Hidden until ${requires} is on.` : `Requires ${requires}.`}</small> : null}
+                      <small id={`${id}-module-${module.id}-dependency`}>{requires ? blocked ? `Hidden until ${requires} is on.` : `Needs ${requires}` : module.recommendation === "recommended" ? "Recommended" : module.recommendation === "not_recommended" ? "Not recommended" : "Recurring only"}</small>
                     </span>
                     <input
                       id={`${id}-module-${module.id}`}
@@ -97,14 +92,14 @@ export function WhiteLabelBuilder({
                       }
                     />
                   </label>
+                  <details className={styles.moduleDetails} onKeyDown={(event) => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label={`${module.label} details`}><Info aria-hidden="true" /></summary><div id={`${id}-module-${module.id}-help`}><p>{module.description}</p><p id={`${id}-module-${module.id}-recommendation`}>{module.recommendationLabel}</p></div></details>
+                  </div>
                 );
               })}
             </div>
-            <p className={styles.hint}>
-              Dashboard, Clients, Team, All Conversations and Settings are always part of a workspace. Operations stays Wolf Forge-only.
-            </p>
             <details className={styles.disclosure}>
               <summary>Publication rules and financial safeguards</summary>
+              <p>Dashboard, Clients, Team, All Conversations and Settings are always part of a workspace. Operations stays Wolf Forge-only.</p>
               <ul className={styles.safeguards}>{WHITE_LABEL_DRAFT_GUIDANCE.split(". ").map((rule) => <li key={rule}>{rule.endsWith(".") ? rule : `${rule}.`}</li>)}</ul>
             </details>
           </fieldset>

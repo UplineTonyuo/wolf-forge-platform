@@ -1,7 +1,7 @@
 "use server";
 
 import { unstable_rethrow } from "next/navigation";
-import type { SavedWhiteLabelDraft, WhiteLabelDraft } from "../../domain/white-label/draft";
+import type { SavedWhiteLabelDraft, WhiteLabelDraft, WhiteLabelDraftSummary } from "../../domain/white-label/draft";
 import { NotFoundError, PermissionDeniedError, type ClientSafeError, toClientSafeError } from "../../lib/errors/application-error";
 import { isLocalQuickAccessSession, localUiQaBypassEnabled } from "../../lib/qa/local-ui-bypass";
 import { getInternalContext } from "../../lib/supabase/next-server";
@@ -34,6 +34,14 @@ function failed<T>(error: unknown): WhiteLabelActionResult<T> {
 export async function getWhiteLabelDraftAction(tenantId: unknown): Promise<WhiteLabelActionResult<WhiteLabelDraft>> {
   try {
     return { ok: true, data: await (await platformAdminServices()).whiteLabel.getDraft(tenantId) };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function listWhiteLabelDraftsAction(): Promise<WhiteLabelActionResult<WhiteLabelDraftSummary[]>> {
+  try {
+    return { ok: true, data: await (await platformAdminServices()).whiteLabel.listDrafts() };
   } catch (error) {
     return failed(error);
   }

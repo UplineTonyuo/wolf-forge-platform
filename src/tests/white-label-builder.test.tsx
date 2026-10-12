@@ -32,7 +32,7 @@ vi.mock("../lib/supabase/next-server", () => ({
     services: { permissions: { requireModuleAccess, isPlatformAdmin }, whiteLabel: { listTenants, getDraft } },
   }),
 }));
-vi.mock("../app/actions/white-label", () => ({ getWhiteLabelDraftAction: vi.fn(), saveWhiteLabelDraftAction: vi.fn() }));
+vi.mock("../app/actions/white-label", () => ({ getWhiteLabelDraftAction: vi.fn(), saveWhiteLabelDraftAction: vi.fn(), listWhiteLabelDraftsAction: vi.fn(() => new Promise(() => {})) }));
 
 import WhiteLabelSettingsPage from "../app/(internal)/white-label/page";
 import LegacyWhiteLabelPage from "../app/(internal)/settings/white-label/page";
@@ -259,7 +259,7 @@ describe("White Label route and Settings entry", () => {
     isPlatformAdmin.mockResolvedValue(true);
     listTenants.mockResolvedValue([TENANT_B]);
     render(await WhiteLabelSettingsPage(noSearch));
-    expect(screen.getByText("Choose a Tenant")).toBeInTheDocument();
+    expect(screen.getByText("Loading Tenant drafts…")).toBeInTheDocument();
     expect(screen.queryByRole("form", { name: "White Label preview settings" })).toBeNull();
     expect(getDraft).not.toHaveBeenCalled();
   });

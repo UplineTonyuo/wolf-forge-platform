@@ -3,6 +3,7 @@
 import { useId, useState, type Dispatch, type SetStateAction } from "react";
 import { WHITE_LABEL_COLOR_TEMPLATES, colorContrast, parseHexColor } from "../../domain/white-label/colors";
 import type { WhiteLabelPreviewState } from "../../domain/white-label/preview";
+import { AnimatedSelect } from "../ui/animated-select";
 import styles from "./white-label-builder.module.css";
 
 type ColorKey = "primaryColor" | "accentColor";
@@ -20,7 +21,7 @@ function ColorField({ label, help, value, onChange, onValidityChange }: {
   const invalid = parseHexColor(hex) === null;
   return (
     <div className={styles.customColor}>
-      <div className={styles.colorLabel}><label htmlFor={`${id}-hex`}>{label}</label><small id={`${id}-help`}>{help}</small></div>
+      <div className={styles.colorLabel}><label htmlFor={`${id}-hex`}>{label}</label><small id={`${id}-help`} className="sr-only">{help}</small></div>
       <div className={styles.colorInputs}>
         <input className={styles.colorPicker} type="color" value={value} aria-label={`${label} picker`} onChange={(event) => {
           setEdit(null);
@@ -66,16 +67,12 @@ export function WhiteLabelColorControls({ state, onStateChange, readOnly, onVali
     <fieldset className={styles.group} disabled={readOnly}>
       <legend>Brand colors</legend>
       <section aria-label="Color templates" className={styles.templates}>
-        <div className={styles.templateHeader}><h3>Color templates</h3><span>{selected?.name ?? "Custom colors"}</span></div>
-        <div className={styles.templateGrid}>
-          {WHITE_LABEL_COLOR_TEMPLATES.map((template) => (
-            <button type="button" key={template.name} className={styles.templateButton} aria-pressed={selected === template} onClick={() => apply(template)}>
-              <span className={styles.templateSwatches} aria-hidden="true"><i style={{ backgroundColor: template.primaryColor }} /><i style={{ backgroundColor: template.accentColor }} /></span>
-              <span>{template.name}</span>
-            </button>
-          ))}
-        </div>
-        <p className={styles.hint}>Start with a template, then adjust either color.</p>
+        <AnimatedSelect name="color-template" label="Color template" menuLabel="Color templates" value={selected?.name ?? "custom"} disabled={readOnly}
+          onChange={(name) => { const template = WHITE_LABEL_COLOR_TEMPLATES.find((entry) => entry.name === name); if (template) apply(template); }}
+          options={[
+            ...(!selected ? [{value:"custom", label:"Custom colors", disabled:true, leading:<span className={styles.templateSwatches} aria-hidden="true"><i style={{backgroundColor:state.primaryColor}} /><i style={{backgroundColor:state.accentColor}} /></span>}] : []),
+            ...WHITE_LABEL_COLOR_TEMPLATES.map((template) => ({value:template.name,label:template.name,leading:<span className={styles.templateSwatches} aria-hidden="true"><i style={{backgroundColor:template.primaryColor}} /><i style={{backgroundColor:template.accentColor}} /></span>})),
+          ]} />
       </section>
       <div className={styles.customColors}>
         {([['primaryColor', 'Primary color', 'Sidebar and brand surfaces'], ['accentColor', 'Accent color', 'Active items and actions']] as const).map(([key, label, help]) => (

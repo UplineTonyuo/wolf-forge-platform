@@ -48,7 +48,8 @@ describe("Sandboxed studio preview", () => {
 describe("Studio color templates and manual colors", () => {
   it.each(WHITE_LABEL_COLOR_TEMPLATES)("applies $name to both previews without changing identity or modules", (template) => {
     render(<Builder />);
-    fireEvent.click(screen.getByRole("button", { name: template.name }));
+    fireEvent.click(screen.getByRole("button", { name: /^Color template:/ }));
+    fireEvent.click(screen.getByRole("option", { name: template.name }));
     expect(screen.getByLabelText("Primary color")).toHaveValue(template.primaryColor);
     expect(screen.getByLabelText("Accent color")).toHaveValue(template.accentColor);
     expect(screen.getAllByRole("checkbox").filter((entry) => (entry as HTMLInputElement).checked)).toHaveLength(6);
@@ -63,13 +64,14 @@ describe("Studio color templates and manual colors", () => {
     fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "#xx" } });
     expect(screen.getByLabelText("Primary color")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByTestId("preview-frame").style.getPropertyValue("--preview-primary")).toBe("#000d51");
-    fireEvent.click(screen.getByRole("button", { name: "Wolf Forge Default" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Color template:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "Wolf Forge Default" }));
     expect(screen.getByLabelText("Primary color")).not.toHaveAttribute("aria-invalid");
     fireEvent.change(screen.getByLabelText("Primary color"), { target: { value: "AABBCC" } });
     expect(screen.getByLabelText("Primary color")).toHaveValue("#aabbcc");
     fireEvent.change(screen.getByLabelText("Accent color picker"), { target: { value: "#445566" } });
     expect(screen.getByLabelText("Accent color")).toHaveValue("#445566");
-    expect(within(screen.getByRole("region", { name: "Color templates" })).getByText("Custom colors")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Color templates" })).getByRole("button", {name:"Color template: Custom colors"})).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Reset to Wolf Forge Default" }));
     expect(screen.getByLabelText("Primary color")).toHaveValue("#000d51");
     expect(screen.getByLabelText("Accent color")).toHaveValue("#a8832e");

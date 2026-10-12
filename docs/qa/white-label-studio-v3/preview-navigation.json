@@ -1,0 +1,170 @@
+[
+  {
+    "mode": "Desktop",
+    "name": "Projects",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Projects\n\nClient delivery work for Services.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Tickets",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Tickets\n\nClient support requests and conversations.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Reporting",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Reporting\n\nClient reports sent from the workspace.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Invoices",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Invoices\n\nBilling documents and payments.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Services",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Services\n\nCatalogue of what the Tenant sells.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Forms",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Forms\n\nPublic, intake and onboarding Forms.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Subscriptions",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Subscriptions\n\nEnable for recurring plans or memberships.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Coupons",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Coupons\n\nEnable for promotional discount campaigns. Otherwise, leave off to avoid extra discount and redemption complexity.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Investment Intent",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Investment Intent\n\nEnable only for a separate workflow to track customer buying-interest signals.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Clients",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Clients\n\nWorkspace clients tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Team",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Team\n\nWorkspace team tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "All Conversations",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "All Conversations\n\nWorkspace all conversations tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Settings",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Settings\n\nWorkspace settings tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Desktop",
+    "name": "Dashboard",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Services\nCatalogue of what the Tenant sells.\nProjects\nClient delivery work for Services.\nTickets\nClient support requests and conversations.\nReporting\nClient reports sent from the workspace.\nInvoices\nBilling documents and payments.\nSubscriptions\nRecurring plans and memberships.\nCoupons\nPromotional discount campaigns.\nInvestment Intent\nCustomer buying-interest signals.\nForms\nPublic, intake and onboarding Forms."
+  },
+  {
+    "mode": "Mobile",
+    "name": "Projects",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Projects\n\nClient delivery work for Services.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Tickets",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Tickets\n\nClient support requests and conversations.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Reporting",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Reporting\n\nClient reports sent from the workspace.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Invoices",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Invoices\n\nBilling documents and payments.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Services",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Services\n\nCatalogue of what the Tenant sells.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Forms",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Forms\n\nPublic, intake and onboarding Forms.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Subscriptions",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Subscriptions\n\nEnable for recurring plans or memberships.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Coupons",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Coupons\n\nEnable for promotional discount campaigns. Otherwise, leave off to avoid extra discount and redemption complexity.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Investment Intent",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Investment Intent\n\nEnable only for a separate workflow to track customer buying-interest signals.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Clients",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Clients\n\nWorkspace clients tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Team",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Team\n\nWorkspace team tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "All Conversations",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "All Conversations\n\nWorkspace all conversations tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Settings",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Settings\n\nWorkspace settings tools.\n\nSimulated content for haha. Your Tenant's records are kept outside the preview.\n\nSample item\nOpen a simulated detail view"
+  },
+  {
+    "mode": "Mobile",
+    "name": "Dashboard",
+    "url": "http://127.0.0.1:3013/white-label?tenant=c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+    "view": "Services\nCatalogue of what the Tenant sells.\nProjects\nClient delivery work for Services.\nTickets\nClient support requests and conversations.\nReporting\nClient reports sent from the workspace.\nInvoices\nBilling documents and payments.\nSubscriptions\nRecurring plans and memberships.\nCoupons\nPromotional discount campaigns.\nInvestment Intent\nCustomer buying-interest signals.\nForms\nPublic, intake and onboarding Forms."
+  }
+]

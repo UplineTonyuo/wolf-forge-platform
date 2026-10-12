@@ -1,18 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { gate, quickAccess, isPlatformAdmin, getDraft, saveDraft, getInternalContext } = vi.hoisted(() => {
+const { gate, quickAccess, isPlatformAdmin, getDraft, saveDraft, listDrafts, getInternalContext } = vi.hoisted(() => {
   const isPlatformAdmin = vi.fn();
   const getDraft = vi.fn();
   const saveDraft = vi.fn();
+  const listDrafts = vi.fn();
   return {
     gate: vi.fn(),
     quickAccess: vi.fn(),
     isPlatformAdmin,
     getDraft,
     saveDraft,
+    listDrafts,
     getInternalContext: vi.fn(async () => ({
       client: {},
-      services: { permissions: { isPlatformAdmin }, whiteLabel: { getDraft, saveDraft } },
+      services: { permissions: { isPlatformAdmin }, whiteLabel: { getDraft, saveDraft, listDrafts } },
     })),
   };
 });
@@ -21,7 +23,7 @@ vi.mock("next/navigation", () => ({ unstable_rethrow: vi.fn() }));
 vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: gate, isLocalQuickAccessSession: quickAccess }));
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext }));
 
-import { getWhiteLabelDraftAction, saveWhiteLabelDraftAction } from "../app/actions/white-label";
+import { getWhiteLabelDraftAction, saveWhiteLabelDraftAction, listWhiteLabelDraftsAction } from "../app/actions/white-label";
 
 afterEach(() => vi.clearAllMocks());
 
@@ -33,6 +35,7 @@ describe("White Label draft actions (WL-2.33)", () => {
     isPlatformAdmin.mockResolvedValue(true);
     await expect(getWhiteLabelDraftAction(TENANT)).resolves.toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
     await expect(saveWhiteLabelDraftAction({})).resolves.toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+    await expect(listWhiteLabelDraftsAction()).resolves.toMatchObject({ok:false,error:{code:"NOT_FOUND"}});
     expect(getInternalContext).not.toHaveBeenCalled();
   });
 
@@ -45,6 +48,8 @@ describe("White Label draft actions (WL-2.33)", () => {
       error: { code: "PERMISSION_DENIED" },
     });
     expect(saveDraft).not.toHaveBeenCalled();
+    await expect(listWhiteLabelDraftsAction()).resolves.toMatchObject({ok:false,error:{code:"PERMISSION_DENIED"}});
+    expect(listDrafts).not.toHaveBeenCalled();
   });
 
   it("refuse a session without the Platform Admin entitlement (re-checked on every call)", async () => {
@@ -65,5 +70,10 @@ describe("White Label draft actions (WL-2.33)", () => {
     const input = { tenantId: TENANT, expectedRevision: 3 };
     await expect(saveWhiteLabelDraftAction(input)).resolves.toEqual({ ok: true, data: { revision: 4, updatedAt: "t" } });
     expect(saveDraft).toHaveBeenCalledExactlyOnceWith(input);
+  });
+  it("rechecks entitlement before discovering summaries and maps read failures safely",async()=>{
+    gate.mockResolvedValue(true);quickAccess.mockResolvedValue(false);isPlatformAdmin.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    listDrafts.mockResolvedValue([]);await expect(listWhiteLabelDraftsAction()).resolves.toEqual({ok:true,data:[]});
+    await expect(listWhiteLabelDraftsAction()).resolves.toMatchObject({ok:false,error:{code:"PERMISSION_DENIED"}});expect(listDrafts).toHaveBeenCalledOnce();
   });
 });

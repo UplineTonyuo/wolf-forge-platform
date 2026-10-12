@@ -33,6 +33,8 @@ export type WhiteLabelDraft = {
 
 export type SavedWhiteLabelDraft = { revision: number; updatedAt: string };
 
+export type WhiteLabelDraftSummary = { tenant: WhiteLabelTenant; draft: WhiteLabelDraft };
+
 const moduleIds = WHITE_LABEL_MODULES.map((module) => module.id) as [string, ...string[]];
 
 /** The selected, configurable modules as the stored sorted set. */

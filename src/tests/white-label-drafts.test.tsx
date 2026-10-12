@@ -10,6 +10,7 @@ const { getDraftAction, saveDraftAction } = vi.hoisted(() => ({ getDraftAction: 
 vi.mock("../app/actions/white-label", () => ({
   getWhiteLabelDraftAction: getDraftAction,
   saveWhiteLabelDraftAction: saveDraftAction,
+  listWhiteLabelDraftsAction: vi.fn(() => new Promise(() => {})),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/white-label", useRouter: () => ({ push: vi.fn() }) }));
 
@@ -123,7 +124,8 @@ describe("White Label draft editor", () => {
     expect(saveButton()).toBeDisabled();
     expect(screen.getByRole("button", { name: "Review Draft" })).toBeDisabled();
     expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Forest Premium" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Color template:/ }));
+    fireEvent.click(screen.getByRole("option", { name: "Forest Premium" }));
     expect(saveButton()).toBeEnabled();
     expect(screen.getByRole("button", { name: "Review Draft" })).toBeEnabled();
     expect(saveDraftAction).not.toHaveBeenCalled();
@@ -195,8 +197,8 @@ describe("White Label draft editor", () => {
   });
   it("requires an explicit Tenant before anything can be saved", () => {
     render(<WhiteLabelDraftEditor tenants={[WF, B]} initialDraft={null} />);
-    expect(screen.getByText("Choose a Tenant")).toBeInTheDocument();
-    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText("Loading Tenant drafts…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", {name:"Save Draft"})).toBeNull();
     expect(getDraftAction).not.toHaveBeenCalled();
   });
 

@@ -1,17 +1,20 @@
 "use client";
 
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getWhiteLabelDraftAction, saveWhiteLabelDraftAction } from "../../app/actions/white-label";
+import { getWhiteLabelDraftAction, listWhiteLabelDraftsAction, saveWhiteLabelDraftAction } from "../../app/actions/white-label";
 import {
   draftModuleKeys,
   draftProblem,
   type WhiteLabelDraft,
+  type WhiteLabelDraftSummary,
   type WhiteLabelTenant,
 } from "../../domain/white-label/draft";
 import type { WhiteLabelPreviewState } from "../../domain/white-label/preview";
 import { AnimatedSelect } from "../ui/animated-select";
+import { PortalDialog } from "../account/ui/portal-dialog";
+import { WhiteLabelDraftList } from "./white-label-draft-list";
 import { WhiteLabelBuilder } from "./white-label-builder";
 import { WhiteLabelDraftReview } from "./white-label-draft-review";
 import styles from "./white-label-builder.module.css";
@@ -29,6 +32,11 @@ function persisted(state: WhiteLabelPreviewState): string {
 }
 
 const STATUS_LABEL: Record<string, string> = { active: "Active", suspended: "Suspended", archived: "Archived" };
+function nativeHistoryIndex(): number | undefined {
+  const navigation = (window as Window & {navigation?: {currentEntry?: {index: number}}}).navigation;
+  const index = navigation?.currentEntry?.index;
+  return index !== undefined && index >= 0 ? index : undefined;
+}
 
 /**
  * WL-2.33: Platform Admin draft builder for one explicitly chosen Tenant.
@@ -49,6 +57,14 @@ export function WhiteLabelDraftEditor({
   const [colorsValid, setColorsValid] = useState(true);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [pendingTenantId, setPendingTenantId] = useState<string | null>(null);
+  const [pendingReturn, setPendingReturn] = useState(false);
+  const [summaries, setSummaries] = useState<WhiteLabelDraftSummary[]>([]);
+  const [listStatus, setListStatus] = useState<"loading" | "ready" | "denied" | "failed">("loading");
+  const latestList = useRef(0);
+  const historyIndex = useRef(0);
+  const suppressPop = useRef(false);
+  const allowPop = useRef(false);
+  const pendingHistoryDelta = useRef<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -67,6 +83,32 @@ export function WhiteLabelDraftEditor({
   const latestLoad = useRef(0);
   const saveInFlight = useRef(false);
   const pendingSave = useRef<{ tenantId: string; expectedRevision: number; state: WhiteLabelPreviewState } | null>(null);
+
+  const refreshList = useCallback(async () => {
+    const request = ++latestList.current;
+    setListStatus("loading");
+    const result = await listWhiteLabelDraftsAction().catch(() => null);
+    if (request !== latestList.current) return;
+    if (result?.ok) {
+      setSummaries(result.data);
+      setTenants(result.data.map(({tenant, draft}) => ({...tenant, draftRevision: draft.revision || null})));
+      setListStatus("ready");
+    } else {
+      setSummaries([]);
+      const denied = result?.error.code === "PERMISSION_DENIED" || result?.error.code === "NOT_FOUND";
+      setListStatus(denied ? "denied" : "failed");
+      if (denied) { ++latestLoad.current; pendingSave.current = null; setDraft(null); setState(null); setStatus({kind:"denied",message:"Tenant drafts are not available to your current session."}); }
+    }
+  }, []);
+  const invalidateRequests = useCallback(() => { ++latestList.current; ++latestLoad.current; }, []);
+  useEffect(() => {
+    let mounted = true;
+    queueMicrotask(() => { if (mounted) void refreshList(); });
+    const index = window.history.state?.wfStudioIndex;
+    historyIndex.current = nativeHistoryIndex() ?? (Number.isInteger(index) ? index : 0);
+    window.history.replaceState({...window.history.state, wfStudioIndex: historyIndex.current}, "", window.location.href);
+    return () => { mounted = false; invalidateRequests(); };
+  }, [refreshList, invalidateRequests]);
 
   const tenant = tenants.find((entry) => entry.id === tenantId);
   const pendingTenant = tenants.find((entry) => entry.id === pendingTenantId);
@@ -98,43 +140,108 @@ export function WhiteLabelDraftEditor({
     };
   }, [dirty]);
   function cancelDeparture() {
+    pendingHistoryDelta.current = null;
     setPendingHref(null);
     departureLink.current?.focus();
+  }
+  function completeDeparture() {
+    const delta = pendingHistoryDelta.current;
+    pendingHistoryDelta.current = null;
+    if (delta !== null) { allowPop.current = true; setPendingHref(null); window.history.go(delta); }
+    else if (pendingHref) router.push(pendingHref);
   }
   useEffect(() => { if (pendingHref) keepEditingButton.current?.focus(); }, [pendingHref]);
   const busy = status.kind === "loading" || status.kind === "saving";
   const readOnly = draft?.tenantStatus !== "active";
-  const canSave = Boolean(draft && state && dirty && colorsValid && !readOnly && !busy && !pendingTenantId && !pendingHref && status.kind !== "conflict" && status.kind !== "denied");
+  const canSave = Boolean(draft && state && dirty && colorsValid && !readOnly && !busy && !pendingTenantId && !pendingReturn && !pendingHref && status.kind !== "conflict" && status.kind !== "denied");
 
-  async function load(nextTenantId: string) {
+  const load = useCallback(async (nextTenantId: string, navigation: "push" | "none" = "push") => {
     const request = ++latestLoad.current;
     setPendingTenantId(null);
+    setPendingReturn(false);
     setReviewing(false);
     setColorsValid(true);
     pendingSave.current = null;
     setTenantId(nextTenantId);
     setDraft(null);
     setState(null);
+    if (navigation === "push") {
+      historyIndex.current = nativeHistoryIndex() ?? historyIndex.current;
+      ++historyIndex.current;
+      window.history.pushState({...window.history.state,wfStudioIndex:historyIndex.current}, "", nextTenantId ? `/white-label?tenant=${encodeURIComponent(nextTenantId)}` : "/white-label");
+    }
+    if (!nextTenantId) { setStatus({kind:"idle"}); void refreshList(); return; }
+    if (!tenants.some((entry) => entry.id === nextTenantId)) { setStatus({kind:"denied",message:"This Tenant's draft is not available to you."}); return; }
     setStatus({ kind: "loading" });
-    window.history.replaceState(null, "", `?tenant=${encodeURIComponent(nextTenantId)}`);
     // A transport failure (null) is retryable, like a server failure.
     const result = await getWhiteLabelDraftAction(nextTenantId).catch(() => null);
     if (request !== latestLoad.current) return;
     if (result?.ok) {
       setDraft(result.data);
       setState(result.data.state);
+      setSummaries((current) => current.map((entry) => entry.tenant.id === nextTenantId ? {...entry,draft:result.data} : entry));
       setStatus({ kind: "idle" });
     } else if (result?.error.code === "PERMISSION_DENIED" || result?.error.code === "NOT_FOUND") {
       setStatus({ kind: "denied", message: "This Tenant's draft is not available to you." });
     } else {
       setStatus({ kind: "failed", retry: "load" });
     }
-  }
+  }, [refreshList, tenants]);
+
+  useEffect(() => {
+    const onPop = (event: PopStateEvent) => {
+      if (suppressPop.current) { suppressPop.current = false; return; }
+      const requested = new URLSearchParams(window.location.search).getAll("tenant");
+      const nextTenant = requested.length === 1 ? requested[0] ?? "" : "";
+      const nextIndex = nativeHistoryIndex() ?? (Number.isInteger(window.history.state?.wfStudioIndex) ? window.history.state.wfStudioIndex : historyIndex.current - 1);
+      if (window.location.pathname === "/white-label" && nextTenant === tenantId) {
+        historyIndex.current = nextIndex;
+        return;
+      }
+      const delta = nextIndex - historyIndex.current;
+      if (dirty && !allowPop.current && delta !== 0) {
+        event.stopImmediatePropagation();
+        pendingHistoryDelta.current = delta;
+        suppressPop.current = true;
+        const href = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        window.history.go(-delta);
+        if (window.location.pathname !== "/white-label") setPendingHref(href);
+        else if (nextTenant) setPendingTenantId(nextTenant); else setPendingReturn(true);
+        return;
+      }
+      allowPop.current = false;
+      historyIndex.current = nextIndex;
+      if (window.location.pathname !== "/white-label") return;
+      void load(nextTenant, "none");
+    };
+    window.addEventListener("popstate", onPop, true);
+    return () => window.removeEventListener("popstate", onPop, true);
+  }, [dirty, load, tenantId]);
 
   function chooseTenant(nextTenantId: string) {
     if (nextTenantId === tenantId) return;
     if (dirty) setPendingTenantId(nextTenantId);
     else void load(nextTenantId);
+  }
+
+  function returnToDrafts() {
+    if (dirty) setPendingReturn(true);
+    else void load("");
+  }
+  function cancelSwitch() {
+    if (saveInFlight.current) return;
+    pendingHistoryDelta.current = null;
+    setPendingTenantId(null);
+    setPendingReturn(false);
+  }
+  function completeSwitch() {
+    const delta = pendingHistoryDelta.current;
+    pendingHistoryDelta.current = null;
+    if (delta !== null) {
+      allowPop.current = true;
+      setPendingTenantId(null); setPendingReturn(false);
+      window.history.go(delta);
+    } else void load(pendingReturn ? "" : pendingTenantId ?? "");
   }
 
   async function save() {
@@ -165,12 +272,17 @@ export function WhiteLabelDraftEditor({
     if (result?.ok) {
       pendingSave.current = null;
       // Only now, after the server confirmed the write, is the draft "saved".
-      setDraft({ ...draft, state: saved, revision: result.data.revision, updatedAt: result.data.updatedAt });
+      const confirmed = { ...draft, state: saved, revision: result.data.revision, updatedAt: result.data.updatedAt };
+      setDraft(confirmed);
+      ++latestList.current;
+      setListStatus("ready");
+      setSummaries((current) => current.map((entry) => entry.tenant.id === snapshot.tenantId ? {...entry,draft:confirmed} : entry));
       setState((current) => current && persisted(current) !== persisted(saved) ? current : saved);
       setTenants((current) =>
         current.map((entry) => (entry.id === draft.tenantId ? { ...entry, draftRevision: result.data.revision } : entry)),
       );
       setStatus({ kind: "saved", revision: result.data.revision });
+      return persisted(state) === persisted(saved) && colorsValid;
     } else if (result?.error.code === "CONFLICT") {
       pendingSave.current = null;
       setStatus({ kind: "conflict" });
@@ -180,6 +292,7 @@ export function WhiteLabelDraftEditor({
     } else {
       setStatus({ kind: "failed", retry: "save" });
     }
+    return false;
   }
 
   const revisionLabel = !draft ? "" : draft.revision === 0 ? "No draft saved yet · defaults" : `Draft revision ${draft.revision}`;
@@ -188,12 +301,12 @@ export function WhiteLabelDraftEditor({
     <div className={styles.editor}>
       <header className={styles.studioHeader}>
         <h1>White Label Studio</h1>
-        <p>Draft only. Save your Tenant&apos;s identity and module choices without changing its live workspace.</p>
+        <p>Draft only. Live workspaces stay unchanged.</p>
       </header>
 
       <div className={styles.toolbar}>
         <div className={styles.tenantPicker}>
-          <span className={styles.toolbarLabel}>Tenant</span>
+          <span className="sr-only">Tenant</span>
           <AnimatedSelect
             name="tenant"
             label="Tenant"
@@ -210,13 +323,14 @@ export function WhiteLabelDraftEditor({
             }))}
           />
         </div>
-        <div className={styles.toolbarActions}>
+        {tenantId ? <div className={styles.toolbarActions}>
           <span className={styles.draftMeta} data-testid="draft-revision">
             {dirty ? <strong className={styles.dirty}>Unsaved changes</strong> : null}
             {draft && !dirty ? <strong>{draft.revision ? "All changes saved" : "Loaded defaults"}</strong> : null}
             {revisionLabel}
             {status.kind === "saving" ? <span>Saving draft…</span> : status.kind === "conflict" ? <strong className={styles.dirty}>Revision conflict</strong> : uncertain ? <strong className={styles.dirty}>Save failed · confirmation pending</strong> : null}
           </span>
+          <button type="button" className="button-secondary" disabled={busy} onClick={returnToDrafts}>All Drafts</button>
           <button
             ref={reviewButton}
             type="button"
@@ -236,8 +350,19 @@ export function WhiteLabelDraftEditor({
             {status.kind === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
             {status.kind === "saving" ? "Saving…" : "Save Draft"}
           </button>
-        </div>
+        </div> : null}
       </div>
+
+      <PortalDialog open={pendingReturn || Boolean(pendingTenantId)} onClose={cancelSwitch} title="Unsaved draft changes" initialFocusRef={keepEditingButton} closeOnBackdrop={false}
+        footer={<div className={styles.noticeActions}>
+          <button ref={keepEditingButton} type="button" className="button-secondary" disabled={busy} onClick={cancelSwitch}>Keep editing</button>
+          <button type="button" className="button-secondary" disabled={busy} onClick={completeSwitch}>{pendingReturn ? "Discard and return" : "Discard and switch"}</button>
+          <button type="button" className="button-primary" disabled={busy || !colorsValid || readOnly || status.kind === "conflict" || status.kind === "denied"} onClick={async () => { if (await save()) completeSwitch(); }}>Save Draft, then {pendingReturn ? "return" : "switch"}</button>
+        </div>}>
+        <p>You have unsaved changes to {tenant?.displayName ?? "this Tenant"}. {pendingReturn ? "Return to All Drafts" : `Switch to ${pendingTenant?.displayName ?? "the requested Tenant"}`} after saving, or discard only your local edits.</p>
+        {status.kind === "failed" || status.kind === "conflict" || status.kind === "invalid" || status.kind === "denied" ? <p role="alert">{status.kind === "conflict" ? "Revision conflict. Keep editing and load the latest draft before saving." : status.kind === "failed" ? "Save was not confirmed. Your edits remain here; retry confirms the original save first." : status.message}</p> : null}
+        {status.kind === "saved" && dirty ? <p role="status">The original save is confirmed. Save again to include your newer edits before returning.</p> : null}
+      </PortalDialog>
 
       <div className={styles.statusRegion} role="status" aria-live="polite">
         {pendingHref ? (
@@ -245,21 +370,7 @@ export function WhiteLabelDraftEditor({
             <p>You have unsaved draft changes. Leaving this studio discards them.</p>
             <div className={styles.noticeActions}>
               <button ref={keepEditingButton} type="button" className="button-secondary" onClick={cancelDeparture}>Keep editing</button>
-              <button type="button" className="button-primary" disabled={busy} onClick={() => router.push(pendingHref)}>Discard and leave</button>
-            </div>
-          </div>
-        ) : pendingTenant && tenant ? (
-          <div className={styles.notice}>
-            <p>
-              You have unsaved changes to {tenant.displayName}. Switching to {pendingTenant.displayName} discards them.
-            </p>
-            <div className={styles.noticeActions}>
-              <button type="button" className="button-secondary" onClick={() => setPendingTenantId(null)}>
-                Keep editing
-              </button>
-              <button type="button" className="button-primary" onClick={() => void load(pendingTenant.id)}>
-                Discard and switch
-              </button>
+              <button type="button" className="button-primary" disabled={busy} onClick={completeDeparture}>Discard and leave</button>
             </div>
           </div>
         ) : status.kind === "loading" ? (
@@ -324,10 +435,11 @@ export function WhiteLabelDraftEditor({
             }}
           /> : undefined}
         />
-      ) : status.kind !== "loading" && !tenantId ? (
-        <div className={styles.emptyState}>
-          <strong>Choose a Tenant</strong>
-          <p>Pick the Tenant whose White Label draft you want to edit. Nothing is saved until you choose Save Draft.</p>
+      ) : !tenantId ? (
+        listStatus === "ready" ? <WhiteLabelDraftList summaries={summaries} onContinue={chooseTenant} /> : <div className={styles.emptyState} role="status">
+          <strong>{listStatus === "loading" ? "Loading Tenant drafts…" : listStatus === "denied" ? "Drafts unavailable" : "Drafts could not be loaded"}</strong>
+          <p>{listStatus === "denied" ? "Your current session cannot manage these drafts." : listStatus === "failed" ? "No drafts have been changed. Try loading them again." : "Reading saved configurations from the server."}</p>
+          {listStatus === "failed" ? <button type="button" className="button-secondary" onClick={() => void refreshList()}>Try again</button> : null}
         </div>
       ) : null}
     </div>

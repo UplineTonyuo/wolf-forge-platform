@@ -11,9 +11,9 @@ export default async function WhiteLabelStudioPage({ searchParams }: {
 }) {
   if (!(await localUiQaBypassEnabled())) notFound();
   const context = await getInternalContext();
-  await context.services.permissions.requireModuleAccess("settings");
   if (await isLocalQuickAccessSession(context.actor)) notFound();
   if (!(await context.services.permissions.isPlatformAdmin())) notFound();
+  await context.services.permissions.requireModuleAccess("settings");
   const tenants = await context.services.whiteLabel.listTenants();
   const { tenant } = await searchParams;
   const initialDraft = typeof tenant === "string" && tenants.some((entry) => entry.id === tenant)

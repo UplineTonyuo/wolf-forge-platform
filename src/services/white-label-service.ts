@@ -3,6 +3,7 @@ import {
   saveWhiteLabelDraftSchema,
   type SavedWhiteLabelDraft,
   type WhiteLabelDraft,
+  type WhiteLabelDraftSummary,
   type WhiteLabelTenant,
 } from "../domain/white-label/draft";
 import { ValidationError } from "../lib/errors/application-error";
@@ -19,6 +20,19 @@ export class WhiteLabelService {
 
   listTenants(): Promise<WhiteLabelTenant[]> {
     return this.dependencies.repository.listTenants();
+  }
+
+  async listDrafts(): Promise<WhiteLabelDraftSummary[]> {
+    const tenants = await this.listTenants();
+    const summaries: WhiteLabelDraftSummary[] = [];
+    // Bound concurrent RPC reads; each draft still passes the database's entitlement check.
+    for (let index = 0; index < tenants.length; index += 6) {
+      summaries.push(...await Promise.all(tenants.slice(index, index + 6).map(async (tenant) => ({
+        tenant,
+        draft: await this.getDraft(tenant.id),
+      }))));
+    }
+    return summaries;
   }
 
   getDraft(tenantId: unknown): Promise<WhiteLabelDraft> {
