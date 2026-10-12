@@ -335,6 +335,7 @@ export type FormSubmissionSummary = {
   submitted_at: string;
   submitted_by_profile_id: string | null;
   supersedes_submission_id: string | null;
+  provenance?: FormSubmissionRow["provenance"];
 };
 
 export type FormSubmissionDetail = {

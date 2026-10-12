@@ -136,7 +136,7 @@ describe("White Label builder", () => {
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
-    expect(screen.getByText(/Reporting, Investment Intent, Projects, Tickets, Subscriptions and Invoices are optional for publication/)).toBeInTheDocument();
+    expect(screen.getByText(/Reporting, Investment Intent, Projects, Tickets, Subscriptions, Invoices and Forms are optional for publication/)).toBeInTheDocument();
     expect(screen.getByText(/Invoices can be disabled only with Subscriptions OFF and no outstanding or pending financial obligations, including archived obligations/)).toBeInTheDocument();
     expect(screen.getByText(/Refund ledger entries do not confirm returned money/)).toBeInTheDocument();
     expect(screen.getByText(/Published Projects requires Tickets/)).toBeInTheDocument();

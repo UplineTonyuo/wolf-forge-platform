@@ -492,5 +492,14 @@ select throws_ok($$select public.app_correct_form_submission('f1360050-0000-4000
 reset role;
 select set_config('request.jwt.claim.sub','',true);
 select throws_ok($$insert into public.form_submissions(id,form_id,form_version_id,root_submission_id) select 'f1360070-0000-4000-8000-000000001875',id,published_version_id,'f1360070-0000-4000-8000-000000001875' from public.forms where id=(select id from wlforms136_ids where label='wf-public')$$,'55000',null,'trusted new root refuses archived Form');
+select ok(not has_column_privilege('authenticated','public.form_submissions','order_id','SELECT'),'raw submission Project pointer is not granted');
+select ok(not has_column_privilege('authenticated','public.form_submissions','provenance','SELECT'),'raw submission provenance is not granted');
+select ok(not has_column_privilege('authenticated','public.form_assignments','order_id','SELECT'),'raw assignment Project pointer is not granted');
+select ok(has_column_privilege('authenticated','public.form_submissions','id','SELECT'),'scoped raw receipt identity remains readable');
+set local role authenticated;
+select pg_temp.act('1802','{"x-wf-tenant":"f1360010-0000-4000-8000-000000001801"}');
+select ok(exists(select 1 from public.app_list_form_submissions((select id from wlforms136_ids where label='b-onboard'),null)),'secured list retains authorized Tenant history');
+select is((select count(*) from public.app_list_form_submissions((select id from wlforms136_ids where label='wf-onboard'),null)),0::bigint,'secured list refuses foreign Tenant history');
+reset role;
 select * from finish();
 rollback;

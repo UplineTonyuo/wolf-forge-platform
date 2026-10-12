@@ -5709,6 +5709,10 @@ export type Database = {
         Args: { p_company_id: string; p_stripe_customer_id: string }
         Returns: string
       }
+      app_list_form_submissions: {
+        Args: { p_form_id?: string; p_order_id?: string }
+        Returns: Database["public"]["Tables"]["form_submissions"]["Row"][]
+      }
       app_list_assigned_forms: {
         Args: never
         Returns: {
