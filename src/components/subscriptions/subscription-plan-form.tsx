@@ -114,7 +114,7 @@ export function SubscriptionPlanForm({
         <div className={styles.formGrid}>
           <label><span>Quantity</span><input name="quantity" type="number" min="1" required defaultValue={currentItem?.quantity ?? 1} /></label>
           <label><span>Unit amount</span><input name="unit_amount" inputMode="decimal" required value={amount} onChange={(event) => setAmount(event.currentTarget.value)} />{state.fieldErrors.unit_amount ? <em>{state.fieldErrors.unit_amount}</em> : null}</label>
-          <label><span>Unit discount</span><input name="unit_discount" inputMode="decimal" required defaultValue={currentItem ? centsToMoneyInput(currentItem.unit_discount_cents) : "0.00"} />{state.fieldErrors.unit_discount ? <em>{state.fieldErrors.unit_discount}</em> : null}</label>
+          <label><span>Unit discount</span><input name="unit_discount" inputMode="decimal" required defaultValue={currentItem ? centsToMoneyInput(currentItem.unit_discount_cents) : "0.00"} />{state.fieldErrors.unit_discount ? <em>{state.fieldErrors.unit_discount}</em> : null}{currentItem?.coupon_id ? <small>This plan includes a saved Coupon discount. While Coupons are unavailable, keep its amount, quantity, discount and currency unchanged to preserve the agreed duration.</small> : null}</label>
           <label className={styles.checkboxField}><input name="is_taxable" type="checkbox" defaultChecked={currentItem?.is_taxable ?? true} /><span>Taxable line item</span></label>
         </div>
       </section>

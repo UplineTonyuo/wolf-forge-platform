@@ -51,7 +51,7 @@ select set_config('request.headers',json_build_object('x-wf-tenant',tenant)::tex
 $$;
 
 create temp table module_sets as select array_agg(module_key order by module_key) enabled,
-array_agg(module_key order by module_key) filter(where module_key not in ('subscriptions','invoices')) disabled
+array_agg(module_key order by module_key) filter(where module_key not in ('subscriptions','invoices','coupons')) disabled
 from private.white_label_modules;
 grant select on module_sets to authenticated;
 create function pg_temp.publish(keys text[],revision integer,tenant uuid default 'f0f0f0f0-0000-4000-8000-000000008381') returns integer language plpgsql as $$
@@ -103,7 +103,7 @@ select ok(private.published_module_set_valid((select disabled from module_sets))
 select ok(not private.published_module_set_valid((select array_remove(enabled,'invoices') from module_sets)),'Subscriptions ON requires Invoices');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'services') from module_sets)),'Services mandatory');
 select ok(private.published_module_set_valid((select array_remove(enabled,'forms') from module_sets)),'Forms independently optional');
-select ok(not private.published_module_set_valid((select array_remove(enabled,'coupons') from module_sets)),'Coupons mandatory');
+select ok(private.published_module_set_valid((select array_remove(enabled,'coupons') from module_sets)),'Coupons independently optional');
 select ok(not private.published_module_set_valid((select array_remove(enabled,'tickets') from module_sets)),'Projects still needs Tickets');
 select ok(not private.published_module_set_valid((select enabled||array['invoices'] from module_sets)),'duplicates invalid');
 select ok(not private.published_module_set_valid(array['todo']),'Operations excluded');

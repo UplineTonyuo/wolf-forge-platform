@@ -19,7 +19,7 @@ describe("integrated Forms boundaries", () => {
   });
 
   it("explains Forms optionality and retained history without changing Invoice guidance", () => {
-    expect(WHITE_LABEL_DRAFT_GUIDANCE).toContain("Invoices and Forms are optional for publication; Services and Coupons are required");
+    expect(WHITE_LABEL_DRAFT_GUIDANCE).toContain("Invoices, Forms and Coupons are optional for publication; Services is required");
     expect(WHITE_LABEL_DRAFT_GUIDANCE).toContain("currently authorized history");
     expect(WHITE_LABEL_DRAFT_GUIDANCE).toContain("no outstanding or pending financial obligations");
   });

@@ -19,7 +19,7 @@
 
 * { box-sizing: border-box; }
 html { background: var(--wf-warm-50); color: var(--wf-text); font-family: "Inter Variable", Inter, system-ui, sans-serif; }
-body { margin: 0; min-width: 320px; background: var(--wf-white); }
+body { margin: 0; background: var(--wf-white); }
 /* The Subscription calendar portals above the app; the page behind it must not scroll. */
 body.wf-subscription-calendar-open { overflow: hidden; }
 button, input, textarea, select { font: inherit; }

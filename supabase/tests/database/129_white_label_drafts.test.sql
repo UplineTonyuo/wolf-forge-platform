@@ -400,10 +400,10 @@ select is(
   '24. Tenant records (including their real display names) and profiles are unchanged');
 
 select pg_temp.act('3201');
-select ok(not private.published_module_set_valid(array['forms','invoices','projects','reporting','services','tickets']),
-  'recommended draft defaults do not weaken publication requirements');
-select throws_ok($$select private.publish_tenant_modules('f0f0f0f0-0000-4000-8000-000000003201',0,array['forms','invoices','projects','reporting','services','tickets'],'Draft defaults are not publication')$$,
-  '22023',null,'trusted publication writer rejects draft-only defaults');
+select ok(private.published_module_set_valid(array['forms','invoices','projects','reporting','services','tickets']),
+  'recommended draft defaults are now a valid optional-module set without publishing');
+select throws_ok($$select private.publish_tenant_modules('f0f0f0f0-0000-4000-8000-000000003201',0,'{}'::text[],'Draft defaults are not publication')$$,
+  '22023',null,'trusted publication writer rejects an empty draft selection');
 set local role authenticated;
 select lives_ok($$select * from public.app_save_white_label_draft('f0f0f0f0-0000-4000-8000-000000003201',4,'Explicit all modules','#000d51','#a8832e',array['coupons','forms','investment_intent','invoices','projects','reporting','services','subscriptions','tickets'])$$,
   'all nine modules remain selectable and saveable');

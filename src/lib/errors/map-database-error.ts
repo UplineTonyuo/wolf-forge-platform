@@ -20,6 +20,12 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
   if (error instanceof ApplicationError) return error;
 
   const databaseError = error as DatabaseErrorLike;
+  if (databaseError?.code === "42501" && databaseError.message === "WF_COUPONS_DISABLED") {
+    return new ApplicationError("PERMISSION_DENIED", "Coupons are unavailable. This request made no new purchase or payment.", { cause: error });
+  }
+  if (databaseError?.code === "42501" && databaseError.message === "Historic Coupon terms must be preserved exactly") {
+    return new ApplicationError("PERMISSION_DENIED", "Keep the existing Coupon discount, quantity, amount and currency unchanged while Coupons are unavailable.", { cause: error });
+  }
   switch (databaseError?.code) {
     case "PGRST116":
     case "02000":
