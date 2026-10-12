@@ -1,0 +1,12 @@
+# Proposed canonical memory delta — Forms integration
+
+Proposal only. No canonical Second Brain file was modified. Apply narrowly only after the eventual canonical integration owner accepts the local branch and exact commit.
+
+- **01 Current State.md:** record Forms source `87f8937` integrated by `24ed9c8`, followed by verified integration corrections `f2e7ae2dc0f0c0aa585023fb0e66d91502b7c0cd`. Seven optional modules now include Forms; Services/Coupons remain required. Preserve Invoice/Subscription obligations and outstanding recorded limitations. Reference the integration handoff and delivered documentation SHA, not feature historical test totals.
+- **02 Decisions.md:** only record newly accepted integration authorization/projection decisions if the canonical owner settles them: recheck authority after waits; collection definitions unavailable OFF; retain scoped receipt history; raw historical Project/provenance disclosure uses secured projections. Preserve the approved unpublished trusted bootstrap exception.
+- **03 Implementation Log.md:** append timestamped Codex integration entry covering 232 exact source integration, forward234/235, scoped repository, visibility tokens and guidance. Validation: fresh 153 source replay, 125/5,834 pgTAP, 234/3,034 Vitest, focused80 pgTAP/24 Vitest, build/typecheck/ESLint/SQL lint PASS, zero secret findings, 14 publication races, 4 Tenant authority races, 17 rollback mutants, authenticated seven-width browser results (96+14 cases and Project scope check). Do not paste raw private test logs.
+- **04 Known Issues.md:** record only confirmed resolved wait/disclosure/schema/helper/guidance/stale-scope findings; retain unrelated financial, dependency and type-drift issues. Do not retain reconciled fixture/transport/test-observation failures as product bugs.
+- **05 Architecture Map.md:** Forms historical list now uses secured RPC; direct authenticated sensitive-column grants are restricted; collection RLS has a narrow current-Tenant wrapper; browser signature incorporates scoped pointer/assignment-option visibility.
+- **Security overview/topic registry/change log:** concise control evidence, verified isolated identity, actor revocation/wait and publication behavior, guest replay confidentiality, trusted writes and restored mutants. Cite handoff, no secrets or exploit walkthrough.
+
+Next authorized canonical action remains owner review/merge decision. This task neither merges main nor integrates Coupons/Builder/Services. Coupons233 composition must account for later234/235 replacements.
