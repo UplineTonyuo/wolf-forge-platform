@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, LayoutList, LoaderCircle, Save } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getWhiteLabelDraftAction, listWhiteLabelDraftsAction, saveWhiteLabelDraftAction } from "../../app/actions/white-label";
@@ -12,7 +12,6 @@ import {
   type WhiteLabelTenant,
 } from "../../domain/white-label/draft";
 import type { WhiteLabelPreviewState } from "../../domain/white-label/preview";
-import { AnimatedSelect } from "../ui/animated-select";
 import { PortalDialog } from "../account/ui/portal-dialog";
 import { WhiteLabelDraftList } from "./white-label-draft-list";
 import { WhiteLabelBuilder } from "./white-label-builder";
@@ -298,60 +297,17 @@ export function WhiteLabelDraftEditor({
   const revisionLabel = !draft ? "" : draft.revision === 0 ? "No draft saved yet · defaults" : `Draft revision ${draft.revision}`;
 
   return (
-    <div className={styles.editor}>
-      <header className={styles.studioHeader}>
-        <h1>White Label Studio</h1>
-        <p>Draft only. Live workspaces stay unchanged.</p>
-      </header>
-
-      <div className={styles.toolbar}>
-        <div className={styles.tenantPicker}>
-          <span className="sr-only">Tenant</span>
-          <AnimatedSelect
-            name="tenant"
-            label="Tenant"
-            menuLabel="Tenants"
-            value={tenantId}
-            disabled={status.kind === "saving"}
-            onChange={chooseTenant}
-            options={tenants.map((entry) => ({
-              value: entry.id,
-              label: entry.displayName,
-              description: `${entry.slug} · ${STATUS_LABEL[entry.status] ?? entry.status} · ${
-                entry.draftRevision ? `draft revision ${entry.draftRevision}` : "no draft"
-              }`,
-            }))}
-          />
+    // The shared page frame gives White Label the same width, gutters and header rule as other feature pages.
+    <div className={`page-frame ${styles.editor}`}>
+      <header className={`page-header ${styles.studioHeader}`}>
+        {tenantId ? <button type="button" className={styles.backButton} aria-label="Back to All Drafts" title="Back to All Drafts" disabled={status.kind === "saving"} onClick={returnToDrafts}><ArrowLeft aria-hidden="true" /></button> : null}
+        <div>
+          <h1 id="main-heading" tabIndex={-1}>White Label Studio</h1>
+          <p>{tenantId
+            ? <>Editing <strong data-testid="studio-tenant">{tenant?.displayName ?? "Tenant"}</strong>{tenant ? ` · ${tenant.slug} · ${STATUS_LABEL[tenant.status] ?? tenant.status}` : ""}. Saving updates the draft only; live workspaces stay unchanged.</>
+            : "Choose a Tenant draft to continue. Saving updates drafts only; live workspaces stay unchanged."}</p>
         </div>
-        {tenantId ? <div className={styles.toolbarActions}>
-          <span className={styles.draftMeta} data-testid="draft-revision">
-            {dirty ? <strong className={styles.dirty}>Unsaved changes</strong> : null}
-            {draft && !dirty ? <strong>{draft.revision ? "All changes saved" : "Loaded defaults"}</strong> : null}
-            {revisionLabel}
-            {status.kind === "saving" ? <span>Saving draft…</span> : status.kind === "conflict" ? <strong className={styles.dirty}>Revision conflict</strong> : uncertain ? <strong className={styles.dirty}>Save failed · confirmation pending</strong> : null}
-          </span>
-          <button type="button" className="button-secondary" disabled={busy} onClick={returnToDrafts}>All Drafts</button>
-          <button
-            ref={reviewButton}
-            type="button"
-            className="button-secondary"
-            disabled={!draft || !state || !colorsValid || busy || reviewing || Boolean(pendingTenantId) || Boolean(pendingHref)}
-            onClick={() => setReviewing(true)}
-          >
-            Review Draft
-          </button>
-          <button
-            type="button"
-            className="button-primary"
-            disabled={!canSave}
-            aria-busy={status.kind === "saving" || undefined}
-            onClick={() => void save()}
-          >
-            {status.kind === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
-            {status.kind === "saving" ? "Saving…" : "Save Draft"}
-          </button>
-        </div> : null}
-      </div>
+      </header>
 
       <PortalDialog open={pendingReturn || Boolean(pendingTenantId)} onClose={cancelSwitch} title="Unsaved draft changes" initialFocusRef={keepEditingButton} closeOnBackdrop={false}
         footer={<div className={styles.noticeActions}>
@@ -422,6 +378,34 @@ export function WhiteLabelDraftEditor({
           readOnly={readOnly || status.kind === "saving" || status.kind === "denied"}
           onColorValidityChange={setColorsValid}
           tenantName={tenant?.displayName}
+          actions={<>
+            <button
+              type="button"
+              className={`button-primary ${styles.saveButton}`}
+              disabled={!canSave}
+              aria-busy={status.kind === "saving" || undefined}
+              onClick={() => void save()}
+            >
+              {status.kind === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Save aria-hidden="true" />}
+              {status.kind === "saving" ? "Saving…" : "Save Draft"}
+            </button>
+            <button
+              ref={reviewButton}
+              type="button"
+              className="button-secondary"
+              disabled={!draft || !state || !colorsValid || busy || reviewing || Boolean(pendingTenantId) || Boolean(pendingHref)}
+              onClick={() => setReviewing(true)}
+            >
+              <ClipboardCheck aria-hidden="true" />Review Draft
+            </button>
+            <button type="button" className="button-secondary" disabled={busy} onClick={returnToDrafts}><LayoutList aria-hidden="true" />All Drafts</button>
+            <span className={styles.draftMeta} data-testid="draft-revision">
+              {dirty ? <strong className={styles.dirty}>Unsaved changes</strong> : null}
+              {draft && !dirty ? <strong>{draft.revision ? "All changes saved" : "Loaded defaults"}</strong> : null}
+              {revisionLabel}
+              {status.kind === "saving" ? <span>Saving draft…</span> : status.kind === "conflict" ? <strong className={styles.dirty}>Revision conflict</strong> : uncertain ? <strong className={styles.dirty}>Save failed · confirmation pending</strong> : null}
+            </span>
+          </>}
           controls={reviewing ? <WhiteLabelDraftReview
             draft={draft}
             state={state}

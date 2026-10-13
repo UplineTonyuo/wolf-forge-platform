@@ -57,6 +57,24 @@ export function moduleAvailable(modules: Record<string, boolean>, id: string): b
   return entry.requires.every((required) => moduleAvailable(modules, required));
 }
 
+const moduleLabel = (id: string) => WHITE_LABEL_MODULES.find((entry) => entry.id === id)?.label ?? id;
+const listLabels = (labels: string[]) => labels.length < 2 ? labels.join("") : `${labels.slice(0, -1).join(", ")} and ${labels[labels.length - 1]}`;
+
+/**
+ * Why a draft module toggle is refused, or null when it may proceed. Enabling needs every
+ * required module selected; disabling is refused while a selected module still requires it.
+ */
+export function moduleToggleBlocker(modules: Record<string, boolean>, id: string, enable: boolean): string | null {
+  const entry = WHITE_LABEL_MODULES.find((candidate) => candidate.id === id);
+  if (!entry) return "This navigation entry is not a configurable module.";
+  if (enable) {
+    const missing = entry.requires.filter((required) => modules[required] !== true).map(moduleLabel);
+    return missing.length ? `${entry.label} needs ${listLabels(missing)}. Add ${listLabels(missing)} first.` : null;
+  }
+  const dependents = WHITE_LABEL_MODULES.filter((candidate) => modules[candidate.id] === true && candidate.requires.includes(entry.id)).map((candidate) => candidate.label);
+  return dependents.length ? `${listLabels(dependents)} ${dependents.length > 1 ? "need" : "needs"} ${entry.label}. Remove ${dependents.length > 1 ? "them" : "it"} first.` : null;
+}
+
 /** The module map the real shell navigation (navigationForModules) consumes. */
 export function previewNavigationModules(modules: Record<string, boolean>): Record<string, boolean> {
   const result: Record<string, boolean> = Object.fromEntries(CORE_MODULES.map((id) => [id, true]));

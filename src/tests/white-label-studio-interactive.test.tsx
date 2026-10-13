@@ -14,21 +14,81 @@ function Builder() {
   return <WhiteLabelBuilder state={state} onStateChange={update} />;
 }
 beforeEach(() => { window.history.replaceState(null, "", "/white-label?tenant=isolated-test"); });
+const live = () => within(screen.getByRole("region", { name: "Live preview" }));
+// X/+ controls exist only in the preview sidebar's transient edit mode.
+const editModules = () => { const edit = live().queryByRole("button", { name: "Edit modules" }); if (edit) fireEvent.click(edit); };
+const moduleSwitch = (label: string) => { editModules(); return live().getByRole("switch", { name: `${label} module` }); };
+const selectedModules = () => (editModules(), live().getAllByRole("switch")).filter((entry) => entry.getAttribute("aria-checked") === "true");
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 describe("Sandboxed studio preview", () => {
-  it("sidebar, cards and detail navigation remain inside the preview in both devices", () => {
+  it("keeps the shared application canvas across simulated screens and device changes", () => {
     render(<Builder />);
-    fireEvent.click(screen.getByRole("button", { name: "Open Projects preview" }));
+    for (const label of ["Services", "Projects", "Tickets", "Reporting", "Invoices", "Forms"]) {
+      fireEvent.click(live().getByRole("button", { name: `Open ${label} preview` }));
+      expect(within(screen.getByTestId("preview-workspace")).getByTestId("preview-greeting")).toHaveTextContent(label);
+      fireEvent.click(live().getAllByRole("button", { name: /^Open sample / })[0]!);
+      expect(screen.getByTestId("preview-greeting")).toHaveTextContent(`${label} sample`);
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
+    expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Forms sample");
+    expect(screen.getByTestId("preview-workspace")).toHaveTextContent("Client intake");
+    expect(window.location.pathname + window.location.search).toBe("/white-label?tenant=isolated-test");
+    expect(navigate).not.toHaveBeenCalled();
+  });
+  it("labels dashboard metrics, chart and activity as sample data and obeys module eligibility", () => {
+    render(<Builder />);
+    const workspace = within(screen.getByTestId("preview-workspace"));
+    expect(workspace.getByText(/Sample data only, no live Tenant records/)).toBeInTheDocument();
+    expect(workspace.getByRole("img", { name: /Illustrative revenue trend.*Sample data, no live records/ })).toBeInTheDocument();
+    expect(within(workspace.getByRole("list", { name: "Sample metrics" })).getAllByRole("listitem")).toHaveLength(4);
+    expect(workspace.getByRole("region", { name: "Sample recent activity" })).toHaveTextContent("New project created");
+    fireEvent.click(workspace.getByRole("button", { name: /New project created/ }));
+    expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects");
+    fireEvent.click(live().getByRole("button", { name: "Workspace overview" }));
+    fireEvent.click(moduleSwitch("Projects"));
+    fireEvent.click(moduleSwitch("Invoices"));
+    const updated = within(screen.getByTestId("preview-workspace"));
+    expect(updated.queryByRole("button", { name: /New project created|Payment received/ })).toBeNull();
+    expect(updated.queryByRole("button", { name: /Explore (Projects|Invoices) preview/ })).toBeNull();
+    expect(updated.getByRole("img", { name: /Illustrative activity trend/ })).toBeInTheDocument();
+    expect(within(updated.getByRole("list", { name: "Sample metrics" })).getAllByRole("listitem")).toHaveLength(4);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+  it("mobile navigation opens inside the phone, closes on selection and returns focus on Escape", () => {
+    render(<Builder />);
+    fireEvent.click(live().getByRole("button", { name: "Open Dashboard preview" }));
+    expect(screen.getByTestId("preview-greeting")).toHaveFocus();
+    fireEvent.click(live().getByRole("button", { name: "Mobile" }));
+    expect(live().queryByRole("button", { name: "Open Projects preview" })).toBeNull();
+    fireEvent.click(live().getByRole("button", { name: "Open preview navigation" }));
+    expect(live().getByRole("button", { name: "Close preview navigation" })).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(live().getByRole("button", { name: "Open Projects preview" }));
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects");
     expect(screen.getByTestId("preview-greeting")).toHaveFocus();
-    fireEvent.click(screen.getByRole("button", { name: /Sample item/ }));
+    expect(live().getByRole("button", { name: "Open preview navigation" })).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(live().getByRole("button", { name: "Open preview navigation" }));
+    fireEvent.click(live().getByRole("button", { name: "Open Projects preview" }));
+    expect(screen.getByTestId("preview-greeting")).toHaveFocus();
+    fireEvent.click(live().getByRole("button", { name: "Open preview navigation" }));
+    fireEvent.keyDown(live().getByRole("button", { name: "Close preview navigation" }), { key: "Escape" });
+    expect(live().getByRole("button", { name: "Open preview navigation" })).toHaveFocus();
+    expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects");
+    expect(window.location.pathname + window.location.search).toBe("/white-label?tenant=isolated-test");
+    expect(navigate).not.toHaveBeenCalled();
+  });
+  it("sidebar, cards and detail navigation remain inside the preview in both devices", () => {
+    render(<Builder />);
+    fireEvent.click(live().getByRole("button", { name: "Open Projects preview" }));
+    expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects");
+    expect(screen.getByTestId("preview-greeting")).toHaveFocus();
+    fireEvent.click(live().getByRole("button", { name: "Open sample Website Redesign" }));
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects sample");
-    fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
+    fireEvent.click(live().getByRole("button", { name: "Mobile" }));
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Projects sample");
-    fireEvent.click(screen.getByRole("button", { name: "Back to projects preview" }));
-    fireEvent.click(screen.getByRole("button", { name: "Workspace overview" }));
-    fireEvent.click(screen.getByRole("button", { name: "Explore Tickets preview" }));
+    fireEvent.click(live().getByRole("button", { name: "Back to projects preview" }));
+    fireEvent.click(live().getByRole("button", { name: "Workspace overview" }));
+    fireEvent.click(live().getByRole("button", { name: /^Explore Tickets preview/ }));
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Tickets");
     expect(window.location.pathname + window.location.search).toBe("/white-label?tenant=isolated-test");
     expect(navigate).not.toHaveBeenCalled();
@@ -36,11 +96,11 @@ describe("Sandboxed studio preview", () => {
   });
   it("disabling an active module or its dependency removes its content and focus targets", () => {
     render(<Builder />);
-    fireEvent.click(screen.getByRole("button", { name: "Explore Projects preview" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Services" }));
+    fireEvent.click(live().getByRole("button", { name: /^Explore Projects preview/ }));
+    fireEvent.click(moduleSwitch("Projects"));
     expect(screen.getByTestId("preview-greeting")).toHaveTextContent("Welcome to");
-    expect(screen.queryByRole("button", { name: "Open Projects preview" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Explore Projects preview" })).toBeNull();
+    expect(live().getByRole("button", { name: "Open Projects preview" })).toBeDisabled();
+    expect(live().queryByRole("button", { name: /^Explore Projects preview/ })).toBeNull();
     expect(document.querySelector('[data-module="projects"] button')).toBeDisabled();
   });
 });
@@ -52,7 +112,7 @@ describe("Studio color templates and manual colors", () => {
     fireEvent.click(screen.getByRole("option", { name: template.name }));
     expect(screen.getByLabelText("Primary color")).toHaveValue(template.primaryColor);
     expect(screen.getByLabelText("Accent color")).toHaveValue(template.accentColor);
-    expect(screen.getAllByRole("checkbox").filter((entry) => (entry as HTMLInputElement).checked)).toHaveLength(6);
+    expect(selectedModules()).toHaveLength(6);
     expect(screen.getByTestId("preview-brand-name")).toHaveTextContent(SYNTHETIC_PREVIEW_STATE.displayName);
     fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
     expect(screen.getByTestId("preview-frame").style.getPropertyValue("--preview-primary")).toBe(template.primaryColor);

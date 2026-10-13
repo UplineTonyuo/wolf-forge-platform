@@ -65,8 +65,9 @@ export function WhiteLabelColorControls({ state, onStateChange, readOnly, onVali
   }
   return (
     <fieldset className={styles.group} disabled={readOnly}>
-      <legend>Brand colors</legend>
+      <legend className="sr-only">Brand colors</legend>
       <section aria-label="Color templates" className={styles.templates}>
+        <span className={styles.fieldLabel} aria-hidden="true">Color template</span>
         <AnimatedSelect name="color-template" label="Color template" menuLabel="Color templates" value={selected?.name ?? "custom"} disabled={readOnly}
           onChange={(name) => { const template = WHITE_LABEL_COLOR_TEMPLATES.find((entry) => entry.name === name); if (template) apply(template); }}
           options={[
