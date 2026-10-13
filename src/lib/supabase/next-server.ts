@@ -14,6 +14,8 @@ import type { TicketCapabilities } from "../../domain/tickets/schema";
 import { toModuleAccessMap, type ModuleAccess } from "../../domain/permissions/schema";
 import type { Database } from "./database.types";
 import { hardenAuthCookieOptions } from "./auth-cookie-options";
+import { identityLookup, IdentityLookupError } from "./identity-lookup";
+import { recordIdentityUnavailable } from "./identity-failure-response";
 import { currentCorrelationId } from "../security/request-correlation";
 import { recordSecurityAuditEvent } from "../security/security-audit-log";
 import { recordSecurityEvent } from "../security/security-log";
@@ -265,19 +267,25 @@ export async function resolveInternalUser(
   // Access and role come from the caller's membership in the current Tenant
   // (WL-2.18), never from the global Wolf Forge compatibility profiles.role_id.
   const [membershipResult, profileResult, permissionsResult, modulesResult] = await Promise.all([
-    client.rpc("app_current_tenant_membership"),
-    client.from("profiles").select("id, display_name, avatar_url, archived_at").eq("id", actor.id).single(),
-    client.rpc("app_current_user_permissions"),
-    client.rpc("app_current_user_modules"),
+    identityLookup(() => client.rpc("app_current_tenant_membership"), "membership"),
+    identityLookup(() => client.from("profiles").select("id, display_name, avatar_url, archived_at").eq("id", actor.id).single(), "profile"),
+    identityLookup(() => client.rpc("app_current_user_permissions"), "permissions"),
+    identityLookup(() => client.rpc("app_current_user_modules"), "modules"),
   ]);
 
+  if (!Array.isArray(membershipResult.data)) throw new IdentityLookupError("unavailable", "membership");
+  if (!Array.isArray(permissionsResult.data)) throw new IdentityLookupError("unavailable", "permissions");
+  if (!Array.isArray(modulesResult.data)) throw new IdentityLookupError("unavailable", "modules");
+  if (!profileResult.error && (!profileResult.data || profileResult.data.id !== actor.id)) {
+    throw new IdentityLookupError("unavailable", "profile");
+  }
   const membership = membershipResult.error ? undefined : membershipResult.data?.[0];
   const role = membership?.role_name;
   if (membership?.account_class !== "internal" || !role || !internalRoleNames.has(role)) return null;
-  if (profileResult.error || !profileResult.data || profileResult.data.archived_at) return null;
+  if (profileResult.error || !profileResult.data || profileResult.data.id !== actor.id || profileResult.data.archived_at) return null;
 
   const granted = new Set(
-    permissionsResult.error ? [] : (permissionsResult.data ?? []).map((row) => row.permission_key),
+    (permissionsResult.data ?? []).map((row) => row.permission_key),
   );
 
   return {
@@ -288,7 +296,7 @@ export async function resolveInternalUser(
     role: role as InternalUser["role"],
     tenantId: membership.tenant_id,
     modules: toModuleAccessMap(
-      modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
+      (modulesResult.data ?? []) as ModuleAccess[],
     ),
     team: {
       view: granted.has("users.view"),
@@ -368,12 +376,15 @@ export async function resolveClientUser(
   actor: VerifiedActor,
 ): Promise<ClientUser | null> {
   const [result, modulesResult] = await Promise.all([
-    client.rpc("app_get_client_account_context"),
-    client.rpc("app_current_user_modules"),
+    identityLookup(() => client.rpc("app_get_client_account_context"), "client_account"),
+    identityLookup(() => client.rpc("app_current_user_modules"), "modules"),
   ]);
   if (result.error) return null;
+  if (!Array.isArray(result.data)) throw new IdentityLookupError("unavailable", "client_account");
+  if (!Array.isArray(modulesResult.data)) throw new IdentityLookupError("unavailable", "modules");
   const account = result.data?.[0];
-  if (!account || account.profile_id !== actor.id) return null;
+  if (!account) return null;
+  if (account.profile_id !== actor.id) throw new IdentityLookupError("unavailable", "client_account");
 
   return {
     id: account.profile_id,
@@ -381,7 +392,7 @@ export async function resolveClientUser(
     displayName: account.display_name,
     companyName: account.company_name,
     modules: toModuleAccessMap(
-      modulesResult.error ? [] : ((modulesResult.data ?? []) as ModuleAccess[]),
+      (modulesResult.data ?? []) as ModuleAccess[],
     ),
   };
 }
@@ -440,9 +451,35 @@ async function recordContextRefusal(input: {
   }
 }
 
+async function pageIdentity<T>(
+  read: () => Promise<T>,
+  surface: "internal" | "client" | "self_service",
+): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (!(error instanceof IdentityLookupError)) throw error;
+    if (error.kind === "unavailable") {
+      await recordIdentityUnavailable(error);
+      redirect(`/login?reason=identity-unavailable${surface === "client" ? "&next=/account" : ""}`);
+    }
+    await recordContextRefusal({ event: "auth.session.unverified", surface, reason: "actor_unverified" });
+    redirect(surface === "client" ? "/login?next=/account" : "/login");
+  }
+}
+
+async function verifyContextActor(client: UserScopedClient): Promise<VerifiedActor | null> {
+  try {
+    return await verifyActor(client);
+  } catch (error) {
+    if (error instanceof IdentityLookupError && error.kind === "unauthenticated") return null;
+    throw error;
+  }
+}
+
 export const getInternalContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "internal");
   if (error || !data.session) {
     await recordContextRefusal({
       event: "authorization.context.unauthenticated",
@@ -454,7 +491,7 @@ export const getInternalContext = cache(async () => {
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await pageIdentity(() => verifyContextActor(client), "internal");
   if (!actor) {
     await recordContextRefusal({
       event: "auth.session.unverified",
@@ -464,7 +501,7 @@ export const getInternalContext = cache(async () => {
     redirect("/login");
   }
 
-  const user = await resolveInternalUser(client, actor);
+  const user = await pageIdentity(() => resolveInternalUser(client, actor), "internal");
   if (!user) {
     /*
      * A verified account with no internal role reaching the staff application.
@@ -577,7 +614,7 @@ export const getInternalContext = cache(async () => {
  */
 export const getTeamActorContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
   if (error || !data.session) return null;
 
   const client = createUserSupabaseClient(
@@ -585,7 +622,7 @@ export const getTeamActorContext = cache(async () => {
     data.session.access_token,
     await requestTenantSelector(),
   );
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await verifyContextActor(client);
   if (!actor) return null;
 
   return {
@@ -614,7 +651,7 @@ export const getTeamActorContext = cache(async () => {
  */
 export const getTicketActorContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
   if (error || !data.session) return null;
 
   const client = createUserSupabaseClient(
@@ -622,7 +659,7 @@ export const getTicketActorContext = cache(async () => {
     data.session.access_token,
     await requestTenantSelector(),
   );
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await verifyContextActor(client);
   if (!actor) return null;
 
   return {
@@ -635,7 +672,7 @@ export const getTicketActorContext = cache(async () => {
  * The internal-actor context for a Route Handler that answers a background
  * fetch rather than rendering a page — the same session, actor-verification
  * AND internal-role checks as getInternalContext(), but returns null instead
- * of redirecting on failure, for the same reason getTeamActorContext() does
+ * of redirecting on lost authentication, for the same reason getTeamActorContext() does
  * above: a poll that has lost its session should receive 401, not a redirect
  * to a login page it cannot render.
  *
@@ -647,19 +684,21 @@ export const getTicketActorContext = cache(async () => {
  * database recheck — Google Sheets access is a single service-account read
  * with no RLS — so this function IS the only authorization boundary those
  * routes have, and it has to match getInternalContext()'s full check.
+ * Explicit non-staff identity throws an authorization refusal; lookup outages
+ * throw an availability failure for the shared route response mapper.
  */
 export const getInternalActorContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
   if (error || !data.session) return null;
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await verifyContextActor(client);
   if (!actor) return null;
 
   const user = await resolveInternalUser(client, actor);
-  if (!user) return null;
+  if (!user) throw new IdentityLookupError("unauthorized", "membership");
 
   return { actor, user, client };
 });
@@ -701,7 +740,7 @@ export async function getAccountProvisioningService() {
  */
 export const getSelfServiceContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "self_service");
   if (error || !data.session) {
     await recordContextRefusal({
       event: "authorization.context.unauthenticated",
@@ -713,7 +752,7 @@ export const getSelfServiceContext = cache(async () => {
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await pageIdentity(() => verifyContextActor(client), "self_service");
   if (!actor) {
     await recordContextRefusal({
       event: "auth.session.unverified",
@@ -734,7 +773,7 @@ export const getSelfServiceContext = cache(async () => {
 
 export const getClientContext = cache(async () => {
   const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "client");
   if (error || !data.session) {
     await recordContextRefusal({
       event: "authorization.context.unauthenticated",
@@ -746,7 +785,7 @@ export const getClientContext = cache(async () => {
 
   const environment = readLocalFrontendEnvironment();
   const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
-  const actor = await verifyActor(client).catch(() => null);
+  const actor = await pageIdentity(() => verifyContextActor(client), "client");
   if (!actor) {
     await recordContextRefusal({
       event: "auth.session.unverified",
@@ -756,7 +795,7 @@ export const getClientContext = cache(async () => {
     redirect("/login?next=/account");
   }
 
-  const user = await resolveClientUser(client, actor);
+  const user = await pageIdentity(() => resolveClientUser(client, actor), "client");
   if (!user) {
     await recordContextRefusal({
       event: "authorization.context.denied",

@@ -95,7 +95,8 @@ describe("internal-app access derives from the current Tenant membership", () =>
   });
 
   it("fails closed when the membership read errors", async () => {
-    expect(await resolveInternalUser(fakeClient({ membership: null, profileRole: "owner" }), actor)).toBeNull();
+    await expect(resolveInternalUser(fakeClient({ membership: null, profileRole: "owner" }), actor))
+      .rejects.toMatchObject({ kind: "unavailable", stage: "membership" });
   });
 
   it("requires both an internal account class and an internal role", async () => {

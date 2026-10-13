@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PublicEnvironment } from "../env/index";
 import type { Database } from "./database.types";
 import { TENANT_SELECTOR_HEADER, type TenantSelector } from "../../domain/tenancy/tenant-selector";
+import { identityLookup, IdentityLookupError } from "./identity-lookup";
 
 declare const userScopedClientBrand: unique symbol;
 declare const verifiedActorBrand: unique symbol;
@@ -51,11 +52,11 @@ export async function verifyActor(client: UserScopedClient): Promise<VerifiedAct
   const accessToken = accessTokens.get(client);
   if (!accessToken) throw new Error("User-scoped client has no verification token.");
 
-  const { data, error } = await client.auth.getClaims(accessToken);
+  const { data } = await identityLookup(() => client.auth.getClaims(accessToken), "claims");
   const subject = data?.claims?.sub;
 
-  if (error || typeof subject !== "string" || subject.length === 0) {
-    throw new Error("Authenticated user verification failed.");
+  if (typeof subject !== "string" || subject.length === 0) {
+    throw new IdentityLookupError("unauthenticated", "claims");
   }
 
   const email = typeof data?.claims.email === "string" && data.claims.email ? data.claims.email : null;

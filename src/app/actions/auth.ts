@@ -31,6 +31,8 @@ import {
   resolveInternalUser,
 } from "../../lib/supabase/next-server";
 import { createUserSupabaseClient, verifyActor } from "../../lib/supabase/user-client";
+import { IDENTITY_UNAVAILABLE_MESSAGE, IdentityLookupError } from "../../lib/supabase/identity-lookup";
+import { recordIdentityUnavailable } from "../../lib/supabase/identity-failure-response";
 
 export type LoginState = { error: string | null };
 
@@ -151,8 +153,22 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
     data.session.access_token,
     tenantSelector,
   );
-  const actor = await verifyActor(client).catch(() => null);
-  const internalUser = actor ? await resolveInternalUser(client, actor) : null;
+  let actor;
+  let internalUser;
+  let clientUser;
+  try {
+    actor = await verifyActor(client);
+    internalUser = await resolveInternalUser(client, actor);
+    if (!internalUser) clientUser = await resolveClientUser(client, actor);
+  } catch (error) {
+    if (!(error instanceof IdentityLookupError)) throw error;
+    if (error.kind === "unavailable") {
+      await recordIdentityUnavailable(error);
+      return { error: IDENTITY_UNAVAILABLE_MESSAGE };
+    }
+    await supabase.auth.signOut();
+    return signInFailure();
+  }
   if (resolveSignInSurface({ hasInternalUser: Boolean(internalUser), hasClientUser: false }) === "internal") {
     recordSecurityEvent({
       event: "auth.login.succeeded",
@@ -165,7 +181,6 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
     redirect(safeNextPath(formData.get("next")));
   }
 
-  const clientUser = actor ? await resolveClientUser(client, actor) : null;
   if (resolveSignInSurface({ hasInternalUser: false, hasClientUser: Boolean(clientUser) }) !== "client") {
     /*
      * The password was correct but the account belongs to no surface. Worth a

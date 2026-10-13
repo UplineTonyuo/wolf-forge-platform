@@ -11,7 +11,26 @@ describe("verified actor and environment boundaries", () => {
   it("rejects actor derivation when Auth cannot verify a user", async () => {
     const client = createUserSupabaseClient(environment, "invalid-token");
     vi.spyOn(client.auth, "getClaims").mockResolvedValue({ data: null, error: new Error("invalid") } as never);
-    await expect(verifyActor(client)).rejects.toThrow("verification failed");
+    await expect(verifyActor(client)).rejects.toMatchObject({ kind: "unavailable", stage: "claims" });
+  });
+
+  it.each(["invalid_jwt", "session_not_found"])("rejects %s as unauthenticated without retry", async (code) => {
+    const client = createUserSupabaseClient(environment, "invalid-token");
+    const claims = vi.spyOn(client.auth, "getClaims").mockResolvedValue({
+      data: null, error: { code, status: code === "invalid_jwt" ? 400 : 401 },
+    } as never);
+    await expect(verifyActor(client)).rejects.toMatchObject({ kind: "unauthenticated", stage: "claims" });
+    expect(claims).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers a claims verifier outage only after successful verification", async () => {
+    const client = createUserSupabaseClient(environment, "signed-token");
+    const claims = vi.spyOn(client.auth, "getClaims")
+      .mockResolvedValueOnce({ data: null, error: { status: 503 } } as never)
+      .mockResolvedValueOnce({ data: { claims: { sub: "20000000-0000-4000-8000-000000000001" } }, error: null } as never);
+    const actor = await verifyActor(client);
+    expect(claims).toHaveBeenCalledTimes(2);
+    expect(() => assertVerifiedActor(actor)).not.toThrow();
   });
 
   it("derives and freezes actor identity only from verified Auth output", async () => {

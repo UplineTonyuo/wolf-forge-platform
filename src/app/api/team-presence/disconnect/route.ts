@@ -2,6 +2,7 @@ import { teamPresenceConnectionSchema } from "../../../../domain/team/schema";
 import { readBoundedJson } from "../../../../lib/security/bounded-json";
 import { requestIsSameOrigin } from "../../../../lib/security/same-origin";
 import { getTeamActorContext } from "../../../../lib/supabase/next-server";
+import { identityFailureResponse } from "../../../../lib/supabase/identity-failure-response";
 
 /**
  * Best-effort page-exit cleanup for one browser tab. Stale expiry remains the
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
   if (!payload.success) return new Response(null, { status: 400 });
 
   try {
-    const context = await getTeamActorContext();
+    const context = await getTeamActorContext().catch(identityFailureResponse);
+    if (context instanceof Response) return context;
     if (!context) return new Response(null, { status: 401 });
     await context.team.disconnectPresence(payload.data, context.actor);
   } catch {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "../../components/forms/login-form";
+import { IDENTITY_UNAVAILABLE_MESSAGE } from "../../lib/supabase/identity-lookup";
 
 export const metadata: Metadata = {
   title: "Wolf Forge Access",
@@ -13,11 +14,13 @@ export default async function LoginPage({
   const params = await searchParams;
 
   const initialError =
-    params.reason === "staff-only"
-      ? "This area is for Wolf Forge team members."
-      : params.reason === "client-only"
-        ? "This area is for active Wolf Forge client accounts."
-        : null;
+    params.reason === "identity-unavailable"
+      ? IDENTITY_UNAVAILABLE_MESSAGE
+      : params.reason === "staff-only"
+        ? "This area is for Wolf Forge team members."
+        : params.reason === "client-only"
+          ? "This area is for active Wolf Forge client accounts."
+          : null;
 
   return (
     <main className="login-page wf-cinematic-login">
