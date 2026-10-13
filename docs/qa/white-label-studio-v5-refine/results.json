@@ -1,0 +1,419 @@
+{
+  "failedResponses": [],
+  "checks": [
+    {
+      "name": "White Label entry uses the shared page frame geometry",
+      "ok": true,
+      "detail": {
+        "servicesFrame": {
+          "x": 250,
+          "y": 20,
+          "w": 1170,
+          "h": 891,
+          "right": 1420,
+          "bottom": 911
+        },
+        "wlFrame": {
+          "x": 250,
+          "y": 20,
+          "w": 1170,
+          "h": 455,
+          "right": 1420,
+          "bottom": 475
+        }
+      }
+    },
+    {
+      "name": "Header copy stays clear of the search/command bar",
+      "ok": true,
+      "detail": {
+        "headerText": {
+          "x": 274,
+          "y": 40,
+          "w": 592,
+          "h": 55,
+          "right": 866,
+          "bottom": 95
+        },
+        "commandBar": {
+          "x": 876,
+          "y": 30,
+          "w": 520,
+          "h": 44,
+          "right": 1396,
+          "bottom": 74
+        }
+      }
+    },
+    {
+      "name": "No horizontal overflow on drafts landing",
+      "ok": true
+    },
+    {
+      "name": "Studio keeps the same frame as the landing",
+      "ok": true,
+      "detail": {
+        "x": 250,
+        "y": 20,
+        "w": 1170,
+        "h": 960,
+        "right": 1420,
+        "bottom": 980
+      }
+    },
+    {
+      "name": "Workspace Settings ~25% / Live Preview ~75%",
+      "ok": true,
+      "detail": {
+        "settings": 281,
+        "preview": 822,
+        "share": "0.255"
+      }
+    },
+    {
+      "name": "Desktop normal mode has no X/+ controls",
+      "ok": true
+    },
+    {
+      "name": "Normal navigation lists only enabled modules",
+      "ok": true,
+      "detail": [
+        "dashboard",
+        "projects",
+        "tickets",
+        "reporting",
+        "clients",
+        "invoices",
+        "subscriptions",
+        "services",
+        "forms",
+        "team",
+        "team_supervision",
+        "settings"
+      ]
+    },
+    {
+      "name": "No separate Mobile preview section",
+      "ok": true
+    },
+    {
+      "name": "Edit mode shows all nine optional modules in established order",
+      "ok": true,
+      "detail": [
+        "projects",
+        "tickets",
+        "reporting",
+        "invoices",
+        "subscriptions",
+        "coupons",
+        "investment_intent",
+        "services",
+        "forms"
+      ]
+    },
+    {
+      "name": "Edit control is keyboard-operable with a visible focus ring and shows Done",
+      "ok": true,
+      "detail": {
+        "focusVisible": true
+      }
+    },
+    {
+      "name": "Excluded modules are faded with + and cannot open",
+      "ok": true,
+      "detail": [
+        {
+          "id": "coupons",
+          "openDisabled": true,
+          "opacity": "0.45",
+          "toggle": "false"
+        },
+        {
+          "id": "investment_intent",
+          "openDisabled": true,
+          "opacity": "0.45",
+          "toggle": "false"
+        }
+      ]
+    },
+    {
+      "name": "Core modules have no X/+ controls",
+      "ok": true,
+      "detail": [
+        [
+          "dashboard",
+          false
+        ],
+        [
+          "clients",
+          false
+        ],
+        [
+          "team",
+          false
+        ],
+        [
+          "team_supervision",
+          false
+        ],
+        [
+          "settings",
+          false
+        ]
+      ]
+    },
+    {
+      "name": "Dependency-breaking removal is refused with an explanation",
+      "ok": true,
+      "detail": "Projects and Subscriptions need Services. Remove them first."
+    },
+    {
+      "name": "Adding coupons in edit mode updates the draft state",
+      "ok": true,
+      "detail": "Coupons added to the draft. Save Draft to keep this change."
+    },
+    {
+      "name": "Removing the previewed module returns to Dashboard",
+      "ok": true
+    },
+    {
+      "name": "Escape leaves edit mode and focuses Edit modules",
+      "ok": true
+    },
+    {
+      "name": "Done/Escape did not save (Unsaved changes shown)",
+      "ok": true
+    },
+    {
+      "name": "Exactly one phone, inside Live Preview",
+      "ok": true
+    },
+    {
+      "name": "Preset selector sits inside the Live Preview header",
+      "ok": true,
+      "detail": {
+        "pickerBox": {
+          "x": 1139,
+          "y": 182,
+          "w": 236,
+          "h": 54,
+          "right": 1375,
+          "bottom": 236
+        },
+        "headerBox": {
+          "x": 596,
+          "y": 174,
+          "w": 780,
+          "h": 70,
+          "right": 1375,
+          "bottom": 244
+        }
+      }
+    },
+    {
+      "name": "All three presets keep exact logical viewports and label device + dimensions",
+      "ok": true,
+      "detail": [
+        {
+          "name": "Samsung Galaxy S24",
+          "size": [
+            "360px",
+            "780px",
+            360,
+            780
+          ],
+          "label": "Samsung Galaxy S24 · 360 × 780"
+        },
+        {
+          "name": "Google Pixel 9",
+          "size": [
+            "412px",
+            "915px",
+            412,
+            915
+          ],
+          "label": "Google Pixel 9 · 412 × 915"
+        },
+        {
+          "name": "iPhone 15 Pro",
+          "size": [
+            "393px",
+            "852px",
+            393,
+            852
+          ],
+          "label": "iPhone 15 Pro · 393 × 852"
+        }
+      ]
+    },
+    {
+      "name": "Mobile shows the module added on desktop (shared draft state)",
+      "ok": true
+    },
+    {
+      "name": "Mobile drawer edit mode shows nine controls",
+      "ok": true
+    },
+    {
+      "name": "Mobile drawer closes on Escape with focus on the menu button",
+      "ok": true
+    },
+    {
+      "name": "Sample screens still open inside the phone",
+      "ok": true
+    },
+    {
+      "name": "No horizontal overflow at 320-1440 (Studio, both devices)",
+      "ok": true,
+      "detail": [
+        {
+          "width": 320,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 289
+        },
+        {
+          "width": 360,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 329
+        },
+        {
+          "width": 390,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 359
+        },
+        {
+          "width": 430,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 399
+        },
+        {
+          "width": 768,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 723
+        },
+        {
+          "width": 1280,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 1215
+        },
+        {
+          "width": 1440,
+          "mobileOverflow": 0,
+          "desktopOverflow": 0,
+          "headerRight": 1375
+        },
+        {
+          "landing": 320,
+          "overflow": 0
+        },
+        {
+          "landing": 390,
+          "overflow": 0
+        },
+        {
+          "landing": 768,
+          "overflow": 0
+        }
+      ]
+    },
+    {
+      "name": "Unsaved-change dialog appears when leaving a dirty draft",
+      "ok": true
+    },
+    {
+      "name": "Keep editing preserves the unsaved state",
+      "ok": true
+    },
+    {
+      "name": "Drafts landing has no horizontal overflow at 320/390/768",
+      "ok": true
+    },
+    {
+      "name": "Tenant B draft opens with its own name",
+      "ok": true
+    },
+    {
+      "name": "Tenant B opens clean (no unsaved changes)",
+      "ok": true
+    },
+    {
+      "name": "Reduced motion removes module-toggle transitions",
+      "ok": true,
+      "detail": "0s"
+    },
+    {
+      "name": "Tenant A/B drafts unchanged in the database (no saves)",
+      "ok": true
+    }
+  ],
+  "widths": [
+    {
+      "width": 320,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 289
+    },
+    {
+      "width": 360,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 329
+    },
+    {
+      "width": 390,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 359
+    },
+    {
+      "width": 430,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 399
+    },
+    {
+      "width": 768,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 723
+    },
+    {
+      "width": 1280,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 1215
+    },
+    {
+      "width": 1440,
+      "mobileOverflow": 0,
+      "desktopOverflow": 0,
+      "headerRight": 1375
+    },
+    {
+      "landing": 320,
+      "overflow": 0
+    },
+    {
+      "landing": 390,
+      "overflow": 0
+    },
+    {
+      "landing": 768,
+      "overflow": 0
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy."
+  ],
+  "pageErrors": 0
+}
