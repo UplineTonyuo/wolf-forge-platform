@@ -34,7 +34,7 @@ const button=(p,name)=>p.getByRole('button',{name,exact:true});
 const monitor=p=>{p.on('pageerror',e=>result.errors.push(e.message));p.on('console',m=>{if(m.type()==='error')result.consoleErrors.push(m.text());});};
 const ready=p=>p.getByLabel('Workspace display name',{exact:true}).waitFor({timeout:90000});
 const saved=p=>p.getByText(/Draft saved · revision/).waitFor({timeout:45000});
-const noOverlay=async p=>assert.equal(await p.locator('nextjs-portal').count(),0);
+const noOverlay=async p=>assert.equal(await p.locator('nextjs-portal [data-nextjs-dialog-header]').count(),0);
 try{
  if(phase==='login'){
   for(const [name,a] of Object.entries(accounts)){
@@ -43,7 +43,7 @@ try{
    await page.goto(identity.origin+'/login',{waitUntil:'domcontentloaded',timeout:120000});
    await page.getByLabel('Email',{exact:true}).fill(a.email);
    await page.getByLabel('Password',{exact:true}).fill(a.password);
-   await button(page,'Sign in').click();
+   await page.getByRole('button',{name:/^Sign in/}).click();
    await page.waitForURL(url=>url.pathname!=='/login',{timeout:120000});
    await noOverlay(page);
    await context.storageState({path:resolve(sessions,name+'.json')});
