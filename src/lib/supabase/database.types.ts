@@ -9,6 +9,101 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      tenants: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          display_name: string
+          id: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tenant_memberships: {
+        Row: {
+          account_class: string
+          archived_at: string | null
+          company_id: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          role_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_class: string
+          archived_at?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id: string
+          role_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_class?: string
+          archived_at?: string | null
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string
+          role_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       activity_events: {
         Row: {
           action: string
