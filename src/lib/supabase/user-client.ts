@@ -11,6 +11,7 @@ export type UserScopedClient = SupabaseClient<Database> & {
 
 export type VerifiedActor = {
   readonly id: string;
+  readonly email: string | null;
   readonly [verifiedActorBrand]: true;
 };
 
@@ -47,7 +48,7 @@ export async function verifyActor(client: UserScopedClient): Promise<VerifiedAct
     throw new Error("Authenticated user verification failed.");
   }
 
-  const actor = Object.freeze({ id: subject }) as VerifiedActor;
+  const actor = Object.freeze({ id: subject, email: typeof data?.claims.email === "string" ? data.claims.email : null }) as VerifiedActor;
   verifiedActors.add(actor);
   return actor;
 }

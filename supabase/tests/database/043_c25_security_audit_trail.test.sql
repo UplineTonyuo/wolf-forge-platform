@@ -42,8 +42,8 @@ select is(
 
 select is(
   (select count(*) from private.security_audit_event_codes),
-  8::bigint,
-  'exactly eight codes are selected as auditable'
+    9::bigint,
+    'exactly nine codes, including draft saves, are selected as auditable'
 );
 
 select is(

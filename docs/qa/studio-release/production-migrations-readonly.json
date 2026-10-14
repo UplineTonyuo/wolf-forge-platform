@@ -1,0 +1,399 @@
+{
+  "project": "jwynqsyirgenqlmkooah",
+  "observedAt": "2026-10-14",
+  "operation": "read-only list_migrations",
+  "migrations": [
+    {
+      "version": "20260812024130",
+      "name": "initial_core_schema"
+    },
+    {
+      "version": "20260813010000",
+      "name": "phase2b_atomic_mutations"
+    },
+    {
+      "version": "20260813020000",
+      "name": "phase2b_final_corrections"
+    },
+    {
+      "version": "20260813023000",
+      "name": "client_status"
+    },
+    {
+      "version": "20260813030000",
+      "name": "services_engine_mvp"
+    },
+    {
+      "version": "20260813043000",
+      "name": "company_wallet"
+    },
+    {
+      "version": "20260813053000",
+      "name": "wallet_notifications"
+    },
+    {
+      "version": "20260813060000",
+      "name": "live_services_catalog"
+    },
+    {
+      "version": "20260813060100",
+      "name": "catalog_gbp_only_seo"
+    },
+    {
+      "version": "20260813060200",
+      "name": "catalog_local_seo"
+    },
+    {
+      "version": "20260813060300",
+      "name": "catalog_ecommerce_seo"
+    },
+    {
+      "version": "20260813060400",
+      "name": "catalog_onpage_technical_seo"
+    },
+    {
+      "version": "20260813060500",
+      "name": "catalog_website_design"
+    },
+    {
+      "version": "20260813060600",
+      "name": "catalog_press_releases"
+    },
+    {
+      "version": "20260813060700",
+      "name": "catalog_backlink_service"
+    },
+    {
+      "version": "20260813060800",
+      "name": "catalog_finalize"
+    },
+    {
+      "version": "20260813060900",
+      "name": "catalog_seo_sprint_descriptions"
+    },
+    {
+      "version": "20260813070000",
+      "name": "client_private_access_foundation"
+    },
+    {
+      "version": "20260813090000",
+      "name": "roles_permissions_foundation"
+    },
+    {
+      "version": "20260813100000",
+      "name": "backend_permission_boundary"
+    },
+    {
+      "version": "20260813105658",
+      "name": "fix_company_wallet_permission_trigger"
+    },
+    {
+      "version": "20260813110000",
+      "name": "coupons_backend_engine"
+    },
+    {
+      "version": "20260813120000",
+      "name": "coupon_scope_trigger_fix"
+    },
+    {
+      "version": "20260813130000",
+      "name": "invoices_backend_foundation"
+    },
+    {
+      "version": "20260813140000",
+      "name": "invoice_refund_balance_fix"
+    },
+    {
+      "version": "20260814100000",
+      "name": "wf_card_payment_foundation"
+    },
+    {
+      "version": "20260814110000",
+      "name": "subscriptions_backend_foundation"
+    },
+    {
+      "version": "20260814120000",
+      "name": "subscription_audit_fixes"
+    },
+    {
+      "version": "20260814130000",
+      "name": "forms_backend_core"
+    },
+    {
+      "version": "20260814130100",
+      "name": "forms_rls_permission_fix"
+    },
+    {
+      "version": "20260814130200",
+      "name": "forms_frontend_read_models"
+    },
+    {
+      "version": "20260814140000",
+      "name": "tickets_backend_core"
+    },
+    {
+      "version": "20260815100000",
+      "name": "account_access_presets_and_provisioning"
+    },
+    {
+      "version": "20260815120000",
+      "name": "team_directory_read_models"
+    },
+    {
+      "version": "20260815200000",
+      "name": "client_portal_store_module"
+    },
+    {
+      "version": "20260815215800",
+      "name": "ticket_message_avatars"
+    },
+    {
+      "version": "20260816010900",
+      "name": "unified_notifications"
+    },
+    {
+      "version": "20260817000000",
+      "name": "dashboard_executive_metrics"
+    },
+    {
+      "version": "20260818000000",
+      "name": "profile_self_service_and_avatars"
+    },
+    {
+      "version": "20260818120000",
+      "name": "client_portal_notifications"
+    },
+    {
+      "version": "20260819120000",
+      "name": "store_investment_intent"
+    },
+    {
+      "version": "20260820120000",
+      "name": "stripe_customer_mapping"
+    },
+    {
+      "version": "20260820140000",
+      "name": "client_reporting"
+    },
+    {
+      "version": "20260820150000",
+      "name": "reporting_builder"
+    },
+    {
+      "version": "20260820164642",
+      "name": "client_report_viewer"
+    },
+    {
+      "version": "20260820191205",
+      "name": "service_aware_reporting_wizard"
+    },
+    {
+      "version": "20260820201822",
+      "name": "expose_client_report_one_time_metadata"
+    },
+    {
+      "version": "20260820234921",
+      "name": "p0_authorization_security"
+    },
+    {
+      "version": "20260821103000",
+      "name": "b1_medium_authorization_hardening"
+    },
+    {
+      "version": "20260821130000",
+      "name": "b2_abuse_resistance_hardening"
+    },
+    {
+      "version": "20260823120000",
+      "name": "store_service_purchase_fulfillment"
+    },
+    {
+      "version": "20260823140000",
+      "name": "remove_wf_card_store_purchase_gate"
+    },
+    {
+      "version": "20260823150000",
+      "name": "store_and_invoice_coupons"
+    },
+    {
+      "version": "20260824090000",
+      "name": "c23_abuse_rate_limits"
+    },
+    {
+      "version": "20260825005219",
+      "name": "settings_integrations_foundation"
+    },
+    {
+      "version": "20260825131637",
+      "name": "gmail_live_integration"
+    },
+    {
+      "version": "20260825170000",
+      "name": "c23_self_service_profile_rate_limits"
+    },
+    {
+      "version": "20260826120000",
+      "name": "c25_durable_security_audit"
+    },
+    {
+      "version": "20260826170000",
+      "name": "team_communication_tasks"
+    },
+    {
+      "version": "20260826180000",
+      "name": "team_presence_connections"
+    },
+    {
+      "version": "20260826190000",
+      "name": "team_communication_v2"
+    },
+    {
+      "version": "20260826200000",
+      "name": "team_typing_eager_authorization"
+    },
+    {
+      "version": "20260826210000",
+      "name": "team_communication_v21_hardening"
+    },
+    {
+      "version": "20260826220000",
+      "name": "team_live_sync"
+    },
+    {
+      "version": "20260826230000",
+      "name": "team_markdown_escapes"
+    },
+    {
+      "version": "20260827000000",
+      "name": "team_search_and_reactions"
+    },
+    {
+      "version": "20260827010000",
+      "name": "team_message_actions"
+    },
+    {
+      "version": "20260827094453",
+      "name": "production_login_cost_abuse_hardening"
+    },
+    {
+      "version": "20260827100220",
+      "name": "authenticated_cost_limits"
+    },
+    {
+      "version": "20260827130000",
+      "name": "reporting_send_window"
+    },
+    {
+      "version": "20260828120000",
+      "name": "team_communication_v26_governance"
+    },
+    {
+      "version": "20260901151505",
+      "name": "team_voice_messages_and_pins"
+    },
+    {
+      "version": "20260902141757",
+      "name": "restrict_integration_and_team_helper_privileges"
+    },
+    {
+      "version": "20260902163628",
+      "name": "fix_idor_authorization_boundaries"
+    },
+    {
+      "version": "20260907160000",
+      "name": "team_voice_playback_rate_limit"
+    },
+    {
+      "version": "20260913184254",
+      "name": "order_conversation_restoration"
+    },
+    {
+      "version": "20260914182625",
+      "name": "order_message_actions"
+    },
+    {
+      "version": "20260915085547",
+      "name": "internal_note_unsend"
+    },
+    {
+      "version": "20260915092641",
+      "name": "assignee_avatar_options"
+    },
+    {
+      "version": "20260915100009",
+      "name": "project_conversation_attachments"
+    },
+    {
+      "version": "20260916090000",
+      "name": "ticket_reply_media_quote"
+    },
+    {
+      "version": "20260916100000",
+      "name": "ticket_attachment_secure_download_metadata"
+    },
+    {
+      "version": "20260916110000",
+      "name": "ticket_reply_attachment_target"
+    },
+    {
+      "version": "20260917100000",
+      "name": "project_native_conversation_foundation"
+    },
+    {
+      "version": "20260917130000",
+      "name": "investment_conversation"
+    },
+    {
+      "version": "20260917140000",
+      "name": "project_conversation_native_read"
+    },
+    {
+      "version": "20260918120000",
+      "name": "ticket_inbox_membership"
+    },
+    {
+      "version": "20260924120000",
+      "name": "client_welcome_email"
+    },
+    {
+      "version": "20260926203443",
+      "name": "client_conversation_notifications_and_project_purchase"
+    },
+    {
+      "version": "20260928194600",
+      "name": "team_supervision_authorization_foundation"
+    },
+    {
+      "version": "20260928202728",
+      "name": "team_supervision_audit_foundation"
+    },
+    {
+      "version": "20260929084337",
+      "name": "team_supervision_conversation_list"
+    },
+    {
+      "version": "20260929091403",
+      "name": "team_supervision_transcript_detail"
+    },
+    {
+      "version": "20260929110000",
+      "name": "team_supervision_transcript_pagination"
+    },
+    {
+      "version": "20260929120000",
+      "name": "team_supervision_conversation_search"
+    },
+    {
+      "version": "20261002120000",
+      "name": "subscription_eligible_services"
+    },
+    {
+      "version": "20261002130000",
+      "name": "admin_subscription_eligibility"
+    },
+    {
+      "version": "20261006120000",
+      "name": "organizations"
+    }
+  ]
+}

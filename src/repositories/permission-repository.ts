@@ -43,6 +43,13 @@ export class PermissionRepository {
     );
   }
 
+  /** Global Platform Admin entitlement of the session's own identity (never a Tenant role). */
+  async isPlatformAdmin(): Promise<boolean> {
+    const { data, error } = await this.client.rpc("app_is_platform_admin");
+    if (error) throw mapDatabaseError(error, "Platform Admin");
+    return data === true;
+  }
+
   async listPresets(): Promise<PermissionPreset[]> {
     return unwrapMany(
       await this.client.rpc("app_list_permission_presets"),

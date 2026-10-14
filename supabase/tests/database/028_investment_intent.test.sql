@@ -791,13 +791,14 @@ select is(
 -- This remove/re-add happened immediately after the previous renewal, inside
 -- the Batch B2 cooldown. The intent state still advanced (add_count is 3
 -- above), but Wolf Forge is not told a second time: coalescing protects the
--- work queue without falsifying the interest record.
+-- work queue without falsifying the interest record. Count the same fixture recipients.
 select is(
   (
     select count(*)
     from public.notifications
     where entity_type = 'service_interest'
       and company_id = '71000000-0000-0000-0000-00000000000a'
+      and recipient_profile_id in ('70000000-0000-0000-0000-000000000004', '70000000-0000-0000-0000-000000000005')
   ),
   4::bigint,
   'a re-add inside the cooldown advances the intent without manufacturing a second signal'

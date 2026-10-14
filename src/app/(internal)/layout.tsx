@@ -1,4 +1,5 @@
-﻿import { InternalShell } from "../../components/shell/internal-shell";
+﻿import { isLocalQuickAccessSession } from "../../lib/qa/local-ui-bypass";
+import { InternalShell } from "../../components/shell/internal-shell";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,14 @@ export default async function InternalLayout({ children }: { children: React.Rea
    */
   const profile = await context.services.profile.getMine().catch(() => null);
 
+  const showWhiteLabel = context.user.modules.settings === true
+    && !(await isLocalQuickAccessSession(context.actor))
+    && await context.services.permissions.isPlatformAdmin().catch(() => false);
+
   return (
     <InternalShell
       user={context.user}
+      showWhiteLabel={showWhiteLabel}
       notificationSoundEnabled={profile?.notificationSoundEnabled ?? true}
     >
       {children}

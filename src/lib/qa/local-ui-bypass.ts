@@ -129,7 +129,33 @@ export async function ensureLocalQaSession(
   const credentials = await readLocalQaCredentials();
   if (!credentials) return;
 
-  await supabase.auth.signInWithPassword(credentials).catch(() => {
-    // Local Supabase is stopped, or the QA account/password is stale.
-  });
+  const signedIn = await supabase.auth.signInWithPassword(credentials).catch(() => null);
+  // Local Supabase is stopped, or the QA account/password is stale.
+  if (!signedIn?.data.session) return;
+
+  /*
+   * Passwordless auto-login must never carry the global Platform Admin
+   * entitlement (WL-2.32). If the QA account holds it, or the check cannot
+   * run, drop the session it just created: fail closed, back to /login.
+   */
+  const check = await Promise.resolve(supabase.rpc("app_is_platform_admin")).catch(() => null);
+  if (!check || check.error || check.data !== false) {
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  }
+}
+
+/**
+ * True when the signed-in session belongs to the passwordless Quick Access
+ * identity (WL-2.33, D-297). `ensureLocalQaSession` only refuses the Platform
+ * Admin entitlement when it mints a session, so an already-running Quick
+ * Access session would carry a later grant; Platform Admin surfaces call this
+ * on every request and refuse it. Takes the server-verified actor, whose
+ * email comes from the verified token. Fails closed: an actor without an
+ * email counts as Quick Access while the credentials file exists.
+ */
+export async function isLocalQuickAccessSession(actor: { readonly email: string | null }): Promise<boolean> {
+  const credentials = await readLocalQaCredentials();
+  if (!credentials) return false;
+  if (!actor.email) return true;
+  return actor.email.toLowerCase() === credentials.email.toLowerCase();
 }

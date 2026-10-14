@@ -2,6 +2,11 @@ begin;
 
 select plan(26);
 
+create temp table existing_staff_count as
+select count(*) as members from public.profiles p join public.roles r on r.id = p.role_id
+where r.name = 'staff' and p.archived_at is null;
+grant select on existing_staff_count to authenticated;
+
 -- =============================================================================
 -- STRUCTURE
 -- =============================================================================
@@ -303,7 +308,7 @@ select ok(
     select overview_row.member_count
     from public.app_list_permission_preset_overview() as overview_row
     where overview_row.preset_key = 'staff'
-  ) = 1,
+  ) = (select members + 1 from existing_staff_count),
   'member counts exclude archived profiles'
 );
 

@@ -129,8 +129,12 @@ describe("local UI QA bypass", () => {
 });
 
 describe("ensureLocalQaSession", () => {
-  function fakeSupabase(signInWithPassword: ReturnType<typeof vi.fn>): SupabaseClient<Database> {
-    return { auth: { signInWithPassword } } as unknown as SupabaseClient<Database>;
+  function fakeSupabase(
+    signInWithPassword: ReturnType<typeof vi.fn>,
+    rpc: ReturnType<typeof vi.fn> = vi.fn(),
+    signOut: ReturnType<typeof vi.fn> = vi.fn(),
+  ): SupabaseClient<Database> {
+    return { auth: { signInWithPassword, signOut }, rpc } as unknown as SupabaseClient<Database>;
   }
 
   function loopbackRequest(): Request {
@@ -184,12 +188,47 @@ describe("ensureLocalQaSession", () => {
   it("swallows a failed sign-in rather than throwing (e.g. local Supabase is stopped)", async () => {
     enableLocalQaEnvironment();
     const signInWithPassword = vi.fn().mockRejectedValue(new Error("fetch failed"));
+    const rpc = vi.fn();
     mockReadFile.mockResolvedValueOnce(
       JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
     );
 
     await expect(
-      ensureLocalQaSession(fakeSupabase(signInWithPassword), loopbackRequest()),
+      ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc), loopbackRequest()),
     ).resolves.toBeUndefined();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["holds the Platform Admin entitlement", { data: true, error: null }],
+    ["cannot be checked", { data: null, error: { code: "PGRST202", message: "missing" } }],
+    ["cannot be checked because the call throws", new Error("fetch failed")],
+  ])("signs the auto-login session out again when the QA identity %s (WL-2.32)", async (_label, check) => {
+    enableLocalQaEnvironment();
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
+    const rpc = check instanceof Error ? vi.fn().mockRejectedValue(check) : vi.fn().mockResolvedValue(check);
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    mockReadFile.mockResolvedValueOnce(
+      JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
+    );
+
+    await ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc, signOut), loopbackRequest());
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("app_is_platform_admin");
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
+  });
+
+  it("keeps the auto-login session of an ordinary (non Platform Admin) QA identity", async () => {
+    enableLocalQaEnvironment();
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    const signOut = vi.fn();
+    mockReadFile.mockResolvedValueOnce(
+      JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
+    );
+
+    await ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc, signOut), loopbackRequest());
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("app_is_platform_admin");
+    expect(signOut).not.toHaveBeenCalled();
   });
 });

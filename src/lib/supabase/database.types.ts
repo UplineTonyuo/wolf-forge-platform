@@ -4267,6 +4267,48 @@ export type Database = {
       }
     }
     Functions: {
+      app_is_platform_admin: {
+        Args: never
+        Returns: boolean
+      }
+      app_list_white_label_tenants: {
+        Args: never
+        Returns: {
+          display_name: string
+          draft_revision: number | null
+          slug: string
+          status: string
+          tenant_id: string
+        }[]
+      }
+      app_get_white_label_draft: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          accent_color: string
+          display_name: string
+          module_keys: string[]
+          primary_color: string
+          revision: number
+          tenant_id: string
+          tenant_status: string
+          updated_at: string | null
+        }[]
+      }
+      app_save_white_label_draft: {
+        Args: {
+          p_accent_color: string
+          p_display_name: string
+          p_expected_revision: number
+          p_module_keys: string[]
+          p_primary_color: string
+          p_tenant_id: string
+        }
+        Returns: {
+          already_applied: boolean
+          revision: number
+          updated_at: string
+        }[]
+      }
       app_add_organization_member: {
         Args: { p_contact_id: string; p_organization_id: string }
         Returns: {

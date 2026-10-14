@@ -18,6 +18,7 @@ import {
   TrendingUp,
   UsersRound,
   Wrench,
+  Palette,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -35,7 +36,7 @@ import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
 
-const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
+export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
   projects: FolderKanban,
   tickets: TicketCheck,
@@ -51,6 +52,7 @@ const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = 
   team: ShieldCheck,
   team_supervision: MessagesSquare,
   settings: Settings,
+  white_label: Palette,
 };
 
 function SidebarLink({
@@ -104,16 +106,18 @@ function SidebarLink({
 export function InternalShell({
   user,
   notificationSoundEnabled = true,
+  showWhiteLabel = false,
   children,
 }: {
   user: InternalUser;
   /** The profile's stored chime preference, passed through to the bell. */
   notificationSoundEnabled?: boolean;
+  showWhiteLabel?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const navigationCategories = navigationForModules(user.modules);
+  const navigationCategories = navigationForModules(user.modules, showWhiteLabel);
   const mobileDrawerRef = useRef<HTMLDialogElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 

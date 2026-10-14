@@ -35,6 +35,8 @@ import { SubscriptionRepository } from "../../repositories/subscription-reposito
 import { FormRepository } from "../../repositories/form-repository";
 import { TicketRepository } from "../../repositories/ticket-repository";
 import { ProjectConversationRepository } from "../../repositories/project-conversation-repository";
+import { WhiteLabelRepository } from "../../repositories/white-label-repository";
+import { WhiteLabelService } from "../../services/white-label-service";
 import { PermissionRepository } from "../../repositories/permission-repository";
 import { ProfileRepository } from "../../repositories/profile-repository";
 import { IntegrationRepository } from "../../repositories/integration-repository";
@@ -493,6 +495,7 @@ export const getInternalContext = cache(async () => {
       orders: new OrderService({ repository: new OrderRepository(client) }),
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
+      whiteLabel: new WhiteLabelService({ repository: new WhiteLabelRepository(client) }),
       profile: new ProfileService({ repository: new ProfileRepository(client) }),
       integrations: new IntegrationService({
         repository: new IntegrationRepository(client),
