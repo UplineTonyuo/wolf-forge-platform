@@ -19,6 +19,8 @@ Required source commits, applied by selecting the named feature files and SQL ra
 
 Release adaptations remove the development-only availability condition while retaining verified sessions, explicit Platform Admin checks, Settings access and refusal of the Quick Access identity. Every action repeats these checks. RPCs independently require Platform Admin from `auth.uid()`; a tenant ID grants nothing. The navigation flag is presentation only. Existing CRM membership resolution, host routing, business policies and branding remain the production baseline.
 
+Rendered release QA found and corrected an accepted-source phone-preview defect: the measurement observer did not attach when Desktop changed to Mobile without a preset change. The effect now follows device activation. Its regression test checks the initial switch; browser QA checks the frame fits its container at every required width and retains the preset's exact CSS viewport dimensions.
+
 The editor explicitly says drafts only, publishing and live branding unavailable. A draft passing validation is valid for saving, not publication approval. The simulated preview uses sample data. Drafts may contain Services OFF or no modules; saving never silently adds Services. Neither live module authorization nor live branding reads these drafts.
 
 Excluded: Publication proposal/implementation, the frozen publication contract and its future migration, incomplete Branding consumers, newer optional-module enforcement, Forms/Coupons integration, Custom Extensions, broad tenant authorization rollout and login branding. No publication table, writer, API, button or runtime branding provider is installed.
@@ -37,6 +39,8 @@ Apply exactly these four existing migrations in order after baseline-registry/sc
 4. `20261010120000_white_label_recommended_draft_defaults.sql`
 
 These introduce metadata, a fail-closed profile mirror, private drafts and new guarded RPCs. They do not tenant-convert business records or install publication enforcement. The mirror backfills membership rows and runs on subsequent profile role/company/archive writes. It requires every existing role to have a valid internal/client preset. The draft-default update leaves saved arrays, including empty arrays, intact.
+
+Other tenant-rollout migrations with earlier timestamps are deliberately excluded. A future full tenant rollout must reconcile these four already-installed versions and explicitly rehearse the older pending migrations; merging the recovery branch and blindly using `--include-all` is not an approved composition method.
 
 All 403 production public/private application function bodies match the baseline after newline normalization. Production has 23 additional preexisting `service_role` EXECUTE grants versus a pristine replay; this difference is recorded, not removed. These four migrations revoke/grant only their newly created objects. Preserve the existing production grants and do not apply a wholesale schema diff or grant reset.
 

@@ -72,18 +72,18 @@ function Brand({ name }: { name: string }) {
 }
 
 /** Scales an exact-size simulated viewport down to its slot without changing its CSS pixels. */
-function useFitScale(width: number, height: number, maxHeight?: number) {
+function useFitScale(width: number, height: number, maxHeight: number | undefined, enabled: boolean) {
   const slot = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   useLayoutEffect(() => {
     const element = slot.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
+    if (!enabled || !element || typeof ResizeObserver === "undefined") return;
     const measure = () => setScale(Math.min(1, element.clientWidth / width, maxHeight ? maxHeight / height : 1));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [width, height, maxHeight]);
+  }, [width, height, maxHeight, enabled]);
   return { slot, scale };
 }
 
@@ -127,7 +127,7 @@ export function WhiteLabelPreview({ state, device, phone = DEFAULT_PHONE, onTogg
   const title = entries.find((entry) => entry.id === active)?.label ?? "Dashboard";
   const selectedModule = WHITE_LABEL_MODULES.find((entry) => entry.id === active);
   const detail = active === view.module ? view.detail : null;
-  const { slot, scale } = useFitScale(phone.width + BEZEL * 2, phone.height + BEZEL * 2, maxPhoneHeight);
+  const { slot, scale } = useFitScale(phone.width + BEZEL * 2, phone.height + BEZEL * 2, maxPhoneHeight, device === "mobile");
   function open(id: string) { if (available[id]) { setMobileMenuOpen(false); focusView.current = true; setView({ module: id, detail: null }); } }
   useEffect(() => { if (focusView.current) { heading.current?.focus(); focusView.current = false; } }, [view, mobileMenuOpen]);
   useEffect(() => { if (!notice) return; const timer = window.setTimeout(() => setNotice(null), 6000); return () => window.clearTimeout(timer); }, [notice]);

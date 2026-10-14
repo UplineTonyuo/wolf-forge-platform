@@ -124,6 +124,23 @@ const moduleSwitch = (label: string) => { editModules(); return live().getByRole
 const selectedModules = () => (editModules(), live().getAllByRole("switch")).filter((entry) => entry.getAttribute("aria-checked") === "true");
 
 describe("White Label builder", () => {
+  it("measures the newly mounted phone when switching from Desktop to Mobile", () => {
+    const observe = vi.fn(), disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class { observe = observe; disconnect = disconnect; unobserve = vi.fn(); });
+    const width = vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(280);
+    try {
+      render(<Builder />);
+      expect(observe).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
+      expect(Number(screen.getByTestId("preview-frame").style.zoom)).toBeCloseTo(280 / 413);
+      expect(observe).toHaveBeenCalledOnce();
+      fireEvent.click(screen.getByRole("button", { name: "Desktop" }));
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      width.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
   it("starts with six choices and lets every non-default module be added in both previews", () => {
     render(<Builder />);
     expect(selectedModules()).toHaveLength(6);

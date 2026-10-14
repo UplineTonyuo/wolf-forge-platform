@@ -11,7 +11,8 @@ assert.equal(identity.api,'http://127.0.0.1:62321');
 assert.equal(identity.origin,'http://127.0.0.1:3022');
 const head=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 assert.equal(head,process.env.WF_RELEASE_CANDIDATE_SHA,'Pin the exact committed candidate SHA');
-assert.equal(execFileSync('git',['diff','HEAD','--','src','scripts','supabase','package.json','package-lock.json'],{cwd:root,encoding:'utf8'}),'');
+assert.equal(execFileSync('git',['diff','HEAD','--','src','supabase','package.json','package-lock.json','next.config.ts'],{cwd:root,encoding:'utf8'}),'');
+const harnessClean=execFileSync('git',['diff','HEAD','--','scripts/qa-studio-release-browser.mjs'],{cwd:root,encoding:'utf8'})==='';
 const inspection=JSON.parse(execFileSync('docker',['inspect',identity.containerId],{encoding:'utf8'}))[0];
 assert.equal(inspection.Name,'/supabase_db_Wolf-Forge-Studio-Release-20261014');
 assert.equal(inspection.NetworkSettings.Ports['5432/tcp'][0].HostIp,'127.0.0.1');
@@ -24,16 +25,29 @@ assert.ok(['login','verify'].includes(phase));
 const evidence=resolve(backend,'evidence/browser');
 const sessions=resolve(backend,'private-sessions');
 mkdirSync(evidence,{recursive:true});mkdirSync(sessions,{recursive:true});
-const result={sha:head,phase,origin:identity.origin,backend:identity.project,startedAt:new Date().toISOString(),checks:[],viewports:[],errors:[],consoleErrors:[]};
+const result={sha:head,harnessClean,phase,origin:identity.origin,backend:identity.project,startedAt:new Date().toISOString(),checks:[],viewports:[],errors:[],consoleErrors:[],failedResponses:[]};
 const accounts=JSON.parse(readFileSync(resolve(root,'.qa-local-credentials.release.json'),'utf8'));
 assert.match(accounts.platformAdmin.id,/^[0-9a-f-]{36}$/i);
 let revoked=false;
+let expectedDenial=false;
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const routeA='/white-label?tenant=f0f0f0f0-0000-4000-8000-000000004201';
 const button=(p,name)=>p.getByRole('button',{name,exact:true});
-const monitor=p=>{p.on('pageerror',e=>result.errors.push(e.message));p.on('console',m=>{if(m.type()==='error')result.consoleErrors.push(m.text());});};
-const ready=p=>p.getByLabel('Workspace display name',{exact:true}).waitFor({timeout:90000});
-const saved=p=>p.getByText(/Draft saved · revision/).waitFor({timeout:45000});
+const monitor=p=>{
+ p.on('pageerror',e=>result.errors.push(e.message));
+ p.on('response',r=>{if(r.status()>=400)result.failedResponses.push({status:r.status(),url:r.url(),denialPhase:expectedDenial});});
+ p.on('console',m=>{
+  if(m.type()!=='error')return;
+  const message=m.text(),location=m.location().url;
+  const classification=expectedDenial&&/status of (404|403)/.test(message)?'expected-denial'
+   :/Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy/.test(message)?'inherited-csp-warning'
+   :message.includes('/_vercel/speed-insights/script.js')||location.includes('/_vercel/speed-insights/script.js')?'local-speed-insights'
+   :location.endsWith('/favicon.ico')&&/404/.test(message)?'local-favicon':'unexpected';
+  result.consoleErrors.push({message,location,classification});
+ });
+};
+const ready=p=>p.getByRole('textbox',{name:'Workspace display name',exact:true}).waitFor({timeout:90000});
+const saved=p=>p.getByText(/Draft saved · revision/).filter({visible:true}).first().waitFor({timeout:45000});
 const noOverlay=async p=>assert.equal(await p.locator('nextjs-portal [data-nextjs-dialog-header]').count(),0);
 try{
  if(phase==='login'){
@@ -60,10 +74,10 @@ try{
   assert.ok(await page.getByText('Drafts only · Publishing and live branding are unavailable.').isVisible());
   assert.equal(await page.getByRole('button',{name:/^publish(?: now)?$/i}).count(),0);
   await button(page,'Continue Editing Studio Release A').click();await ready(page);
-  const field=page.getByLabel('Workspace display name',{exact:true});
+  const field=page.getByRole('textbox',{name:'Workspace display name',exact:true});
   await field.fill('Studio candidate '+head.slice(0,8));
   await button(page,'Review Draft').click();
-  await page.getByText('Draft valid for saving. Publishing is unavailable.').waitFor();
+  await page.getByText('Draft valid for saving. Publishing is unavailable.').filter({visible:true}).waitFor();
   await button(page,'Save reviewed draft').click();await saved(page);
   await button(page,'Back to editing').click();
   await page.reload();await ready(page);
@@ -93,7 +107,7 @@ try{
   await page.goto(identity.origin+routeA);await ready(page);
   const second=await context.newPage();monitor(second);await second.goto(identity.origin+routeA);await ready(second);
   await field.fill('First revision winner');await button(page,'Save Draft').click();await saved(page);
-  await second.getByLabel('Workspace display name',{exact:true}).fill('Stale revision loser');
+  await second.getByRole('textbox',{name:'Workspace display name',exact:true}).fill('Stale revision loser');
   await button(second,'Save Draft').click();await second.getByText('Revision conflict',{exact:true}).first().waitFor();
   assert.equal(sql("select display_name from private.tenant_white_label_drafts where tenant_id='f0f0f0f0-0000-4000-8000-000000004201'"),'First revision winner');
   await second.close();result.checks.push('Concurrent stale revision refused without overwriting the winner');
@@ -101,7 +115,7 @@ try{
   await field.fill('A revoked actor must not save');
   sql(`select private.revoke_platform_admin('${accounts.platformAdmin.id}', 'Disposable browser revocation QA')`);revoked=true;
   await button(page,'Save Draft').click();
-  await page.waitForFunction(()=>document.querySelector('input[maxlength="60"]')?.disabled===true);
+  await page.waitForFunction(()=>[...document.querySelectorAll('input[maxlength="60"]')].some(e=>e.checkVisibility()&&e.matches(':disabled')));
   assert.equal(sql("select revision from private.tenant_white_label_drafts where tenant_id='f0f0f0f0-0000-4000-8000-000000004201'"),revision);
   sql(`select private.grant_platform_admin('${accounts.platformAdmin.id}', 'Restore disposable browser QA grant')`);revoked=false;
   result.checks.push('Open editor refuses a save after entitlement revocation; revision unchanged');
@@ -110,6 +124,13 @@ try{
    await page.reload();await ready(page);
    await field.fill('W'.repeat(60));
    await button(page,'Mobile').click();
+   await page.waitForFunction(()=>{
+    const frame=document.querySelector('[data-testid="preview-frame"][data-device="mobile"]');
+    if(!frame||!frame.checkVisibility())return false;
+    const box=frame.getBoundingClientRect(),slot=frame.parentElement.getBoundingClientRect();
+    return box.left>=slot.left-1&&box.right<=slot.right+1&&box.height<=761;
+   });
+   assert.deepEqual(await page.getByTestId('phone-viewport').evaluate(e=>({width:e.style.width,height:e.style.height})),{width:'393px',height:'852px'});
    const size=page.getByRole('button',{name:/Phone size/});
    await size.click();await page.getByRole('listbox').waitFor();
    await page.screenshot({path:resolve(evidence,`phone-menu-${width}.png`),fullPage:true});
@@ -125,22 +146,38 @@ try{
   }
   await page.reload();await ready(page);
   await page.goto(identity.origin+'/white-label?tenant=f0f0f0f0-0000-4000-8000-000000004203');await ready(page);
-  assert.ok(await page.getByLabel('Workspace display name',{exact:true}).isDisabled());
+  assert.ok(await page.getByRole('textbox',{name:'Workspace display name',exact:true}).isDisabled());
   assert.ok(await button(page,'Save Draft').isDisabled());
   result.checks.push('Suspended Tenant is read-only');
   await context.close();
+  expectedDenial=true;
   for(const role of ['owner','staff','client']){
    const c=await browser.newContext({storageState:resolve(sessions,role+'.json')});const p=await c.newPage();monitor(p);
    const response=await p.goto(identity.origin+routeA);
-   assert.ok(response.status()===404||!new URL(p.url()).pathname.startsWith('/white-label'));
-   assert.equal(await p.getByLabel('Workspace display name',{exact:true}).count(),0);
+   await p.waitForFunction(()=>location.pathname==='/login'||location.pathname.startsWith('/account')||[...document.querySelectorAll('h1')].some(e=>e.textContent?.trim()==='404'),null,{timeout:90000});
+   assert.equal(await p.getByRole('textbox',{name:'Workspace display name',exact:true}).count(),0);
    result.checks.push({actor:role,studio:'denied',status:response.status(),route:new URL(p.url()).pathname});
    await c.close();
   }
   const anon=await browser.newContext();const a=await anon.newPage();await a.goto(identity.origin+routeA);
   assert.equal(new URL(a.url()).pathname,'/login');await anon.close();result.checks.push('Anonymous redirected to login');
+  expectedDenial=false;
+  for(const [role,routes] of [['owner',['/dashboard','/clients','/services','/forms','/orders','/tickets','/invoices','/subscriptions','/coupons','/team','/settings/general']],['client',['/account','/account/store','/account/projects','/account/messages','/account/invoices','/account/subscriptions','/account/profile']]]){
+   const c=await browser.newContext({storageState:resolve(sessions,role+'.json')});const p=await c.newPage();monitor(p);
+   for(const route of routes){
+    const response=await p.goto(identity.origin+route,{timeout:90000});
+    await p.getByRole('heading').first().waitFor({timeout:90000});
+    assert.equal(new URL(p.url()).pathname,route);
+    assert.ok(response.status()<400);
+    assert.doesNotMatch(await p.locator('body').innerText(),/Application error:|Something went wrong|Internal Server Error/);
+    await noOverlay(p);result.checks.push({actor:role,route,status:response.status(),heading:await p.getByRole('heading').first().innerText()});
+   }
+   await c.close();
+  }
   assert.equal(sql("select to_regclass('private.tenant_module_publications') is null"),'t');
  }
+ assert.equal(result.errors.length,0,JSON.stringify(result.errors));
+ assert.equal(result.consoleErrors.filter(e=>e.classification==='unexpected').length,0,JSON.stringify(result.consoleErrors));
  result.passed=true;
-} catch(error){result.passed=false;result.failure=error.message;throw error;}
+} catch(error){result.passed=false;result.failure=error.message;for(const c of browser.contexts())for(const p of c.pages())await p.screenshot({path:resolve(evidence,`failure-${phase}.png`),fullPage:true}).catch(()=>{});throw error;}
 finally{if(revoked)sql(`select private.grant_platform_admin('${accounts.platformAdmin.id}', 'Restore disposable QA fixture after interrupted check')`);result.finishedAt=new Date().toISOString();writeFileSync(resolve(evidence,phase+'.json'),JSON.stringify(result,null,2));await browser.close();console.log(JSON.stringify({phase,sha:head,passed:result.passed,checks:result.checks.length,viewports:result.viewports.length,failure:result.failure}));}
