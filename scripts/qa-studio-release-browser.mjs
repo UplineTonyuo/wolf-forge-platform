@@ -75,14 +75,20 @@ try{
   assert.equal(await page.getByRole('button',{name:/^publish(?: now)?$/i}).count(),0);
   await button(page,'Continue Editing Studio Release A').click();await ready(page);
   const field=page.getByRole('textbox',{name:'Workspace display name',exact:true});
+  const shellColor=await page.locator('aside').first().evaluate(e=>getComputedStyle(e).backgroundColor);
   await field.fill('Studio candidate '+head.slice(0,8));
+  await page.getByRole('textbox',{name:'Primary color',exact:true}).fill('#256b45');
+  await page.getByRole('textbox',{name:'Accent color',exact:true}).fill('#e0a438');
   await button(page,'Review Draft').click();
   await page.getByText('Draft valid for saving. Publishing is unavailable.').filter({visible:true}).waitFor();
   await button(page,'Save reviewed draft').click();await saved(page);
   await button(page,'Back to editing').click();
   await page.reload();await ready(page);
   assert.equal(await field.inputValue(),'Studio candidate '+head.slice(0,8));
-  result.checks.push('Review, save and reload a persisted draft');
+  assert.equal(await page.getByRole('textbox',{name:'Primary color',exact:true}).inputValue(),'#256b45');
+  assert.equal(await page.getByRole('textbox',{name:'Accent color',exact:true}).inputValue(),'#e0a438');
+  assert.equal(await page.locator('aside').first().evaluate(e=>getComputedStyle(e).backgroundColor),shellColor);
+  result.checks.push('Review, save and reload draft name/colors; actual shell branding unchanged');
   const live=page.getByRole('region',{name:'Live preview',exact:true});
   await button(live,'Edit modules').click();
   for(const label of ['Projects','Subscriptions','Coupons','Investment Intent','Tickets','Reporting','Invoices','Forms','Services']){
