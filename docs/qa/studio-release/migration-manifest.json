@@ -1,0 +1,18 @@
+[
+  {
+    "name": "20261007120000_tenant_foundation.sql",
+    "normalizedLfSha256": "46f28cda224883433b8e4c8550e48852b3323a4c9e124db4c207b6d0d60a5928"
+  },
+  {
+    "name": "20261009160000_platform_admin_authorization.sql",
+    "normalizedLfSha256": "3d2827ec6efed273ba3a010cd83efbe69ce44baa9b3797cac8b2a836082a96ea"
+  },
+  {
+    "name": "20261010090000_white_label_drafts.sql",
+    "normalizedLfSha256": "de195a16a65beaf1e0cdf7244c314d96b054d61a97bff3cb7abb6780a81e347f"
+  },
+  {
+    "name": "20261010120000_white_label_recommended_draft_defaults.sql",
+    "normalizedLfSha256": "d0f01fab982b98c4ff273855dc8b6eaf7157121995e7d8b00297745c847af5e1"
+  }
+]

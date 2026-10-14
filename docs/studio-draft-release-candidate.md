@@ -54,6 +54,10 @@ Database acceptance: 77 pgTAP files / 3291 assertions passed. Tests were adapted
 
 Application regression evidence, production build, exact candidate SHA and rendered QA results are recorded in the final release validation report. Historical screenshots/test claims from the accepted recovery branch do not count as a new pass. Local browser checks use installed Playwright because the Browser plugin is not available. Tests must pin the committed candidate SHA and reject tracked source drift.
 
+Fresh local public-schema generation verified the four RPC declarations. Two explicit nullable return overrides are retained: an unsaved draft's `updated_at` and an unsaved tenant's `draft_revision` can actually be null, which function-return generation does not express. Only the two new public table declarations were added; unrelated historical type drift was not rewritten.
+
+The local backend uses a separate Docker network with loopback host bindings, following [Supabase local-development guidance](https://supabase.com/docs/guides/local-development). Verify the effective bindings; a loopback API URL alone is not proof of isolation.
+
 Hosted preview is BLOCKED until an approved isolated hosted backend is identified and its credentials can be scoped to a preview deployment. The connected WOLF FORGE SPP account currently lists production only. The local disposable backend is not reachable from Vercel and must not be exposed through a public tunnel. No preview has been deployed or pointed at production. Do not reuse existing production/preview project environment values without verifying their backend identity. Preview metadata must identify this exact commit, and environment overrides must affect only that isolated preview. Do not push main to trigger it.
 
 `npm audit --omit=dev` reports zero high/critical vulnerabilities and one preexisting moderate `music-metadata` vulnerability group (two advisories). No dependency/lockfile changes or tool installations are part of this release. This inherited limitation is not a new security acceptance.

@@ -1,0 +1,32 @@
+{
+  "productionProject": "jwynqsyirgenqlmkooah",
+  "baseline": "d377e290a50e788d0faec71851aef42f373bcb9b",
+  "functionCount": 403,
+  "bodyDifferences": 0,
+  "existingExtraServiceRoleGrants": [
+    "public.app_add_ticket_internal_note(p_request_id uuid, p_ticket_id uuid, p_body text)",
+    "public.app_add_ticket_to_inbox(p_ticket_id uuid)",
+    "public.app_archive_ticket(p_ticket_id uuid)",
+    "public.app_assign_ticket(p_ticket_id uuid, p_assigned_to_profile_id uuid)",
+    "public.app_clear_team_typing(p_conversation_id uuid, p_connection_id uuid)",
+    "public.app_create_team_group(p_title text, p_member_profile_ids uuid[])",
+    "public.app_create_ticket(p_request_id uuid, p_payload jsonb)",
+    "public.app_current_user_permissions()",
+    "public.app_disconnect_team_presence(p_connection_id uuid)",
+    "public.app_get_ticket_detail(p_ticket_id uuid)",
+    "public.app_has_permission(p_permission_key text)",
+    "public.app_list_integration_connections()",
+    "public.app_list_my_team_tasks(p_include_team boolean)",
+    "public.app_list_team_typing(p_conversation_id uuid)",
+    "public.app_list_ticket_summaries(p_include_archived boolean, p_inbox_only boolean)",
+    "public.app_reply_to_ticket(p_request_id uuid, p_ticket_id uuid, p_body text)",
+    "public.app_start_team_conversation(p_other_profile_id uuid)",
+    "public.app_touch_team_presence(p_connection_id uuid)",
+    "public.app_touch_team_typing(p_conversation_id uuid, p_connection_id uuid)",
+    "public.app_update_team_task_details(p_task_id uuid, p_patch jsonb)",
+    "public.app_update_team_task_status(p_task_id uuid, p_status text)",
+    "public.app_update_ticket_priority(p_ticket_id uuid, p_priority text)",
+    "public.app_update_ticket_status(p_ticket_id uuid, p_status text)"
+  ],
+  "policy": "Preserve production grants; no wholesale schema or ACL rewrite"
+}

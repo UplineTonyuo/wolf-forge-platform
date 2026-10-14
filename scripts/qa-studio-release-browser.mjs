@@ -14,6 +14,7 @@ assert.equal(head,process.env.WF_RELEASE_CANDIDATE_SHA,'Pin the exact committed 
 assert.equal(execFileSync('git',['diff','HEAD','--','src','scripts','supabase','package.json','package-lock.json'],{cwd:root,encoding:'utf8'}),'');
 const inspection=JSON.parse(execFileSync('docker',['inspect',identity.containerId],{encoding:'utf8'}))[0];
 assert.equal(inspection.Name,'/supabase_db_Wolf-Forge-Studio-Release-20261014');
+assert.equal(inspection.NetworkSettings.Ports['5432/tcp'][0].HostIp,'127.0.0.1');
 const sql=q=>execFileSync('docker',['exec',identity.containerId,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres','-c',q],{encoding:'utf8'}).trim();
 assert.equal(sql('select system_identifier from pg_control_system()'),identity.systemId);
 const phase=process.argv[2];

@@ -16,6 +16,7 @@ const docker = (...args) => execFileSync('docker', args, {encoding:'utf8'}).trim
 const inspection = JSON.parse(docker('inspect', container))[0];
 assert.equal(inspection.Name, '/' + container);
 assert.equal(inspection.NetworkSettings.Ports['5432/tcp'][0].HostPort, '62322');
+assert.equal(inspection.NetworkSettings.Ports['5432/tcp'][0].HostIp, '127.0.0.1');
 const sql = query => docker('exec','-i', inspection.Id, 'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres','-c',query);
 const systemId = sql('select system_identifier from pg_control_system()');
 const identity = {project:'Wolf-Forge-Studio-Release-20261014', containerId:inspection.Id, systemId, api:'http://127.0.0.1:62321', dbPort:62322, origin:'http://127.0.0.1:3022', backend};
@@ -26,7 +27,7 @@ else if(phase==='record-restart'){
  assert.equal(previous.systemId,identity.systemId);
  assert.equal(previous.backend,identity.backend);
  assert.equal(previous.api,identity.api);
- json(resolve(out,'controlled-restart.json'),{reason:'Enable the isolated local email provider; preserve the existing database volume',previous,current:identity});
+ json(resolve(out,'controlled-restart.json'),{reason:'Controlled restart of the owned isolated QA stack; preserve the existing database volume',previous,current:identity});
  json(resolve(backend,'identity.json'),identity);
 } else assert.deepEqual(read(resolve(backend,'identity.json')),identity);
 const cli=(...a)=>execFileSync(process.execPath,[resolve(root,'node_modules/supabase/dist/supabase.js'),...a,'--workdir',backend],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
