@@ -15,6 +15,8 @@ assert.equal(execFileSync('git',['diff','HEAD','--','src','scripts','supabase','
 const inspection=JSON.parse(execFileSync('docker',['inspect',identity.containerId],{encoding:'utf8'}))[0];
 assert.equal(inspection.Name,'/supabase_db_Wolf-Forge-Studio-Release-20261014');
 assert.equal(inspection.NetworkSettings.Ports['5432/tcp'][0].HostIp,'127.0.0.1');
+const gateway=JSON.parse(execFileSync('docker',['inspect','supabase_kong_Wolf-Forge-Studio-Release-20261014'],{encoding:'utf8'}))[0];
+assert.equal(gateway.NetworkSettings.Ports['8000/tcp'][0].HostIp,'127.0.0.1');
 const sql=q=>execFileSync('docker',['exec',identity.containerId,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres','-c',q],{encoding:'utf8'}).trim();
 assert.equal(sql('select system_identifier from pg_control_system()'),identity.systemId);
 const phase=process.argv[2];
@@ -24,6 +26,8 @@ const sessions=resolve(backend,'private-sessions');
 mkdirSync(evidence,{recursive:true});mkdirSync(sessions,{recursive:true});
 const result={sha:head,phase,origin:identity.origin,backend:identity.project,startedAt:new Date().toISOString(),checks:[],viewports:[],errors:[],consoleErrors:[]};
 const accounts=JSON.parse(readFileSync(resolve(root,'.qa-local-credentials.release.json'),'utf8'));
+assert.match(accounts.platformAdmin.id,/^[0-9a-f-]{36}$/i);
+let revoked=false;
 const browser=await chromium.launch({channel:'chrome',headless:true});
 const routeA='/white-label?tenant=f0f0f0f0-0000-4000-8000-000000004201';
 const button=(p,name)=>p.getByRole('button',{name,exact:true});
@@ -93,6 +97,14 @@ try{
   await button(second,'Save Draft').click();await second.getByText('Revision conflict',{exact:true}).first().waitFor();
   assert.equal(sql("select display_name from private.tenant_white_label_drafts where tenant_id='f0f0f0f0-0000-4000-8000-000000004201'"),'First revision winner');
   await second.close();result.checks.push('Concurrent stale revision refused without overwriting the winner');
+  const revision=sql("select revision from private.tenant_white_label_drafts where tenant_id='f0f0f0f0-0000-4000-8000-000000004201'");
+  await field.fill('A revoked actor must not save');
+  sql(`select private.revoke_platform_admin('${accounts.platformAdmin.id}', 'Disposable browser revocation QA')`);revoked=true;
+  await button(page,'Save Draft').click();
+  await page.waitForFunction(()=>document.querySelector('input[maxlength="60"]')?.disabled===true);
+  assert.equal(sql("select revision from private.tenant_white_label_drafts where tenant_id='f0f0f0f0-0000-4000-8000-000000004201'"),revision);
+  sql(`select private.grant_platform_admin('${accounts.platformAdmin.id}', 'Restore disposable browser QA grant')`);revoked=false;
+  result.checks.push('Open editor refuses a save after entitlement revocation; revision unchanged');
   for(const width of [320,360,390,430,768,1280,1440]){
    await page.setViewportSize({width,height:1000});
    await page.reload();await ready(page);
@@ -131,4 +143,4 @@ try{
  }
  result.passed=true;
 } catch(error){result.passed=false;result.failure=error.message;throw error;}
-finally{result.finishedAt=new Date().toISOString();writeFileSync(resolve(evidence,phase+'.json'),JSON.stringify(result,null,2));await browser.close();console.log(JSON.stringify({phase,sha:head,passed:result.passed,checks:result.checks.length,viewports:result.viewports.length,failure:result.failure}));}
+finally{if(revoked)sql(`select private.grant_platform_admin('${accounts.platformAdmin.id}', 'Restore disposable QA fixture after interrupted check')`);result.finishedAt=new Date().toISOString();writeFileSync(resolve(evidence,phase+'.json'),JSON.stringify(result,null,2));await browser.close();console.log(JSON.stringify({phase,sha:head,passed:result.passed,checks:result.checks.length,viewports:result.viewports.length,failure:result.failure}));}
