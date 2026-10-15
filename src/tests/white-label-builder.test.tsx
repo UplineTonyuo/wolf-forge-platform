@@ -28,6 +28,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: gate, isLocalQuickAccessSession: quickAccess }));
 vi.mock("../lib/supabase/next-server", () => ({
   getInternalContext: async () => ({
+    actor: { id: "f0000000-0000-4000-8000-000000004201" },
     client: {},
     services: { permissions: { requireModuleAccess, isPlatformAdmin }, whiteLabel: { listTenants, getDraft } },
   }),
@@ -124,6 +125,23 @@ const moduleSwitch = (label: string) => { editModules(); return live().getByRole
 const selectedModules = () => (editModules(), live().getAllByRole("switch")).filter((entry) => entry.getAttribute("aria-checked") === "true");
 
 describe("White Label builder", () => {
+  it("measures the newly mounted phone when switching from Desktop to Mobile", () => {
+    const observe = vi.fn(), disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class { observe = observe; disconnect = disconnect; unobserve = vi.fn(); });
+    const width = vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(280);
+    try {
+      render(<Builder />);
+      expect(observe).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
+      expect(Number(screen.getByTestId("preview-frame").style.zoom)).toBeCloseTo(280 / 413);
+      expect(observe).toHaveBeenCalledOnce();
+      fireEvent.click(screen.getByRole("button", { name: "Desktop" }));
+      expect(disconnect).toHaveBeenCalledOnce();
+    } finally {
+      width.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
   it("starts with six choices and lets every non-default module be added in both previews", () => {
     render(<Builder />);
     expect(selectedModules()).toHaveLength(6);
@@ -136,7 +154,7 @@ describe("White Label builder", () => {
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Mobile" }));
     for (const id of ["subscriptions", "coupons", "investment_intent"]) expect(shown(id)).toBe(true);
-    expect(screen.getByText(/Reporting, Investment Intent, Projects, Tickets, Subscriptions, Invoices, Forms and Coupons are optional for publication/)).toBeInTheDocument();
+    expect(screen.getByText(/Reporting, Investment Intent, Projects, Tickets, Subscriptions, Invoices, Forms and Coupons are optional for publication; Services is required/)).toBeInTheDocument();
     expect(screen.getByText(/Invoices can be disabled only with Subscriptions OFF and no outstanding or pending financial obligations, including archived obligations/)).toBeInTheDocument();
     expect(screen.getByText(/Refund ledger entries do not confirm returned money/)).toBeInTheDocument();
     expect(screen.getByText(/Published Projects requires Tickets/)).toBeInTheDocument();
@@ -339,12 +357,16 @@ describe("White Label builder", () => {
 });
 
 describe("White Label route and Settings entry", () => {
-  it("the page does not exist outside the local QA gate, even for a Platform Admin", async () => {
+  it("the approved page accepts an authorized Platform Admin without the obsolete local gate", async () => {
     gate.mockResolvedValue(false);
     isPlatformAdmin.mockResolvedValue(true);
-    await expect(WhiteLabelSettingsPage(noSearch)).rejects.toThrow("NEXT_NOT_FOUND");
-    expect(requireModuleAccess).not.toHaveBeenCalled();
-    expect(isPlatformAdmin).not.toHaveBeenCalled();
+    quickAccess.mockResolvedValue(false);
+    requireModuleAccess.mockResolvedValue(true);
+    listTenants.mockResolvedValue([]);
+    const page = await WhiteLabelSettingsPage(noSearch);
+    expect(page.props.actorId).toBe("f0000000-0000-4000-8000-000000004201");
+    expect(requireModuleAccess).toHaveBeenCalledWith("settings");
+    expect(gate).not.toHaveBeenCalled();
   });
 
   it("inside the gate a Settings-capable Tenant owner without the entitlement gets notFound", async () => {

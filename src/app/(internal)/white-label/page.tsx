@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { WhiteLabelDraftEditor } from "../../../components/white-label/white-label-draft-editor";
-import { isLocalQuickAccessSession, localUiQaBypassEnabled } from "../../../lib/qa/local-ui-bypass";
+import { isLocalQuickAccessSession } from "../../../lib/qa/local-ui-bypass";
 import { getInternalContext } from "../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "White Label Studio" };
@@ -9,7 +9,6 @@ export const metadata: Metadata = { title: "White Label Studio" };
 export default async function WhiteLabelStudioPage({ searchParams }: {
   searchParams: Promise<{ tenant?: string | string[] }>;
 }) {
-  if (!(await localUiQaBypassEnabled())) notFound();
   const context = await getInternalContext();
   if (await isLocalQuickAccessSession(context.actor)) notFound();
   if (!(await context.services.permissions.isPlatformAdmin())) notFound();
@@ -18,5 +17,5 @@ export default async function WhiteLabelStudioPage({ searchParams }: {
   const { tenant } = await searchParams;
   const initialDraft = typeof tenant === "string" && tenants.some((entry) => entry.id === tenant)
     ? await context.services.whiteLabel.getDraft(tenant) : null;
-  return <WhiteLabelDraftEditor tenants={tenants} initialDraft={initialDraft} />;
+  return <WhiteLabelDraftEditor key={context.actor.id} actorId={context.actor.id} tenants={tenants} initialDraft={initialDraft} />;
 }

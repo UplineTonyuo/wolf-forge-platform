@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { draftModuleKeys, draftProblem, type WhiteLabelDraft } from "../../domain/white-label/draft";
 import { staticPublicationBlocker, type WhiteLabelModuleKey } from "../../domain/white-label/publication";
 import { WHITE_LABEL_DRAFT_GUIDANCE, WHITE_LABEL_MODULES, contrastWithWhite, moduleAvailable, type WhiteLabelPreviewState } from "../../domain/white-label/preview";
 import styles from "./white-label-builder.module.css";
 import { colorContrast } from "../../domain/white-label/colors";
 
-export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack, onSave, canSave }: {
+export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack, onSave, canSave, publicationControls }: {
   draft: WhiteLabelDraft;
   state: WhiteLabelPreviewState;
   hasChanges: boolean;
@@ -15,6 +15,7 @@ export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack, 
   onBack: () => void;
   onSave: () => void;
   canSave: boolean;
+  publicationControls?: ReactNode;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
@@ -86,13 +87,14 @@ export function WhiteLabelDraftReview({ draft, state, hasChanges, busy, onBack, 
         <p className={styles.hint}>These are draft choices, not published CRM behavior. Reviewing applies nothing and does not verify runtime module access.</p>
         <details className={styles.disclosure}><summary>Publication rules and financial safeguards</summary><ul className={styles.safeguards}>{WHITE_LABEL_DRAFT_GUIDANCE.split(". ").map((rule) => <li key={rule}>{rule.endsWith(".") ? rule : `${rule}.`}</li>)}</ul></details>
         <h3>Publication requirements</h3>
-        <p className={problem || publicationBlocker ? styles.warning : styles.hint}>
+        {!publicationControls || problem || publicationBlocker ? <p className={problem || publicationBlocker ? styles.warning : styles.hint}>
           {problem ? "Fix the draft validation issues before checking publication eligibility."
             : publicationBlocker === "SERVICES_REQUIRED" ? "Draft valid. Not publishable: Services is required. Enable Services explicitly and save a new draft."
             : publicationBlocker ? "Draft valid. Not publishable: selected modules do not meet publication dependencies."
             : hasChanges || draft.revision === 0 ? "Publication eligibility has not been checked. Save this draft before requesting a publication check."
             : "Publication eligibility has not been checked."}
-        </p>
+        </p> : null}
+        {publicationControls}
       </section>
       <div className={styles.reviewActions}>
         <button type="button" className="button-primary" disabled={!canSave} onClick={onSave}>Save reviewed draft</button>

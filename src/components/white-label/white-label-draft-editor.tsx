@@ -16,6 +16,7 @@ import { PortalDialog } from "../account/ui/portal-dialog";
 import { WhiteLabelDraftList } from "./white-label-draft-list";
 import { WhiteLabelBuilder } from "./white-label-builder";
 import { WhiteLabelDraftReview } from "./white-label-draft-review";
+import { WhiteLabelPublicationControls } from "./white-label-publication-controls";
 import styles from "./white-label-builder.module.css";
 
 type Status =
@@ -45,9 +46,11 @@ function nativeHistoryIndex(): number | undefined {
 export function WhiteLabelDraftEditor({
   tenants: initialTenants,
   initialDraft,
+  actorId,
 }: {
   tenants: WhiteLabelTenant[];
   initialDraft: WhiteLabelDraft | null;
+  actorId?: string;
 }) {
   const [tenants, setTenants] = useState(initialTenants);
   const [tenantId, setTenantId] = useState(initialDraft?.tenantId ?? "");
@@ -413,6 +416,15 @@ export function WhiteLabelDraftEditor({
             busy={busy}
             onSave={() => void save()}
             canSave={canSave}
+            publicationControls={actorId ? <WhiteLabelPublicationControls
+              actorId={actorId}
+              draft={draft}
+              hasChanges={dirty}
+              draftValid={!draftProblem(state)}
+              busy={busy}
+              onReload={() => void load(tenantId)}
+              onConfirmed={() => setStatus((current) => current.kind === "saved" ? { kind: "idle" } : current)}
+            /> : undefined}
             onBack={() => {
               restoreReviewFocus.current = true;
               setReviewing(false);

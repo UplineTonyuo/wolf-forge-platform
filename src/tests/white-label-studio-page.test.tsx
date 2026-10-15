@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ local: vi.fn(), quick: vi.fn(), admin: vi.fn(), settings: vi.fn(), tenants: vi.fn(), draft: vi.fn() }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("STUDIO_NOT_FOUND"); } }));
 vi.mock("../lib/qa/local-ui-bypass", () => ({ localUiQaBypassEnabled: mocks.local, isLocalQuickAccessSession: mocks.quick }));
-vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({ actor: {}, services: {
+vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({ actor: { id: "f0000000-0000-4000-8000-000000004201" }, services: {
   permissions: { isPlatformAdmin: mocks.admin, requireModuleAccess: mocks.settings },
   whiteLabel: { listTenants: mocks.tenants, getDraft: mocks.draft },
 } }) }));
@@ -18,10 +18,13 @@ beforeEach(() => {
 });
 
 describe("Studio page resource and denial boundary", () => {
-  it("denies outside local Studio availability before any entitlement or draft read", async () => {
+  it("preserves approved hosted-shaped access with verified actor-scoped recovery", async () => {
     mocks.local.mockResolvedValue(false);
-    await expect(open(tenant.id)).rejects.toThrow("STUDIO_NOT_FOUND");
-    expect(mocks.admin).not.toHaveBeenCalled(); expect(mocks.tenants).not.toHaveBeenCalled();
+    const page = await open(tenant.id);
+    expect(page.props.actorId).toBe("f0000000-0000-4000-8000-000000004201");
+    expect(page.key).toBe(page.props.actorId);
+    expect(mocks.local).not.toHaveBeenCalled();
+    expect(mocks.settings).toHaveBeenCalledWith("settings");
   });
   it("excludes Quick Access before Settings or draft reads", async () => {
     mocks.quick.mockResolvedValue(true);
