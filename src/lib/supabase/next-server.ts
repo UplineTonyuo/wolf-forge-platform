@@ -591,6 +591,29 @@ export const getInternalContext = cache(async () => {
   };
 });
 
+/** Verified identity only; each protected operation must still authorize its own resource. */
+export const getVerifiedSessionContext = cache(async (): Promise<{
+  actor: VerifiedActor;
+  client: UserScopedClient;
+} | null> => {
+  try {
+    const supabase = await createNextServerSupabaseClient();
+    const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
+    if (error || !data.session) return null;
+
+    const client = createUserSupabaseClient(
+      readLocalFrontendEnvironment(),
+      data.session.access_token,
+      await requestTenantSelector(),
+    );
+    const actor = await verifyActor(client);
+    return { actor, client };
+  } catch (error) {
+    if (error instanceof IdentityLookupError && error.kind === "unauthenticated") return null;
+    throw error;
+  }
+});
+
 /**
  * The Team synchronization context — a verified actor and the Team service,
  * and deliberately nothing else.
@@ -613,17 +636,9 @@ export const getInternalContext = cache(async () => {
  * to a login page it cannot render.
  */
 export const getTeamActorContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
-  if (error || !data.session) return null;
-
-  const client = createUserSupabaseClient(
-    readLocalFrontendEnvironment(),
-    data.session.access_token,
-    await requestTenantSelector(),
-  );
-  const actor = await verifyContextActor(client);
-  if (!actor) return null;
+  const context = await getVerifiedSessionContext();
+  if (!context) return null;
+  const { actor, client } = context;
 
   return {
     actor,
@@ -650,17 +665,9 @@ export const getTeamActorContext = cache(async () => {
  * receive 401, not a redirect to a login page it cannot render.
  */
 export const getTicketActorContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
-  if (error || !data.session) return null;
-
-  const client = createUserSupabaseClient(
-    readLocalFrontendEnvironment(),
-    data.session.access_token,
-    await requestTenantSelector(),
-  );
-  const actor = await verifyContextActor(client);
-  if (!actor) return null;
+  const context = await getVerifiedSessionContext();
+  if (!context) return null;
+  const { actor, client } = context;
 
   return {
     actor,
@@ -688,14 +695,9 @@ export const getTicketActorContext = cache(async () => {
  * throw an availability failure for the shared route response mapper.
  */
 export const getInternalActorContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
-  const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
-  if (error || !data.session) return null;
-
-  const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
-  const actor = await verifyContextActor(client);
-  if (!actor) return null;
+  const context = await getVerifiedSessionContext();
+  if (!context) return null;
+  const { actor, client } = context;
 
   const user = await resolveInternalUser(client, actor);
   if (!user) throw new IdentityLookupError("unauthorized", "membership");

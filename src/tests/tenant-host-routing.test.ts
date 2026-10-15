@@ -290,6 +290,7 @@ describe("every user-client call site sends the host's Tenant", () => {
   beforeAll(() => import("../lib/supabase/next-server"), 30_000);
 
   const factories = [
+    "getVerifiedSessionContext",
     "getInternalContext",
     "getInternalActorContext",
     "getTeamActorContext",

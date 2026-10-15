@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { identityLookup, IdentityLookupError, IDENTITY_UNAVAILABLE_MESSAGE } from "../lib/supabase/identity-lookup";
 import { identityFailureResponse } from "../lib/supabase/identity-failure-response";
-import { getClientContext, getInternalContext, getSelfServiceContext, resolveClientUser, resolveInternalUser } from "../lib/supabase/next-server";
+import { getClientContext, getInternalContext, getSelfServiceContext, getVerifiedSessionContext, getTeamActorContext, getTicketActorContext, resolveClientUser, resolveInternalUser } from "../lib/supabase/next-server";
 import { signInAction } from "../app/actions/auth";
 import { GET as versionRequest } from "../app/api/operations/podcast-seo/version/route";
 import { recordSecurityAuditEvent } from "../lib/security/security-audit-log";
@@ -88,6 +88,61 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 afterEach(() => { setSecurityLogSink(null); vi.unstubAllEnvs(); });
+
+describe("verified session actor/client seam", () => {
+  it("returns the verified actor and its client without resolving business membership or permissions", async () => {
+    state.results.app_current_tenant_membership = [failed(503)];
+    state.results.profile = [failed(503)];
+    state.results.app_current_user_permissions = [failed(503)];
+    state.results.app_current_user_modules = [failed(503)];
+    expect(await getVerifiedSessionContext()).toEqual({ actor, client });
+    expect(state.calls).toEqual({ session: 1, claims: 1 });
+    expect(state.signOut).not.toHaveBeenCalled();
+    expect(recordSecurityAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("returns null for no session before any actor verification", async () => {
+    state.results.session = [ok({ session: null })];
+    expect(await getVerifiedSessionContext()).toBeNull();
+    expect(state.calls).toEqual({ session: 1 });
+  });
+
+  it.each(["session", "claims"])("returns null for explicit invalid authentication at %s", async (stage) => {
+    state.results[stage] = [failed(401, "session_not_found")];
+    expect(await getVerifiedSessionContext()).toBeNull();
+    expect(state.calls[stage]).toBe(1);
+    expect(state.signOut).not.toHaveBeenCalled();
+    expect(recordSecurityAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it.each(["session", "claims"])("propagates typed unavailable identity at %s without redirect or logout", async (stage) => {
+    state.results[stage] = [failed(503)];
+    await expect(getVerifiedSessionContext()).rejects.toMatchObject({ kind: "unavailable", stage });
+    expect(state.calls[stage]).toBe(stage === "session" ? 1 : 2);
+    expect(state.signOut).not.toHaveBeenCalled();
+    expect(recordSecurityAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it("maps an unavailable seam to retryable 503 without exposing credentials", async () => {
+    state.results.claims = [failed(503)];
+    const response = await getVerifiedSessionContext().catch(identityFailureResponse);
+    expect(response).toBeInstanceOf(Response);
+    if (!(response instanceof Response)) throw new Error("Expected identity failure response");
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(await response.json()).toEqual({ ok: false, error: IDENTITY_UNAVAILABLE_MESSAGE, retryable: true });
+    expect(JSON.stringify(records)).not.toContain(PRIVATE_MARKER);
+    expect(recordSecurityAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["Team", getTeamActorContext],
+    ["Ticket", getTicketActorContext],
+  ] as const)("%s context reuses a single session/actor path without role reads", async (_name, factory) => {
+    expect((await factory())?.actor).toBe(actor);
+    expect(state.calls).toEqual({ session: 1, claims: 1 });
+  });
+});
 
 describe("shared context identity classification", () => {
   it("establishes valid staff from the current Tenant and records no denial", async () => {
