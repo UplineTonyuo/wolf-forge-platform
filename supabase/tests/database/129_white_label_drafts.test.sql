@@ -117,17 +117,19 @@ select ok(
                  'public.app_save_white_label_draft(uuid, integer, text, text, text, text[])'::regprocedure)),
   'every draft RPC is SECURITY DEFINER with an empty search_path');
 
--- 23. No-live-publication boundary: nothing but the draft RPCs and the
--- validation trigger reads the drafts, and no policy mentions them.
+-- Mutable drafts are read only by these draft/publication boundaries, never by runtime authorization or RLS.
 select is(
   (select array_agg(p.oid::regprocedure::text order by p.oid::regprocedure::text) from pg_proc as p
    where p.prosrc ilike '%tenant_white_label_drafts%'),
   array[
     'app_get_white_label_draft(uuid)',
     'app_list_white_label_tenants()',
-    'app_save_white_label_draft(uuid,integer,text,text,text,text[])'
+    'app_preflight_white_label_publication(uuid,integer,integer)',
+    'app_publish_white_label_draft(uuid,integer,integer,uuid,text)',
+    'app_save_white_label_draft(uuid,integer,text,text,text,text[])',
+    'private.validate_white_label_publication()'
   ],
-  '23a. only the three draft RPCs read the draft table (no authorization path does)');
+  '23a. only the six explicit draft/publication boundaries read mutable drafts');
 select is(
   (select count(*)::int from pg_policies
    where coalesce(qual, '') ilike '%white_label%' or coalesce(with_check, '') ilike '%white_label%'),

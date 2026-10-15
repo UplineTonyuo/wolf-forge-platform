@@ -1,0 +1,22 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {execFileSync,spawnSync}=require('node:child_process');
+const source=path.resolve(__dirname,'..'),guard='C:/Users/TrojanNiAnton/Documents/Wolf-Forge-Parallel-Setup-20261012/publication-test-environment.cjs';
+const runtime='C:/Users/TrojanNiAnton/AppData/Local/Temp/wolf-forge-publication-backend-20261013/reservation';
+const evidence=path.join(process.env.LOCALAPPDATA,'Temp','wolf-forge-publication-evidence-20261015');fs.mkdirSync(evidence,{recursive:true});
+const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>/^(PATH|PATHEXT|SystemRoot|SystemDrive|windir|ComSpec|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|ProgramFiles|ProgramFiles\(x86\)|ProgramW6432|NUMBER_OF_PROCESSORS|PROCESSOR_ARCHITECTURE)$/i.test(key)));
+Object.assign(env,{SUPABASE_HOME:path.join(evidence,'cli-state'),SUPABASE_TELEMETRY_DISABLED:'1',SUPABASE_NO_UPDATE_NOTIFIER:'1',DO_NOT_TRACK:'1'});
+const verify=()=>execFileSync(process.execPath,[guard,'verify','--require-source'],{cwd:source,env,encoding:'utf8',windowsHide:true});
+verify();
+const files=['129_white_label_drafts.test.sql','130_published_module_enforcement.test.sql','135_invoices_module_enforcement.test.sql',
+  '136_forms_module_enforcement.test.sql','137_coupons_module_enforcement.test.sql','141_white_label_draft_publication.test.sql'];
+const cli=path.join(source,'node_modules/supabase/dist/supabase.js');
+const tests=spawnSync(process.execPath,[cli,'--workdir',runtime,'test','db','--local',...files.map(file=>path.join(source,'supabase/tests/database',file))],{cwd:source,env,encoding:'utf8',windowsHide:true,maxBuffer:32e6});
+fs.writeFileSync(path.join(evidence,'focused-pgtap.log'),(tests.stdout||'')+'\n'+(tests.stderr||''));
+console.log((tests.stdout||'').slice(-2200));assert.equal(tests.status,0,'Focused pgTAP failed; inspect evidence log');
+verify();
+const lint=spawnSync(process.execPath,[cli,'--workdir',runtime,'db','lint','--local','--schema','public,private','--level','error','--fail-on','error'],{cwd:source,env,encoding:'utf8',windowsHide:true,maxBuffer:32e6});
+fs.writeFileSync(path.join(evidence,'application-sql-lint.log'),(lint.stdout||'')+'\n'+(lint.stderr||''));
+assert.equal(lint.status,0,'Application SQL lint failed; inspect evidence log');
+const findings=JSON.parse(lint.stdout||'[]');assert.equal(findings.length,0,'Application SQL lint returned findings');verify();
+const proof={result:'PASS',files,summary:(tests.stdout||'').match(/Files=.*\nResult: PASS/)?.[0]||null,applicationSqlLintFindings:findings.length,completedAt:new Date().toISOString()};
+fs.writeFileSync(path.join(evidence,'focused-database-regressions.json'),JSON.stringify(proof,null,2)+'\n');console.log(JSON.stringify(proof));

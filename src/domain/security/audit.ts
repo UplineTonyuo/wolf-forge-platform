@@ -60,6 +60,7 @@ export const SECURITY_AUDIT_EVENT_CODES = [
   "authorization.context.denied",
   "authorization.team_supervision.read",
   "authorization.white_label.draft_saved",
+  "authorization.white_label.published",
   "integration.gmail.connected",
   "integration.gmail.disconnected",
   "integration.gmail.reauthorization_required",

@@ -4267,6 +4267,22 @@ export type Database = {
       }
     }
     Functions: {
+      app_get_runtime_white_label_configuration: {
+        Args: never
+        Returns: Json
+      }
+      app_preflight_white_label_publication: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number }
+        Returns: Json
+      }
+      app_publish_white_label_draft: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number; p_request_id: string; p_reason: string }
+        Returns: Json
+      }
+      app_reconcile_white_label_publication: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number; p_request_id: string; p_reason: string }
+        Returns: Json
+      }
       app_list_my_wallet_history: {
         Args: { p_limit?: number }
         Returns: {
