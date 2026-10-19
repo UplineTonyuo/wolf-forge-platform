@@ -15302,3 +15302,95 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
     font-size: 16px;
   }
 }
+
+/* Published values stay on the tenant shell; platform and login keep root defaults. */
+.tenant-workspace :is(.app-sidebar, .portal-sidebar, .mobile-nav-drawer) {
+  background: var(--tenant-primary);
+  color: var(--tenant-on-primary);
+}
+
+.tenant-workspace :is(.sidebar-brand, .portal-brand) {
+  gap: 12px;
+  background: #000d51;
+  color: #ffffff;
+}
+
+.tenant-workspace .tenant-workspace-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.tenant-workspace .mobile-nav-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  letter-spacing: normal;
+}
+
+.tenant-workspace :is(
+  .sidebar-section h2, .sidebar-link, .portal-nav-section > h2, .portal-nav-link,
+  .portal-account-identity strong, .portal-account-identity span, .portal-signout,
+  .account-sidebar .avatar-button, .account-button-copy small, .mobile-nav-header button
+) {
+  color: var(--tenant-on-primary);
+}
+
+.tenant-workspace :is(.sidebar-link, .portal-nav-link) svg { opacity: 1; }
+
+.tenant-workspace :is(.portal-signout, .account-sidebar .avatar-button, .mobile-nav-header button):is(:hover, :active, [aria-expanded="true"]) {
+  background: var(--tenant-primary);
+  box-shadow: inset 0 0 0 1px var(--tenant-on-primary);
+}
+
+.tenant-workspace :is(.sidebar-link, .portal-nav-link):is(:hover, .is-active) {
+  background: var(--tenant-primary);
+  color: var(--tenant-on-primary);
+  box-shadow: inset 0 0 0 1px var(--tenant-on-primary);
+}
+
+.tenant-workspace .sidebar-link.is-active::before { background: var(--tenant-active-accent); }
+.tenant-workspace .portal-nav-link.is-active svg { color: var(--tenant-active-accent); }
+
+.tenant-workspace :is(.app-sidebar, .portal-sidebar, .mobile-nav-drawer) :focus-visible {
+  outline-color: var(--tenant-on-primary);
+}
+
+.tenant-workspace .portal-brand:focus-visible { outline-color: #ffffff; }
+
+.tenant-workspace .portal-nav-count[data-actionable="true"] {
+  color: var(--tenant-on-accent);
+  background: var(--tenant-accent);
+}
+
+.tenant-workspace .portal-nav-count[data-actionable="false"] {
+  color: var(--tenant-on-primary);
+  background: var(--tenant-primary);
+  border: 1px solid currentColor;
+}
+
+.tenant-workspace .button-primary {
+  color: var(--tenant-on-primary);
+  background: var(--tenant-primary);
+  border-color: var(--tenant-on-primary);
+}
+
+.tenant-workspace .button-primary:hover {
+  background: var(--tenant-primary);
+  box-shadow: inset 0 0 0 1px var(--tenant-on-primary);
+}
+
+.tenant-workspace :is(.page-header h1, main > h1) { color: var(--wf-navy); }
+
+.tenant-branding-error {
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--wf-danger);
+  background: var(--wf-warm-50);
+  border-bottom: 1px solid var(--wf-border);
+  font-size: 14px;
+  line-height: 1.5;
+}

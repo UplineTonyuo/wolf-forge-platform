@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useClientMounted, useExitTransition } from "../team/use-exit-transition";
 import styles from "./mobile-filter-sheet.module.css";
+import { TenantBrandingScope } from "../shell/tenant-branding-provider";
 
 /**
  * The shared filter sheet: the filtered index pages' `Filter` control, and the
@@ -246,6 +247,7 @@ export function SheetFrame({
   );
 
   return createPortal(
+    <TenantBrandingScope>
     <div
       className={`${styles.backdrop} ${stateClass(styles.backdropOpen, styles.backdropClosing)}`}
       role="presentation"
@@ -297,7 +299,8 @@ export function SheetFrame({
           content
         )}
       </section>
-    </div>,
+    </div>
+    </TenantBrandingScope>,
     document.body,
   );
 }

@@ -62,12 +62,17 @@ export function ClientPortalSidebar({
   categories,
   companyName,
   displayName,
+  workspaceName,
+  brandingUnavailable = false,
 }: {
   categories: PortalNavigationCategory[];
   companyName: string;
   displayName: string | null;
+  workspaceName?: string;
+  brandingUnavailable?: boolean;
 }) {
   const pathname = usePathname();
+  const brandName = brandingUnavailable ? "Workspace branding unavailable" : workspaceName ?? "Wolf Forge";
   const [revokedCategories, setRevokedCategories] = useState<PortalNavigationCategory[] | null>(null);
   useTicketCacheRevocation(() => setRevokedCategories(categories));
   const drawer = usePortalDrawer();
@@ -101,10 +106,11 @@ export function ClientPortalSidebar({
         <Link
           href="/account"
           className="portal-brand"
-          aria-label="Wolf Forge client portal"
+          aria-label={`${brandName} client portal`}
           onClick={closeDrawer}
         >
-          <WolfForgeMark />
+          {brandingUnavailable ? <strong>{brandName}</strong> : <WolfForgeMark />}
+          {workspaceName ? <strong className="tenant-workspace-name">{workspaceName}</strong> : null}
         </Link>
 
         <nav className="portal-nav" aria-label="Client portal">

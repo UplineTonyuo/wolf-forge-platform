@@ -55,6 +55,7 @@ import {
 import { MobileTeamMessagesLever } from "../team/mobile-team-messages-lever";
 import { useTeamMessagesChat } from "../team/use-team-messages-chat";
 import { useHeaderOverlay } from "./use-header-overlay";
+import { TenantBrandingScope } from "./tenant-branding-provider";
 
 function formatActivityTime(
   value: string,
@@ -1034,7 +1035,7 @@ export function WorkspaceCommandBar({
 
       {mounted
         ? createPortal(
-            notificationPanel,
+            <TenantBrandingScope>{notificationPanel}</TenantBrandingScope>,
             document.body,
           )
         : null}

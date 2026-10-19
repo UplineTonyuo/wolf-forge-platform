@@ -36,6 +36,8 @@ import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
 import { TicketAccessBoundary } from "../tickets/ticket-access-boundary";
+import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
+import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "./tenant-branding-provider";
 
 export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true }>> = {
   dashboard: LayoutDashboard,
@@ -108,15 +110,23 @@ export function InternalShell({
   user,
   notificationSoundEnabled = true,
   showWhiteLabel = false,
+  runtimeConfiguration,
+  readRuntimeConfiguration,
   children,
 }: {
   user: InternalUser;
   /** The profile's stored chime preference, passed through to the bell. */
   notificationSoundEnabled?: boolean;
   showWhiteLabel?: boolean;
+  runtimeConfiguration?: RuntimeWhiteLabelConfiguration | null;
+  readRuntimeConfiguration?: RuntimeBrandingReader;
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const controlPlane = pathname === "/white-label" || pathname.startsWith("/white-label/");
+  const brandingState = useRuntimeBranding(runtimeConfiguration, `${user.id}:${user.tenantId}`, !controlPlane, readRuntimeConfiguration);
+  const { branding, unavailable } = brandingState;
+  const workspaceName = unavailable ? "Workspace branding unavailable" : branding?.name ?? "Wolf Forge";
   const ticketRoute = pathname === "/tickets" || pathname.startsWith("/tickets/");
   const router = useRouter();
   const navigationCategories = navigationForModules(user.modules, showWhiteLabel);
@@ -193,9 +203,21 @@ export function InternalShell({
     );
   }
 
+  if (branding && branding.tenantId !== user.tenantId) {
+    throw new Error("Workspace branding scope mismatch.");
+  }
+
   return (
+    <TenantBrandingProvider value={brandingState}>
     <TeamPresenceProvider enabled={user.teamMessaging.use}>
-      <div className="internal-app">
+      <div
+        className={`internal-app${branding ? " tenant-workspace" : ""}`}
+        style={branding?.style}
+        data-branding-tenant={branding?.tenantId}
+        data-branding-revision={branding?.revision}
+        data-branding-contract={branding ? WHITE_LABEL_PUBLICATION_CONTRACT_VERSION : undefined}
+        data-branding-state={unavailable ? "unavailable" : undefined}
+      >
       <a
         className="skip-link"
         href="#main-content"
@@ -205,10 +227,11 @@ export function InternalShell({
 
       <aside className="app-sidebar">
         <div
-          className="sidebar-brand is-mark-only"
-          aria-label="Wolf Forge"
+          className={`sidebar-brand${branding ? "" : " is-mark-only"}`}
+          aria-label={workspaceName}
         >
-          <WolfForgeMark />
+          {unavailable ? <strong>{workspaceName}</strong> : <WolfForgeMark />}
+          {branding ? <strong className="tenant-workspace-name">{branding.name}</strong> : null}
         </div>
 
         {renderNavigation()}
@@ -218,14 +241,14 @@ export function InternalShell({
         ref={mobileDrawerRef}
         id="mobile-navigation"
         className="mobile-nav-drawer"
-        aria-label="Wolf Forge navigation"
+        aria-label={`${workspaceName} navigation`}
         onClose={() => setMobileOpen(false)}
         onClick={(event) => {
           if (event.target === event.currentTarget) mobileDrawerRef.current?.close();
         }}
       >
         <div className="mobile-nav-header">
-          <strong>WOLF FORGE</strong>
+          <strong>{unavailable ? workspaceName : branding?.name ?? "WOLF FORGE"}</strong>
           <button type="button" aria-label="Close navigation" onClick={() => mobileDrawerRef.current?.close()}>
             <X aria-hidden="true" />
           </button>
@@ -238,6 +261,7 @@ export function InternalShell({
         id="main-content"
         className="workspace"
       >
+        {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
         <WorkspaceCommandBar
           user={user}
           notificationSoundEnabled={
@@ -273,5 +297,6 @@ export function InternalShell({
       </div>
       </div>
     </TeamPresenceProvider>
+    </TenantBrandingProvider>
   );
 }

@@ -22,6 +22,7 @@ import type {
 } from "../../lib/supabase/next-server";
 import { useHeaderOverlay } from "./use-header-overlay";
 import styles from "./workspace-quick-action.module.css";
+import { TenantBrandingScope } from "./tenant-branding-provider";
 
 /**
  * Which face of the panel is showing.
@@ -318,7 +319,7 @@ export function WorkspaceQuickAction({
 
       {mounted
         ? createPortal(
-            modal,
+            <TenantBrandingScope>{modal}</TenantBrandingScope>,
             document.body,
           )
         : null}
