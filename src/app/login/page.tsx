@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LoginForm } from "../../components/forms/login-form";
 import { IDENTITY_UNAVAILABLE_MESSAGE } from "../../lib/supabase/identity-lookup";
+import { PwaInstallButton } from "../../components/pwa/pwa-provider";
 
 export const metadata: Metadata = {
   title: "Wolf Forge Access",
@@ -92,6 +93,7 @@ export default async function LoginPage({
             next={params.next}
             initialError={initialError}
           />
+          <PwaInstallButton variant="login" />
         </section>
       </section>
     </main>

@@ -7,6 +7,7 @@ import { signOutAction } from "../../app/actions/auth";
 import type { InternalUser } from "../../lib/supabase/next-server";
 import { AccountAvatar } from "../ui/account-avatar";
 import { useHeaderOverlay } from "./use-header-overlay";
+import { PwaInstallButton } from "../pwa/pwa-provider";
 
 function SignOutButton() {
   const { pending } = useFormStatus();
@@ -159,6 +160,7 @@ export function AccountMenu({ user, mobile = false, sidebar = false }: { user: I
             <span>{roleLabel}</span>
           </div>
           <div role="menu" aria-labelledby={identityId}>
+            <PwaInstallButton variant="menu" focusReturnRef={buttonRef} />
             <form action={signOutAction} role="none">
               <SignOutButton />
             </form>

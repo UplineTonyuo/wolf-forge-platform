@@ -1,0 +1,22 @@
+.content { display: grid; gap: 16px; }
+.content p { margin: 0; line-height: 1.6; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.loginTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  margin-top: 16px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  color: #f4d889;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+.loginTrigger svg { width: 16px; height: 16px; }
+.loginTrigger:hover { color: #ffffff; }
+.loginTrigger:focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }

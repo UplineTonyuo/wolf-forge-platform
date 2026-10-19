@@ -1,5 +1,7 @@
 "use client";
 
+import { PwaInstallButton } from "../pwa/pwa-provider";
+
 import {
   BarChart3,
   CircleUserRound,
@@ -154,6 +156,7 @@ export function ClientPortalSidebar({
         </nav>
 
         <div className="portal-account">
+          <PwaInstallButton variant="portal" />
           <span className="portal-account-identity">
             <strong>{companyName}</strong>
             {displayName ? <span>{displayName}</span> : null}
