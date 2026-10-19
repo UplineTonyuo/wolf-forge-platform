@@ -4,7 +4,7 @@ import { getVerifiedSessionContext, resolveClientUser, resolveInternalUser } fro
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET() {
   let destination = "/login";
   try {
     const context = await getVerifiedSessionContext();
@@ -19,6 +19,6 @@ export async function GET(request: Request) {
   }
   return new Response(null, {
     status: 307,
-    headers: { location: new URL(destination, request.url).href, "cache-control": "private, no-store, max-age=0" },
+    headers: { location: destination, "cache-control": "private, no-store, max-age=0" },
   });
 }
