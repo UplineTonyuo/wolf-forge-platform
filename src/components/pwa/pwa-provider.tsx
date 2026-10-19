@@ -20,7 +20,10 @@ export function PwaProvider({ children }: { children: ReactNode }) {
   const [installed, setInstalled] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState(false);
+  const [confirmReload, setConfirmReload] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const cancelReloadRef = useRef<HTMLButtonElement>(null);
+  const reloadTriggerRef = useRef<HTMLButtonElement>(null);
   const client = useSyncExternalStore(subscribeClient, isClient, isServer);
   const standalone = client && (window.matchMedia("(display-mode: standalone)").matches ||
     (navigator as Navigator & { standalone?: boolean }).standalone === true);
@@ -44,7 +47,12 @@ export function PwaProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (confirmReload) cancelReloadRef.current?.focus();
+  }, [confirmReload]);
+
   function close() {
+    setConfirmReload(false);
     setOpen(false);
     window.requestAnimationFrame(() => returnFocus.current?.focus());
   }
@@ -66,8 +74,18 @@ export function PwaProvider({ children }: { children: ReactNode }) {
 
   return <InstallContext.Provider value={(target) => { returnFocus.current = target; setOpen(true); }}>
     {children}
-    <PortalDialog open={open} onClose={close} title={installed || standalone ? "Wolf Forge app" : "Install Wolf Forge"} showClose>
+    <PortalDialog open={open} onClose={close} title={confirmReload ? "Reload Wolf Forge?" : installed || standalone ? "Wolf Forge app" : "Install Wolf Forge"} showClose>
       <div className={styles.content}>
+        {confirmReload ? <>
+          <p>Save unfinished edits and wait for uploads to finish before reloading. Unsaved work will be lost if you reload now.</p>
+          <div className={styles.actions}>
+            <button ref={cancelReloadRef} type="button" className="button button-secondary" onClick={() => {
+              setConfirmReload(false);
+              window.requestAnimationFrame(() => reloadTriggerRef.current?.focus());
+            }}>Cancel</button>
+            <button type="button" className="button button-primary" onClick={() => window.location.reload()}>Reload now</button>
+          </div>
+        </> : <>
         <p>{installed || standalone ? "Wolf Forge is running as an app or has been installed from this browser." :
           "Add Wolf Forge to your device and open your workspace in its own window."}</p>
         {!installed && !standalone ? <>
@@ -82,11 +100,10 @@ export function PwaProvider({ children }: { children: ReactNode }) {
         <p>An internet connection is required for your workspace, messages and files.</p>
         <p>Updates load when you reopen or reload the app. Save unfinished work before reloading; this app will not reload automatically.</p>
         <div className={styles.actions}>
-          <button type="button" className="button button-secondary" onClick={() => {
-            if (window.confirm("Reload Wolf Forge? Save unfinished edits and wait for any uploads to finish first.")) window.location.reload();
-          }}>Reload app</button>
+          <button ref={reloadTriggerRef} type="button" className="button button-secondary" onClick={() => setConfirmReload(true)}>Reload app</button>
           <button type="button" className="button button-secondary" onClick={close}>Done</button>
         </div>
+        </>}
       </div>
     </PortalDialog>
   </InstallContext.Provider>;

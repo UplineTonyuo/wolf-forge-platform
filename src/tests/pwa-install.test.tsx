@@ -3,6 +3,10 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PwaInstallButton, PwaProvider } from "../components/pwa/pwa-provider";
+import { TicketComposer } from "../components/tickets/ticket-composer";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("../app/actions/tickets", () => ({ sendTicketComposerAction: vi.fn() }));
 
 beforeEach(() => {
   vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
@@ -94,7 +98,36 @@ describe("PWA install and update controls", () => {
     expect(confirm).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Install or update app" }));
     fireEvent.click(screen.getByRole("button", { name: "Reload app" }));
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Save unfinished edits"));
+    expect(screen.getByRole("dialog", { name: "Reload Wolf Forge?" })).toBeInTheDocument();
+    expect(confirm).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByLabelText("Unsaved message")).toHaveValue("Draft message");
+  });
+
+  it("keeps the actual rich reply and selected attachment when reload is canceled", () => {
+    const confirm = vi.spyOn(window, "confirm");
+    render(<PwaProvider>
+      <TicketComposer target={{ kind: "ticket", ticketId: "20000000-0000-4000-8000-000000000001" }} mode="client" attached />
+      <PwaInstallButton variant="portal" />
+    </PwaProvider>);
+    const editor = screen.getByRole("textbox", { name: "Write a reply" });
+    editor.innerHTML = "<strong>Keep this unsent reply</strong>";
+    fireEvent.input(editor);
+    const attachment = new File(["Synthetic fixture"], "pwa-qa.txt", { type: "text/plain" });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [attachment] } });
+    fireEvent.click(screen.getByRole("button", { name: "Install or update app" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reload app" }));
+    expect(screen.getByRole("dialog", { name: "Reload Wolf Forge?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Reload now" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByRole("textbox", { name: "Write a reply" })).toBe(editor);
+    expect(editor.innerHTML).toBe("<strong>Keep this unsent reply</strong>");
+    expect(screen.getByText("pwa-qa.txt")).toBeInTheDocument();
+    expect(fileInput.files?.[0]).toBe(attachment);
+    expect(screen.getByRole("button", { name: "Send reply" })).toBeEnabled();
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
