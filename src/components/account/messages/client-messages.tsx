@@ -7,6 +7,7 @@ import { createClientTicketAction } from "../../../app/actions/tickets";
 import { ticketAttention } from "../../../domain/client-portal/attention";
 import type { ClientTicketSummary } from "../../../domain/tickets/schema";
 import { formatDateTime } from "../../../lib/format";
+import { useBrowserTimeZone } from "../../../lib/use-browser-time-zone";
 import { OPEN_MESSAGE_COMPOSER_EVENT } from "../command/client-quick-action";
 import { AttentionPill } from "../ui/attention-pill";
 import { TicketRichTextEditor } from "../../tickets/ticket-rich-text-editor";
@@ -43,6 +44,7 @@ export function ClientMessages({
   composeOnMount?: boolean;
   seedFromCart?: boolean;
 }) {
+  const timeZone = useBrowserTimeZone();
   const [composerOpen, setComposerOpen] = useState(composeOnMount);
   const subjectRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("");
@@ -179,7 +181,7 @@ export function ClientMessages({
                     <strong>{ticket.subject}</strong>
                     <span>
                       {ticket.message_count} {ticket.message_count === 1 ? "message" : "messages"} ·
-                      updated {formatDateTime(ticket.last_message_at ?? ticket.updated_at)}
+                      updated {formatDateTime(ticket.last_message_at ?? ticket.updated_at, timeZone)}
                     </span>
                   </span>
 

@@ -2,6 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as actions from "../app/actions/tickets";
 import { ClientMessages } from "../components/account/messages/client-messages";
@@ -258,6 +260,32 @@ describe("Ticket detail and actions", () => {
 });
 
 describe("Client Messages", () => {
+  it("hydrates saved Inbox dates across time zones without replacing the conversation link", async () => {
+    const RealDateTimeFormat = Intl.DateTimeFormat;
+    let localTimeZone = "UTC";
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (locales, options) {
+      return new RealDateTimeFormat(locales, { ...options, timeZone: options?.timeZone ?? localTimeZone });
+    });
+    const element = <ClientMessages summaries={[{ ...ticket, last_message_at: "2026-10-19T23:35:00Z" }]} />;
+    const container = document.createElement("div");
+    container.innerHTML = renderToString(element);
+    document.body.append(container);
+    const serverLink = container.querySelector(`a[href="/account/messages/${ticket.ticket_id}"]`);
+    expect(serverLink?.textContent).toContain("11:35 PM");
+    localTimeZone = "Asia/Singapore";
+    const recoverableError = vi.fn();
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    try {
+      await act(async () => { root = hydrateRoot(container, element, { onRecoverableError: recoverableError }); });
+      expect(recoverableError).not.toHaveBeenCalled();
+      expect(container.querySelector(`a[href="/account/messages/${ticket.ticket_id}"]`)).toBe(serverLink);
+      expect(serverLink?.textContent).toContain("7:35 AM");
+    } finally {
+      await act(async () => root?.unmount());
+      container.remove();
+    }
+  });
+
   it("renders only client-safe list data and starts a conversation once", async () => {
     render(<ClientMessages summaries={[ticket]} />);
     expect(screen.getByRole("heading", { name: "Inbox" })).toBeInTheDocument();

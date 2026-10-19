@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -33,10 +32,7 @@ import {
 import styles from "./tickets.module.css";
 import type { TicketMutationResult } from "../../app/actions/tickets";
 import { OrderMessageActions, type OrderReplyTarget } from "./order-message-actions";
-
-const subscribeTimeZone = () => () => {};
-const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
-const serverTimeZone = () => "UTC";
+import { useBrowserTimeZone } from "../../lib/use-browser-time-zone";
 
 function renderTicketInline(
   text: string,
@@ -567,8 +563,7 @@ export function TicketConversation({
   onToggleReaction?: (messageId: string, reactionCode: string) => Promise<TicketMutationResult>;
   onRetryMessage?: (message: TicketDetailMessage) => void;
 }) {
-  // The first browser render must match SSR before adopting the viewer's time zone.
-  const timeZone = useSyncExternalStore(subscribeTimeZone, browserTimeZone, serverTimeZone);
+  const timeZone = useBrowserTimeZone();
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
   const lightboxTriggerRef = useRef<HTMLButtonElement | null>(null);
 
