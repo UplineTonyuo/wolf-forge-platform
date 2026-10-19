@@ -15,7 +15,7 @@ export function formatShortDate(value: string | null): string {
   return formatCalendarDate(value, { month: "short", day: "numeric" });
 }
 
-export function formatDateTime(value: string | null): string {
+export function formatDateTime(value: string | null, timeZone?: string): string {
   if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
@@ -23,6 +23,7 @@ export function formatDateTime(value: string | null): string {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone,
   }).format(new Date(value));
 }
 
