@@ -212,6 +212,19 @@ insert into wlforms136_ids select 'b-intake-assignment', (public.app_assign_form
   'f1360050-0000-4000-8000-000000001816', (select id from wlforms136_ids where label = 'b-intake'),
   jsonb_build_object('order_id', 'f1360040-0000-4000-8000-000000001802', 'client_profile_id', 'f1360000-0000-4000-8000-000000001806'))).id;
 
+-- Retain explicit coverage for the historical recipient-less intake case.
+reset role;
+do $$ declare legacy public.form_assignments; replacement uuid; fixture_label text; begin
+  foreach fixture_label in array array['wf-intake-assignment','b-intake-assignment'] loop
+    select * into legacy from public.form_assignments where id=(select id from wlforms136_ids where label=fixture_label);
+    update public.form_assignments set status='canceled',canceled_at=now() where id=legacy.id;
+    insert into public.form_assignments(form_id,form_version_id,company_id,order_id,required,assigned_by_profile_id)
+      values(legacy.form_id,legacy.form_version_id,legacy.company_id,legacy.order_id,legacy.required,legacy.assigned_by_profile_id)
+      returning id into replacement;
+    update wlforms136_ids set id=replacement where label=fixture_label;
+  end loop;
+end $$;
+set local role authenticated;
 select pg_temp.act('1805', '');
 insert into wlforms136_ids values ('wf-submission', (public.app_submit_form(
   'f1360050-0000-4000-8000-000000001817',
@@ -233,10 +246,10 @@ reset role;
 select set_config('request.jwt.claim.sub', '', true);
 select set_config('request.headers', '', true);
 insert into public.form_submissions (
-  id, form_id, form_version_id, form_assignment_id, company_id, order_id, root_submission_id,
+  id, form_id, form_version_id, form_assignment_id, company_id, client_profile_id, order_id, root_submission_id,
   submitted_by_profile_id
 ) select
-  'f1360070-0000-4000-8000-000000001823', form_id, form_version_id, id, company_id, order_id,
+  'f1360070-0000-4000-8000-000000001823', form_id, form_version_id, id, company_id, client_profile_id, order_id,
   'f1360070-0000-4000-8000-000000001823', 'f1360000-0000-4000-8000-000000001801'
 from public.form_assignments where id = (select id from wlforms136_ids where label = 'wf-intake-assignment');
 set local role authenticated;

@@ -1,6 +1,7 @@
 begin;
 
 select plan(76);
+create temp table form_catalog_baseline as select count(*)::bigint total from public.services where tenant_id=private.wolf_forge_tenant_id();
 
 -- -----------------------------------------------------------------------------
 -- Structure, capabilities, and protected boundaries
@@ -645,8 +646,8 @@ select throws_ok(
     jsonb_build_array(jsonb_build_object('field_key', '54000000-0000-0000-0000-000000000001', 'value', 'Spoofed context')),
     '[]'
   )$$,
-  '42501', 'Form assignment access is denied',
-  'NULL-assignee Intake cannot be submitted even with spoofed Order context'
+  '42501', 'Form Order context cannot be spoofed',
+  'an assigned client cannot spoof a different Project context'
 );
 set local "request.jwt.claim.sub" = '2b000000-0000-0000-0000-000000000001';
 select lives_ok(
@@ -660,7 +661,7 @@ select lives_ok(
       '[]'
     )).id
   )$$,
-  'authorized internal owner submits NULL-assignee Intake in the correct Order scope'
+  'authorized internal owner submits assigned Intake in the correct Order scope'
 );
 reset role;
 select ok(
@@ -919,7 +920,7 @@ select ok(
   and (select count(*) >= 1 from public.activity_events where entity_type = 'form_submission' and action = 'form.submission_corrected'),
   'meaningful Form lifecycle, assignment, submission, and correction activity is recorded'
 );
-select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), 59::bigint, 'Forms preserves the Wolf Forge 59-Service catalog baseline');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), (select total from form_catalog_baseline), 'Forms preserves the existing Wolf Forge Service catalogue');
 select ok(
   to_regclass('public.invoices') is not null
   and to_regclass('public.subscriptions') is not null

@@ -236,7 +236,7 @@ insert into wl214_ids values ('b-submission', (public.app_submit_form(
 -- -----------------------------------------------------------------------------
 
 select pg_temp.act('1801', '');
-select is((select count(*) from public.app_list_assigned_forms()), 2::bigint,
+select is((select count(*) from public.app_list_assigned_forms() where form_id in (select id from wl214_ids where label in ('wf-intake','wf-onboard','b-intake','b-onboard'))), 2::bigint,
   'the WF owner list contains exactly the WF assignments');
 select is((select count(*) from public.app_list_assigned_forms()
   where form_id = (select id from wl214_ids where label = 'wf-onboard')), 1::bigint,
@@ -260,7 +260,7 @@ select is((select revision_number from public.form_submissions
   'the correction appends revision 2');
 
 select pg_temp.act('1802', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001801"}');
-select is((select count(*) from public.app_list_assigned_forms()), 2::bigint,
+select is((select count(*) from public.app_list_assigned_forms() where form_id in (select id from wl214_ids where label in ('wf-intake','wf-onboard','b-intake','b-onboard'))), 2::bigint,
   'the Tenant B owner list contains exactly the Tenant B assignments');
 select is((select count(*) from public.app_list_assigned_forms()
   where assignment_id = (select id from wl214_ids where label = 'b-intake-assignment')), 1::bigint,

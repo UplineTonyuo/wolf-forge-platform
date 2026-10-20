@@ -294,7 +294,7 @@ select is(pg_temp.economic_snapshot(),(select data from economic_before),'accept
 select throws_ok($$select * from public.app_purchase_service_with_balance((select request_id from fixture_ids where kind='purchase'),'e7360000-0000-4000-8000-000000003602')$$,'23505',null,'altered payload cannot replay');
 select throws_ok($$select * from public.app_purchase_service_with_balance((select request_id from fixture_ids where kind='purchase'),'e7360000-0000-4000-8000-000000003601','PROJECTSQA')$$,'23505',null,'altered coupon cannot replay');
 select is((select count(*) from public.invoices where id=(select invoice_id from accepted_purchase)),1::bigint,'financial invoice remains accessible');
-select throws_ok($$select public.app_get_assigned_form_schema((select id from fixture_ids where kind='intake_assignment'))$$,'42501',null,'NULL-assignee Intake remains denied to clients while Projects OFF');
+select lives_ok($$select public.app_get_assigned_form_schema((select id from fixture_ids where kind='intake_assignment'))$$,'the exact recipient retains its independently authorized Form while Projects OFF');
 select lives_ok($$select public.app_get_ticket_detail((select id from fixture_ids where kind='plain_ticket'))$$,'ordinary support detail remains available');
 select lives_ok($$select public.app_reply_to_ticket(gen_random_uuid(),(select id from fixture_ids where kind='plain_ticket'),'Allowed ordinary support')$$,'ordinary support reply preserved');
 reset role;

@@ -21,6 +21,9 @@
 @media(min-width:1351px){.builderActions{margin-right:528px}}
 @media(min-width:1024px) and (max-width:1350px){.builderTop{align-items:flex-start;flex-direction:column;padding-top:62px}.builderActions{margin-right:0}}
 .customField { min-width: 0; display: grid; align-content: start; gap: 7px; color: #656c7c; font-size: 10px; font-weight: 650; }
+.assignmentRoot { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.assignPanel, .assignmentHistory, .assignFields > label { min-width: 0; }
+.assignFields input, .assignFields select { min-width: 0; max-width: 100%; }
 @media (max-width: 1100px) { .formSettingsBar > .customField:last-child { grid-column: 1 / -1; } }
 .renderField>fieldset{min-width:0;margin:0;padding:0;border:0}
 .builderTop{flex-wrap:wrap}.builderTop>div:first-child{min-width:0}.builderTop h1{overflow-wrap:anywhere}.builderActions{flex-wrap:wrap}.formSettingsBar>label{min-width:0}.formSettingsBar input{min-width:0;width:100%}
