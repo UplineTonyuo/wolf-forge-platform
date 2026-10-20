@@ -461,11 +461,11 @@ grant select on order_authz_form to authenticated;
 
 select pg_temp.act('1302', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001301"}');
 select is(pg_temp.try($$ select public.app_assign_form(gen_random_uuid(), (select form_id from order_authz_form),
-    jsonb_build_object('order_id', 'd3000000-0000-4000-8000-000000001301')) $$), 'P0002',
+    jsonb_build_object('order_id', 'd3000000-0000-4000-8000-000000001301', 'client_profile_id', '20000000-0000-0000-0000-000000001307')) $$), 'P0002',
   'B admin cannot attach a Form to the WF Order');
 select pg_temp.act('1301', '');
 select is(pg_temp.try($$ select public.app_assign_form(gen_random_uuid(), (select form_id from order_authz_form),
-    jsonb_build_object('order_id', 'd3000000-0000-4000-8000-000000001301')) $$), 'ok',
+    jsonb_build_object('order_id', 'd3000000-0000-4000-8000-000000001301', 'client_profile_id', '20000000-0000-0000-0000-000000001307')) $$), 'ok',
   'WF admin attaches the Form to the WF Order');
 
 select * from finish();

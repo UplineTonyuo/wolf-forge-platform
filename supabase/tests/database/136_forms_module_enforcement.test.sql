@@ -187,7 +187,7 @@ insert into wlforms136_ids select 'wf-onboard-assignment', (public.app_assign_fo
   jsonb_build_object('client_profile_id', 'f1360000-0000-4000-8000-000000001805'))).id;
 insert into wlforms136_ids select 'wf-intake-assignment', (public.app_assign_form(
   'f1360050-0000-4000-8000-000000001808', (select id from wlforms136_ids where label = 'wf-intake'),
-  jsonb_build_object('order_id', 'f1360040-0000-4000-8000-000000001801'))).id;
+  jsonb_build_object('order_id', 'f1360040-0000-4000-8000-000000001801', 'client_profile_id', 'f1360000-0000-4000-8000-000000001805'))).id;
 
 select pg_temp.act('1802', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001801"}');
 insert into wlforms136_ids values ('b-public', (public.app_create_form(
@@ -210,7 +210,7 @@ insert into wlforms136_ids select 'b-onboard-assignment', (public.app_assign_for
   jsonb_build_object('client_profile_id', 'f1360000-0000-4000-8000-000000001806'))).id;
 insert into wlforms136_ids select 'b-intake-assignment', (public.app_assign_form(
   'f1360050-0000-4000-8000-000000001816', (select id from wlforms136_ids where label = 'b-intake'),
-  jsonb_build_object('order_id', 'f1360040-0000-4000-8000-000000001802'))).id;
+  jsonb_build_object('order_id', 'f1360040-0000-4000-8000-000000001802', 'client_profile_id', 'f1360000-0000-4000-8000-000000001806'))).id;
 
 select pg_temp.act('1805', '');
 insert into wlforms136_ids values ('wf-submission', (public.app_submit_form(

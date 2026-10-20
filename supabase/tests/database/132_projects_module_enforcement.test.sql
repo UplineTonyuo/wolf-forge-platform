@@ -176,7 +176,7 @@ insert into fixture_ids(kind,request_id,payload) values('intake',gen_random_uuid
   'rules','[]'::jsonb,'service_links',jsonb_build_array(jsonb_build_object('service_id','e7360000-0000-4000-8000-000000003601','role','intake_assignment','sort_order',0)))));
 update fixture_ids set id=(public.app_create_form(request_id,payload)).id where kind='intake';
 select lives_ok($$select public.app_publish_form(gen_random_uuid(),(select id from fixture_ids where kind='intake'))$$,'intake fixture publishes normally');
-insert into fixture_ids(kind,request_id,payload) select 'intake_assignment',gen_random_uuid(),jsonb_build_object('order_id',id) from fixture_ids where kind='project';
+insert into fixture_ids(kind,request_id,payload) select 'intake_assignment',gen_random_uuid(),jsonb_build_object('order_id',id,'client_profile_id','20000000-0000-4000-8000-000000003604') from fixture_ids where kind='project';
 update fixture_ids set id=(public.app_assign_form(request_id,(select id from fixture_ids where kind='intake'),payload)).id where kind='intake_assignment';
 insert into fixture_ids(kind,request_id,payload) values('onboarding',gen_random_uuid(),jsonb_build_object('form_type','onboarding','canonical_key','wl236-onboarding','definition',jsonb_build_object(
   'name','Onboarding','title','Onboarding','visibility','assigned','fields',jsonb_build_array(jsonb_build_object('stable_field_key','e7360000-0000-4000-8000-000000003698','sort_order',0,'field_type','text','label','Name','required',true)), 'rules','[]'::jsonb,'service_links','[]'::jsonb)));

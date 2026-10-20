@@ -15394,3 +15394,26 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* Reserve the desktop utility row so long page titles and actions cannot sit under it. */
+@media (min-width: 1024px) {
+  .workspace > .workspace-command-bar {
+    position: relative;
+    top: auto;
+    right: auto !important;
+    margin: 10px 24px 0 auto;
+  }
+  .workspace .page-actions { margin-right: 0; }
+}
+
+/* Search stays inside the viewport even when a desktop-open panel is resized. */
+@media (max-width: 900px) {
+  .portal-command-search-anchor .portal-header-panel {
+    position: fixed;
+    top: 72px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100dvh - 88px);
+  }
+}

@@ -110,7 +110,7 @@ select throws_ok(
 
 
 -- =============================================================================
--- CLIENT ACCOUNTS ARE NOT INTERNAL ACCOUNTS
+-- ACTIVE CLIENT ACCOUNTS CAN UPDATE ONLY THEIR OWN PROFILE
 -- =============================================================================
 
 reset role;
@@ -118,11 +118,9 @@ set local role authenticated;
 set local "request.jwt.claim.sub" = '1f000000-0000-0000-0000-000000000001';
 set local "request.jwt.claim.role" = 'authenticated';
 
-select throws_ok(
+select lives_ok(
   $$select * from public.app_update_my_profile('Client Rename', true)$$,
-  '42501',
-  null,
-  'a client portal account cannot use the internal profile RPC'
+  'an active client can update its own profile through the self-service RPC'
 );
 
 

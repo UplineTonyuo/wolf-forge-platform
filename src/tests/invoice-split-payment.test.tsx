@@ -9,6 +9,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 vi.mock("../app/actions/wf-card", () => ({
   payInvoiceWithWfCardAction: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 import { InvoiceItemScope } from "../components/account/billing/invoice-item-scope";
 import { InvoicePaymentSelector } from "../components/invoices/invoice-payment-selector";

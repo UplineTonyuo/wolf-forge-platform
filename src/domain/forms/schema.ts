@@ -160,6 +160,7 @@ export const assignFormSchema = z.object({
   context: z.union([
     z.object({
       order_id: uuidSchema,
+      client_profile_id: uuidSchema,
       required: z.boolean().default(true),
       due_at: z.iso.datetime({ offset: true }).nullable().optional(),
     }).strict(),

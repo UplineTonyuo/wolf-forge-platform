@@ -190,7 +190,7 @@ insert into wl214_ids select 'wf-onboard-assignment', (public.app_assign_form(
   jsonb_build_object('client_profile_id', '20000000-0000-4000-8000-000000001805'))).id;
 insert into wl214_ids select 'wf-intake-assignment', (public.app_assign_form(
   '71000000-0000-4000-8000-000000001808', (select id from wl214_ids where label = 'wf-intake'),
-  jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001801'))).id;
+  jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001801', 'client_profile_id', '20000000-0000-4000-8000-000000001805'))).id;
 
 select pg_temp.act('1802', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001801"}');
 insert into wl214_ids values ('b-public', (public.app_create_form(
@@ -213,7 +213,7 @@ insert into wl214_ids select 'b-onboard-assignment', (public.app_assign_form(
   jsonb_build_object('client_profile_id', '20000000-0000-4000-8000-000000001806'))).id;
 insert into wl214_ids select 'b-intake-assignment', (public.app_assign_form(
   '71000000-0000-4000-8000-000000001816', (select id from wl214_ids where label = 'b-intake'),
-  jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001802'))).id;
+  jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001802', 'client_profile_id', '20000000-0000-4000-8000-000000001806'))).id;
 
 select pg_temp.act('1805', '');
 insert into wl214_ids values ('wf-submission', (public.app_submit_form(
@@ -333,13 +333,13 @@ select is(pg_temp.try($$select public.app_correct_form_submission(
 
 select is(pg_temp.try($$select public.app_assign_form(
     '71000000-0000-4000-8000-000000001827', (select id from wl214_ids where label = 'b-intake'),
-    jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001801'))$$),
+    jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001801', 'client_profile_id', '20000000-0000-4000-8000-000000001805'))$$),
   'P0002', 'a Tenant B Form cannot attach to a WF Order');
 
 select pg_temp.act('1801', '');
 select is(pg_temp.try($$select public.app_assign_form(
     '71000000-0000-4000-8000-000000001828', (select id from wl214_ids where label = 'wf-intake'),
-    jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001802'))$$),
+    jsonb_build_object('order_id', '0d000000-0000-4000-8000-000000001802', 'client_profile_id', '20000000-0000-4000-8000-000000001806'))$$),
   'P0002', 'a WF Form cannot attach to a Tenant B Order');
 
 select pg_temp.act('1802', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001801"}');

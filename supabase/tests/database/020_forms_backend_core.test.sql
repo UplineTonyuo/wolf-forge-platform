@@ -595,7 +595,7 @@ select lives_ok(
     (public.app_assign_form(
       '64000000-0000-0000-0000-000000000003',
       (select id from form_test_ids where label = 'intake-form'),
-      jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000001', 'required', true)
+      jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000001', 'client_profile_id', '1b000000-0000-0000-0000-000000000001', 'required', true)
     )).id
   )$$,
   'Intake Form assigns to an authoritative Order with a linked Service'
@@ -604,7 +604,7 @@ select throws_ok(
   $$select public.app_assign_form(
     '64000000-0000-0000-0000-000000000004',
     (select id from form_test_ids where label = 'intake-form'),
-    jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000002')
+    jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000002', 'client_profile_id', '1b000000-0000-0000-0000-000000000001')
   )$$,
   '23514', 'Intake Form is not linked to the Order Service',
   'Intake assignment refuses an Order whose Service is not linked'

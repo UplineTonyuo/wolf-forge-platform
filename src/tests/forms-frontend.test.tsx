@@ -314,6 +314,19 @@ describe("renderer and safety", () => {
 });
 
 describe("assignments, submissions, and client experience", () => {
+  it("requires an intake recipient from the selected Project company", async () => {
+    render(<FormAssignments formId="form" formType="intake" assignments={[]}
+      options={[{ id: "project", label: "QA Project", detail: "Acme", companyId: "company" }]}
+      recipients={[{ id: "client", label: "Jane Client", detail: "Acme", companyId: "company" }, { id: "foreign", label: "Other Client", detail: "Other", companyId: "other" }]} />);
+    fireEvent.change(screen.getByLabelText("Project"), { target: { value: "project" } });
+    expect(screen.getByRole("button", { name: "Assign Form" })).toBeDisabled();
+    fireEvent.change(screen.getByRole("combobox", { name: "Client recipient" }), { target: { value: "Jane" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Jane Client/ }));
+    expect(screen.queryByRole("option", { name: /Other Client/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Assign Form" }));
+    await waitFor(() => expect(actions.assignFormAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.assignFormAction).mock.calls[0]![1].context).toMatchObject({ order_id: "project", client_profile_id: "client" });
+  });
   /*
    * The client-facing view of an assignment now lives in the portal's
    * Onboarding surface and is covered by client-portal-dashboard.test.tsx.

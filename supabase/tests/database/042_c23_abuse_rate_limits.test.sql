@@ -611,8 +611,8 @@ select throws_ok(
   $$select public.app_set_my_avatar(
       'e1000000-0000-0000-0000-000000000001/stolen.webp',
       'http://127.0.0.1:54321/storage/v1/object/public/profile-avatars/stolen.webp')$$,
-  '42501', 'verified internal authentication is required',
-  'a client account cannot persist an avatar, and is refused on authorization not on rate'
+  '42501', 'an avatar path must be owned by your own account',
+  'a client cannot persist another account avatar, and ownership is checked before rate'
 );
 
 reset role;
