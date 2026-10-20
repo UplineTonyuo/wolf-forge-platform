@@ -3371,6 +3371,10 @@
 }
 
 /* Canonical Ticket attachment composer ------------------------------------ */
+.draftStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; }
+.draftStatus > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.draftStatus > button,.draftActions > button { min-height: 44px; }
+.draftActions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 .composerActions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .addFileButton {
   display: inline-flex;

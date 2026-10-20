@@ -8,6 +8,8 @@ import { getClientNavCounts } from "../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../lib/supabase/next-server";
 import { WhiteLabelPublicationRepository } from "../../repositories/white-label-publication-repository";
 import { WhiteLabelPublicationService } from "../../services/white-label-publication-service";
+import { ClientDraftProvider } from "../../components/tickets/client-draft-provider";
+import { studioDraftSavingAvailable } from "../../domain/tickets/draft-saving";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,7 @@ export default async function ClientAccountLayout({ children }: { children: Reac
   const profile = await context.services.profile.getMine().catch(() => null);
 
   return (
+    <ClientDraftProvider key={`${context.user.companyId}:${context.user.id}`} owner={studioDraftSavingAvailable(process.env) ? `${context.user.companyId}:${context.user.id}` : null}>
     <ClientAccountShell
       user={context.user}
       runtimeConfiguration={runtimeConfiguration}
@@ -65,5 +68,6 @@ export default async function ClientAccountLayout({ children }: { children: Reac
     >
       {children}
     </ClientAccountShell>
+    </ClientDraftProvider>
   );
 }

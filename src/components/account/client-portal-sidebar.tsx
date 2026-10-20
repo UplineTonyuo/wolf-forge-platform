@@ -1,6 +1,7 @@
 "use client";
 
 import { PwaInstallButton } from "../pwa/pwa-provider";
+import { ClientDraftSignOut } from "../tickets/client-draft-provider";
 
 import {
   BarChart3,
@@ -161,12 +162,12 @@ export function ClientPortalSidebar({
             <strong>{companyName}</strong>
             {displayName ? <span>{displayName}</span> : null}
           </span>
-          <form action={signOutAction}>
+          <ClientDraftSignOut action={signOutAction}>
             <button type="submit" className="portal-signout">
               <LogOut aria-hidden={true} />
               <span className="sr-only">Sign out</span>
             </button>
-          </form>
+          </ClientDraftSignOut>
         </div>
       </aside>
     </>

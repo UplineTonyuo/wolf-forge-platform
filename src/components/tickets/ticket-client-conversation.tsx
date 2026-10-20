@@ -90,6 +90,7 @@ export function TicketClientConversation({
           onSend: conversation.addOptimistic,
           onSettled: conversation.settle,
         }}
+        confirmedRequestIds={conversation.messages.filter((message) => !message.pending && message.requestId).map((message) => message.requestId!)}
       />
     </div>
   );
