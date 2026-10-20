@@ -1,5 +1,8 @@
 "use client";
 
+import { ClientPushNotifications } from "./client-push-notifications";
+import type { ClientPushConfiguration } from "../../../domain/notifications/push";
+
 import { Check, Loader2, Trash2, Upload } from "lucide-react";
 import { useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 import {
@@ -39,10 +42,12 @@ export function ClientProfile({
   profile,
   companyName,
   identities,
+  pushConfiguration = null,
 }: {
   profile: MyProfile;
   companyName: string;
   identities: SignInIdentity[];
+  pushConfiguration?: ClientPushConfiguration | null;
 }) {
   const [state, submit, pending] = useActionState(
     updateMyProfileAction,
@@ -261,6 +266,7 @@ export function ClientProfile({
        * Supabase Auth reports for this account and nothing speculative, so it is
        * safe to share with the internal Settings surface verbatim.
        */}
+      {pushConfiguration ? <ClientPushNotifications config={pushConfiguration} /> : null}
       <div className="portal-security">
         <SecuritySection
           identities={identities}

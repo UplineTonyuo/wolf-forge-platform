@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+.portal-push-card { display: grid; gap: 16px; min-width: 0; }
+.portal-push-card p { margin: 0; overflow-wrap: anywhere; }
+
 :root {
   --wf-navy: #000d51;
   --wf-navy-hover: #001a73;

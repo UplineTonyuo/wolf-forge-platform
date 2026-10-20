@@ -1,0 +1,11 @@
+{
+  "name": "wolf-forge-studio-push-worker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned dependency audit boundary for the isolated Supabase push worker.",
+  "dependencies": {
+    "@supabase/server": "1.9.2",
+    "@supabase/supabase-js": "2.112.3",
+    "web-push": "3.6.7"
+  }
+}

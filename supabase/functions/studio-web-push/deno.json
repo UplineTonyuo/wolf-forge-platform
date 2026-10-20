@@ -1,0 +1,8 @@
+{
+  "nodeModulesDir": "auto",
+  "compilerOptions": { "strict": true },
+  "imports": {
+    "npm:@supabase/server@1.9.2": "npm:@supabase/server@1.9.2",
+    "npm:web-push@3.6.7": "npm:web-push@3.6.7"
+  }
+}
