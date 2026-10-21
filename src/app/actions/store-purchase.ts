@@ -60,11 +60,12 @@ export async function purchaseServiceWithBalanceAction(input: {
       context.actor,
     );
 
-    // The purchase touches four surfaces the client can see.
+    // Refresh the purchase and any newly assigned intake forms.
     revalidatePath("/account");
     revalidatePath("/account/projects");
     revalidatePath("/account/invoices");
     revalidatePath("/account/store");
+    revalidatePath("/account/onboarding");
     revalidatePath(`/account/store/${input.serviceId}`);
 
     return {

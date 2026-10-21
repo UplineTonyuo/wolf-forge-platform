@@ -54,7 +54,7 @@ export default async function AssignedFormPage({
 
         <section className={styles.clientAssignmentContext}>
           <div>
-            <span>{assignment.order_title ? "Project information" : "Account setup"}</span>
+            <span>{assignment.form_type === "intake" ? "Project information" : "Account setup"}</span>
             <strong>{assignment.title}</strong>
           </div>
           <dl>

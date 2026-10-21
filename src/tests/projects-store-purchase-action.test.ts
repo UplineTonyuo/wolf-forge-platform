@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { revalidatePath } from "next/cache";
 
 const mocks = vi.hoisted(() => ({ purchase: vi.fn(), gate: vi.fn(), event: vi.fn(), projectVisible: true }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -27,6 +28,7 @@ describe("Store Projects boundary", () => {
     expect(await purchaseServiceWithBalanceAction(input)).toMatchObject({ ok: true, destinationHref: "/account/projects" });
     expect(mocks.gate.mock.calls).toEqual([["portal_store"]]);
     expect(mocks.purchase).toHaveBeenCalledWith({ request_id: "request", service_id: "service" }, { id: "client" });
+    expect(revalidatePath).toHaveBeenCalledWith("/account/onboarding");
   });
   it("routes accepted retries to the financial receipt without a Projects precheck", async () => {
     mocks.purchase.mockResolvedValue({ invoiceId: "invoice", replayed: true });
