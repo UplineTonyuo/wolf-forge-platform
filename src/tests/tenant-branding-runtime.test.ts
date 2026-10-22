@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../app/api/white-label/runtime/route";
 import InternalLayout from "../app/(internal)/layout";
 import ClientAccountLayout from "../app/account/layout";
+import { ClientDraftProvider } from "../components/tickets/client-draft-provider";
+import { ClientAccountShell } from "../components/account/client-account-shell";
+import { InternalShell } from "../components/shell/internal-shell";
 import { IdentityLookupError } from "../lib/supabase/identity-lookup";
 
 const state = vi.hoisted(() => ({
@@ -103,16 +106,31 @@ describe("runtime GET binding", () => {
 });
 
 describe("layout published snapshot binding", () => {
-  it.each([InternalLayout, ClientAccountLayout])("seeds the actual shell from the authorized runtime read", async (layout) => {
-    const shell = await layout({ children: "business workspace" });
+  const layouts = [
+    { name: "internal", render: async () => {
+      const shell = await InternalLayout({ children: "business workspace" });
+      expect(shell.type).toBe(InternalShell);
+      return shell;
+    } },
+    { name: "client", render: async () => {
+      const provider = await ClientAccountLayout({ children: "business workspace" });
+      expect(provider.type).toBe(ClientDraftProvider);
+      const shell = provider.props.children;
+      expect(shell.type).toBe(ClientAccountShell);
+      return shell;
+    } },
+  ];
+
+  it.each(layouts)("seeds the actual $name shell from the authorized runtime read", async ({ render }) => {
+    const shell = await render();
     expect(shell.props.runtimeConfiguration).toEqual(published);
     expect(shell.props.children).toBe("business workspace");
     expect(rpc.mock.calls).toEqual([["app_get_runtime_white_label_configuration"]]);
   });
 
-  it.each([InternalLayout, ClientAccountLayout])("passes explicit unavailable state after failure instead of unpublished defaults", async (layout) => {
+  it.each(layouts)("passes explicit unavailable state to the $name shell after failure", async ({ render }) => {
     rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
-    const shell = await layout({ children: "business workspace" });
+    const shell = await render();
     expect(shell.props.runtimeConfiguration).toBeNull();
   });
 });

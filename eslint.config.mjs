@@ -6,6 +6,12 @@ export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
   {
+    files: ["scripts/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
     files: ["src/app/**/*.tsx"],
     rules: {
       "react-hooks/error-boundaries": "off",
