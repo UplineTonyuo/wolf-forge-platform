@@ -2,6 +2,9 @@ begin;
 
 select plan(40);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('7f300000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'list-owner@example.invalid', now(), now()),
@@ -519,7 +522,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'),
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'),
   0::bigint,
   'LIST emits no authorization.team_supervision.read event'
 );

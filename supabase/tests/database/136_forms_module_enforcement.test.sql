@@ -5,6 +5,11 @@ select no_plan();
 -- Regression seed for the approved Forms policies. The six denial/redaction
 -- assertions fail at baseline adad483; this is not the complete acceptance suite.
 -- Synthetic fixtures use the f136 UUID namespace and roll back with the test.
+-- The wf-* labels refer to a fresh owning Tenant, not the existing WF dataset.
+
+create function pg_temp.forms_tenant_id()
+returns uuid language sql immutable
+as $$ select 'f1360010-0000-4000-8000-000000001800'::uuid $$;
 
 -- -----------------------------------------------------------------------------
 -- Fixtures (rolled back)
@@ -19,21 +24,23 @@ select ('f1360000-0000-4000-8000-00000000' || n)::uuid, 'authenticated', 'authen
 from unnest(array['1801', '1802', '1803', '1804', '1805', '1806']) as n;
 
 insert into public.tenants (id, slug, display_name, status)
-values ('f1360010-0000-4000-8000-000000001801', 'forms136-authz-tenant-b', 'Form Authz Tenant B', 'active');
+values
+  (pg_temp.forms_tenant_id(), 'forms136-authz-tenant-a', 'Form Authz Tenant A', 'active'),
+  ('f1360010-0000-4000-8000-000000001801', 'forms136-authz-tenant-b', 'Form Authz Tenant B', 'active');
 
 insert into public.companies (id, tenant_id, name, status)
 values
-  ('f1360020-0000-4000-8000-000000001801', private.wolf_forge_tenant_id(), 'FORMS136_WF_CLIENT', 'client'),
+  ('f1360020-0000-4000-8000-000000001801', pg_temp.forms_tenant_id(), 'FORMS136_WF_CLIENT', 'client'),
   ('f1360020-0000-4000-8000-000000001802', 'f1360010-0000-4000-8000-000000001801', 'FORMS136_B_CLIENT', 'client');
 
 insert into public.services (id, tenant_id, name, price, currency, is_active, is_public, recurring, sort_order)
 values
-  ('f1360030-0000-4000-8000-000000001801', private.wolf_forge_tenant_id(), 'FORMS136_WF_SERVICE', 100.00, 'USD', true, true, false, 0),
+  ('f1360030-0000-4000-8000-000000001801', pg_temp.forms_tenant_id(), 'FORMS136_WF_SERVICE', 100.00, 'USD', true, true, false, 0),
   ('f1360030-0000-4000-8000-000000001802', 'f1360010-0000-4000-8000-000000001801', 'FORMS136_B_SERVICE', 100.00, 'USD', true, true, false, 0);
 
 insert into public.orders (id, tenant_id, company_id, service_id, title)
 values
-  ('f1360040-0000-4000-8000-000000001801', private.wolf_forge_tenant_id(), 'f1360020-0000-4000-8000-000000001801', 'f1360030-0000-4000-8000-000000001801', 'FORM AUTHZ WF Order'),
+  ('f1360040-0000-4000-8000-000000001801', pg_temp.forms_tenant_id(), 'f1360020-0000-4000-8000-000000001801', 'f1360030-0000-4000-8000-000000001801', 'FORM AUTHZ WF Order'),
   ('f1360040-0000-4000-8000-000000001802', 'f1360010-0000-4000-8000-000000001801', 'f1360020-0000-4000-8000-000000001802', 'f1360030-0000-4000-8000-000000001802', 'FORM AUTHZ B Order');
 
 update public.profiles as profile
@@ -48,8 +55,7 @@ where profile.id in (
   and role.name = 'owner';
 
 update public.profiles
-set role_id = (select id from public.roles where name = 'client'),
-    company_id = 'f1360020-0000-4000-8000-000000001801'
+set role_id = (select id from public.roles where name = 'client'), company_id = null
 where id = 'f1360000-0000-4000-8000-000000001805';
 
 -- 1806 stays a default client profile (the auth trigger already assigned the
@@ -70,6 +76,9 @@ insert into public.tenant_memberships (tenant_id, profile_id, account_class, rol
 select fixture.tenant_id::uuid, fixture.profile_id::uuid, fixture.account_class,
   role.id, fixture.company_id::uuid, fixture.archived_at
 from (values
+  ('f1360010-0000-4000-8000-000000001800', 'f1360000-0000-4000-8000-000000001801', 'internal', 'owner', null, null::timestamptz),
+  ('f1360010-0000-4000-8000-000000001800', 'f1360000-0000-4000-8000-000000001803', 'internal', 'owner', null, null),
+  ('f1360010-0000-4000-8000-000000001800', 'f1360000-0000-4000-8000-000000001805', 'client', 'client', 'f1360020-0000-4000-8000-000000001801', null),
   ('f1360010-0000-4000-8000-000000001801', 'f1360000-0000-4000-8000-000000001802', 'internal', 'owner', null, null::timestamptz),
   ('f1360010-0000-4000-8000-000000001801', 'f1360000-0000-4000-8000-000000001803', 'internal', 'owner', null, null),
   ('f1360010-0000-4000-8000-000000001801', 'f1360000-0000-4000-8000-000000001804', 'internal', 'owner', null, now()),
@@ -89,7 +98,8 @@ returns void
 language sql
 as $$
   select set_config('request.jwt.claim.sub', 'f1360000-0000-4000-8000-00000000' || p_actor, true);
-  select set_config('request.headers', p_header, true);
+  select set_config('request.headers', case when p_header = '' then
+    '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}' else p_header end, true);
 $$;
 
 create function pg_temp.try(p_sql text)
@@ -157,7 +167,7 @@ as $$
 $$;
 
 grant execute on function pg_temp.act(text, text), pg_temp.try(text),
-  pg_temp.contact_def(), pg_temp.onboard_def(), pg_temp.intake_def(uuid) to authenticated;
+  pg_temp.contact_def(), pg_temp.onboard_def(), pg_temp.intake_def(uuid), pg_temp.forms_tenant_id() to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- Tenant fixtures through the real RPCs
@@ -244,7 +254,7 @@ insert into wlforms136_ids values ('b-submission', (public.app_submit_form(
 -- -----------------------------------------------------------------------------
 reset role;
 select set_config('request.jwt.claim.sub', '', true);
-select set_config('request.headers', '', true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 insert into public.form_submissions (
   id, form_id, form_version_id, form_assignment_id, company_id, client_profile_id, order_id, root_submission_id,
   submitted_by_profile_id
@@ -297,7 +307,7 @@ create temp table replay_effects (before_replay jsonb);
 set local role anon;
 set local "request.jwt.claim.role" = 'anon';
 select set_config('request.jwt.claim.sub', '', true);
-select set_config('request.headers', '', true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 insert into guest_receipt select 'initial', to_jsonb(public.app_submit_form('f1360050-0000-4000-8000-000000001822', (select id from wlforms136_ids where label = 'wf-public-v1'), '{}'::jsonb, jsonb_build_array(jsonb_build_object('field_key', 'f1360060-0000-4000-8000-000000001801', 'value', 'synthetic subject'), jsonb_build_object('field_key', 'f1360060-0000-4000-8000-000000001802', 'value', 'synthetic message')), '[]'::jsonb));
 reset role;
 insert into wlforms136_ids select 'guest-persisted', submission_id from private.form_submission_requests
@@ -318,19 +328,19 @@ select is(pg_temp.try('select public.app_get_form_submission((select id from wlf
 reset role;
 -- Lifecycle assertions extend the original ten regressions without changing them.
 select set_config('request.jwt.claim.sub','',true);
-select set_config('request.headers','',true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 select private.grant_platform_admin('f1360000-0000-4000-8000-000000001801','Forms rollback fixture publisher');
 create temp table forms136_before_assignments as select to_jsonb(a) row from public.form_assignments a;
 create temp table forms136_before_effects as select pg_temp.effects() effects;
 select pg_temp.act('1801','');
-select lives_ok($$select private.publish_tenant_modules(private.wolf_forge_tenant_id(),
-  coalesce((select max(revision) from private.tenant_module_publications where tenant_id=private.wolf_forge_tenant_id()),0),
+select lives_ok($$select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  coalesce((select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),0),
   (select array_agg(module_key order by module_key) from private.white_label_modules where module_key<>'forms'),
   'Forms OFF rollback test')$$,'Forms can be disabled with outstanding assignments');
 select is((select jsonb_agg(to_jsonb(a) order by a.id) from public.form_assignments a),
   (select jsonb_agg(row order by row->>'id') from forms136_before_assignments),'OFF freezes every assignment byte-for-byte');
 select is(pg_temp.effects(),(select effects from forms136_before_effects),'OFF publication changes no Form, quota, challenge or Contact effects');
-select ok(not private.tenant_module_allowed(private.wolf_forge_tenant_id(),'forms'),'owning Tenant Forms is OFF');
+select ok(not private.tenant_module_allowed(pg_temp.forms_tenant_id(),'forms'),'owning Tenant Forms is OFF');
 select ok(private.tenant_module_allowed('f1360010-0000-4000-8000-000000001801','forms'),'another Tenant retains Forms ON');
 set local role authenticated;
 select pg_temp.act('1801','');
@@ -352,7 +362,7 @@ select is((public.app_submit_form('f1360050-0000-4000-8000-000000001817',(select
 select throws_ok($$select public.app_submit_form('f1360050-0000-4000-8000-000000001836',(select id from wlforms136_ids where label='wf-onboard-v1'),jsonb_build_object('assignment_id',(select id from wlforms136_ids where label='wf-onboard-assignment')),jsonb_build_array(jsonb_build_object('field_key','f1360060-0000-4000-8000-000000001803','value','new refused')),'[]')$$,'42501',null,'new assigned response refuses OFF before effects');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
-select set_config('request.headers','',true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 select throws_ok($$update public.forms set name='trusted off change' where id=(select id from wlforms136_ids where label='wf-public')$$,'42501',null,'trusted auth-NULL management refuses published OFF');
 select throws_ok($$update public.form_versions set title='trusted off draft' where id=(select current_draft_version_id from public.forms where id=(select id from wlforms136_ids where label='wf-public'))$$,'42501',null,'trusted version write refuses OFF');
 select throws_ok($$update public.form_assignments set due_at=now() where id=(select id from wlforms136_ids where label='wf-intake-assignment')$$,'42501',null,'trusted outstanding assignment mutation refuses OFF');
@@ -364,8 +374,8 @@ select throws_ok($$select public.app_submit_form('f1360050-0000-4000-8000-000000
 reset role;
 select is(pg_temp.effects(),(select effects from forms136_before_effects),'all refused work and accepted replay have zero effects');
 select pg_temp.act('1801','');
-select lives_ok($$select private.publish_tenant_modules(private.wolf_forge_tenant_id(),
-  (select max(revision) from private.tenant_module_publications where tenant_id=private.wolf_forge_tenant_id()),
+select lives_ok($$select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  (select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),
   (select array_agg(module_key order by module_key) from private.white_label_modules),'Forms re-enable rollback test')$$,'Forms can be re-enabled');
 select is(pg_temp.effects(),(select effects from forms136_before_effects),'re-enable performs no conversion, repinning or publication of Form drafts');
 set local role authenticated;
@@ -374,7 +384,7 @@ select ok(public.app_forms_work_enabled(),'collection eligibility restored ON');
 select is(public.app_get_published_form_schema('wlforms136-wf-public')->>'form_version_id',(select id::text from wlforms136_ids where label='wf-public-v1'),'unchanged public URL restores exact published version');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
-select set_config('request.headers','',true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 select throws_ok($$insert into public.form_submissions(id,form_id,form_version_id,company_id,root_submission_id)
   select 'f1360070-0000-4000-8000-000000001840',f.id,f.published_version_id,'f1360020-0000-4000-8000-000000001802','f1360070-0000-4000-8000-000000001840'
   from public.forms f where id=(select id from wlforms136_ids where label='wf-public')$$,'23514',null,'trusted receipt rejects foreign Company');
@@ -389,9 +399,14 @@ select pg_temp.act('1801','');
 select is((select count(*) from public.app_list_assigned_forms() where assignment_id=(select id from wlforms136_ids where label='wf-intake-assignment') and order_id='f1360040-0000-4000-8000-000000001801'),1::bigint,'authorized owner sees live Project context ON');
 reset role;
 select pg_temp.act('1801','');
+select throws_ok($$select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  (select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),
+  (select array_agg(module_key order by module_key) from private.white_label_modules where module_key<>'projects'),
+  'Unfinished synthetic Project rollback fixture')$$,
+  '55000','unfinished Projects prevent disablement','unfinished Projects still block disablement in the owning test Tenant');
 update public.orders set status='complete',completed_at=now() where id='f1360040-0000-4000-8000-000000001801';
-select private.publish_tenant_modules(private.wolf_forge_tenant_id(),
-  (select max(revision) from private.tenant_module_publications where tenant_id=private.wolf_forge_tenant_id()),
+select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  (select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),
   (select array_agg(module_key order by module_key) from private.white_label_modules where module_key not in ('projects')),'Project redaction rollback fixture');
 set local role authenticated;
 select pg_temp.act('1801','');
@@ -400,8 +415,8 @@ select is(public.app_get_assigned_form_schema((select id from wlforms136_ids whe
 reset role;
 select pg_temp.act('1801','');
 update public.tickets set status='closed',closed_at=now() where source_form_submission_id=(select id from wlforms136_ids where label='guest-persisted');
-select private.publish_tenant_modules(private.wolf_forge_tenant_id(),
-  (select max(revision) from private.tenant_module_publications where tenant_id=private.wolf_forge_tenant_id()),
+select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  (select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),
   (select array_agg(module_key order by module_key) from private.white_label_modules where module_key not in ('projects','tickets')),'Forms ON Tickets OFF rollback fixture');
 set local role anon;
 set local "request.jwt.claim.role"='anon';
@@ -416,8 +431,8 @@ select 'f1360070-0000-4000-8000-000000001843',id,published_version_id,'f1360070-
 from public.forms where id=(select id from wlforms136_ids where label='wf-public');
 select ok(exists(select 1 from public.form_submissions where id='f1360070-0000-4000-8000-000000001843' and orchestration_type is null and orchestration_status='not_required' and provenance->>'tickets_enabled_at_submission'='false'),'trusted Contact insertion derives nongenerative provenance when Tickets OFF');
 select pg_temp.act('1801','');
-select private.publish_tenant_modules(private.wolf_forge_tenant_id(),
-  (select max(revision) from private.tenant_module_publications where tenant_id=private.wolf_forge_tenant_id()),
+select private.publish_tenant_modules(pg_temp.forms_tenant_id(),
+  (select max(revision) from private.tenant_module_publications where tenant_id=pg_temp.forms_tenant_id()),
   (select array_agg(module_key order by module_key) from private.white_label_modules),'Restore all modules rollback fixture');
 select is(private.create_ticket_from_contact_submission((select id from wlforms136_ids where label='forms-only-contact')),null::uuid,'re-enable cannot convert Forms-only Contact');
 select is((select count(*) from public.tickets where source_form_submission_id=(select id from wlforms136_ids where label='forms-only-contact')),0::bigint,'trusted later orchestration creates no Forms-only Ticket');
@@ -446,12 +461,12 @@ select throws_ok($$select public.app_get_form_submission((select id from wlforms
 select is((select count(*) from public.form_submissions where id=(select id from wlforms136_ids where label='wf-submission')),0::bigint,'secured direct history listing excludes a foreign Tenant receipt');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
-select set_config('request.headers','',true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 update public.tenant_memberships set role_id=(select id from public.roles where name='staff')
-where tenant_id=private.wolf_forge_tenant_id() and profile_id='f1360000-0000-4000-8000-000000001803';
+where tenant_id=pg_temp.forms_tenant_id() and profile_id='f1360000-0000-4000-8000-000000001803';
 insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed) values
-(private.wolf_forge_tenant_id(),'f1360000-0000-4000-8000-000000001803','forms.view',false),
-(private.wolf_forge_tenant_id(),'f1360000-0000-4000-8000-000000001803','forms.submissions_view',true);
+(pg_temp.forms_tenant_id(),'f1360000-0000-4000-8000-000000001803','forms.view',false),
+(pg_temp.forms_tenant_id(),'f1360000-0000-4000-8000-000000001803','forms.submissions_view',true);
 set local role authenticated;
 select pg_temp.act('1803','');
 select ok(public.app_require_module_access('forms'),'history-only staff enters Forms without builder permission');
@@ -461,13 +476,13 @@ select is(public.app_get_form_submission((select id from wlforms136_ids where la
 select is((select count(*) from public.form_submissions where id=(select id from wlforms136_ids where label='wf-submission')),1::bigint,'history-only staff direct response listing contains the authorized original receipt');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
-update public.tenant_memberships set archived_at=now() where tenant_id=private.wolf_forge_tenant_id() and profile_id='f1360000-0000-4000-8000-000000001803';
+update public.tenant_memberships set archived_at=now() where tenant_id=pg_temp.forms_tenant_id() and profile_id='f1360000-0000-4000-8000-000000001803';
 set local role authenticated;
 select pg_temp.act('1803','');
 select throws_ok($$select public.app_get_form_submission((select id from wlforms136_ids where label='wf-submission'))$$,'42501',null,'revoked membership removes retained history authority');
 reset role;
 select set_config('request.jwt.claim.sub','',true);
-select set_config('request.headers','',true);
+select set_config('request.headers', '{"x-wf-tenant":"f1360010-0000-4000-8000-000000001800"}', true);
 update public.forms set archived_at=now(),status='archived' where id=(select id from wlforms136_ids where label='wf-onboard');
 set local role authenticated;
 select pg_temp.act('1801','');

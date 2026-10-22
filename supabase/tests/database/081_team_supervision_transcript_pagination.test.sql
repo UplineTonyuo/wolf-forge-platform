@@ -2,6 +2,9 @@ begin;
 
 select plan(76);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('8f400000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'page-owner@example.invalid', now(), now()),
@@ -238,7 +241,8 @@ create temp table page_audit_before (count bigint not null) on commit drop;
 insert into page_audit_before
 select count(*)
 from public.security_audit_events
-where event_code = 'authorization.team_supervision.read'
+where id not in (select id from supervision_audit_before)
+  and event_code = 'authorization.team_supervision.read'
   and action_slug = 'team.supervision.page';
 
 select has_function(
@@ -447,7 +451,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 3 from page_audit_before),
   'Owner history, Admin history and Owner window each append one PAGE audit'
@@ -629,7 +634,8 @@ select throws_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 9 from page_audit_before),
   'invalid cursor adds no successful PAGE audit'
@@ -840,7 +846,8 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 13 from page_audit_before),
   'each successful history page or window has exactly one PAGE audit and failed reads have none'
@@ -848,14 +855,16 @@ select is(
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('b', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('b', 32)),
   '{"read_kind":"page","conversation_kind":"direct","result_count":5}'::jsonb,
   'history PAGE audit metadata contains only bounded non-content fields'
 );
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('c', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('c', 32)),
   '{"read_kind":"page","conversation_kind":"direct","result_count":5}'::jsonb,
   'window PAGE audit metadata contains only bounded non-content fields'
 );
@@ -863,7 +872,8 @@ select is(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and metadata::text ~ '(HIDDEN_PAGE|DELETED_PAGE|VOICE_PAGE|private-page-secret|query|body|reply|storage)'
   ),
   'PAGE audit metadata contains no body, reply, query or voice-storage content'
@@ -872,12 +882,13 @@ select ok(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and action_slug = 'team.supervision.page'
-      and actor_profile_id not in (
+      and (actor_profile_id is null or actor_profile_id not in (
         '8f400000-0000-4000-8000-000000000001',
         '8f400000-0000-4000-8000-000000000002'
-      )
+      ))
   ),
   'every PAGE audit actor is the authenticated Owner or Admin'
 );
@@ -907,7 +918,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   1::bigint, 'the detail cursor source emitted only its one OPEN event'
 );

@@ -42,8 +42,8 @@ select is(
 
 select is(
   (select count(*) from private.security_audit_event_codes),
-  9::bigint,
-  'exactly nine codes are selected as auditable'
+  10::bigint,
+  'exactly ten codes are selected as auditable'
 );
 
 select is(
@@ -54,12 +54,13 @@ select is(
       'authorization.context.denied',
       'authorization.team_supervision.read',
       'authorization.white_label.draft_saved',
+      'authorization.white_label.published',
       'integration.gmail.connected',
       'integration.gmail.disconnected',
       'integration.gmail.reauthorization_required',
       'integration.gmail.disconnect_failed'
     )),
-  9::bigint,
+  10::bigint,
   'the seeded vocabulary matches SECURITY_AUDIT_EVENT_CODES exactly'
 );
 

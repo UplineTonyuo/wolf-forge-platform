@@ -1,6 +1,6 @@
 begin;
 
-select plan(57);
+select plan(60);
 
 -- WL-2.24: subscription authorization is Tenant-relative. Wolf Forge (WF) =
 -- f0f0f0f0-0000-4000-8000-000000000001, Tenant B = ...09c1, Tenant C = ...09c3
@@ -149,6 +149,10 @@ from (values
 -- D1: child SELECT policies derive ownership from the parent Subscription
 -- -----------------------------------------------------------------------------
 
+create temp table subscription_tenant_scope on commit drop as
+select id, tenant_id from public.subscriptions;
+grant select on subscription_tenant_scope to authenticated;
+
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000954';
@@ -182,15 +186,30 @@ select set_config('request.headers', '', true);
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000951';
 
 select is(
-  (select array_agg(subscription_id order by subscription_id) from public.subscription_cycles),
+  (select array_agg(subscription_id order by subscription_id) from public.subscription_cycles
+   where subscription_id in (select unnest(array[wf_id, b_id, c_id]) from fixture_subscription)),
   array[(select wf_id from fixture_subscription)],
   'a dual-Tenant identity with the Wolf Forge selector reads only Wolf Forge cycles'
 );
 
 select is(
-  (select array_agg(distinct subscription_id order by subscription_id) from public.subscription_events),
+  (select array_agg(distinct subscription_id order by subscription_id) from public.subscription_events
+   where subscription_id in (select unnest(array[wf_id, b_id, c_id]) from fixture_subscription)),
   array[(select wf_id from fixture_subscription)],
   'a dual-Tenant identity with the Wolf Forge selector reads only Wolf Forge events'
+);
+
+select ok(
+  not exists (select 1 from public.subscription_cycles
+    where subscription_id not in (select id from subscription_tenant_scope
+      where tenant_id = 'f0f0f0f0-0000-4000-8000-000000000001')),
+  'every visible cycle belongs to Wolf Forge, including pre-existing records'
+);
+select ok(
+  not exists (select 1 from public.subscription_events
+    where subscription_id not in (select id from subscription_tenant_scope
+      where tenant_id = 'f0f0f0f0-0000-4000-8000-000000000001')),
+  'every visible event belongs to Wolf Forge, including pre-existing records'
 );
 
 select set_config('request.headers', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-0000000009c1"}', true);
@@ -483,9 +502,17 @@ set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000951';
 
 select is(
   (select array_agg(distinct subscription_id order by subscription_id)
-    from public.app_list_due_subscription_work()),
+    from public.app_list_due_subscription_work()
+    where subscription_id in (select unnest(array[wf_id, b_id, c_id]) from fixture_subscription)),
   array[(select wf_id from fixture_subscription)],
   'a Wolf Forge owner sees only Wolf Forge due work'
+);
+
+select ok(
+  not exists (select 1 from public.app_list_due_subscription_work()
+    where subscription_id not in (select id from subscription_tenant_scope
+      where tenant_id = 'f0f0f0f0-0000-4000-8000-000000000001')),
+  'every due-work row belongs to Wolf Forge, including pre-existing records'
 );
 
 select set_config('request.headers', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-0000000009c1"}', true);

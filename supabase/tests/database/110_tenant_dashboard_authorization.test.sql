@@ -19,6 +19,13 @@ from public.companies
 where tenant_id = private.wolf_forge_tenant_id();
 grant select on wf_companies_before to authenticated;
 
+create temporary table wf_billable_subscriptions_before on commit drop as
+select count(*) as count from public.subscriptions
+where tenant_id = private.wolf_forge_tenant_id()
+  and archived_at is null
+  and status in ('active', 'past_due', 'pending_cancellation');
+grant select on wf_billable_subscriptions_before to authenticated;
+
 -- -----------------------------------------------------------------------------
 -- Fixtures (rolled back)
 -- -----------------------------------------------------------------------------
@@ -240,7 +247,7 @@ select is((pg_temp.dash() #>> '{clients,converted,current}')::bigint, 1::bigint,
   'WF conversions count only WF status events');
 select is((pg_temp.dash() #>> '{new_subscriptions,current}')::bigint, 1::bigint,
   'WF new subscriptions count only WF subscriptions');
-select is((pg_temp.dash() #>> '{active_subscriptions,billable}')::bigint, 1::bigint,
+select is((pg_temp.dash() #>> '{active_subscriptions,billable}')::bigint, 1 + (select count from wf_billable_subscriptions_before),
   'WF billable subscriptions count only WF subscriptions');
 select is((select sum((point ->> 'net_cents')::bigint)::bigint from jsonb_array_elements(pg_temp.dash() -> 'sales_trend' -> 0 -> 'points') as point),
   45000::bigint, 'the WF sales trend carries only WF movements');

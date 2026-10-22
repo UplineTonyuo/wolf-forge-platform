@@ -2,6 +2,9 @@ begin;
 
 select plan(32);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('7f200000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'audit-owner@example.invalid', now(), now()),
@@ -154,14 +157,16 @@ select lives_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'),
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'),
   3::bigint,
   'the three allowed actions each produced one event'
 );
 
 select is(
   (select actor_profile_id from public.security_audit_events
-   where action_slug = 'team.supervision.search'),
+   where id not in (select id from supervision_audit_before)
+     and action_slug = 'team.supervision.search'),
   '7f200000-0000-4000-8000-000000000002'::uuid,
   'the event actor comes from the authenticated supervisor, not an argument'
 );
@@ -169,7 +174,8 @@ select is(
 select ok(
   exists (
     select 1 from public.security_audit_events
-    where action_slug = 'team.supervision.open'
+    where id not in (select id from supervision_audit_before)
+      and action_slug = 'team.supervision.open'
       and event_code = 'authorization.team_supervision.read'
       and actor_class = 'internal'
       and resource_type = 'team_conversation'
@@ -183,7 +189,8 @@ select ok(
 
 select is(
   (select metadata from public.security_audit_events
-   where action_slug = 'team.supervision.search'),
+   where id not in (select id from supervision_audit_before)
+     and action_slug = 'team.supervision.search'),
   '{"read_kind":"search","conversation_kind":"direct","result_count":3}'::jsonb,
   'metadata contains only bounded non-content fields derived by the writer'
 );
@@ -226,21 +233,24 @@ select throws_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'),
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'),
   3::bigint,
   'rejected inputs persisted no audit rows'
 );
 
 select throws_ok(
   $$update public.security_audit_events set outcome = 'failed'
-    where event_code = 'authorization.team_supervision.read'$$,
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'$$,
   '55000', 'security audit events are append-only',
   'supervision audit rows cannot be modified'
 );
 
 select throws_ok(
   $$delete from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'$$,
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'$$,
   '55000', 'security audit events are append-only',
   'supervision audit rows cannot be deleted'
 );
@@ -255,7 +265,8 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'),
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'),
   3::bigint,
   'ordinary participant reads emit no supervision audit event'
 );

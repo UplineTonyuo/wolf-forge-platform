@@ -17,7 +17,7 @@ where (profile.id, role.name) in (
 
 -- A Client record whose business name matches the Company created below.
 insert into public.companies (id, name, status)
-values ('30000000-0000-0000-0000-000000000851', 'Anthony PLATFORM', 'client');
+values ('30000000-0000-0000-0000-000000000851', 'Organizations QA 085', 'client');
 
 insert into public.client_contacts (id, company_id, name, is_primary)
 values ('45000000-0000-0000-0000-000000000851', '30000000-0000-0000-0000-000000000851', 'Antonio Paghubasan Jr', true);
@@ -34,16 +34,16 @@ set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '20000000-0000-0000-0000-000000000851';
 
 select lives_ok(
-  $$select public.app_create_organization('85000000-0000-0000-0000-000000000001', 'Anthony PLATFORM')$$,
+  $$select public.app_create_organization('85000000-0000-0000-0000-000000000001', 'Organizations QA 085')$$,
   'admin creates a Company whose name matches a Client business name'
 );
 select is(
-  (select count(*) from public.organizations where name = 'Anthony PLATFORM'),
+  (select count(*) from public.organizations where name = 'Organizations QA 085'),
   1::bigint,
   'the Company exists once'
 );
 select lives_ok(
-  $$select public.app_create_organization('85000000-0000-0000-0000-000000000001', 'Anthony PLATFORM')$$,
+  $$select public.app_create_organization('85000000-0000-0000-0000-000000000001', 'Organizations QA 085')$$,
   'a retried create with the same request id succeeds'
 );
 select is(
@@ -52,7 +52,7 @@ select is(
   'the retry does not duplicate the Company'
 );
 select is(
-  (select count(*) from public.companies where name = 'Anthony PLATFORM'),
+  (select count(*) from public.companies where name = 'Organizations QA 085'),
   1::bigint,
   'creating a Company creates no Client record'
 );
@@ -69,13 +69,13 @@ select is(
 
 select lives_ok(
   $$select public.app_add_organization_member(
-      (select id from public.organizations where name = 'Anthony PLATFORM'),
+      (select id from public.organizations where name = 'Organizations QA 085'),
       '45000000-0000-0000-0000-000000000851')$$,
   'admin adds an existing person explicitly'
 );
 select lives_ok(
   $$select public.app_add_organization_member(
-      (select id from public.organizations where name = 'Anthony PLATFORM'),
+      (select id from public.organizations where name = 'Organizations QA 085'),
       '45000000-0000-0000-0000-000000000851')$$,
   'adding the same person again is a no-op'
 );
@@ -102,13 +102,13 @@ select is(
 
 select lives_ok(
   $$select public.app_update_organization(
-      (select id from public.organizations where name = 'Anthony PLATFORM'),
-      'Anthony Team')$$,
+      (select id from public.organizations where name = 'Organizations QA 085'),
+      'Organizations QA 085 renamed')$$,
   'admin renames the Company'
 );
 select is(
   (select name from public.companies where id = '30000000-0000-0000-0000-000000000851'),
-  'Anthony PLATFORM',
+  'Organizations QA 085',
   'renaming the Company leaves the Client business name alone'
 );
 

@@ -634,9 +634,10 @@ set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '70000000-0000-0000-0000-000000000004';
 
 select is(
-  (select count(*) from public.app_list_investment_intents()),
+  (select count(*) from public.app_list_investment_intents()
+   where company_id in ('71000000-0000-0000-0000-00000000000a', '71000000-0000-0000-0000-00000000000b')),
   2::bigint,
-  'an admin session reads every recorded interest'
+  'an admin session reads every interest recorded by the fixtures'
 );
 
 select is(

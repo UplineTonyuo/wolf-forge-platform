@@ -2,6 +2,9 @@ begin;
 
 select plan(54);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('7f400000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'detail-owner@example.invalid', now(), now()),
@@ -337,7 +340,8 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   2::bigint,
   'denied and invalid opens append no successful OPEN audit event'
@@ -491,7 +495,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'
      and resource_type = 'team_conversation'
      and resource_id = '7f410000-0000-4000-8000-000000000001'),
@@ -500,7 +505,8 @@ select is(
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('a', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('a', 32)),
   '{"read_kind":"open","conversation_kind":"direct","result_count":50}'::jsonb,
   'the OPEN audit stores only bounded non-content metadata with the result count'
 );
@@ -508,7 +514,8 @@ select is(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and metadata::text ~ '(HIDDEN_CANONICAL|DELETED_ORIGINAL|VOICE_ORIGINAL|secret-object|search)'
   ),
   'audit metadata contains no message, query, or voice-storage content'
@@ -523,7 +530,8 @@ select throws_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   4::bigint, 'a failed audited open leaves no false successful-read event'
 );
@@ -581,12 +589,13 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'
-     and actor_profile_id not in (
+     and (actor_profile_id is null or actor_profile_id not in (
        '7f400000-0000-4000-8000-000000000001',
        '7f400000-0000-4000-8000-000000000002'
-     )),
+     ))),
   0::bigint, 'every OPEN event actor is the authenticated Owner or Admin'
 );
 
