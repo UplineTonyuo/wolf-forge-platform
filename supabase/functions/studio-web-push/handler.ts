@@ -15,13 +15,17 @@ export function validPushEndpoint(value: string): boolean {
   } catch { return false; }
 }
 
-export async function dispatchStudioPush(rpc: Rpc, details: RequestDetails, send: typeof fetch, projectUrl: string) {
-  if (projectUrl !== "https://rsnmlcyopnxucwgfttyf.supabase.co") return { accepted: 0, refused: true };
+export async function dispatchClientPush(rpc: Rpc, details: RequestDetails, send: typeof fetch, projectUrl: string) {
+  const production = projectUrl === "https://jwynqsyirgenqlmkooah.supabase.co";
+  if (!production && projectUrl !== "https://rsnmlcyopnxucwgfttyf.supabase.co") return { accepted: 0, refused: true };
   const settingsResult = await rpc("app_get_studio_push_dispatch_settings");
   if (settingsResult.error) throw new Error("Push configuration unavailable");
   if (!settingsResult.data) return { accepted: 0, refused: false };
   const settings = settingsResult.data as Settings;
-  if (settings.projectUrl !== projectUrl || !/^https:\/\/wolf-forge-platform-[a-z0-9]+-wolf-forge\.vercel\.app$/.test(settings.origin)) return { accepted: 0, refused: true };
+  const originAllowed = production
+    ? settings.origin === "https://wolf-forge-platform-woad.vercel.app"
+    : /^https:\/\/wolf-forge-platform-[a-z0-9]+-wolf-forge\.vercel\.app$/.test(settings.origin);
+  if (settings.projectUrl !== projectUrl || !originAllowed) return { accepted: 0, refused: true };
   const result = await rpc("app_claim_studio_push_deliveries");
   if (result.error || !Array.isArray(result.data) || result.data.length > 10) throw new Error("Push queue unavailable");
   let accepted = 0;

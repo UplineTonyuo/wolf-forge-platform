@@ -49,7 +49,7 @@ select is((select count(*) from pg_class c join pg_namespace n on n.oid=c.relnam
 
 select pg_temp.push_actor('1904');
 select throws_ok('select public.app_get_my_push_configuration()','42501',null,'internal owner cannot enroll as a client');
-select throws_ok($q$select public.app_configure_studio_push('https://jwynqsyirgenqlmkooah.supabase.co','https://wolf-forge-platform-pushtest-wolf-forge.vercel.app',repeat('A',87),repeat('B',43),repeat('C',40))$q$,'22023',null,'production project configuration refused');
+select throws_ok($q$select public.app_configure_studio_push('https://jwynqsyirgenqlmkooah.supabase.co','https://wolf-forge-platform-pushtest-wolf-forge.vercel.app',repeat('A',87),repeat('B',43),repeat('C',40))$q$,'22023',null,'production backend cannot use a Studio origin');
 select pg_temp.push_actor('1901');
 select is(public.app_get_my_push_configuration()->>'publicKey',repeat('A',87),'eligible client gets public key only');
 select is((select count(*) from jsonb_object_keys(public.app_get_my_push_configuration())),2::bigint,'configuration excludes secrets');

@@ -1,12 +1,12 @@
 import { withSupabase } from "npm:@supabase/server@1.9.2";
 import webpush from "npm:web-push@3.6.7";
-import { dispatchStudioPush } from "./handler.ts";
+import { dispatchClientPush } from "./handler.ts";
 
-export default {
+const worker = {
   fetch: withSupabase({ auth: "secret" }, async (request, context) => {
     if (request.method !== "POST") return new Response(null, { status: 405 });
     try {
-      const result = await dispatchStudioPush(
+      const result = await dispatchClientPush(
         context.supabaseAdmin.rpc.bind(context.supabaseAdmin),
         webpush.generateRequestDetails.bind(webpush), fetch, Deno.env.get("SUPABASE_URL") ?? "",
       );
@@ -16,3 +16,5 @@ export default {
     }
   }),
 };
+
+export default worker;

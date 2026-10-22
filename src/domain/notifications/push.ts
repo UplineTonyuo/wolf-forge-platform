@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const STUDIO_PUSH_PROJECT = "rsnmlcyopnxucwgfttyf";
+export const PRODUCTION_PUSH_PROJECT = "jwynqsyirgenqlmkooah";
 const pushHosts = new Set([
   "fcm.googleapis.com",
   "updates.push.services.mozilla.com",
@@ -17,9 +18,11 @@ export function allowedPushEndpoint(value: string): boolean {
 
 export const pushEndpointSchema = z.string().min(1).max(2048).refine(allowedPushEndpoint);
 
-export function studioPushAvailable(source: Record<string, string | undefined>): boolean {
-  return source.VERCEL_ENV === "preview"
-    && source.SUPABASE_URL === `https://${STUDIO_PUSH_PROJECT}.supabase.co`;
+export function clientPushAvailable(source: Record<string, string | undefined>): boolean {
+  return (source.VERCEL_ENV === "preview"
+    && source.SUPABASE_URL === `https://${STUDIO_PUSH_PROJECT}.supabase.co`)
+    || (source.VERCEL_ENV === "production"
+      && source.SUPABASE_URL === `https://${PRODUCTION_PUSH_PROJECT}.supabase.co`);
 }
 
 export type ClientPushConfiguration = { publicKey: string; origin: string };

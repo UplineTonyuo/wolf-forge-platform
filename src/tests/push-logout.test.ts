@@ -20,13 +20,17 @@ it("signs out even when push cleanup throws synchronously",async()=>{
   await expect(signOutAction()).rejects.toThrow("REDIRECT:/login");
   expect(signOut).toHaveBeenCalledOnce();
 });
-it("awaits SDK-style thenable cleanup before destroying the session",async()=>{
+it.each([
+  ["preview","https://rsnmlcyopnxucwgfttyf.supabase.co"],
+  ["production","https://jwynqsyirgenqlmkooah.supabase.co"],
+])("awaits SDK-style cleanup before logout in %s",async(environment,project)=>{
+  vi.stubEnv("VERCEL_ENV",environment);vi.stubEnv("SUPABASE_URL",project);
   rpc.mockReturnValue({then:(resolve:(value:unknown)=>unknown)=>Promise.resolve({error:null}).then(resolve)});
   await expect(signOutAction()).rejects.toThrow("REDIRECT:/login");
   expect(rpc).toHaveBeenCalledWith("app_disable_my_push_session");expect(signOut).toHaveBeenCalledOnce();
   expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(signOut.mock.invocationCallOrder[0]!);
 });
-it("does not invoke Studio push RPCs in production",async()=>{
+it("does not invoke push RPCs with a mismatched production backend",async()=>{
   vi.stubEnv("VERCEL_ENV","production");
   await expect(signOutAction()).rejects.toThrow("REDIRECT:/login");
   expect(rpc).not.toHaveBeenCalled();expect(signOut).toHaveBeenCalledOnce();

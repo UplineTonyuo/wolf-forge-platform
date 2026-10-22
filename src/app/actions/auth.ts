@@ -32,7 +32,7 @@ import {
 } from "../../lib/supabase/next-server";
 import { createUserSupabaseClient, verifyActor } from "../../lib/supabase/user-client";
 import { IDENTITY_UNAVAILABLE_MESSAGE, IdentityLookupError } from "../../lib/supabase/identity-lookup";
-import { studioPushAvailable } from "../../domain/notifications/push";
+import { clientPushAvailable } from "../../domain/notifications/push";
 import { recordIdentityUnavailable } from "../../lib/supabase/identity-failure-response";
 
 export type LoginState = { error: string | null };
@@ -246,7 +246,7 @@ export async function signOutAction() {
     .then(({ data }) => (typeof data?.claims?.sub === "string" ? data.claims.sub : null))
     .catch(() => null);
 
-  if (studioPushAvailable(process.env)) {
+  if (clientPushAvailable(process.env)) {
     try {
       const rpc = supabase.rpc.bind(supabase) as unknown as (name: string) => PromiseLike<unknown>;
       await rpc("app_disable_my_push_session");

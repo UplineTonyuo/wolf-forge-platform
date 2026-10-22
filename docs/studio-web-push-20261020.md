@@ -1,5 +1,7 @@
 # Studio Web Push — October 20, 2026
 
+Historical Studio-only checkpoint. The original SPP now has source support described in [Client Web Push for WOAD and Studio](client-web-push-production-20261022.md); production activation still requires the reviewed rollout.
+
 User-authorized addition to the isolated PWA candidate. Production deployment and backend are excluded. Device delivery acceptance is pending; this document is implementation evidence, not a closed-app delivery pass.
 
 ## Boundary

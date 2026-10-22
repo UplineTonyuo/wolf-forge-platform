@@ -1,13 +1,16 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
-import { allowedPushEndpoint, studioPushAvailable } from "../domain/notifications/push";
-import { dispatchStudioPush, validPushEndpoint } from "../../supabase/functions/studio-web-push/handler";
+import { allowedPushEndpoint, clientPushAvailable } from "../domain/notifications/push";
+import { dispatchClientPush, validPushEndpoint } from "../../supabase/functions/studio-web-push/handler";
 
 const project = "https://rsnmlcyopnxucwgfttyf.supabase.co";
+const productionProject = "https://jwynqsyirgenqlmkooah.supabase.co";
+const productionOrigin = "https://wolf-forge-platform-woad.vercel.app";
+const studioOrigin = "https://wolf-forge-platform-example-wolf-forge.vercel.app";
 const endpoint = "https://fcm.googleapis.com/wp/synthetic-device";
 
-describe("Studio push boundaries", () => {
+describe("client push boundaries", () => {
   it.each(["http://fcm.googleapis.com/x", "https://127.0.0.1/x", "https://fcm.googleapis.com.attacker.invalid/x", "https://fcm.googleapis.com@attacker.invalid/x", "https://fcm.googleapis.com:8443/x", "https://web.push.apple.com/x#fragment", "https://169.254.169.254/latest/meta-data", "https://attacker.invalid/x"])("rejects network target %s", (target) => {
     expect(allowedPushEndpoint(target)).toBe(false);
     expect(validPushEndpoint(target)).toBe(false);
@@ -16,18 +19,21 @@ describe("Studio push boundaries", () => {
     expect(allowedPushEndpoint(target)).toBe(true);
     expect(validPushEndpoint(target)).toBe(true);
   });
-  it("fails closed for production and unrelated backends", () => {
-    expect(studioPushAvailable({ VERCEL_ENV: "preview", SUPABASE_URL: project })).toBe(true);
-    expect(studioPushAvailable({ VERCEL_ENV: "production", SUPABASE_URL: project })).toBe(false);
-    expect(studioPushAvailable({ VERCEL_ENV: "preview", SUPABASE_URL: "https://jwynqsyirgenqlmkooah.supabase.co" })).toBe(false);
+  it("supports production and Studio only in their matching environments", () => {
+    expect(clientPushAvailable({ VERCEL_ENV: "preview", SUPABASE_URL: project })).toBe(true);
+    expect(clientPushAvailable({ VERCEL_ENV: "production", SUPABASE_URL: productionProject })).toBe(true);
+    expect(clientPushAvailable({ VERCEL_ENV: "production", SUPABASE_URL: project })).toBe(false);
+    expect(clientPushAvailable({ VERCEL_ENV: "preview", SUPABASE_URL: productionProject })).toBe(false);
+    expect(clientPushAvailable({ VERCEL_ENV: "development", SUPABASE_URL: productionProject })).toBe(false);
+    expect(clientPushAvailable({ VERCEL_ENV: "production", SUPABASE_URL: "https://unrelated.supabase.co" })).toBe(false);
   });
 });
 
-function dispatcherFixture(target = endpoint) {
-  const rpc = vi.fn(async (name: string) => ({ data: name === "app_get_studio_push_dispatch_settings"
-    ? { projectUrl: project, origin: "https://wolf-forge-platform-example-wolf-forge.vercel.app", publicKey: "public", privateKey: "private" }
+function dispatcherFixture(target = endpoint, backend = project, origin = studioOrigin) {
+  const rpc = vi.fn<Parameters<typeof dispatchClientPush>[0]>(async (name: string) => ({ data: name === "app_get_studio_push_dispatch_settings"
+    ? { projectUrl: backend, origin, publicKey: "public", privateKey: "private" }
     : name === "app_claim_studio_push_deliveries" ? [{ id: "delivery", attemptId: "attempt", endpoint: target }] : true, error: null }));
-  const details = vi.fn<Parameters<typeof dispatchStudioPush>[1]>(() => ({ headers: { Authorization: "vapid synthetic" } }));
+  const details = vi.fn<Parameters<typeof dispatchClientPush>[1]>(() => ({ headers: { Authorization: "vapid synthetic" } }));
   const send = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 201 }));
   return { rpc, details, send };
 }
@@ -35,7 +41,7 @@ function dispatcherFixture(target = endpoint) {
 describe("background dispatch", () => {
   it("sends no content, forbids redirects and binds the result to its durable attempt", async () => {
     const f = dispatcherFixture();
-    expect(await dispatchStudioPush(f.rpc, f.details, f.send, project)).toEqual({ accepted: 1, refused: false });
+    expect(await dispatchClientPush(f.rpc, f.details, f.send, project)).toEqual({ accepted: 1, refused: false });
     expect(f.rpc.mock.calls[1]?.[0]).toBe("app_claim_studio_push_deliveries");
     expect(f.details.mock.calls[0]?.[1]).toBeNull();
     expect(f.send).toHaveBeenCalledWith(endpoint, expect.objectContaining({ method: "POST", body: null, redirect: "error" }));
@@ -45,24 +51,47 @@ describe("background dispatch", () => {
   });
   it("does not fetch a forged endpoint even if the database returns one", async () => {
     const f = dispatcherFixture("https://127.0.0.1/secret");
-    await dispatchStudioPush(f.rpc, f.details, f.send, project);
+    await dispatchClientPush(f.rpc, f.details, f.send, project);
     expect(f.send).not.toHaveBeenCalled();
     expect(f.rpc).toHaveBeenLastCalledWith("app_finish_studio_push_delivery", expect.objectContaining({ p_outcome: "rejected" }));
   });
   it("records uncertain transport without a second send", async () => {
     const f = dispatcherFixture(); f.send.mockRejectedValue(new TypeError("connection interrupted"));
-    await dispatchStudioPush(f.rpc, f.details, f.send, project);
+    await dispatchClientPush(f.rpc, f.details, f.send, project);
     expect(f.send).toHaveBeenCalledTimes(1);
     expect(f.rpc).toHaveBeenLastCalledWith("app_finish_studio_push_delivery", expect.objectContaining({ p_outcome: "unknown", p_http_status: null }));
   });
   it.each([[410,"rejected"],[429,"rejected"],[503,"unknown"]])("records provider status %s", async (status, outcome) => {
     const f = dispatcherFixture();f.send.mockResolvedValue(new Response(null,{status:Number(status)}));
-    await dispatchStudioPush(f.rpc,f.details,f.send,project);
+    await dispatchClientPush(f.rpc,f.details,f.send,project);
     expect(f.rpc).toHaveBeenLastCalledWith("app_finish_studio_push_delivery",expect.objectContaining({p_outcome:outcome,p_http_status:status}));
   });
-  it("refuses production before accessing configuration or the network", async () => {
+  it("supports production delivery only for the canonical WOAD origin", async () => {
+    const f = dispatcherFixture(endpoint, productionProject, productionOrigin);
+    expect(await dispatchClientPush(f.rpc,f.details,f.send,productionProject)).toEqual({accepted:1,refused:false});
+    expect(f.details.mock.calls[0]?.[1]).toBeNull();
+    expect(f.send).toHaveBeenCalledOnce();
+  });
+  it.each([
+    [productionProject,studioOrigin,productionProject],
+    [project,productionOrigin,project],
+    [project,studioOrigin,productionProject],
+    [productionProject,"https://wolf-forge-platform-woad.vercel.app.attacker.invalid",productionProject],
+    [productionProject,"https://wolf-forge-platform-woad.vercel.app:8443",productionProject],
+    [productionProject,"http://wolf-forge-platform-woad.vercel.app",productionProject],
+  ])("refuses mismatched backend or origin %s / %s",async(backend,origin,actualBackend)=>{
+    const f=dispatcherFixture(endpoint,backend,origin);
+    expect((await dispatchClientPush(f.rpc,f.details,f.send,actualBackend)).refused).toBe(true);
+    expect(f.rpc).toHaveBeenCalledTimes(1);expect(f.details).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
+  });
+  it("leaves an unconfigured production deployment inactive",async()=>{
+    const f=dispatcherFixture();f.rpc.mockResolvedValue({data:null,error:null});
+    expect(await dispatchClientPush(f.rpc,f.details,f.send,productionProject)).toEqual({accepted:0,refused:false});
+    expect(f.rpc).toHaveBeenCalledTimes(1);expect(f.send).not.toHaveBeenCalled();
+  });
+  it("refuses unrelated backends before accessing configuration or the network", async () => {
     const f = dispatcherFixture();
-    expect((await dispatchStudioPush(f.rpc,f.details,f.send,"https://jwynqsyirgenqlmkooah.supabase.co")).refused).toBe(true);
+    expect((await dispatchClientPush(f.rpc,f.details,f.send,"https://unrelated.supabase.co")).refused).toBe(true);
     expect(f.rpc).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
   });
 });
