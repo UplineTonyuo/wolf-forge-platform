@@ -22,7 +22,7 @@ ROOT = HERE.parent
 SRC = HERE / "source"
 OUT = ROOT / "out"
 SR = 48000
-DUR = 25.0
+DUR = 28.0
 N = int(DUR * SR)
 rng = np.random.default_rng(11)
 
@@ -134,8 +134,7 @@ if len(segs) != 9:
     sys.exit(f"expected 9 VO phrases, found {len(segs)}: {segs}")
 
 # Phrase start times on the video timeline (the visuals' CUE table follows these).
-PLACE = [0.45, 3.62, None, 9.6, 12.95, 16.25, 18.25, 21.3, 23.05]
-PLACE[2] = segs[2][0]  # "Projects. Tickets. Clients. Billing." keeps its own timing
+PLACE = [0.45, 3.55, 7.2, 11.3, 14.6, 18.15, 20.9, 23.8, 25.55]
 vo_bus = np.zeros((N, 2))
 report = []
 for (a, b), t in zip(segs, PLACE):
@@ -152,9 +151,13 @@ music = np.zeros((N, 2))
 send = np.zeros((N, 2))  # reverb send
 BEAT = 0.5
 BAR0 = 3.5
+LIFT = 11.0    # full drums from the zoom-out to the whole workspace
+BUILD = 21.0   # snare roll + riser under "Your brand. Your colors."
+DROP = 23.25   # everything cuts out
+LOGO = 23.5    # app icon lockup hit
 NOTE = {"D": 73.42, "Bb": 58.27, "F": 87.31, "C": 65.41, "G": 49.0, "A": 55.0}
 CHORDS = [("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("F", [0, 4, 7]), ("C", [0, 4, 7]),
-          ("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("G", [0, 3, 7]), ("A", [0, 4, 7]), ("A", [0, 4, 7])]
+          ("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("F", [0, 4, 7]), ("C", [0, 4, 7]), ("G", [0, 3, 7]), ("A", [0, 4, 7])]
 
 
 def chord_at(t):
@@ -185,6 +188,18 @@ def hat(gain=1.0, open_=False):
     return fft_filter(rng.standard_normal(n), lo=7000) * np.exp(-tt * (18 if open_ else 90)) * gain
 
 
+def mouse_click(gain=1.0):
+    """Trackpad-style press/release: two short filtered transients 45 ms apart."""
+    n = int(0.09 * SR)
+    tt = np.arange(n) / SR
+    out = np.zeros(n)
+    for start, f, g in ((0, 3200, 1.0), (int(0.045 * SR), 4200, 0.6)):
+        m = n - start
+        burst = fft_filter(rng.standard_normal(m), lo=1500, hi=9000) * np.exp(-tt[:m] * 600)
+        out[start:] += (burst * 0.6 + np.sin(2 * np.pi * f * tt[:m]) * np.exp(-tt[:m] * 380)) * g
+    return out * gain
+
+
 def tick(freq=2400, gain=1.0):
     n = int(0.06 * SR)
     tt = np.arange(n) / SR
@@ -203,39 +218,39 @@ for t in (0.5, 0.75, 1.5, 1.75, 2.5, 2.75):
     add(music, kick(0.35 if t % 1 == 0.5 else 0.22), t)
 
 # Pads (whole piece from the hit), three detuned voices per chord tone
-for bar in range(9):
+for bar in range(len(CHORDS)):
     t0 = BAR0 + bar * 2
-    if t0 >= 21.0:
+    if t0 >= LOGO:
         break
     root, ivs = CHORDS[bar]
-    length = min(2.0, 21.0 - t0)
+    length = min(2.0, LOGO - t0)
     n = int(length * SR) + int(0.3 * SR)
     pad = np.zeros(n)
     for iv in ivs:
         f = NOTE[root] * 4 * 2 ** (iv / 12)
         for d in (-0.004, 0, 0.005):
             pad += saw(f, n, 14, d)
-    pad = fft_filter(pad, hi=1400 if t0 < 17.5 else 2600) * adsr(n, a=0.25, r=0.4) * 0.05
+    pad = fft_filter(pad, hi=1400 if t0 < 19.5 else 2600) * adsr(n, a=0.25, r=0.4) * 0.05
     add(music, pad, t0, pan=-0.2)
     add(music, pad, t0 + 0.012, pan=0.2)
     add(send, pad, t0, 0.6)
 
-# Drums, bass, arp: 3.5 → 20.75, then a dropout into the logo hit
+# Drums, bass, arp: 3.5 → DROP, then a dropout into the logo hit
 t = 3.5
 step = 0.125
-while t < 20.75 - 1e-9:
+while t < DROP - 1e-9:
     b = round((t - BAR0) / step)  # 16th index
     root, ivs = chord_at(t)
     on_beat = b % 4 == 0
     beat_in_bar = (b // 4) % 4
-    building = t >= 18.0
+    building = t >= BUILD
     if on_beat:
-        add(music, kick(1.0 if t >= 12.5 else 0.85), t)
+        add(music, kick(1.0 if t >= LIFT else 0.85), t)
     if b % 4 == 2:
         add(music, hat(0.22, open_=b % 8 == 6), t, pan=0.3)
-    elif t >= 5.5:
+    elif t >= 5.0:
         add(music, hat(0.08), t, pan=-0.25)
-    if t >= 12.5 and on_beat and beat_in_bar in (1, 3) and not building:
+    if t >= LIFT and on_beat and beat_in_bar in (1, 3) and not building:
         s = snare(0.55)
         add(music, s, t)
         add(send, s, t, 0.35)
@@ -243,14 +258,14 @@ while t < 20.75 - 1e-9:
     if b % 2 == 1 or (b % 2 == 0 and not on_beat):
         n = int(0.115 * SR)
         f = NOTE[root] * (2 if b % 4 == 3 else 1)
-        bs = fft_filter(saw(f, n, 24), hi=900 if t < 12.5 else 1600) * adsr(n, 0.004, 0.03) * 0.42
+        bs = fft_filter(saw(f, n, 24), hi=900 if t < LIFT else 1600) * adsr(n, 0.004, 0.03) * 0.42
         add(music, bs, t)
     # arp: 16ths across two octaves from the first product shot
-    if t >= 5.5:
+    if t >= 5.0:
         seq = [0, 1, 2, 1, 2, 3, 2, 1]
         k = seq[b % 8]
         iv = (ivs + [12 + ivs[0]])[k]
-        f = NOTE[root] * 8 * 2 ** (iv / 12) * (2 if (b // 8) % 2 and t >= 12.5 else 1)
+        f = NOTE[root] * 8 * 2 ** (iv / 12) * (2 if (b // 8) % 2 and t >= LIFT else 1)
         n = int(0.2 * SR)
         tt = np.arange(n) / SR
         pl = saw(f, n, 10) * np.exp(-tt * 22) * 0.11 * (0.7 + 0.3 * (b % 4 == 0))
@@ -260,21 +275,21 @@ while t < 20.75 - 1e-9:
         add(send, pl, t, 0.3)
     t = round(t + step, 6)
 
-# Build: snare roll 18 → 20.75 accelerating, rising noise
-roll_t = 18.0
-while roll_t < 20.75:
-    rate = 0.25 if roll_t < 19.5 else (0.125 if roll_t < 20.25 else 0.0625)
-    g = 0.15 + 0.45 * (roll_t - 18.0) / 2.75
+# Build: snare roll BUILD → DROP accelerating, rising noise
+roll_t = BUILD
+while roll_t < DROP:
+    rate = 0.25 if roll_t < BUILD + 1.25 else (0.125 if roll_t < DROP - 0.4 else 0.0625)
+    g = 0.15 + 0.45 * (roll_t - BUILD) / (DROP - BUILD)
     add(music, snare(g, 0.12), roll_t)
     add(send, snare(g * 0.5, 0.12), roll_t)
     roll_t = round(roll_t + rate, 6)
-n_b = at(20.75) - at(18.0)
+n_b = at(DROP) - at(BUILD)
 tt = np.arange(n_b) / SR
 rise = fft_filter(rng.standard_normal((n_b, 2)), lo=2000, hi=12000) * ((tt / tt[-1]) ** 2.5)[:, None] * 0.12
-add(music, rise, 18.0)
+add(music, rise, BUILD)
 
-# Final: Dm(add9) chord bloom + sub + shimmer, 21 → 25
-n_f = at(4.0)
+# Final: Dm(add9) chord bloom + sub + shimmer, LOGO → end
+n_f = at(DUR - LOGO)
 tt = np.arange(n_f) / SR
 fin = np.zeros(n_f)
 for f in (146.83, 220.0, 293.66, 349.23, 440.0, 659.25):
@@ -286,10 +301,10 @@ shimmer = np.zeros(n_f)
 for f in (1174.66, 1760.0, 2349.32, 2637.0):
     shimmer += np.sin(2 * np.pi * f * tt) * (0.5 + 0.5 * np.sin(2 * np.pi * 7 * tt + f))
 shimmer *= np.exp(-tt * 1.1) * 0.02
-add(music, fin, 21.0)
-add(music, sub, 21.0)
-add(music, shimmer, 21.0, pan=0.15)
-add(send, fin + shimmer * 2, 21.0, 1.0)
+add(music, fin, LOGO)
+add(music, sub, LOGO)
+add(music, shimmer, LOGO, pan=0.15)
+add(send, fin + shimmer * 2, LOGO, 1.0)
 
 music += reverb(send, 2.6) * 0.55
 
@@ -304,23 +319,28 @@ def peak_time(x):
 
 
 wp = peak_time(whoosh)
-for i, cut in enumerate((5.5, 9.5, 12.5, 16.0, 17.23)):
-    add(sfx, whoosh * (0.5 if i < 4 else 0.32), cut - wp)
+# camera moves: dive into the app, zoom-out wall, explode, devices, back into the app, White Label
+for cut, g in ((5.0, 0.55), (11.0, 0.5), (14.5, 0.45), (18.0, 0.45), (19.13, 0.3), (20.0, 0.4), (20.9, 0.35)):
+    add(sfx, whoosh * g, cut - wp)
 bp = peak_time(boom)
 add(sfx, boom * 0.95, 3.5 - bp)
-add(sfx, boom * 0.95, 21.0 - bp)
-add(sfx, boom * 0.35, 14.56 - bp)
+add(sfx, boom * 0.95, LOGO - bp)
+add(sfx, boom * 0.35, 16.21 - bp)
 suck = boom[::-1].copy()
 suck *= np.linspace(0, 1, len(suck))[:, None] ** 2
 add(sfx, suck * 0.45, 3.5 - len(suck) / SR)
-add(sfx, riser * 0.6, 21.0 - len(riser) / SR)
+add(sfx, riser * 0.6, LOGO - len(riser) / SR)
 gp = peak_time(glitch)
-for t_g, g in ((12.62, 0.5), (14.5, 0.6), (19.31, 0.45)):
+for t_g, g in ((14.72, 0.5), (16.15, 0.6), (21.96, 0.45)):
     add(sfx, glitch * g, t_g - gp)
-for c in (5.67, 6.72, 7.58, 8.49):
-    add(sfx, tick(2600, 0.25), c, pan=-0.3)
-    add(sfx, tick(3900, 0.12), c + 0.03, pan=0.3)
-for c in (17.23, 17.36):
+# POV mouse clicks on the sidebar (Projects, Tickets, Clients, Invoices, Dashboard, Settings, Brand colors)
+for c in (7.2, 8.25, 9.11, 10.02, 10.85, 20.4, 21.88):
+    add(sfx, mouse_click(0.55), c - 0.01)
+# soft focus pings as the camera lands on each detail
+for c in (6.75, 7.7, 8.75, 9.6, 10.5, 20.8):
+    add(sfx, tick(2600, 0.18), c, pan=-0.3)
+    add(sfx, tick(3900, 0.09), c + 0.03, pan=0.3)
+for c in (19.13, 19.26):
     add(sfx, tick(1800, 0.2), c)
 add(sfx, reverb(sfx, 1.4) * 0.18, 0)
 

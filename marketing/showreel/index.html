@@ -4,27 +4,24 @@
 <meta charset="utf-8" />
 <title>Wolf Forge Portal Showreel</title>
 <!--
-  Wolf Forge Portal — 25s showreel composition (1920x1080, 30fps).
+  Wolf Forge Portal — 28s showreel composition (1920x1080, 30fps).
+  The story is a user's walk through the app: Dashboard → Projects → Tickets →
+  Clients → Invoices → back to Dashboard → the whole workspace → Settings →
+  White Label. One in-app camera zooms in on what the user is looking at and
+  pulls out to the navigation before each click.
+
   Every visual is a pure function of time: window.seek(t) poses the whole frame,
   so render.mjs can step it frame by frame. Open with ?t=12.4 to inspect a frame,
-  or ?play to watch it run in real time.
-  Served from the repo root (see render.mjs) so it can use the real brand art in
-  public/ and the real product screenshots in docs/qa/.
+  or ?play to watch it in real time.
+
+  Screens in captures/ are real renders of this app (local Supabase, demo data).
+  Brand art comes from public/branding, White Label Studio frames from docs/qa.
 -->
 <style>
   @font-face { font-family: "Sora"; src: url("fonts/sora-latin-wght-normal.woff2") format("woff2"); font-weight: 100 800; }
   @font-face { font-family: "Inter"; src: url("fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
 
-  :root {
-    --navy: #000d51;
-    --deep: #00062f;
-    --gold: #d9a92f;
-    --gold-bright: #f1c85a;
-    --gold-ink: #a8832e;
-    --blue: #3e6cff;
-    --text: #f8f9ff;
-    --muted: #9ca5c4;
-  }
+  :root { --navy: #000d51; --gold: #d9a92f; --gold-bright: #f1c85a; --text: #f8f9ff; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
   #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; background: #01041f; font-family: "Inter", system-ui, sans-serif; color: var(--text); }
@@ -49,7 +46,24 @@
   .screen img { display: block; width: 100%; height: 100%; }
   .layer { position: absolute; overflow: hidden; border-radius: 10px; }
   .layer img { position: absolute; display: block; }
-  .phone { position: absolute; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.6)); }
+
+  /* the in-app camera */
+  .app { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; border-radius: 16px; overflow: hidden; background: #000d51;
+    box-shadow: 0 0 0 1.5px rgba(241,200,90,0.6), 0 50px 140px rgba(0,0,0,0.7), 0 0 90px rgba(62,108,255,0.2); }
+  .app > img { position: absolute; inset: 0; width: 1440px; height: 900px; display: block; }
+  .ring { position: absolute; border-radius: 10px; border: 2.5px solid #f1c85a; box-shadow: 0 0 22px rgba(241,200,90,0.9), inset 0 0 14px rgba(241,200,90,0.35); opacity: 0; }
+  .ripple { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid #f1c85a; opacity: 0; }
+  .cursor { position: absolute; width: 30px; height: 30px; transform-origin: 0 0; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.45)); }
+
+  .lt { position: absolute; left: 110px; bottom: 104px; display: flex; align-items: center; gap: 22px; padding: 18px 34px 18px 22px; border-radius: 22px;
+    background: rgba(0, 6, 47, 0.72); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(241,200,90,0.35), 0 24px 60px rgba(0,0,0,0.5); }
+  .lt .idx { font-family: "Sora"; font-weight: 300; font-size: 26px; color: #f1c85a; letter-spacing: 0.08em; padding-right: 22px; border-right: 1px solid rgba(241,200,90,0.4); }
+  .lt .lbl { font-family: "Sora"; font-weight: 800; font-size: 56px; letter-spacing: -0.02em; line-height: 1; }
+
+  .phoneFrame { position: absolute; width: 400px; height: 838px; padding: 12px; border-radius: 58px; background: linear-gradient(160deg, #23263a, #07080f 60%);
+    box-shadow: 0 0 0 2px rgba(241,200,90,0.45), 0 40px 90px rgba(0,0,0,0.65); }
+  .phoneFrame img { width: 376px; height: 814px; border-radius: 46px; display: block; }
+  .phoneFrame .notch { position: absolute; left: 50%; top: 24px; width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #05060b; }
 </style>
 </head>
 <body>
@@ -68,7 +82,7 @@
       <div id="aLine2" class="abs kicker" style="left:0;right:0;top:910px;text-align:center;color:#f1c85a">needs a leader</div>
     </div>
 
-    <!-- B · 3.5–5.5  Title slam -->
+    <!-- B · 3.5–5.0  Title slam, then the camera dives through it -->
     <div id="sB" class="scene persp">
       <img id="bWolf" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px;opacity:0.12" />
       <div id="bTitle" class="abs p3d" style="left:0;right:0;top:330px;text-align:center">
@@ -77,65 +91,55 @@
       </div>
     </div>
 
-    <!-- C · 5.5–9.5  Product showcase: real desktop + kinetic nav words -->
-    <div id="sC" class="scene persp">
-      <div id="cScreenWrap" class="abs p3d" style="left:640px;top:150px;width:1200px;height:750px">
-        <div class="screen" style="inset:0">
-          <img src="/docs/qa/white-label-studio-v5-refine/desktop-normal-1440.png" />
-          <div id="cPill" class="abs" style="left:10px;width:172px;height:30px;border-radius:8px;border:2px solid #f1c85a;box-shadow:0 0 24px rgba(241,200,90,0.85), inset 0 0 18px rgba(241,200,90,0.35)"></div>
-        </div>
+    <!-- APP · one camera for the in-app walkthroughs (5.0–11.0 and 20.0–23.5) -->
+    <div id="sApp" class="scene persp" style="perspective:2400px">
+      <div id="app" class="app">
+        <img data-page="dashboard" src="captures/dashboard.jpg" />
+        <img data-page="orders" src="captures/orders.jpg" />
+        <img data-page="tickets" src="captures/tickets.jpg" />
+        <img data-page="clients" src="captures/clients.jpg" />
+        <img data-page="invoices" src="captures/invoices.jpg" />
+        <img data-page="settings" src="captures/settings.jpg" />
+        <img data-page="wl" src="/docs/qa/white-label-studio-v3/editor-1440-final.png" />
+        <img data-page="wlGreen" src="/docs/qa/white-label-studio-v3/editor-1440-900.png" />
+        <div id="ring" class="ring"></div>
+        <div id="ripple" class="ripple"></div>
+        <svg id="cursor" class="cursor" viewBox="0 0 30 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25.2 L13 16.8 L21 16.8 Z" fill="#fff" stroke="#0b1033" stroke-width="1.8" stroke-linejoin="round"/></svg>
       </div>
-      <div id="cWords" class="abs sora" style="left:110px;top:250px;font-weight:800;font-size:104px;line-height:1.12;letter-spacing:-0.02em">
-        <div class="cw">Projects</div><div class="cw">Tickets</div><div class="cw">Clients</div><div class="cw">Billing</div>
+      <div id="lt" class="lt"><span id="ltIdx" class="idx">01</span><span id="ltLbl" class="lbl gold-text">Dashboard</span></div>
+      <div id="appScrim" class="abs" style="left:0;right:0;bottom:0;height:300px;background:linear-gradient(180deg, rgba(0,4,30,0) 0%, rgba(0,4,30,0.88) 70%)"></div>
+      <div id="appBrand" class="abs sora" style="left:0;right:0;top:930px;text-align:center;font-weight:800;font-size:92px;letter-spacing:-0.02em;white-space:nowrap">
+        <span id="gW1" style="display:inline-block">Your brand.</span>&nbsp;<span id="gW2" class="gold-text" style="display:inline-block">Your colors.</span>
       </div>
-      <div id="cKicker" class="abs kicker" style="left:114px;top:190px;font-size:20px;color:#f1c85a">Wolf Forge Portal</div>
     </div>
 
-    <!-- D · 9.5–12.5  Wall of real screens collapses into one place -->
+    <!-- WALL · 11.0–14.5  Zoom out to every page, then back into one place -->
     <div id="sD" class="scene persp">
       <div id="dPlane" class="abs p3d" style="left:960px;top:540px;width:0;height:0"></div>
+      <div id="dKicker" class="abs kicker" style="left:0;right:0;top:110px;text-align:center">Your entire operation</div>
       <div id="dScrim" class="abs" style="left:0;right:0;top:700px;height:380px;background:radial-gradient(ellipse 55% 60% at 50% 62%, rgba(0,4,30,0.85) 0%, rgba(0,4,30,0) 100%)"></div>
-      <div id="dKicker" class="abs kicker" style="left:0;right:0;top:120px;text-align:center">Your entire operation</div>
       <div id="dBig" class="abs sora gold-text" style="left:0;right:0;top:830px;text-align:center;font-weight:800;font-size:120px;letter-spacing:-0.01em">In one place.</div>
     </div>
 
-    <!-- E · 12.5–16.0  UI explode -->
+    <!-- EXPLODE · 14.5–18.0  The real dashboard, in layers -->
     <div id="sE" class="scene persp" style="perspective:2600px">
-      <div id="eRig" class="abs p3d" style="left:210px;top:71px;width:1500px;height:938px"></div>
+      <div id="eRig" class="abs p3d" style="left:160px;top:40px;width:1600px;height:1000px"></div>
       <div id="eText1" class="abs sora" style="left:120px;top:110px;font-weight:800;font-size:92px;letter-spacing:-0.02em">Built in layers.</div>
       <div id="eText2" class="abs sora gold-text" style="right:120px;top:52px;font-weight:800;font-size:92px;letter-spacing:-0.02em;text-align:right">Engineered to move.</div>
     </div>
 
-    <!-- F · 16.0–18.0  Desktop + Mobile -->
+    <!-- DEVICES · 18.0–20.0  Desktop, then real mobile renders -->
     <div id="sF" class="scene persp">
-      <div id="fDesk" class="abs p3d" style="left:120px;top:170px;width:1180px;height:738px">
-        <div class="screen" style="inset:0"><img src="/docs/qa/white-label-studio-v5/final-desktop-1440.png" /></div>
+      <div id="fDesk" class="abs p3d" style="left:110px;top:180px;width:1180px;height:738px">
+        <div class="screen" style="inset:0"><img src="captures/dashboard.jpg" /></div>
       </div>
-      <img id="fPhone1" class="phone" src="/docs/qa/white-label-preview-premium/final-mobile-1440.png" style="left:1190px;top:150px;width:412px;height:777px" />
-      <img id="fPhone2" class="phone" src="/docs/qa/white-label-preview-premium/after-mobile-menu-1440.png" style="left:1480px;top:220px;width:374px;height:705px" />
-      <div id="fK1" class="abs kicker" style="left:126px;top:96px;font-size:22px">Desktop</div>
-      <div id="fK2" class="abs kicker" style="left:1196px;top:96px;font-size:22px;color:#f1c85a">Mobile</div>
+      <div id="fPhone1" class="phoneFrame" style="left:1150px;top:130px"><img src="captures/m-dashboard.jpg" /><div class="notch"></div></div>
+      <div id="fPhone2" class="phoneFrame" style="left:1450px;top:200px;transform-origin:50% 100%"><img src="captures/m-orders.jpg" /><div class="notch"></div></div>
+      <div id="fK1" class="abs kicker" style="left:116px;top:106px;font-size:22px">Desktop</div>
+      <div id="fK2" class="abs kicker" style="left:1156px;top:62px;font-size:22px;color:#f1c85a">Mobile</div>
     </div>
 
-    <!-- G · 18.0–21.0  Your brand, your colors (real Forest Premium template) -->
-    <div id="sG" class="scene persp">
-      <div id="gRig" class="abs p3d" style="left:330px;top:70px;width:1260px;height:788px">
-        <div class="screen" style="inset:0">
-          <img src="/docs/qa/white-label-studio-v3/editor-1440-final.png" />
-          <img id="gGreen" class="abs" src="/docs/qa/white-label-studio-v3/editor-1440-900.png" style="left:0;top:0;width:100%;height:100%" />
-        </div>
-      </div>
-      <div id="gChips" class="abs" style="left:110px;top:360px">
-        <div id="gChipA" class="abs" style="width:150px;height:150px;border-radius:30px;box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.25)"></div>
-        <div id="gChipB" class="abs" style="left:60px;top:110px;width:110px;height:110px;border-radius:24px;box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.25)"></div>
-        <div id="gHex" class="abs kicker" style="top:250px;font-size:18px;letter-spacing:0.3em"></div>
-      </div>
-      <div id="gText" class="abs sora" style="left:0;right:0;top:900px;text-align:center;font-weight:800;font-size:96px;letter-spacing:-0.02em;white-space:nowrap">
-        <span id="gW1">Your brand.</span>&nbsp;<span id="gW2" class="gold-text">Your colors.</span>
-      </div>
-    </div>
-
-    <!-- H · 21.0–25.0  App icon lockup -->
+    <!-- LOCKUP · 23.5–28.0 -->
     <div id="sH" class="scene">
       <div id="hRing" class="abs" style="left:960px;top:540px;width:10px;height:10px;border-radius:50%;border:3px solid #f1c85a"></div>
       <div id="hIconWrap" class="abs" style="left:770px;top:350px;width:380px;height:380px">
@@ -164,25 +168,105 @@ const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const prog = (t, a, b) => clamp((t - a) / (b - a));
 const lerp = (a, b, k) => a + (b - a) * k;
 const E = {
+  linear: (k) => k,
   outExpo: (k) => (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k)),
   inExpo: (k) => (k <= 0 ? 0 : Math.pow(2, 10 * k - 10)),
   outCubic: (k) => 1 - Math.pow(1 - k, 3),
   inCubic: (k) => k * k * k,
   inOutCubic: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
   inOutQuint: (k) => (k < 0.5 ? 16 * k ** 5 : 1 - Math.pow(-2 * k + 2, 5) / 2),
+  inOutExpo: (k) => (k <= 0 ? 0 : k >= 1 ? 1 : k < 0.5 ? Math.pow(2, 20 * k - 10) / 2 : (2 - Math.pow(2, -20 * k + 10)) / 2),
   outBack: (k) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); },
-  outElastic: (k) => (k <= 0 ? 0 : k >= 1 ? 1 : Math.pow(2, -10 * k) * Math.sin((k * 10 - 0.75) * (2 * Math.PI) / 3) + 1),
 };
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let r = Math.imul(s ^ (s >>> 15), 1 | s); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
 const $ = (id) => document.getElementById(id);
 const st = (el, css) => { for (const k in css) el.style[k] = css[k]; };
 
 // ---------- timeline (seconds) — cuts land on the 120 BPM grid of the score ----------
-const SCENES = { sA: [0, 3.5], sB: [3.5, 5.5], sC: [5.5, 9.5], sD: [9.5, 12.5], sE: [12.5, 16.0], sF: [16.0, 18.0], sG: [18.0, 21.0], sH: [21.0, 25.01] };
-// Hits drive flash + camera shake: [time, strength]
-const HITS = [[3.5, 1.0], [5.5, 0.35], [9.5, 0.35], [12.5, 0.3], [14.56, 0.55], [16.0, 0.3], [17.23, 0.25], [19.31, 0.3], [21.0, 1.0]];
-// Spoken-word cues from the placed voice-over (see audio/mix.py)
-const CUE = { projects: 5.67, tickets: 6.72, clients: 7.58, billing: 8.49, place: 11.43, layers: 12.95, engineered: 14.56, desktop: 16.25, mobile: 17.23, brand: 18.25, colors: 19.31, portal: 21.3, lead: 23.05 };
+const DURATION = 28;
+const SCENES = { sA: [0, 3.5], sB: [3.5, 5.0], sApp: [[5.0, 11.0], [20.0, 23.5]], sD: [11.0, 14.5], sE: [14.5, 18.0], sF: [18.0, 20.0], sH: [23.5, DURATION + 0.01] };
+// Spoken-word cues from the placed voice-over (printed by audio/mix.py)
+const CUE = { projects: 7.2, tickets: 8.25, clients: 9.11, billing: 10.02, place: 13.13, layers: 14.6, engineered: 16.21, desktop: 18.15, mobile: 19.13, brand: 20.9, colors: 21.96, portal: 23.8, lead: 25.55 };
+// POV clicks (no VO) and every hit that flashes / shakes the frame: [time, strength]
+const CLICK = { home: 10.85, settings: 20.4 };
+const HITS = [[3.5, 1.0], [5.0, 0.3], [11.0, 0.3], [14.5, 0.3], [16.21, 0.55], [18.0, 0.3], [19.13, 0.25], [20.0, 0.25], [CUE.colors, 0.3], [23.5, 1.0]];
+
+// ---------- app camera ----------
+// Page coordinates are the 1440x900 CSS pixels the screens were captured at.
+// zoom 1 shows the whole app 1600px wide; rx/ry tilt the frame in 3D.
+const NAV = { dashboard: [112, 142], projects: [104, 209], tickets: [100, 249], clients: [100, 329], invoices: [104, 436], settings: [100, 810] };
+const VIEW = {
+  full: [720, 450, 1, 0, 0],
+  nav: [600, 430, 1.14, 0, 0],
+  far: [720, 450, 0.5, 24, -20],
+  kpi: [835, 300, 1.7, 0, 0],
+  revenue: [470, 290, 2.3, 0, 0],
+  projects: [790, 420, 1.5, 0, 0],
+  tickets: [860, 520, 1.55, 0, 0],
+  clients: [790, 540, 1.4, 0, 0],
+  invoices: [760, 520, 1.65, 0, 0],
+  navLow: [470, 640, 1.45, 0, 0],
+  settingsTabs: [440, 300, 2.0, 0, 0],
+  brand: [330, 250, 1.75, 0, 0],
+  wlFull: [720, 450, 1.02, 4, 3],
+  push: [720, 470, 3.2, 0, 0],
+};
+// [time, view, easing into this key]
+const CAM = [
+  [5.0, 'far'], [5.85, 'full', 'outExpo'], [6.25, 'full'], [6.75, 'revenue', 'inOutExpo'], [6.95, 'revenue'],
+  [7.15, 'nav', 'inOutCubic'],
+  [CUE.projects + 0.08, 'nav'], [CUE.projects + 0.5, 'projects', 'inOutExpo'], [CUE.tickets - 0.38, 'projects'],
+  [CUE.tickets - 0.05, 'nav', 'inOutCubic'], [CUE.tickets + 0.08, 'nav'], [CUE.tickets + 0.5, 'tickets', 'inOutExpo'], [CUE.clients - 0.36, 'tickets'],
+  [CUE.clients - 0.05, 'nav', 'inOutCubic'], [CUE.clients + 0.08, 'nav'], [CUE.clients + 0.5, 'clients', 'inOutExpo'], [CUE.billing - 0.36, 'clients'],
+  [CUE.billing - 0.05, 'nav', 'inOutCubic'], [CUE.billing + 0.08, 'nav'], [CUE.billing + 0.48, 'invoices', 'inOutExpo'], [CLICK.home - 0.4, 'invoices'],
+  [CLICK.home - 0.05, 'nav', 'inOutCubic'], [CLICK.home + 0.05, 'nav'], [11.0, 'full', 'inOutCubic'],
+  // second walkthrough: Settings → White Label
+  [20.0, 'full'], [20.3, 'navLow', 'outExpo'], [CLICK.settings + 0.05, 'navLow'], [CLICK.settings + 0.4, 'settingsTabs', 'inOutExpo'],
+  [CUE.brand - 0.02, 'settingsTabs'], [CUE.brand + 0.02, 'brand', 'linear'], [CUE.colors - 0.1, 'brand'], [CUE.colors + 0.55, 'wlFull', 'inOutCubic'],
+  [22.95, 'wlFull'], [23.5, 'push', 'inExpo'],
+];
+function camAt(t) {
+  let i = 0;
+  while (i < CAM.length - 1 && CAM[i + 1][0] <= t) i++;
+  const a = CAM[i], b = CAM[Math.min(i + 1, CAM.length - 1)];
+  const k = b === a ? 0 : (E[b[2] || 'inOutCubic'])(prog(t, a[0], b[0]));
+  return VIEW[a[1]].map((v, j) => lerp(v, VIEW[b[1]][j], k));
+}
+// Which screen is showing: [from time, page]
+const PAGES = [[0, 'dashboard'], [CUE.projects + 0.06, 'orders'], [CUE.tickets + 0.06, 'tickets'], [CUE.clients + 0.06, 'clients'], [CUE.billing + 0.06, 'invoices'],
+  [CLICK.home + 0.06, 'dashboard'], [20.0, 'dashboard'], [CLICK.settings + 0.06, 'settings'], [CUE.brand, 'wl']];
+// Cursor path in page coords: [time, x, y]; clicks ripple on arrival
+const CURSOR = [
+  [5.9, 1000, 760], [6.6, 540, 330], [6.95, 520, 320],
+  [CUE.projects - 0.02, ...NAV.projects], [CUE.projects + 0.45, 300, 420],
+  [CUE.tickets - 0.02, ...NAV.tickets], [CUE.tickets + 0.45, 300, 520],
+  [CUE.clients - 0.02, ...NAV.clients], [CUE.clients + 0.45, 300, 560],
+  [CUE.billing - 0.02, ...NAV.invoices], [CUE.billing + 0.45, 330, 560],
+  [CLICK.home - 0.02, ...NAV.dashboard], [11.0, 300, 300],
+  [20.0, 600, 560], [CLICK.settings - 0.02, ...NAV.settings], [CLICK.settings + 0.4, 360, 380], [CUE.brand, 360, 380], [CUE.brand + 0.4, 300, 175], [CUE.colors + 0.6, 520, 420],
+];
+const CLICKS = [CUE.projects, CUE.tickets, CUE.clients, CUE.billing, CLICK.home, CLICK.settings, CUE.colors - 0.08];
+// Gold focus rings on what the camera is looking at: [from, to, x0, y0, x1, y1]
+const RINGS = [
+  [6.6, 7.05, 271, 184, 544, 369],
+  [CUE.projects + 0.45, CUE.tickets - 0.35, 1098, 300, 1206, 332],
+  [CUE.tickets + 0.45, CUE.clients - 0.33, 848, 512, 916, 541],
+  [CUE.clients + 0.45, CUE.billing - 0.33, 1205, 607, 1282, 633],
+  [CUE.billing + 0.42, CLICK.home - 0.35, 694, 499, 746, 523],
+  [CLICK.settings + 0.35, CUE.brand - 0.05, 340, 168, 535, 196],
+];
+// Lower thirds: the user's path through the app
+const LT = [[5.85, CUE.projects, '01', 'Dashboard'], [CUE.projects, CUE.tickets, '02', 'Projects'], [CUE.tickets, CUE.clients, '03', 'Tickets'],
+  [CUE.clients, CUE.billing, '04', 'Clients'], [CUE.billing, CLICK.home, '05', 'Billing'], [CLICK.settings, CUE.brand, '06', 'Settings']];
+
+function track(path, t) {
+  if (t <= path[0][0]) return path[0].slice(1);
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i], b = path[i + 1];
+    if (t < b[0]) { const k = E.inOutCubic(prog(t, a[0], b[0])); return [lerp(a[1], b[1], k), lerp(a[2], b[2], k)]; }
+  }
+  return path[path.length - 1].slice(1);
+}
 
 // ---------- text helpers ----------
 function splitChars(el, text) {
@@ -239,55 +323,51 @@ function drawEmbers(t, amount, boost) {
 const grain = $('grain').getContext('2d');
 const PLATES = (() => { const out = []; const r = rng(99); for (let i = 0; i < 10; i++) { const im = grain.createImageData(960, 540); const d = im.data; for (let j = 0; j < d.length; j += 4) { const v = 128 + (r() + r() + r() - 1.5) * 150; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; } out.push(im); } return out; })();
 
-// ---------- scene builders ----------
-// D: wall of real screens
-const D_IMGS = [
-  'white-label-studio-v5/final-desktop-1440.png', 'white-label-studio-v5-refine/drafts-landing-1440.png', 'white-label-studio-v3/editor-1440-900.png',
-  'white-label-studio-v5/template-menu-1440.png', 'white-label-studio-v3/dropdown-1440-final.png', 'white-label-studio-v5/mobile-drawer-1440.png',
-  'white-label-studio-v5-refine/desktop-edit-1440.png', 'white-label-studio-v5/all-drafts-1440.png', 'white-label-studio-v5-refine/mobile-preview-1440.png',
-  'white-label-studio-v5/mobile-1440.png', 'white-label-studio-v3/editor-1440-final.png', 'white-label-studio-v5-refine/mobile-preset-pixel9-1440.png',
-  'white-label-studio-v5/desktop-1440.png', 'white-label-studio-v5/mobile-edit-mode-1440.png',
-];
+// ---------- builders ----------
+// WALL: every captured page around the dashboard
+const D_IMGS = ['orders', 'tickets', 'clients', 'invoices', 'services', 'team', 'settings'];
+const D_TILE = 720, D_FULL = 1600 / D_TILE;
 const D_TILES = [];
 (() => {
   const plane = $('dPlane'); let k = 0;
   for (let r = -2; r <= 2; r++) for (let c = -3; c <= 3; c++) {
     const center = r === 0 && c === 0;
-    const src = center ? 'white-label-studio-v5-refine/desktop-normal-1440.png' : D_IMGS[k++ % D_IMGS.length];
-    const d = document.createElement('div'); d.className = 'screen'; d.style.width = '720px'; d.style.height = '450px'; d.style.borderRadius = '12px';
-    d.innerHTML = `<img src="/docs/qa/${src}">`; plane.appendChild(d);
+    const src = center ? 'dashboard' : D_IMGS[k++ % D_IMGS.length];
+    const d = document.createElement('div'); d.className = 'screen'; d.style.width = D_TILE + 'px'; d.style.height = D_TILE * 0.625 + 'px'; d.style.borderRadius = '10px';
+    d.innerHTML = `<img src="captures/${src}.jpg">`; plane.appendChild(d);
     D_TILES.push({ el: d, r, c, center, seed: rng(r * 31 + c * 7 + 100)() });
   }
 })();
 
-// E: exploded layers cut from the real desktop screenshot (coords in the 1440x900 source)
-const E_SRC = '/docs/qa/white-label-studio-v5-refine/desktop-normal-1440.png';
+// EXPLODE: layers cut from the real dashboard capture (coords in 1440x900 page space)
+const E_SRC = 'captures/dashboard.jpg';
 const E_LAYERS = [
   { box: [0, 0, 1440, 900], z: 0, base: true },
-  { box: [0, 0, 230, 900], z: 70, d: 0.00 },
-  { box: [274, 25, 1400, 128], z: 120, d: 0.05 },
-  { box: [275, 153, 555, 900], z: 95, d: 0.08 },
-  { box: [576, 153, 1396, 895], z: 60, d: 0.03 },
-  { box: [596, 244, 1375, 873], z: 150, d: 0.12 },
-  { box: [295, 643, 534, 689], z: 230, d: 0.2 },
-  { box: [1151, 174, 1375, 229], z: 215, d: 0.18 },
-  { box: [826, 403, 945, 583], z: 265, d: 0.22 },
-  { box: [957, 403, 1077, 583], z: 290, d: 0.25 },
-  { box: [1089, 403, 1209, 583], z: 315, d: 0.28 },
-  { box: [1221, 403, 1341, 583], z: 340, d: 0.31 },
-  { box: [826, 598, 1122, 862], z: 245, d: 0.26 },
-  { box: [1136, 598, 1341, 862], z: 280, d: 0.3 },
+  { box: [0, 0, 230, 900], z: 70, d: 0.0 },
+  { box: [860, 26, 1402, 78], z: 160, d: 0.06 },
+  { box: [268, 86, 820, 170], z: 120, d: 0.04 },
+  { box: [1288, 133, 1402, 168], z: 210, d: 0.1 },
+  { box: [271, 184, 544, 369], z: 260, d: 0.14 },
+  { box: [557, 184, 830, 369], z: 285, d: 0.17 },
+  { box: [843, 184, 1116, 369], z: 310, d: 0.2 },
+  { box: [1129, 184, 1402, 369], z: 335, d: 0.23 },
+  { box: [271, 385, 1402, 795], z: 150, d: 0.08 },
+  { box: [290, 500, 1385, 765], z: 240, d: 0.18 },
+  { box: [271, 811, 1033, 900], z: 190, d: 0.12 },
+  { box: [1045, 811, 1402, 900], z: 220, d: 0.15 },
 ];
-const E_SCALE = 1500 / 1440;
+const E_SCALE = 1600 / 1440;
 (() => {
   const rig = $('eRig');
   for (const L of E_LAYERS) {
     const [x0, y0, x1, y1] = L.box; const d = document.createElement('div'); d.className = 'layer';
-    st(d, { left: x0 * E_SCALE + 'px', top: y0 * E_SCALE + 'px', width: (x1 - x0) * E_SCALE + 'px', height: (y1 - y0) * E_SCALE + 'px', borderRadius: L.base ? '18px' : '10px' });
+    st(d, { left: x0 * E_SCALE + 'px', top: y0 * E_SCALE + 'px', width: (x1 - x0) * E_SCALE + 'px', height: (y1 - y0) * E_SCALE + 'px', borderRadius: L.base ? '16px' : '10px' });
     d.innerHTML = `<img src="${E_SRC}" style="left:${-x0 * E_SCALE}px;top:${-y0 * E_SCALE}px;width:${1440 * E_SCALE}px;height:${900 * E_SCALE}px">`;
     rig.appendChild(d); L.el = d;
   }
 })();
+
+const APP_PAGES = [...document.querySelectorAll('#app > img')];
 
 // ---------- per-scene posing ----------
 function poseA(t) {
@@ -301,7 +381,7 @@ function poseA(t) {
   st($('aWolf'), { webkitMaskImage: mask, maskImage: mask });
   const sweep = lerp(-30, 130, E.inOutCubic(prog(t, 0.4, 2.9)));
   const band = `linear-gradient(100deg, rgba(0,0,0,0) ${sweep - 9}%, #000 ${sweep}%, rgba(0,0,0,0) ${sweep + 9}%)`;
-  st($('aWolfGlow'), { webkitMaskImage: band, maskImage: band, opacity: String(0.95) });
+  st($('aWolfGlow'), { webkitMaskImage: band, maskImage: band, opacity: '0.95' });
   const l1 = E.outCubic(prog(t, 0.45, 1.3)), l2 = E.outCubic(prog(t, 1.3, 2.1)), out = prog(t, 2.95, 3.3);
   st($('aLine1'), { opacity: String(l1 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l1) + 'em', filter: `blur(${(1 - l1) * 8}px)` });
   st($('aLine2'), { opacity: String(l2 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l2) + 'em', filter: `blur(${(1 - l2) * 8}px)` });
@@ -310,74 +390,104 @@ function poseA(t) {
 function poseB(t) {
   const lt = t - 3.5;
   bTop.forEach((s, i) => {
-    const k = E.outExpo(prog(lt, i * 0.035, i * 0.035 + 0.45));
+    const k = E.outExpo(prog(lt, i * 0.03, i * 0.03 + 0.4));
     st(s, { transform: `translateZ(${lerp(900, 0, k)}px) translateY(${lerp(40, 0, k)}px)`, opacity: String(clamp(k * 1.6)), filter: `blur(${(1 - k) * 22}px)` });
   });
   bBot.forEach((s, i) => {
-    const k = E.outCubic(prog(lt, 0.35 + i * 0.06, 0.85 + i * 0.06));
+    const k = E.outCubic(prog(lt, 0.3 + i * 0.05, 0.75 + i * 0.05));
     st(s, { opacity: String(k), transform: `translateY(${lerp(30, 0, k)}px)`, filter: `blur(${(1 - k) * 10}px)` });
   });
-  const out = E.inExpo(prog(t, 5.2, 5.5));
-  st($('bTitle'), { transform: `scale(${lerp(1, 1.06, prog(lt, 0, 2)) + out * 0.6}) translateX(${-out * 900}px)`, opacity: String(1 - out), filter: `blur(${out * 14}px)` });
-  st($('bWolf'), { transform: `scale(${lerp(1.5, 1.7, prog(lt, 0, 2))}) rotate(${lerp(-2, 2, prog(lt, 0, 2))}deg)`, opacity: String(0.13 * (1 - out)) });
+  // the camera dives through the title into the app
+  const dive = E.inExpo(prog(t, 4.6, 5.0));
+  st($('bTitle'), { transform: `scale(${lerp(1, 1.05, prog(lt, 0, 1.1)) + dive * 5})`, opacity: String(1 - dive), filter: `blur(${dive * 16}px)` });
+  st($('bWolf'), { transform: `scale(${lerp(1.5, 1.65, prog(lt, 0, 1.5)) + dive * 3})`, opacity: String(0.13 * (1 - dive)) });
 }
 
-function poseC(t) {
-  const lt = t - 5.5;
-  const enter = E.outExpo(prog(lt, 0, 0.75));
-  const exit = E.inExpo(prog(t, 9.15, 9.5));
-  const ry = lerp(-48, -16, enter) + lt * 0.9, rx = lerp(18, 6, enter);
-  st($('cScreenWrap'), { transform: `translateX(${lerp(700, 0, enter) - exit * 300}px) translateZ(${lerp(-900, 0, enter) + exit * 1400}px) rotateY(${ry}deg) rotateX(${rx}deg)`, opacity: String(1 - exit * 0.6) });
-  // gold pill walks the real sidebar (Projects, Tickets, Clients, Invoices rows)
-  const rows = [209, 249, 329, 476].map((y) => y * (1200 / 1440) - 15);
-  const cues = [CUE.projects, CUE.tickets, CUE.clients, CUE.billing];
-  let y = rows[0];
-  for (let i = 1; i < 4; i++) y = lerp(y, rows[i], E.outBack(prog(t, cues[i] - 0.05, cues[i] + 0.25)));
-  st($('cPill'), { top: y + 'px', opacity: String(prog(t, cues[0] - 0.1, cues[0] + 0.05)) });
-  [...document.querySelectorAll('.cw')].forEach((w, i) => {
-    const k = E.outExpo(prog(t, cues[i] - 0.06, cues[i] + 0.4));
-    const active = i === 3 ? 1 : 1 - E.outCubic(prog(t, cues[i + 1] - 0.05, cues[i + 1] + 0.25));
-    st(w, { opacity: String(k * lerp(0.22, 1, active)), transform: `translateX(${lerp(-120, 0, k)}px) scale(${lerp(1.25, 1, k)})`, transformOrigin: '0 50%', filter: `blur(${(1 - k) * 12}px)` });
-    w.className = 'cw' + (active > 0.5 ? ' gold-text' : '');
-  });
-  st($('cKicker'), { opacity: String(E.outCubic(prog(lt, 0.2, 0.8)) * (1 - exit)) });
-  st($('cWords'), { opacity: String(1 - exit), transform: `translateX(${-exit * 200}px)` });
+function poseApp(t) {
+  const [cx, cy, z, rx, ry] = camAt(t);
+  const S = z * (1600 / 1440);
+  st($('app'), { transform: `translate(960px, 540px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${S}) translate(${-cx}px, ${-cy}px)` });
+  // pages: quick cross-fade on navigation, like a real route change
+  let cur = PAGES[0], prev = null;
+  for (const p of PAGES) if (t >= p[0]) { prev = cur; cur = p; }
+  const fade = prev ? E.outCubic(prog(t, cur[0], cur[0] + 0.14)) : 1;
+  const wipe = E.inOutCubic(prog(t, CUE.colors - 0.08, CUE.colors + 0.6));
+  for (const img of APP_PAGES) {
+    const name = img.dataset.page;
+    let o = 0;
+    if (name === cur[1]) o = fade; else if (prev && name === prev[1]) o = 1;
+    if (name === 'wlGreen') o = t >= CUE.colors - 0.1 && t < 23.6 ? 1 : 0;
+    st(img, { opacity: String(o), zIndex: name === cur[1] ? '2' : name === 'wlGreen' ? '3' : '1' });
+  }
+  // recolor radiates from the real Brand colors control
+  st(APP_PAGES.find((i) => i.dataset.page === 'wlGreen'), { clipPath: `circle(${wipe * 1800}px at 290px 168px)` });
+  // cursor (constant on-screen size) + click ripple
+  const [mx, my] = track(CURSOR, t);
+  let press = 0, ripple = -1;
+  for (const c of CLICKS) { const d = t - c; if (d > -0.05 && d < 0.5) { press = Math.max(press, d < 0.12 ? Math.sin(prog(d, -0.05, 0.12) * Math.PI) : 0); if (d >= 0) ripple = d; } }
+  const cursorOn = (t >= 5.9 && t < 11.0) || (t >= 20.05 && t < 22.9);
+  st($('cursor'), { left: mx + 'px', top: my + 'px', opacity: cursorOn ? '1' : '0', transform: `scale(${(1 - press * 0.18) / S})`, zIndex: '6' });
+  if (ripple >= 0) {
+    const k = E.outCubic(prog(ripple, 0, 0.5));
+    st($('ripple'), { left: mx + 'px', top: my + 'px', opacity: String((1 - k) * 0.9), transform: `scale(${1 + k * 6})`, zIndex: '5' });
+  } else $('ripple').style.opacity = '0';
+  // focus ring
+  let ring = null;
+  for (const r of RINGS) if (t >= r[0] - 0.05 && t < r[1] + 0.15) ring = r;
+  if (ring) {
+    const k = E.outBack(prog(t, ring[0], ring[0] + 0.25)) * (1 - prog(t, ring[1], ring[1] + 0.15));
+    const pad = 6;
+    st($('ring'), { left: ring[2] - pad + 'px', top: ring[3] - pad + 'px', width: ring[4] - ring[2] + pad * 2 + 'px', height: ring[5] - ring[3] + pad * 2 + 'px', opacity: String(clamp(k)), transform: `scale(${lerp(1.15, 1, clamp(k))})`, zIndex: '4' });
+  } else $('ring').style.opacity = '0';
+  // lower third
+  let lt = null;
+  for (const l of LT) if (t >= l[0] && t < l[1]) lt = l;
+  if (lt) {
+    const k = E.outExpo(prog(t, lt[0], lt[0] + 0.35));
+    $('ltIdx').textContent = lt[2]; $('ltLbl').textContent = lt[3];
+    st($('lt'), { opacity: String(k), transform: `translateX(${lerp(-60, 0, k)}px)` });
+  } else st($('lt'), { opacity: '0' });
+  // brand words over the White Label Studio
+  const w1 = E.outExpo(prog(t, CUE.brand - 0.05, CUE.brand + 0.4)), w2 = E.outExpo(prog(t, CUE.colors - 0.05, CUE.colors + 0.4));
+  const out = prog(t, 22.95, 23.3);
+  st($('appScrim'), { opacity: String(Math.max(w1, lt ? 0.6 : 0) * (1 - out)) });
+  st($('gW1'), { opacity: String(w1 * (1 - out)), transform: `translateY(${lerp(50, 0, w1)}px)`, filter: `blur(${(1 - w1) * 10}px)` });
+  st($('gW2'), { opacity: String(w2 * (1 - out)), transform: `translateY(${lerp(50, 0, w2)}px) scale(${lerp(1.3, 1, w2)})`, filter: `blur(${(1 - w2) * 10}px)` });
+  st($('app'), { filter: `blur(${E.inExpo(prog(t, 23.1, 23.5)) * 10}px)` });
 }
 
 function poseD(t) {
-  const lt = t - 9.5;
-  const enter = E.outExpo(prog(lt, 0, 0.6));
-  const merge = E.inOutQuint(prog(t, 11.15, 12.35));
-  const rx = lerp(52, 0, merge), rz = lerp(-22, 0, merge);
-  const scale = lerp(lerp(0.45, 0.62, enter), 1500 / 720, merge);
-  const drift = lerp(380, -220, prog(lt, 0, 1.8)) * (1 - merge);
-  st($('dPlane'), { transform: `translateZ(${lerp(-600, 0, enter)}px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(${scale}) translateY(${drift}px)` });
+  const out = E.inOutQuint(prog(t, 11.05, 12.0));
+  const merge = E.inOutQuint(prog(t, CUE.place - 0.15, CUE.place + 0.95));
+  const spreadK = out * (1 - merge);
+  const rx = lerp(0, 50, spreadK), rz = lerp(0, -22, spreadK);
+  const scale = lerp(D_FULL, 0.52, spreadK);
+  const drift = lerp(0, 1, prog(t, 11.5, CUE.place)) * 160 * spreadK;
+  st($('dPlane'), { transform: `rotateX(${rx}deg) rotateZ(${rz}deg) scale(${scale}) translateY(${-drift}px)` });
   for (const tile of D_TILES) {
-    const spread = 1 - merge;
-    const x = tile.c * 768 * spread - 360, y = tile.r * 498 * spread - 225;
-    const lift = tile.center ? 2 : -merge * 40;
-    const wave = Math.sin(t * 2 + tile.seed * 6) * 18 * spread;
-    st(tile.el, { transform: `translate3d(${x}px, ${y}px, ${lift + wave}px)`, opacity: String(tile.center ? 1 : clamp(1 - merge * 1.3) * clamp(enter * 1.5)) });
+    const x = tile.c * 768 - 360, y = tile.r * 498 - 225;
+    const wave = Math.sin(t * 2 + tile.seed * 6) * 18 * spreadK;
+    st(tile.el, { transform: `translate3d(${x}px, ${y}px, ${(tile.center ? 2 : 0) + wave}px)`, opacity: String(tile.center ? 1 : clamp(spreadK * 1.6)) });
   }
-  const k1 = E.outCubic(prog(t, 9.62, 10.2));
+  const k1 = E.outCubic(prog(t, 11.3, 11.9));
   st($('dKicker'), { opacity: String(k1 * (1 - merge)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
-  const k2 = E.outExpo(prog(t, CUE.place - 0.08, CUE.place + 0.4)), o2 = prog(t, 12.15, 12.45);
+  const k2 = E.outExpo(prog(t, CUE.place - 0.08, CUE.place + 0.4)), o2 = prog(t, 14.05, 14.4);
   st($('dScrim'), { opacity: String(k2 * (1 - o2)) });
   st($('dBig'), { opacity: String(k2 * (1 - o2)), transform: `scale(${lerp(1.4, 1, k2)})`, filter: `blur(${(1 - k2) * 16 + o2 * 10}px)` });
 }
 
 function poseE(t) {
-  const tilt = E.inOutCubic(prog(t, 12.55, 13.35));
+  const tilt = E.inOutCubic(prog(t, 14.55, 15.3));
   const collapse = E.inExpo(prog(t, CUE.engineered - 0.32, CUE.engineered));
   const flat = E.outExpo(prog(t, CUE.engineered, CUE.engineered + 0.58));
   const r = tilt * (1 - flat);
-  const orbit = lerp(-6, 22, prog(t, 13.0, 14.6));
-  const exit = E.inExpo(prog(t, 15.65, 16.0));
-  const zoom = lerp(1, 1.08, prog(t, CUE.engineered, 15.65));
-  st($('eRig'), { transform: `translateX(${-exit * 2200}px) scale(${lerp(lerp(1, 0.8, flat), 0.84, r) * zoom}) translateY(${flat * 70}px) rotateX(${54 * r}deg) rotateZ(${(-34 - orbit) * r}deg)`, filter: `blur(${exit * 10}px)` });
+  const orbit = lerp(-6, 22, prog(t, 15.0, CUE.engineered));
+  const exit = E.inExpo(prog(t, 17.65, 18.0));
+  const zoom = lerp(1, 1.06, prog(t, CUE.engineered, 17.65));
+  st($('eRig'), { transform: `translateX(${-exit * 2200}px) scale(${lerp(lerp(1, 0.8, flat), 0.8, r) * zoom}) translateY(${flat * 70}px) rotateX(${54 * r}deg) rotateZ(${(-34 - orbit) * r}deg)`, filter: `blur(${exit * 10}px)` });
   for (const L of E_LAYERS) {
     if (L.base) { st(L.el, { filter: `brightness(${lerp(1, 0.45, r)})`, boxShadow: '0 40px 120px rgba(0,0,0,.6)' }); continue; }
-    const lift = E.outExpo(prog(t, 12.75 + L.d, 13.6 + L.d)) * (1 - collapse);
+    const lift = E.outExpo(prog(t, 14.75 + L.d, 15.6 + L.d)) * (1 - collapse);
     const hover = Math.sin(t * 3 + L.z) * 10 * lift;
     st(L.el, { transform: `translateZ(${(L.z * 4.2) * lift + hover}px)`, boxShadow: `0 ${20 * lift}px ${60 * lift}px rgba(0,0,0,${0.55 * lift}), 0 0 0 ${1.5 * lift}px rgba(241,200,90,${0.8 * lift})` });
   }
@@ -388,44 +498,24 @@ function poseE(t) {
 }
 
 function poseF(t) {
-  const lt = t - 16.0;
-  const enter = E.outExpo(prog(lt, 0, 0.6));
+  const lt = t - 18.0;
+  const enter = E.outExpo(prog(lt, 0, 0.55));
   const ph = E.outBack(prog(t, CUE.mobile - 0.05, CUE.mobile + 0.5));
   const ph2 = E.outBack(prog(t, CUE.mobile + 0.08, CUE.mobile + 0.62));
-  const exit = E.inExpo(prog(t, 17.7, 18.0));
-  st($('fDesk'), { transform: `translateX(${lerp(1400, 0, enter) - exit * 300}px) rotateY(${lerp(-30, 14, enter) + lt * 2}deg) scale(${lerp(1, 0.94, ph)})`, opacity: String(1 - exit), filter: `brightness(${lerp(1, 0.7, ph)})` });
-  st($('fPhone1'), { transform: `translateY(${lerp(1100, 0, ph) + exit * -200}px) rotate(${lerp(14, -4, ph)}deg)`, opacity: String(1 - exit) });
-  st($('fPhone2'), { transform: `translateY(${lerp(1100, 0, ph2) + exit * -260}px) rotate(${lerp(18, 6, ph2)}deg)`, opacity: String(1 - exit) });
+  const exit = E.inExpo(prog(t, 19.72, 20.0));
+  st($('fDesk'), { transform: `translateX(${lerp(1400, 0, enter)}px) rotateY(${lerp(-30, 14, enter) + lt * 2}deg) scale(${lerp(1, 0.94, ph) + exit * 0.3})`, opacity: String(1 - exit), filter: `brightness(${lerp(1, 0.7, ph)})` });
+  st($('fPhone1'), { transform: `translateY(${lerp(1100, 0, ph) - exit * 200}px) rotate(${lerp(14, -4, ph)}deg)`, opacity: String(1 - exit) });
+  st($('fPhone2'), { transform: `translateY(${lerp(1100, 0, ph2) - exit * 260}px) rotate(${lerp(18, 6, ph2)}deg)`, opacity: String(1 - exit) });
   const k1 = E.outCubic(prog(t, CUE.desktop - 0.1, CUE.desktop + 0.35)), k2 = E.outCubic(prog(t, CUE.mobile, CUE.mobile + 0.35));
   st($('fK1'), { opacity: String(k1 * (1 - exit)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
   st($('fK2'), { opacity: String(k2 * (1 - exit)), letterSpacing: lerp(1, 0.55, k2) + 'em' });
 }
 
-function poseG(t) {
-  const lt = t - 18.0;
-  const enter = E.outExpo(prog(lt, 0, 0.7));
-  const wipe = E.inOutCubic(prog(t, CUE.colors - 0.05, CUE.colors + 0.65));
-  const push = E.inExpo(prog(t, 20.35, 21.0));
-  st($('gRig'), { transform: `translateZ(${lerp(-700, 0, enter) + push * 1500}px) rotateX(${lerp(20, 4, enter) - push * 4}deg) rotateY(${lerp(-10, 3, enter) + lt * 1.2}deg)`, filter: `blur(${push * 8}px)` });
-  // circle wipe radiates from the real "Brand colors" control
-  const ox = 290 * (1260 / 1440), oy = 168 * (788 / 900);
-  st($('gGreen'), { clipPath: `circle(${wipe * 1700}px at ${ox}px ${oy}px)` });
-  const navy = ['#000d51', '#a8832e'], green = ['#173c32', '#d2b777'];
-  st($('gChipA'), { background: wipe < 0.5 ? navy[0] : green[0], transform: `scale(${1 + Math.sin(wipe * Math.PI) * 0.25}) rotate(${lerp(-8, 6, enter)}deg)` });
-  st($('gChipB'), { background: wipe < 0.5 ? navy[1] : green[1], transform: `scale(${1 + Math.sin(wipe * Math.PI) * 0.3}) rotate(${lerp(10, -4, enter)}deg)` });
-  $('gHex').textContent = wipe < 0.5 ? '#000D51  #A8832E' : '#173C32  #D2B777';
-  const chips = E.outBack(prog(lt, 0.25, 0.85));
-  st($('gChips'), { opacity: String(chips * (1 - push)), transform: `translateX(${lerp(-300, 0, chips)}px)` });
-  const w1 = E.outExpo(prog(t, CUE.brand - 0.05, CUE.brand + 0.4)), w2 = E.outExpo(prog(t, CUE.colors - 0.05, CUE.colors + 0.4));
-  st($('gW1'), { opacity: String(w1 * (1 - push)), display: 'inline-block', transform: `translateY(${lerp(50, 0, w1)}px)`, filter: `blur(${(1 - w1) * 10}px)` });
-  st($('gW2'), { opacity: String(w2 * (1 - push)), display: 'inline-block', transform: `translateY(${lerp(50, 0, w2)}px) scale(${lerp(1.3, 1, w2)})`, filter: `blur(${(1 - w2) * 10}px)` });
-}
-
 function poseH(t) {
-  const lt = t - 21.0;
+  const lt = t - 23.5;
   const pop = E.outBack(prog(lt, 0, 0.55));
   const slide = E.inOutCubic(prog(t, CUE.portal - 0.05, CUE.portal + 0.75));
-  const fade = E.inCubic(prog(t, 24.25, 25.0));
+  const fade = E.inCubic(prog(t, DURATION - 0.8, DURATION));
   st($('hIconWrap'), { transform: `translateX(${-slide * 420}px) scale(${lerp(0.4, 1, pop) * lerp(1, 0.78, slide)})`, opacity: String(clamp(pop * 2) * (1 - fade)) });
   st($('hGlow'), { opacity: String((0.6 + 0.4 * Math.sin(lt * 3)) * clamp(pop)), transform: `scale(${1 + 0.06 * Math.sin(lt * 2)})` });
   st($('hSweep'), { left: lerp(-60, 160, E.inOutCubic(prog(lt, 0.25, 1.1))) + '%' });
@@ -440,23 +530,23 @@ function poseH(t) {
   st($('hTag'), { opacity: String(tg * (1 - fade)), letterSpacing: lerp(1.2, 0.55, tg) + 'em', filter: `blur(${(1 - tg) * 6}px)` });
 }
 
-const POSE = { sA: poseA, sB: poseB, sC: poseC, sD: poseD, sE: poseE, sF: poseF, sG: poseG, sH: poseH };
+const POSE = { sA: poseA, sB: poseB, sApp: poseApp, sD: poseD, sE: poseE, sF: poseF, sH: poseH };
 
 function moodAt(t) {
-  const green = Math.sin(Math.PI * prog(t, 19.3, 21.0)) * 1.0;
+  const green = Math.sin(Math.PI * prog(t, CUE.colors - 0.2, 23.5)) * 1.0;
   const intro = E.outCubic(prog(t, 0, 1.2));
-  const outro = 1 - E.inCubic(prog(t, 24.3, 25));
-  return { blue: 1 - green * 0.6, gold: (t > 21 ? 1.6 : 1) * (1 - green * 0.5), green, bright: clamp(intro * outro * (t < 3.5 ? 0.7 : 1)) };
+  const outro = 1 - E.inCubic(prog(t, DURATION - 0.7, DURATION));
+  return { blue: 1 - green * 0.6, gold: (t > 23.5 ? 1.6 : 1) * (1 - green * 0.5), green, bright: clamp(intro * outro * (t < 3.5 ? 0.7 : 1)) };
 }
 
 // ---------- frame ----------
 window.seek = function seek(t) {
   for (const id in SCENES) {
-    const [a, b] = SCENES[id]; const on = t >= a && t < b;
+    const spans = Array.isArray(SCENES[id][0]) ? SCENES[id] : [SCENES[id]];
+    const on = spans.some(([a, b]) => t >= a && t < b);
     $(id).style.display = on ? 'block' : 'none';
     if (on) POSE[id](t);
   }
-  // hits: flash + camera shake
   let flash = 0, shake = 0;
   for (const [ht, s] of HITS) { const d = t - ht; if (d >= -0.02 && d < 0.6) { flash = Math.max(flash, s * Math.exp(-d * 9)); shake = Math.max(shake, s * Math.exp(-d * 7)); } }
   const r = rng(Math.floor(t * 30) + 1);
@@ -465,12 +555,13 @@ window.seek = function seek(t) {
   $('flash').style.opacity = String(clamp(flash * 0.85));
   const mood = moodAt(t);
   drawMesh(t, mood);
-  const emberAmt = (t < 3.5 ? E.outCubic(prog(t, 0.3, 2)) : t >= 21 ? 1 : 0.35) * mood.bright;
-  drawEmbers(t, emberAmt, t >= 21 ? Math.exp(-(t - 21) * 2) : 0);
+  const emberAmt = (t < 3.5 ? E.outCubic(prog(t, 0.3, 2)) : t >= 23.5 ? 1 : 0.35) * mood.bright;
+  drawEmbers(t, emberAmt, t >= 23.5 ? Math.exp(-(t - 23.5) * 2) : 0);
   grain.putImageData(PLATES[Math.floor(t * 30) % PLATES.length], 0, 0);
   $('grain').style.transform = `translate(${(r() - 0.5) * 6}px, ${(r() - 0.5) * 6}px) scale(1.01)`;
   $('vignette').style.opacity = String(0.92 + 0.08 * Math.sin(t * 1.3));
 };
+window.DURATION = DURATION;
 
 window.ready = (async () => {
   await document.fonts.ready;
@@ -480,7 +571,7 @@ window.ready = (async () => {
 
 const q = new URLSearchParams(location.search);
 window.ready.then(() => {
-  if (q.has('play')) { const t0 = performance.now(); const loop = () => { const t = ((performance.now() - t0) / 1000) % 25; window.seek(t); requestAnimationFrame(loop); }; loop(); }
+  if (q.has('play')) { const t0 = performance.now(); const loop = () => { const t = ((performance.now() - t0) / 1000) % DURATION; window.seek(t); requestAnimationFrame(loop); }; loop(); }
   else window.seek(parseFloat(q.get('t') || '0'));
 });
 </script>

@@ -1,6 +1,6 @@
 // Renders index.html to video frames with headless Chromium and pipes them into ffmpeg.
 //
-//   node marketing/showreel/render.mjs                  -> out/frames.mp4 (silent, 25s @ 30fps)
+//   node marketing/showreel/render.mjs                  -> out/frames.mp4 (silent, full length @ 30fps)
 //   node marketing/showreel/render.mjs --stills 4,12.8  -> out/still-4.00.jpg, ...
 //
 // Then `python3 marketing/showreel/audio/mix.py` builds the soundtrack and muxes the final MP4.
@@ -15,7 +15,6 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../..");
 const outDir = path.join(here, "out");
 const FPS = 30;
-const DURATION = 25;
 
 const MIME = { ".html": "text/html", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".js": "text/javascript" };
 
@@ -58,6 +57,8 @@ async function main() {
   page.on("pageerror", (err) => console.error("page error:", err.message));
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "load" });
   await page.evaluate(() => window.ready);
+  // The composition owns its length (window.DURATION in index.html).
+  const DURATION = await page.evaluate(() => window.DURATION);
 
   const shoot = async (t) => {
     await page.evaluate((time) => window.seek(time), t);
