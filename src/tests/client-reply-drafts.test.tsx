@@ -49,11 +49,14 @@ function attach() {
 async function savedStatus() { await screen.findByText(/Draft saved on this device for 30 days/); }
 
 describe("private client reply drafts", () => {
-  it("is enabled only in a Preview using the isolated Studio backend", () => {
+  it("enables drafts only for the matched Studio Preview and production backends", () => {
     const env = { VERCEL_ENV: "preview", SUPABASE_URL: "https://rsnmlcyopnxucwgfttyf.supabase.co" };
     expect(studioDraftSavingAvailable(env)).toBe(true);
+    expect(studioDraftSavingAvailable({ VERCEL_ENV: "production", SUPABASE_URL: "https://jwynqsyirgenqlmkooah.supabase.co" })).toBe(true);
     expect(studioDraftSavingAvailable({ ...env, VERCEL_ENV: "production" })).toBe(false);
     expect(studioDraftSavingAvailable({ ...env, SUPABASE_URL: "https://jwynqsyirgenqlmkooah.supabase.co" })).toBe(false);
+    expect(studioDraftSavingAvailable({ VERCEL_ENV: "development", SUPABASE_URL: "https://jwynqsyirgenqlmkooah.supabase.co" })).toBe(false);
+    expect(studioDraftSavingAvailable({ VERCEL_ENV: "production", SUPABASE_URL: "https://unrelated.supabase.co" })).toBe(false);
     expect(studioDraftSavingAvailable({})).toBe(false);
   });
 
