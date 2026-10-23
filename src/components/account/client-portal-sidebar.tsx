@@ -20,7 +20,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { usePathname } from "next/navigation";
-import type { ComponentType } from "react";
+import type { ComponentType, MouseEvent } from "react";
 import { signOutAction } from "../../app/actions/auth";
 import { WolfForgeMark } from "../shell/wolf-forge-mark";
 import { usePortalDrawer } from "./command/portal-drawer";
@@ -67,12 +67,16 @@ export function ClientPortalSidebar({
   displayName,
   workspaceName,
   brandingUnavailable = false,
+  pendingRoute = null,
+  onNavigate,
 }: {
   categories: PortalNavigationCategory[];
   companyName: string;
   displayName: string | null;
   workspaceName?: string;
   brandingUnavailable?: boolean;
+  pendingRoute?: string | null;
+  onNavigate?: (route: string, event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const pathname = usePathname();
   const brandName = brandingUnavailable ? "Workspace branding unavailable" : workspaceName ?? "Wolf Forge";
@@ -110,7 +114,7 @@ export function ClientPortalSidebar({
           href="/account"
           className="portal-brand"
           aria-label={`${brandName} client portal`}
-          onClick={closeDrawer}
+          onClick={(event) => { closeDrawer(); onNavigate?.("/account", event); }}
         >
           {brandingUnavailable ? <strong>{brandName}</strong> : <WolfForgeMark />}
           {workspaceName ? <strong className="tenant-workspace-name">{workspaceName}</strong> : null}
@@ -127,7 +131,7 @@ export function ClientPortalSidebar({
 
               <div className="portal-nav-links">
                 {category.items.map((item) => {
-                  const current = portalRouteIsCurrent(item, pathname);
+                  const current = portalRouteIsCurrent(item, pendingRoute ?? pathname);
 
                   /*
                    * Services is a plain destination here. The cart-oriented
@@ -143,7 +147,8 @@ export function ClientPortalSidebar({
                       className={`portal-nav-link${current ? " is-active" : ""}`}
                       href={item.route}
                       aria-current={current ? "page" : undefined}
-                      onClick={closeDrawer}
+                      aria-busy={pendingRoute === item.route || undefined}
+                      onClick={(event) => { closeDrawer(); onNavigate?.(item.route, event); }}
                     >
                       <Icon aria-hidden={true} />
                       <span>{item.label}</span>

@@ -47,6 +47,7 @@ function CommandBarActions({
   canMessage,
   projectsAvailable = true,
   notificationSoundEnabled,
+  pendingRoute,
   onCompose,
 }: {
   displayName: string | null;
@@ -55,6 +56,7 @@ function CommandBarActions({
   canMessage: boolean;
   projectsAvailable?: boolean;
   notificationSoundEnabled: boolean;
+  pendingRoute?: string | null;
   onCompose: () => void;
 }) {
   const panels = useHeaderPanels();
@@ -85,7 +87,7 @@ function CommandBarActions({
         <span className="sr-only">{drawer?.open ? "Close menu" : "Open menu"}</span>
       </button>
 
-      <span className="portal-command-title">{portalTitleForPath(pathname)}</span>
+      <span className="portal-command-title">{portalTitleForPath(pendingRoute ?? pathname)}</span>
 
       <ClientSearch mobileOpen={searchOpen} onMobileOpenChange={setSearchOpen} />
 
@@ -127,6 +129,7 @@ function CommandBarActions({
 }
 
 export function ClientCommandBar(props: {
+  pendingRoute?: string | null;
   displayName: string | null;
   companyName: string;
   avatarUrl: string | null;
