@@ -405,10 +405,9 @@ set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = 'e2000000-0000-0000-0000-000000000001';
 
-select throws_ok(
+select lives_ok(
   $$select public.app_claim_avatar_upload()$$,
-  '42501', 'verified internal authentication is required',
-  'a client-portal account is refused by the claim, before any 5 MB object is written'
+  'an active client may claim its own avatar upload under the same rate limits'
 );
 
 reset role;
@@ -417,8 +416,8 @@ select is(
   (select count(*)::int from private.rate_limit_counters
     where scope like 'avatar.%'
       and subject = 'e2000000-0000-0000-0000-000000000001'),
-  0,
-  'the refused caller consumed no avatar allowance'
+  3,
+  'the client claim consumes exactly the minute hour and day allowance'
 );
 
 set local role authenticated;
@@ -427,7 +426,7 @@ set local "request.jwt.claim.sub" = 'e1000000-0000-0000-0000-000000000003';
 
 select throws_ok(
   $$select public.app_claim_avatar_upload()$$,
-  '42501', 'verified internal authentication is required',
+  '42501', 'active profile authentication is required',
   'an archived internal account is refused by the claim'
 );
 
@@ -611,8 +610,8 @@ select throws_ok(
   $$select public.app_set_my_avatar(
       'e1000000-0000-0000-0000-000000000001/stolen.webp',
       'http://127.0.0.1:54321/storage/v1/object/public/profile-avatars/stolen.webp')$$,
-  '42501', 'verified internal authentication is required',
-  'a client account cannot persist an avatar, and is refused on authorization not on rate'
+  '42501', 'an avatar path must be owned by your own account',
+  'a client cannot persist another account avatar, and ownership is checked before rate'
 );
 
 reset role;

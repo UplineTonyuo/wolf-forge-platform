@@ -45,8 +45,7 @@ values
   ('2a000000-0000-0000-0000-000000000002', 'services.edit', true),
   ('2a000000-0000-0000-0000-000000000002', 'services.archive', true),
   ('2a000000-0000-0000-0000-000000000003', 'clients.view', false),
-  ('2a000000-0000-0000-0000-000000000003', 'services.view', false),
-  ('1a000000-0000-0000-0000-000000000003', 'projects.view', false);
+  ('2a000000-0000-0000-0000-000000000003', 'services.view', false);
 
 insert into public.companies (id, name, status)
 values
@@ -67,6 +66,11 @@ where id in (
   '1a000000-0000-0000-0000-000000000002',
   '1a000000-0000-0000-0000-000000000003'
 );
+
+-- D-275: the Client link above is what provisions these clients into Wolf
+-- Forge, so their overrides follow it.
+insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+values ('1a000000-0000-0000-0000-000000000003', 'projects.view', false);
 
 insert into public.services (id, name, is_active, is_public)
 values ('4a000000-0000-0000-0000-000000000001', 'P0 Project Service', true, true);

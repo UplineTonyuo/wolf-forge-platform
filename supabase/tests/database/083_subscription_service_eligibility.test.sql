@@ -10,7 +10,8 @@ select col_not_null('public', 'services', 'subscription_eligible', 'subscription
 select col_default_is('public', 'services', 'subscription_eligible', 'false', 'new Services default to ineligible');
 
 select set_eq(
-  $$select id from public.services where subscription_eligible$$,
+  $$select id from public.services where subscription_eligible
+    and tenant_id = private.wolf_forge_tenant_id()$$,
   $$values
     ('5f000000-0000-4000-8000-000000000318'::uuid),
     ('5f000000-0000-4000-8000-000000000555'::uuid),
@@ -19,7 +20,7 @@ select set_eq(
     ('5f000000-0000-4000-8000-000000000554'::uuid),
     ('5f000000-0000-4000-8000-000000000124'::uuid),
     ('5f000000-0000-4000-8000-000000000546'::uuid)$$,
-  'only GMB/GBP Management and the six recurring Local SEO packages are eligible'
+  'Wolf Forge catalog backfill enables only GMB/GBP Management and the six recurring Local SEO packages'
 );
 
 select ok(

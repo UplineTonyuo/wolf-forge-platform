@@ -23,6 +23,7 @@ type TicketLiveSyncOptions = {
    * scheduler back to FAST.
    */
   onMessages: (messages: unknown[], fingerprint: string) => boolean;
+  onUnavailable?: () => void;
 };
 
 /**
@@ -62,13 +63,16 @@ export function useTicketLiveSync({
   active,
   getFingerprint,
   onMessages,
+  onUnavailable,
 }: TicketLiveSyncOptions) {
   const fingerprintRef = useRef(getFingerprint);
   const onMessagesRef = useRef(onMessages);
+  const onUnavailableRef = useRef(onUnavailable);
   useEffect(() => {
     fingerprintRef.current = getFingerprint;
     onMessagesRef.current = onMessages;
-  }, [getFingerprint, onMessages]);
+    onUnavailableRef.current = onUnavailable;
+  }, [getFingerprint, onMessages, onUnavailable]);
 
   /*
    * Mutable scheduler state, never React state: it changes on every tick and
@@ -83,24 +87,24 @@ export function useTicketLiveSync({
     failures: 0,
   });
 
-  const inFlight = useRef(false);
-  const pendingWake = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const controller = useRef<AbortController | null>(null);
-  const disposed = useRef(false);
   const wakeRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    disposed.current = false;
     if (!active || !ticketId) return;
+    let cancelled = false;
+    let inFlight = false;
+    let pendingWake = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let controller: AbortController | null = null;
+    let unavailable = false;
 
     const suspended = () =>
       document.visibilityState !== "visible" || !navigator.onLine;
 
     const clearTimer = () => {
-      if (timer.current !== null) {
-        clearTimeout(timer.current);
-        timer.current = null;
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
       }
     };
 
@@ -111,24 +115,24 @@ export function useTicketLiveSync({
 
     const schedule = (immediate: boolean) => {
       clearTimer();
-      if (disposed.current || suspended()) return;
+      if (cancelled || unavailable || suspended()) return;
       const tier = nextTicketLiveTier(Date.now() - scheduleState.current.lastActivityAt);
       scheduleState.current.tier = tier;
       const delay = immediate
         ? 0
         : computeTicketLiveDelayMs({ tier, failureCount: scheduleState.current.failures });
-      timer.current = setTimeout(() => {
+      timer = setTimeout(() => {
         void run();
       }, delay);
     };
 
     async function run() {
-      if (disposed.current || suspended() || inFlight.current) return;
-      inFlight.current = true;
+      if (cancelled || suspended() || inFlight) return;
+      inFlight = true;
       let changed = false;
       try {
         const abort = new AbortController();
-        controller.current = abort;
+        controller = abort;
         const response = await fetch("/api/ticket-live", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -144,11 +148,17 @@ export function useTicketLiveSync({
         const payload = (await response.json().catch(() => null)) as
           | {
               ok?: boolean;
+              code?: string;
               data?: { ticketId?: string; fingerprint?: string; changed?: boolean; messages?: unknown[] | null };
             }
           | null;
 
-        if (payload?.ok && payload.data) {
+        if (cancelled) return;
+        if (response.status === 401 || response.status === 403 || response.status === 404
+          || payload?.code === "PERMISSION_DENIED" || payload?.code === "NOT_FOUND") {
+          unavailable = true;
+          onUnavailableRef.current?.();
+        } else if (payload?.ok && payload.data) {
           scheduleState.current.failures = 0;
           const data = payload.data;
           /*
@@ -168,15 +178,15 @@ export function useTicketLiveSync({
           scheduleState.current.failures += 1;
         }
       } catch {
-        if (!disposed.current) scheduleState.current.failures += 1;
+        if (!cancelled) scheduleState.current.failures += 1;
       } finally {
-        controller.current = null;
-        inFlight.current = false;
+        controller = null;
+        inFlight = false;
       }
 
       if (changed) markActivity();
-      const immediate = pendingWake.current;
-      pendingWake.current = false;
+      const immediate = pendingWake;
+      pendingWake = false;
       schedule(immediate);
     }
 
@@ -187,9 +197,9 @@ export function useTicketLiveSync({
      */
     function wake() {
       markActivity();
-      if (disposed.current || suspended()) return;
-      if (inFlight.current) {
-        pendingWake.current = true;
+      if (cancelled || suspended()) return;
+      if (inFlight) {
+        pendingWake = true;
         return;
       }
       clearTimer();
@@ -211,10 +221,10 @@ export function useTicketLiveSync({
     wake();
 
     return () => {
-      disposed.current = true;
+      cancelled = true;
       clearTimer();
-      controller.current?.abort();
-      controller.current = null;
+      controller?.abort();
+      controller = null;
       window.removeEventListener("focus", wake);
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisible);

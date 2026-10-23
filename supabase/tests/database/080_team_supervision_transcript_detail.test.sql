@@ -2,6 +2,9 @@ begin;
 
 select plan(54);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('7f400000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'detail-owner@example.invalid', now(), now()),
@@ -35,22 +38,25 @@ or (profile_row.id = '7f400000-0000-4000-8000-000000000005' and role_row.name = 
 or (profile_row.id = '7f400000-0000-4000-8000-000000000007' and role_row.name = 'admin');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000001',
     '7f400000-0000-4000-8000-000000000004|7f400000-0000-4000-8000-000000000005',
     '7f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:04:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000002',
     'group:7f410000-0000-4000-8000-000000000002',
     '7f400000-0000-4000-8000-000000000004', 'group', 'Denied group',
     null, '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f410000-0000-4000-8000-000000000003',
     '7f400000-0000-4000-8000-000000000004|7f400000-0000-4000-8000-000000000006',
     '7f400000-0000-4000-8000-000000000004', 'direct', null,
@@ -296,8 +302,9 @@ select throws_ok(
 );
 reset role;
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
-values ('7f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
+values (private.wolf_forge_tenant_id(), '7f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('7f400000-0000-4000-8000-000000000002');
 set local role authenticated;
@@ -333,7 +340,8 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   2::bigint,
   'denied and invalid opens append no successful OPEN audit event'
@@ -487,7 +495,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'
      and resource_type = 'team_conversation'
      and resource_id = '7f410000-0000-4000-8000-000000000001'),
@@ -496,7 +505,8 @@ select is(
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('a', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('a', 32)),
   '{"read_kind":"open","conversation_kind":"direct","result_count":50}'::jsonb,
   'the OPEN audit stores only bounded non-content metadata with the result count'
 );
@@ -504,7 +514,8 @@ select is(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and metadata::text ~ '(HIDDEN_CANONICAL|DELETED_ORIGINAL|VOICE_ORIGINAL|secret-object|search)'
   ),
   'audit metadata contains no message, query, or voice-storage content'
@@ -519,7 +530,8 @@ select throws_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   4::bigint, 'a failed audited open leaves no false successful-read event'
 );
@@ -577,12 +589,13 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'
-     and actor_profile_id not in (
+     and (actor_profile_id is null or actor_profile_id not in (
        '7f400000-0000-4000-8000-000000000001',
        '7f400000-0000-4000-8000-000000000002'
-     )),
+     ))),
   0::bigint, 'every OPEN event actor is the authenticated Owner or Admin'
 );
 

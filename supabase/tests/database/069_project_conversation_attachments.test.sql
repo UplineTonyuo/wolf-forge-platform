@@ -27,7 +27,7 @@ where id = 'fb000000-0000-4000-8000-000000000003';
 insert into public.orders (id, company_id, service_id, title) values (
   'fb200000-0000-4000-8000-000000000001',
   'fb100000-0000-4000-8000-000000000001',
-  (select id from public.services where archived_at is null limit 1),
+  (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1),
   'Attachment Project A'
 );
 

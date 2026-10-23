@@ -2,7 +2,7 @@
 
 import { LoaderCircle, MoreHorizontal, X } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState, useTransition, type FormEvent } from "react";
+import { useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   issueInvoiceAction,
@@ -14,6 +14,7 @@ import type { InvoiceCapabilities, InvoiceStatus } from "../../domain/invoices/s
 import { centsToMoneyInput, parseMoneyToCents } from "../../lib/invoices/form-data";
 import { formatCurrencyCents } from "../../lib/format";
 import styles from "./invoice-admin.module.css";
+import { AnimatedSelect } from "../ui/animated-select";
 
 type ModalKind = "issue" | "payment" | "refund" | "void";
 
@@ -39,6 +40,7 @@ export function InvoiceDetailActions({
   capabilities: InvoiceCapabilities;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const dialogTitleId = useId();
   const router = useRouter();
   const [modal, setModal] = useState<ModalKind>("issue");
   const [amount, setAmount] = useState("");
@@ -111,10 +113,10 @@ export function InvoiceDetailActions({
         {primary}
         {canEdit || canVoid ? <details><summary className="button-secondary" aria-label="Invoice actions"><MoreHorizontal aria-hidden="true" /></summary><div>{canEdit ? <Link href={`/invoices/${invoiceId}/edit`}>Edit</Link> : null}{canVoid ? <button type="button" onClick={() => open("void")}>Void invoice</button> : null}</div></details> : null}
       </div>
-      <dialog className={styles.dialog} ref={dialogRef} onCancel={(event) => { if (pending) event.preventDefault(); }}>
+      <dialog className={styles.dialog} ref={dialogRef} aria-labelledby={dialogTitleId} onCancel={(event) => { if (pending) event.preventDefault(); }}>
         <form onSubmit={submit}>
-          <header><div><h2>{modal === "issue" ? "Issue invoice?" : modal === "payment" ? "Record Payment" : modal === "refund" ? "Refund Invoice" : "Void invoice?"}</h2>{modal === "issue" ? <p>The invoice will receive its invoice number and become payable.</p> : modal === "void" ? <p>This invoice will no longer accept payments. Financial history will be preserved.</p> : null}</div><button type="button" aria-label="Close" onClick={close}><X aria-hidden="true" /></button></header>
-          {modal === "payment" ? <><dl className={styles.dialogSummary}><div><dt>Invoice total</dt><dd>{formatCurrencyCents(totalCents, currency)}</dd></div><div><dt>Already paid</dt><dd>{formatCurrencyCents(grossPaidCents, currency)}</dd></div><div><dt>Remaining balance</dt><dd>{formatCurrencyCents(balanceDueCents, currency)}</dd></div></dl><label className={styles.field}><span>Amount</span><input autoFocus inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" /></label><label className={styles.field}><span>Payment method</span><select value={method} onChange={(event) => setMethod(event.target.value)}><option value="manual">Manual</option><option value="bank_transfer">Bank transfer</option><option value="wallet">Wallet</option><option value="other">Other</option></select></label></> : null}
+          <header><div><h2 id={dialogTitleId}>{modal === "issue" ? "Issue invoice?" : modal === "payment" ? "Record Payment" : modal === "refund" ? "Record Refund" : "Void invoice?"}</h2>{modal === "issue" ? <p>The invoice will receive its invoice number and become payable.</p> : modal === "void" ? <p>This invoice will no longer accept payments. Financial history will be preserved.</p> : modal === "refund" ? <p>This records a refund in the ledger. It does not return money to a wallet or payment provider.</p> : null}</div><button type="button" aria-label="Close" onClick={close}><X aria-hidden="true" /></button></header>
+          {modal === "payment" ? <><dl className={styles.dialogSummary}><div><dt>Invoice total</dt><dd>{formatCurrencyCents(totalCents, currency)}</dd></div><div><dt>Already paid</dt><dd>{formatCurrencyCents(grossPaidCents, currency)}</dd></div><div><dt>Remaining balance</dt><dd>{formatCurrencyCents(balanceDueCents, currency)}</dd></div></dl><label className={styles.field}><span>Amount</span><input autoFocus inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0.00" /></label><label className={styles.field}><span>Payment method</span><AnimatedSelect name="payment_method" label="Payment method" menuLabel="Payment methods" value={method} onChange={setMethod} options={[{value:"manual",label:"Manual"},{value:"bank_transfer",label:"Bank transfer"},{value:"wallet",label:"Wallet"},{value:"other",label:"Other"}]} /></label></> : null}
           {modal === "refund" ? <><dl className={styles.dialogSummary}><div><dt>Paid</dt><dd>{formatCurrencyCents(grossPaidCents, currency)}</dd></div><div><dt>Already refunded</dt><dd>{formatCurrencyCents(refundedCents, currency)}</dd></div><div><dt>Refundable</dt><dd>{formatCurrencyCents(refundable, currency)}</dd></div></dl><label className={styles.field}><span>Amount</span><input autoFocus inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /></label><label className={styles.field}><span>Reason</span><textarea rows={3} maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} /></label></> : null}
           {error ? <p className={styles.formError} role="alert">{error}</p> : null}
           <footer><button className="button-secondary" type="button" disabled={pending} onClick={close}>Cancel</button><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending || (modal === "payment" && !amount.trim()) || (modal === "refund" && (!amount.trim() || !reason.trim()))}>{pending ? <><LoaderCircle className="spinner" aria-hidden="true" />Saving…</> : modal === "issue" ? "Issue Invoice" : modal === "payment" ? "Record Payment" : modal === "refund" ? "Refund" : "Void Invoice"}</button></footer>

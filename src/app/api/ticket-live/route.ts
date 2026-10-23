@@ -4,6 +4,7 @@ import { toClientSafeError } from "../../../lib/errors/application-error";
 import { readBoundedJson } from "../../../lib/security/bounded-json";
 import { requestIsSameOrigin } from "../../../lib/security/same-origin";
 import { getTicketActorContext } from "../../../lib/supabase/next-server";
+import { identityFailureResponse } from "../../../lib/supabase/identity-failure-response";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "Invalid Ticket live request." }, { status: 400 });
   }
 
-  const context = await getTicketActorContext();
+  const context = await getTicketActorContext().catch(identityFailureResponse);
+  if (context instanceof Response) return context;
   if (!context) {
     return Response.json({ ok: false, error: "Session expired." }, { status: 401 });
   }
@@ -75,9 +77,9 @@ export async function POST(request: Request) {
   } catch (error) {
     const safe = toClientSafeError(error);
     return Response.json(
-      { ok: false, error: safe.message },
+      { ok: false, error: safe.message, code: safe.code },
       {
-        status: safe.code === "NOT_FOUND" ? 404 : safe.code === "RATE_LIMITED" ? 429 : 400,
+        status: safe.code === "PERMISSION_DENIED" ? 403 : safe.code === "NOT_FOUND" ? 404 : safe.code === "RATE_LIMITED" ? 429 : 400,
         headers: { "cache-control": "private, no-store, max-age=0" },
       },
     );

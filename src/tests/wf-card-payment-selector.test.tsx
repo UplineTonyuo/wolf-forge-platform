@@ -1,12 +1,15 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../app/actions/wf-card", () => ({
   payInvoiceWithWfCardAction: vi.fn(),
 }));
+const { refresh } = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+import { payInvoiceWithWfCardAction } from "../app/actions/wf-card";
 
 import { InvoicePaymentSelector } from "../components/invoices/invoice-payment-selector";
 import { resolveWalletFunding } from "../domain/client-portal/payment-method";
@@ -54,6 +57,14 @@ const baseProps = {
 afterEach(cleanup);
 
 describe("WF Card invoice payment selector", () => {
+  it("refreshes the server-rendered receipt after successful settlement", async () => {
+    refresh.mockClear();
+    vi.mocked(payInvoiceWithWfCardAction).mockResolvedValue({ ok: true, walletBalanceCents: 18_717, invoiceBalanceCents: 0 });
+    render(<InvoicePaymentSelector {...baseProps} membershipStatus="active" />);
+    fireEvent.click(screen.getByRole("button", { name: "Pay $497.00 with Wolf Forge Balance" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(payInvoiceWithWfCardAction).toHaveBeenCalledTimes(1);
+  });
   it("reuses the approved wallet card and defaults active members to WF Card", () => {
     const { container } = render(
       <InvoicePaymentSelector {...baseProps} membershipStatus="active" />,

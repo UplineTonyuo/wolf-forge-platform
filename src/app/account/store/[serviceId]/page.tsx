@@ -1,3 +1,5 @@
+import { financialAuthority, financialIdentity, storeVisibility } from "../../../../domain/invoices/visibility";
+import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { StoreServiceDetail } from "../../../../components/account/store/store-service-detail";
@@ -24,6 +26,7 @@ export default async function ClientStoreServicePage({
   let service: StoreServiceView | null = null;
   let folderName: string | null = null;
   let purchaseOffer: StorePurchaseOffer | null = null;
+  let signature = "";
   let denied = false;
   let missing = false;
 
@@ -46,12 +49,19 @@ export default async function ClientStoreServicePage({
      * of an eligible one-time Service needs only a sufficient balance.
      */
     try {
-      const wallet = await services.wallets.getForCompany(context.user.companyId);
+      const [wallet, projectsEnabled, invoicesEnabled] = await Promise.all([
+        services.wallets.getForCompany(context.user.companyId),
+        services.wfCard.storePurchaseProjectsEnabled(),
+        services.invoices.workEnabled(),
+      ]);
 
+      signature = storeVisibility(wallet, invoicesEnabled, projectsEnabled, financialIdentity(context.user));
       purchaseOffer = resolveStorePurchaseOffer({
         service,
         balanceCents: wallet.balance_cents,
         walletCurrency: wallet.currency,
+        projectsEnabled,
+        invoicesEnabled,
       });
     } catch {
       purchaseOffer = null;
@@ -67,7 +77,7 @@ export default async function ClientStoreServicePage({
   if (denied) redirect("/account");
   if (missing || !service) notFound();
 
-  return (
+  const detail = (
     <StoreServiceDetail
       service={service}
       folderName={folderName}
@@ -75,4 +85,5 @@ export default async function ClientStoreServicePage({
       purchaseOffer={purchaseOffer}
     />
   );
+  return signature ? <FinancialVisibilityBoundary key={financialAuthority("store", signature)} signature={signature} scope="store">{detail}</FinancialVisibilityBoundary> : detail;
 }

@@ -40,7 +40,7 @@ function newRequestId(): string {
 export function PurchaseWithBalance({
   serviceId,
   serviceName,
-  offer,
+  offer: currentOffer,
 }: {
   serviceId: string;
   serviceName: string;
@@ -51,6 +51,9 @@ export function PurchaseWithBalance({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<StorePurchaseActionResult | null>(null);
+
+  const [decisionOffer, setDecisionOffer] = useState<Extract<StorePurchaseOffer, { purchasable: true }> | null>(null);
+  const offer = (open || pending || done?.ok) && decisionOffer ? decisionOffer : currentOffer;
 
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -79,7 +82,7 @@ export function PurchaseWithBalance({
     if (!done?.ok) return;
     const timer = window.setTimeout(() => {
       router.refresh();
-      router.push("/account/projects");
+      router.push(done.destinationHref);
     }, outroMs);
     return () => window.clearTimeout(timer);
   }, [done, router]);
@@ -108,6 +111,8 @@ export function PurchaseWithBalance({
   }
 
   const openConfirm = () => {
+    if (!offer.purchasable) return;
+    setDecisionOffer(offer);
     requestIdRef.current = newRequestId();
     setError(null);
     setOpen(true);
@@ -127,7 +132,15 @@ export function PurchaseWithBalance({
     setPending(true);
     setError(null);
 
-    const result = await purchaseServiceWithBalanceAction({ serviceId, requestId });
+    let result: StorePurchaseActionResult;
+    try {
+      result = await purchaseServiceWithBalanceAction({ serviceId, requestId });
+    } catch {
+      submittingRef.current = false;
+      setPending(false);
+      setError("The response could not be confirmed. Retry this purchase to check the same request.");
+      return;
+    }
 
     if (!result.ok) {
       // Failure stays exactly here. No outro, no navigation, no success state.
@@ -231,15 +244,15 @@ export function PurchaseWithBalance({
                 <strong className={styles.outroTitle}>Purchase confirmed</strong>
 
                 <p className={styles.outroBody}>
-                  <b>{done.serviceName}</b> has been added to your Wolf Forge services.
+                  {done.replayed ? <>Your earlier purchase of <b>{done.serviceName}</b> is confirmed.</> : <><b>{done.serviceName}</b> has been added to your Wolf Forge services.</>}
                 </p>
 
                 <p className={styles.outroNote}>
-                  The Wolf Forge team has been notified and will begin fulfillment.
+                  {done.replayed ? "You have not been charged again." : "The Wolf Forge team has been notified and will begin fulfillment."}
                 </p>
 
                 <span className={styles.outroSweep} aria-hidden={true} />
-                <span className={styles.outroReturn}>Taking you to your projects…</span>
+                <span className={styles.outroReturn}>{done.destinationHref?.startsWith("/account/invoices/") ? "Opening your receipt…" : "Taking you to your projects…"}</span>
               </div>
             </div>,
             document.body,

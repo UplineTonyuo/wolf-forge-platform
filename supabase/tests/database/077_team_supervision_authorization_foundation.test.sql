@@ -30,6 +30,13 @@ or (
   and role_row.name = 'admin'
 );
 
+-- D-275: a new profile has no Tenant membership; this client is provisioned
+-- into Wolf Forge explicitly (no Client link).
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000005', 'client', role_row.id
+from public.roles as role_row
+where role_row.name = 'client';
+
 create or replace function pg_temp.become(p_user uuid)
 returns void
 language sql
@@ -110,10 +117,11 @@ select throws_ok(
   'archived internal profile cannot pass the supervisor helper'
 );
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
 values
-  ('7f100000-0000-4000-8000-000000000001', 'team_messages.supervise', false),
-  ('7f100000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+  (private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000001', 'team_messages.supervise', false),
+  (private.wolf_forge_tenant_id(), '7f100000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('7f100000-0000-4000-8000-000000000002');
 select ok(not public.app_has_permission('team_messages.supervise'), 'explicit deny overrides the admin preset');

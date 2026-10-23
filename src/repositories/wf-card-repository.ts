@@ -36,6 +36,12 @@ export class WfCardRepository {
     };
   }
 
+  async storePurchaseProjectsEnabled(): Promise<boolean> {
+    const result = await this.client.rpc("app_store_purchase_projects_enabled");
+    if (result.error) throw mapDatabaseError(result.error, "Store purchase availability");
+    return result.data === true;
+  }
+
   async payInvoice(input: PayInvoiceWithWfCardInput): Promise<WfCardPaymentResult> {
     const result = await this.client.rpc("app_pay_invoice_with_wallet", {
       p_request_id: input.request_id,

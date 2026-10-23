@@ -17,7 +17,7 @@ vi.mock("node:fs/promises", () => ({
   readFile: mockReadFile,
 }));
 
-import { ensureLocalQaSession, localUiQaBypassEnabled } from "../lib/qa/local-ui-bypass";
+import { ensureLocalQaSession, isLocalQuickAccessSession, localUiQaBypassEnabled } from "../lib/qa/local-ui-bypass";
 
 beforeEach(() => {
   readRequestHeaders.mockResolvedValue(new Headers({ host: "localhost:3000" }));
@@ -92,6 +92,32 @@ describe("local UI QA bypass", () => {
     ).resolves.toBe(false);
   });
 
+  describe("unspecified bind address (next dev --hostname 0.0.0.0)", () => {
+    function bindRequest(forwardedFor?: string): Request {
+      const headers = new Headers({ host: "localhost:3000" });
+      if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
+      return new Request("http://0.0.0.0:3003/dashboard", { headers });
+    }
+
+    it("permits the developer's own machine when the peer is loopback", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest("127.0.0.1"))).resolves.toBe(true);
+      await expect(localUiQaBypassEnabled(bindRequest("::1"))).resolves.toBe(true);
+    });
+
+    it("denies a non-loopback LAN peer claiming a loopback Host (fail closed)", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest("192.168.1.95"))).resolves.toBe(false);
+    });
+
+    it("denies when the peer address is missing or malformed", async () => {
+      enableLocalQaEnvironment();
+      await expect(localUiQaBypassEnabled(bindRequest())).resolves.toBe(false);
+      await expect(localUiQaBypassEnabled(bindRequest(""))).resolves.toBe(false);
+      await expect(localUiQaBypassEnabled(bindRequest("192.168.1.95:3000"))).resolves.toBe(false);
+    });
+  });
+
   it("rejects Preview and Production even when the flag and loopback host are present", async () => {
     vi.stubEnv("LOCAL_UI_QA_BYPASS", "true");
 
@@ -129,8 +155,12 @@ describe("local UI QA bypass", () => {
 });
 
 describe("ensureLocalQaSession", () => {
-  function fakeSupabase(signInWithPassword: ReturnType<typeof vi.fn>): SupabaseClient<Database> {
-    return { auth: { signInWithPassword } } as unknown as SupabaseClient<Database>;
+  function fakeSupabase(
+    signInWithPassword: ReturnType<typeof vi.fn>,
+    rpc: ReturnType<typeof vi.fn> = vi.fn(),
+    signOut: ReturnType<typeof vi.fn> = vi.fn(),
+  ): SupabaseClient<Database> {
+    return { auth: { signInWithPassword, signOut }, rpc } as unknown as SupabaseClient<Database>;
   }
 
   function loopbackRequest(): Request {
@@ -184,12 +214,61 @@ describe("ensureLocalQaSession", () => {
   it("swallows a failed sign-in rather than throwing (e.g. local Supabase is stopped)", async () => {
     enableLocalQaEnvironment();
     const signInWithPassword = vi.fn().mockRejectedValue(new Error("fetch failed"));
+    const rpc = vi.fn();
     mockReadFile.mockResolvedValueOnce(
       JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
     );
 
     await expect(
-      ensureLocalQaSession(fakeSupabase(signInWithPassword), loopbackRequest()),
+      ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc), loopbackRequest()),
     ).resolves.toBeUndefined();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it.each([
+    ["holds the Platform Admin entitlement", { data: true, error: null }],
+    ["cannot be checked", { data: null, error: { code: "PGRST202", message: "missing" } }],
+    ["cannot be checked because the call throws", new Error("fetch failed")],
+  ])("signs the auto-login session out again when the QA identity %s (WL-2.32)", async (_label, check) => {
+    enableLocalQaEnvironment();
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
+    const rpc = check instanceof Error ? vi.fn().mockRejectedValue(check) : vi.fn().mockResolvedValue(check);
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    mockReadFile.mockResolvedValueOnce(
+      JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
+    );
+
+    await ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc, signOut), loopbackRequest());
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("app_is_platform_admin");
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ scope: "local" });
+  });
+
+  it("keeps the auto-login session of an ordinary (non Platform Admin) QA identity", async () => {
+    enableLocalQaEnvironment();
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { access_token: "t" } }, error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+    const signOut = vi.fn();
+    mockReadFile.mockResolvedValueOnce(
+      JSON.stringify({ email: "qa-local@wolf-forge.local", password: "s3cret" }),
+    );
+
+    await ensureLocalQaSession(fakeSupabase(signInWithPassword, rpc, signOut), loopbackRequest());
+
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("app_is_platform_admin");
+    expect(signOut).not.toHaveBeenCalled();
+  });
+});
+
+describe("isLocalQuickAccessSession", () => {
+  it("matches the Quick Access identity by the verified email and fails closed without one", async () => {
+    mockReadFile.mockResolvedValue(JSON.stringify({ email: "QA-Local@wolf-forge.local", password: "x" }));
+    await expect(isLocalQuickAccessSession({ email: "qa-local@wolf-forge.local" })).resolves.toBe(true);
+    await expect(isLocalQuickAccessSession({ email: null })).resolves.toBe(true);
+    await expect(isLocalQuickAccessSession({ email: "admin@wolf-forge.local" })).resolves.toBe(false);
+  });
+
+  it("is false when no Quick Access credentials exist", async () => {
+    mockReadFile.mockRejectedValue(new Error("ENOENT"));
+    await expect(isLocalQuickAccessSession({ email: null })).resolves.toBe(false);
   });
 });

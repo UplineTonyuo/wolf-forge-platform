@@ -44,6 +44,7 @@ export async function sendClientReportAction(input: {
 }): Promise<SendClientReportResult> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
 
     await enforceServerCostLimit({
       actorId: context.actor.id,
@@ -135,6 +136,7 @@ export async function listReportServiceChoicesAction(input: {
 export async function listReportRecipientsAction(): Promise<ReportRecipient[]> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
     const companies = await context.services.companies.listActive();
     return companies.map((company) => ({ id: company.id, name: company.name }));
   } catch {
@@ -316,6 +318,7 @@ export async function sendReportDraftAction(input: {
 }): Promise<SaveReportDraftResult> {
   try {
     const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("reporting");
 
     await enforceServerCostLimit({
       actorId: context.actor.id,

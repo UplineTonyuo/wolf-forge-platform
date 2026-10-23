@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { OnPageSeoWorkflowView } from "../../../../../components/operations/on-page-seo-workflow-view";
-import { getInternalContext } from "../../../../../lib/supabase/next-server";
+import { requireWolfForgeOperations } from "../../../../../lib/security/wolf-forge-operations";
 import { loadOnPageSeoWorkflow } from "../../../../../services/on-page-seo-workflow-service";
 
 export const metadata: Metadata = { title: "Operations — On-page SEO" };
 
 export default async function OnPageSeoPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  await getInternalContext();
+  await requireWolfForgeOperations();
   const { month } = await searchParams;
   const result = await loadOnPageSeoWorkflow(month ?? null);
   if (result.state !== "ready") return <OnPageSeoWorkflowView state={result.state} items={[]} sourceTab={null} lastSyncedAt={null} />;

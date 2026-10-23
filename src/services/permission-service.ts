@@ -41,6 +41,10 @@ export class PermissionService {
     return this.dependencies.repository.requireModuleAccess(parseInput(moduleKeySchema, moduleKey));
   }
 
+  isPlatformAdmin(): Promise<boolean> {
+    return this.dependencies.repository.isPlatformAdmin();
+  }
+
   listPresets(): Promise<PermissionPreset[]> {
     return this.dependencies.repository.listPresets();
   }

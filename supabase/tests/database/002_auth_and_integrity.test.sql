@@ -158,8 +158,8 @@ select throws_ok(
       'Cross-company Linked Contact'
     )
   $$,
-  '23514',
-  'linked contact profile must be a client in the same company',
+  '23503',
+  'insert or update on table "client_contacts" violates foreign key constraint "client_contacts_profile_membership_fkey"',
   'a contact cannot link a client profile from another company'
 );
 
@@ -245,8 +245,8 @@ select throws_ok(
       'Internal Profile Contact'
     )
   $$,
-  '23514',
-  'linked contact profile must be a client in the same company',
+  '23503',
+  'insert or update on table "client_contacts" violates foreign key constraint "client_contacts_profile_membership_fkey"',
   'an internal staff profile cannot be linked as a client contact profile'
 );
 
@@ -384,7 +384,9 @@ select throws_ok(
   'an archived internal profile cannot be assigned an order task'
 );
 
-select lives_ok(
+-- WL-2.8: an event needs a Tenant. A profile event has no Tenant-owned parent,
+-- so a trusted write without a signed-in caller's Tenant is refused.
+select throws_ok(
   $$
     insert into public.activity_events (
       actor_profile_id, entity_type, entity_id, action, summary, metadata
@@ -398,7 +400,9 @@ select lives_ok(
       '{"source":"test"}'::jsonb
     )
   $$,
-  'activity events accept a valid actor and an allowed generic entity UUID/type'
+  '42501',
+  'activity event Tenant cannot be derived',
+  'a profile activity event without a current Tenant is refused'
 );
 
 select throws_ok(

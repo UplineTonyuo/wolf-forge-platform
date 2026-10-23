@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 import { assertLocalSupabaseUrl } from "../src/lib/env/public-env";
+import { WOLF_FORGE_TENANT_ID } from "../src/domain/tenancy/wolf-forge-tenant";
 
 const execFileAsync = promisify(execFile);
 
@@ -204,6 +205,38 @@ async function provisionAccount(
   }
 }
 
+/**
+ * Creates the local QA client company once, if it is missing. Re-running the
+ * script is idempotent: an existing company is reused, never duplicated.
+ * The company belongs to the Wolf Forge Tenant, matching the client identity
+ * this script provisions (whose membership follows profiles.company_id).
+ */
+async function ensureQaCompany(admin: AdminClient, name: string) {
+  const { data: existing, error: existingError } = await admin
+    .from("companies")
+    .select("id")
+    .eq("name", name)
+    .is("archived_at", null)
+    // Ambiguity is not a reason to create another company: reuse the first.
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingError && existing) return;
+
+  const { data: created, error: createError } = await admin
+    .from("companies")
+    // tenant_id is set explicitly: the column default calls
+    // private.identity_tenant_id(), whose EXECUTE is revoked from every role
+    // but postgres (WL-2.22a), so relying on the default fails for the service
+    // role. The committed generated types predate the column, hence the cast.
+    .insert({ name, status: "client", tenant_id: WOLF_FORGE_TENANT_ID } as never)
+    .select("id")
+    .single();
+  if (createError || !created) {
+    throw createError ?? new Error(`Local QA company "${name}" could not be created.`);
+  }
+}
+
 async function main() {
   const projectRoot = resolve(import.meta.dirname, "..");
   const cli = resolve(projectRoot, "node_modules", ".bin", "supabase.cmd");
@@ -226,6 +259,13 @@ async function main() {
   const admin = createClient<Database>(apiUrl, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+
+  // The client identity needs its company to exist before profiles.company_id
+  // can mirror a Client membership; without this the client portal stays
+  // untestable ("Run the local QA seed first").
+  for (const companyName of new Set(QA_ACCOUNTS.map((account) => account.companyName).filter((name): name is string => typeof name === "string"))) {
+    await ensureQaCompany(admin, companyName);
+  }
 
   const { data: usersData, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (usersError) throw usersError;

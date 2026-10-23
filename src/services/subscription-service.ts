@@ -12,6 +12,7 @@ export class SubscriptionService {
   constructor(private readonly dependencies: ServiceDependencies<SubscriptionRepository>) {}
 
   list() { return this.dependencies.repository.list(); }
+  workEnabled() { return this.dependencies.repository.workEnabled(); }
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   listDueWork(limit = 100) { return this.dependencies.repository.listDueWork(limit); }
 

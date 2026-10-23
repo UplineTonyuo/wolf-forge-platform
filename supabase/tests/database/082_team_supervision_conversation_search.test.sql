@@ -2,6 +2,9 @@ begin;
 
 select plan(71);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('9f400000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'search-owner@example.invalid', now(), now()),
@@ -35,28 +38,32 @@ or (profile_row.id = '9f400000-0000-4000-8000-000000000005' and role_row.name = 
 or (profile_row.id = '9f400000-0000-4000-8000-000000000007' and role_row.name = 'admin');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '9f410000-0000-4000-8000-000000000001',
     '9f400000-0000-4000-8000-000000000004|9f400000-0000-4000-8000-000000000005',
     '9f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 12:21:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '9f410000-0000-4000-8000-000000000002',
     'group:9f410000-0000-4000-8000-000000000002',
     '9f400000-0000-4000-8000-000000000004', 'group', 'Search group',
     '2026-09-29 11:01:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '9f410000-0000-4000-8000-000000000003',
     '9f400000-0000-4000-8000-000000000004|9f400000-0000-4000-8000-000000000006',
     '9f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 11:02:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '9f410000-0000-4000-8000-000000000004',
     '9f400000-0000-4000-8000-000000000001|9f400000-0000-4000-8000-000000000004',
     '9f400000-0000-4000-8000-000000000001', 'direct', null,
@@ -196,7 +203,8 @@ create temp table search_audit_before (count bigint not null) on commit drop;
 insert into search_audit_before
 select count(*)
 from public.security_audit_events
-where event_code = 'authorization.team_supervision.read'
+where id not in (select id from supervision_audit_before)
+  and event_code = 'authorization.team_supervision.read'
   and action_slug = 'team.supervision.search';
 
 create temp table supervision_state_before (payload jsonb not null) on commit drop;
@@ -331,8 +339,9 @@ select throws_ok(
 );
 reset role;
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
-values ('9f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
+values (private.wolf_forge_tenant_id(), '9f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('9f400000-0000-4000-8000-000000000002');
 set local role authenticated;
@@ -371,7 +380,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
   (select count from search_audit_before),
   'denied and invalid conversations create no successful SEARCH audit'
@@ -433,7 +443,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
   (select count from search_audit_before) + 1,
   'empty and invalid searches create no audit; the parser-tolerated malformed query is one safe zero-result search'
@@ -731,20 +742,21 @@ select ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
   (select count from search_audit_before) + (select count(*) from supervised_search_results),
   'each successful explicit non-empty search has exactly one SEARCH audit'
 );
 
 select is(
-  (select metadata from public.security_audit_events where correlation_id = repeat('a', 32)),
+  (select metadata from public.security_audit_events where id not in (select id from supervision_audit_before)   and correlation_id = repeat('a', 32)),
   '{"read_kind":"search","conversation_kind":"direct","result_count":3}'::jsonb,
   'matching SEARCH audit metadata is bounded and content-free'
 );
 
 select is(
-  (select metadata from public.security_audit_events where correlation_id = repeat('1', 32)),
+  (select metadata from public.security_audit_events where id not in (select id from supervision_audit_before)   and correlation_id = repeat('1', 32)),
   '{"read_kind":"search","conversation_kind":"direct","result_count":0}'::jsonb,
   'zero-result valid search is audited with result_count zero'
 );
@@ -752,7 +764,8 @@ select is(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and action_slug = 'team.supervision.search'
       and metadata::text ~ '(supervisionneedle|script|private-search-secret|query|snippet|body)'
   ),
@@ -762,12 +775,13 @@ select ok(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and action_slug = 'team.supervision.search'
-      and actor_profile_id not in (
+      and (actor_profile_id is null or actor_profile_id not in (
         '9f400000-0000-4000-8000-000000000001',
         '9f400000-0000-4000-8000-000000000002'
-      )
+      ))
   ),
   'SEARCH audits only identify the authenticated Owner or Admin actor'
 );
@@ -801,19 +815,37 @@ $$;
 reset role;
 
 select is(
-  (select max(hits) from private.rate_limit_counters
+  (select sum(hits)::bigint from private.rate_limit_counters
    where scope = 'team.supervision.search.actor'
      and subject = '9f400000-0000-4000-8000-000000000001'),
-  60, 'repeated valid searches reach the configured supervisory allowance'
+  60::bigint, 'repeated valid searches consume one allowance each across fixed windows'
 );
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
   (select count from search_audit_before) + (select count(*) from supervised_search_results) + 49,
   'each repeated valid search appends exactly one SEARCH audit'
 );
+
+-- A remote runner can cross a minute boundary between statements.
+update private.rate_limit_counters set expires_at = clock_timestamp() + interval '1 hour'
+where scope = 'team.supervision.search.actor'
+  and subject = '9f400000-0000-4000-8000-000000000001';
+with bucket as materialized (select date_trunc('minute', clock_timestamp()) as start)
+insert into private.rate_limit_counters(scope, subject, window_start, expires_at, hits)
+select 'team.supervision.search.actor', '9f400000-0000-4000-8000-000000000001',
+  start + n * interval '1 minute', start + interval '1 hour', 60
+from bucket cross join generate_series(0, 1) n
+on conflict(scope, subject, window_start) do update
+set hits = excluded.hits, expires_at = excluded.expires_at;
+create temp table exhausted_owner_counters_before on commit drop as
+select jsonb_agg(to_jsonb(c) order by window_start) as counters
+from private.rate_limit_counters c
+where scope = 'team.supervision.search.actor'
+  and subject = '9f400000-0000-4000-8000-000000000001';
 
 select pg_temp.become('9f400000-0000-4000-8000-000000000001');
 set local role authenticated;
@@ -841,17 +873,19 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.search'),
   (select count from search_audit_before) + (select count(*) from supervised_search_results) + 49 + 1,
   'a rate-limited search creates no successful SEARCH audit'
 );
 
 select is(
-  (select max(hits) from private.rate_limit_counters
+  (select jsonb_agg(to_jsonb(c) order by window_start) from private.rate_limit_counters c
    where scope = 'team.supervision.search.actor'
      and subject = '9f400000-0000-4000-8000-000000000001'),
-  60, 'a rejected search rolls back its rate-limit increment'
+  (select counters from exhausted_owner_counters_before),
+  'a rejected search leaves every owner counter unchanged'
 );
 
 select is(

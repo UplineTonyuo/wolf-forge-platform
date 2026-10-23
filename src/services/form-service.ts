@@ -46,6 +46,21 @@ export class FormService {
     return this.dependencies.repository.listAssignments();
   }
 
+  workEnabled() {
+    return this.dependencies.repository.workEnabled();
+  }
+
+  getAssignmentHistory(id: unknown) {
+    return this.dependencies.repository.getAssignmentHistory(parseInput(uuidSchema, id));
+  }
+
+  /** Active client members of the current Tenant with an active Client. */
+  listOnboardingCandidates(companyId?: unknown) {
+    return this.dependencies.repository.listOnboardingCandidates(
+      companyId == null ? undefined : parseInput(uuidSchema, companyId),
+    );
+  }
+
   getAssignedForm(id: unknown) {
     return this.dependencies.repository.getAssignedForm(parseInput(uuidSchema, id));
   }

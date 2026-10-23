@@ -42,8 +42,8 @@ select is(
 
 select is(
   (select count(*) from private.security_audit_event_codes),
-  8::bigint,
-  'exactly eight codes are selected as auditable'
+  10::bigint,
+  'exactly ten codes are selected as auditable'
 );
 
 select is(
@@ -53,12 +53,14 @@ select is(
       'auth.login.unassigned',
       'authorization.context.denied',
       'authorization.team_supervision.read',
+      'authorization.white_label.draft_saved',
+      'authorization.white_label.published',
       'integration.gmail.connected',
       'integration.gmail.disconnected',
       'integration.gmail.reauthorization_required',
       'integration.gmail.disconnect_failed'
     )),
-  8::bigint,
+  10::bigint,
   'the seeded vocabulary matches SECURITY_AUDIT_EVENT_CODES exactly'
 );
 
@@ -191,14 +193,14 @@ reset role;
 -- Counts are taken back as the operator: the writer deliberately cannot read
 -- what it wrote, which the privilege assertions above already established.
 select is(
-  (select count(*) from public.security_audit_events),
+  (select count(*) from public.security_audit_events where correlation_id = repeat('a', 32)),
   1::bigint,
   'the trusted writer can append'
 );
 
 select ok(
   (select occurred_at > now() - interval '5 seconds'
-    from public.security_audit_events limit 1),
+    from public.security_audit_events where correlation_id = repeat('a', 32)),
   'occurred_at is forced to database time regardless of caller'
 );
 
@@ -313,21 +315,24 @@ where id = 'c2500000-0000-0000-0000-000000000001';
 
 select is(
   (select count(*) from public.security_audit_events
-    where event_code = 'authorization.context.denied'),
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'),
   1::bigint,
   'de-provisioning an audited account does not destroy the record of what happened'
 );
 
 select is(
   (select target_actor_id from public.security_audit_events
-    where event_code = 'authorization.context.denied'),
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'),
   null,
   'only the actor reference clears, through the declared referential action'
 );
 
 select throws_ok(
   $$update public.security_audit_events set metadata = '{"forged":true}'::jsonb
-    where event_code = 'authorization.context.denied'$$,
+    where event_code = 'authorization.context.denied'
+      and actor_profile_id = 'c2500000-0000-0000-0000-000000000002'$$,
   '55000', 'security audit events are append-only',
   'and the surviving row still cannot be edited by anyone'
 );

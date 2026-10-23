@@ -24,6 +24,10 @@ export class WfCardService {
     return this.dependencies.repository.getOffer();
   }
 
+  storePurchaseProjectsEnabled() {
+    return this.dependencies.repository.storePurchaseProjectsEnabled();
+  }
+
   payInvoice(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.payInvoice(parseInput(payInvoiceWithWfCardSchema, input));

@@ -1,3 +1,5 @@
+import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
+import { invoiceFundingVisibility, financialAuthority, financialIdentity } from "../../../../domain/invoices/visibility";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -29,13 +31,16 @@ export default async function ClientInvoiceDetailPage({
   const [{ invoiceId }, context] = await Promise.all([params, getClientContext()]);
 
   try {
-    const [detail, wallet, membership, offer] = await Promise.all([
+    const [detail, wallet, membership, offer, rows, workEnabled] = await Promise.all([
       context.services.invoices.getForClient(invoiceId),
       context.services.wallets.getForCompany(context.user.companyId),
       context.services.wfCard.getMembership(context.user.companyId),
       context.services.wfCard.getOffer(),
+      context.services.invoices.listForClient(),
+      context.services.invoices.workEnabled(),
     ]);
 
+    const signature = invoiceFundingVisibility(rows, workEnabled, wallet, membership?.status ?? null, financialIdentity(context.user));
     const { invoice, financials, items } = detail;
     const attention = invoiceAttention(financials.presentation_state);
     const membershipStatus = (membership?.status ?? "inactive") as
@@ -55,7 +60,8 @@ export default async function ClientInvoiceDetailPage({
       && !["refunded", "partially_refunded"].includes(financials.presentation_state);
 
     return (
-      <article className="portal-page portal-invoice-detail">
+      <FinancialVisibilityBoundary key={financialAuthority("client-detail", signature)} signature={signature} scope="client-detail" invoiceId={invoiceId}><article className="portal-page portal-invoice-detail">
+        {!workEnabled ? <p role="status">Invoices is disabled. This receipt is read-only.</p> : null}
         <Link href="/account/invoices" className="portal-back">
           <ArrowLeft aria-hidden="true" />
           All invoices
@@ -173,7 +179,7 @@ export default async function ClientInvoiceDetailPage({
               ) : null}
               {financials.successful_refunds_cents > 0 ? (
                 <div>
-                  <dt>Refunded</dt>
+                  <dt>Refunds recorded</dt>
                   <dd>
                     −{formatCurrencyCents(financials.successful_refunds_cents, invoice.currency)}
                   </dd>
@@ -186,6 +192,8 @@ export default async function ClientInvoiceDetailPage({
             </dl>
           </aside>
         </div>
+
+        {financials.successful_refunds_cents > 0 ? <p className="portal-note">Refund ledger entries do not confirm money was returned to a wallet or payment provider.</p> : null}
 
         <div className="portal-invoice-actions">
           <PrintInvoiceButton />
@@ -201,7 +209,7 @@ export default async function ClientInvoiceDetailPage({
          * configuration through a `server-only` module, exactly as
          * /account/payment-method does it.
          */}
-        <InvoicePaymentSelector
+        {workEnabled ? <InvoicePaymentSelector
           invoiceId={invoice.id}
           holderName={context.user.displayName ?? detail.clientName}
           invoiceBalanceCents={financials.balance_due_cents}
@@ -220,8 +228,8 @@ export default async function ClientInvoiceDetailPage({
             }),
             availability: readExternalPaymentRailAvailability(),
           })}
-        />
-      </article>
+        /> : null}
+      </article></FinancialVisibilityBoundary>
     );
   } catch (error) {
     if (["NOT_FOUND", "PERMISSION_DENIED"].includes(toClientSafeError(error).code)) notFound();

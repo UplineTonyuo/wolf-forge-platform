@@ -2,6 +2,14 @@ begin;
 
 select plan(32);
 
+create temp table billable_subscriptions_before on commit drop as
+select count(*) as count
+from public.subscriptions
+where tenant_id = private.wolf_forge_tenant_id()
+  and archived_at is null
+  and status in ('active', 'past_due', 'pending_cancellation');
+grant select on billable_subscriptions_before to authenticated;
+
 -- =============================================================================
 -- STRUCTURE
 --
@@ -478,7 +486,7 @@ select is(
 
 select is(
   (select (payload -> 'active_subscriptions' ->> 'billable')::bigint from dashboard_result),
-  3::bigint,
+  3 + (select count from billable_subscriptions_before),
   'billable subscriptions are active, past_due and pending_cancellation'
 );
 

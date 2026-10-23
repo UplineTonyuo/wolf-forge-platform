@@ -3,6 +3,10 @@ begin;
 
 select plan(17);
 
+create temp table integration_connections_before on commit drop as
+select count(*) as count from public.integration_connections;
+grant select on integration_connections_before to authenticated;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('a1000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'settings-admin@example.invalid', now(), now()),
@@ -57,7 +61,7 @@ set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = 'a1000000-0000-0000-0000-000000000001';
 
-select is((select count(*) from public.app_list_integration_connections()), 0::bigint, 'admin reads an honest empty connection set');
+select is((select count(*) from public.app_list_integration_connections()), (select count from integration_connections_before), 'admin lists persisted connections without inventing a connection');
 select throws_ok($$ select count(*) from public.integration_connections $$, '42501', null, 'admin cannot read the raw table');
 
 reset role;

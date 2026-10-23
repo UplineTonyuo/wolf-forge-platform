@@ -78,10 +78,12 @@ export function ClientPaymentMethodView({
   rails,
   wallet,
   holderName,
+  workEnabled = true,
 }: {
   rails: ClientPaymentRail[];
   wallet: WalletFundingState;
   holderName: string;
+  workEnabled?: boolean;
 }) {
   const primary = primaryPaymentRail(rails);
   const alternatives = alternativePaymentRails(rails);
@@ -90,7 +92,7 @@ export function ClientPaymentMethodView({
     <div className="portal-page">
       <header className="portal-page-head">
         <h1>Payment method</h1>
-        <p>How your account settles invoices with Wolf Forge.</p>
+        <p>{workEnabled ? "How your account settles invoices with Wolf Forge." : "Invoices is disabled. Your wallet balance and history remain available; new Invoice payments and purchases are unavailable."}</p>
       </header>
 
       <div className={styles.stack}>
@@ -130,23 +132,22 @@ export function ClientPaymentMethodView({
                   <span className={styles.figure}>
                     {formatCurrencyCents(wallet.balanceCents, wallet.currency)}
                   </span>
-                  <span className={styles.figureUnit}>available</span>
+                  <span className={styles.figureUnit}>{workEnabled ? "available" : "recorded balance"}</span>
                 </p>
 
-                <p className={styles.anchorCopy}>{primary.description}</p>
+                <p className={styles.anchorCopy}>{workEnabled ? primary.description : "Your recorded wallet balance remains yours. New Invoice payments require Invoices to be re-enabled."}</p>
 
-                {primary.isAvailable ? null : (
+                {workEnabled && !primary.isAvailable ? (
                   <p className={styles.anchorNotice}>
                     <Info aria-hidden={true} />
                     <span>
-                      WF Card membership unlocks the wallet, member-only offers and coupon
-                      eligibility. You can activate it from any open invoice.
+                      WF Card membership unlocks wallet payments, member-only offers and coupon eligibility. You can activate it from an open invoice.
                     </span>
                   </p>
-                )}
+                ) : null}
 
                 <div className={styles.anchorActions}>
-                  <PaymentRailSwitcher rails={rails} />
+                  {workEnabled ? <PaymentRailSwitcher rails={rails} /> : null}
                   <Link className="portal-secondary-action" href="/account/invoices">
                     Go to invoices
                   </Link>
@@ -162,8 +163,7 @@ export function ClientPaymentMethodView({
               Other payment methods
             </h2>
             <p className={styles.groupNote}>
-              Wolf Forge is preparing these. They will become selectable here once they are
-              connected.
+              {workEnabled ? "Wolf Forge is preparing these. They will become selectable here once they are connected." : "New payment-method selection is unavailable while Invoices is disabled."}
             </p>
           </div>
 

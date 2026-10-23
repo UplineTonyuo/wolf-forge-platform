@@ -1,10 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { parseSubscriptionFormData } from "../../lib/subscriptions/form-data";
-import { getInternalContext } from "../../lib/supabase/next-server";
+import { getClientContext, getInternalContext } from "../../lib/supabase/next-server";
+
+export async function loadSubscriptionVisibilityAction(audience: "internal" | "client"): Promise<
+  { ok: true; ids: string[]; states: string[]; workEnabled: boolean } | { ok: false; denied: boolean }
+> {
+  try {
+    const context = audience === "client" ? await getClientContext() : await getInternalContext();
+    const rows = await context.services.subscriptions.list();
+    const workEnabled = await context.services.subscriptions.workEnabled();
+    return { ok: true, ids: rows.map((row) => row.subscription_id), states: rows.map((row) => `${row.subscription_id}:${row.status}`), workEnabled };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false, denied: ["PERMISSION_DENIED", "NOT_FOUND"].includes(toClientSafeError(error).code) };
+  }
+}
 
 export type SubscriptionActionState = {
   error: string | null;

@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { TenantBrandingScope } from "../../shell/tenant-branding-provider";
 
 /**
  * The client portal's one modal dialog.
@@ -198,6 +199,7 @@ export function PortalDialog({
   if (!mounted || !render) return null;
 
   return createPortal(
+    <TenantBrandingScope>
     <div className="portal-overlay" data-phase={phase} data-size={size}>
       <button
         type="button"
@@ -245,7 +247,8 @@ export function PortalDialog({
 
         {footer ? <footer className="portal-overlay-foot">{footer}</footer> : null}
       </div>
-    </div>,
+    </div>
+    </TenantBrandingScope>,
     document.body,
   );
 }

@@ -24,9 +24,9 @@ where id = 'fe000000-0000-4000-8000-000000000003';
 
 insert into public.orders (id, company_id, service_id, title) values
   ('fe200000-0000-4000-8000-000000000001', 'fe100000-0000-4000-8000-000000000001',
-   (select id from public.services where archived_at is null limit 1), 'Project A'),
+   (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Project A'),
   ('fe200000-0000-4000-8000-000000000002', 'fe100000-0000-4000-8000-000000000001',
-   (select id from public.services where archived_at is null limit 1), 'Project B');
+   (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Project B');
 
 -- -----------------------------------------------------------------------------
 -- Security surface: no browser-reachable role can touch these tables

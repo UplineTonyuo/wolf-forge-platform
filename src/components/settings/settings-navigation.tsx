@@ -23,10 +23,11 @@ export const SETTINGS_NAV_ITEMS = [
 
 export function SettingsNavigation() {
   const pathname = usePathname();
+  const items = SETTINGS_NAV_ITEMS;
 
   return (
     <nav className={styles.navigation} aria-label="Settings sections">
-      {SETTINGS_NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const current = pathname === item.route;
         const Icon = item.icon;
         return (

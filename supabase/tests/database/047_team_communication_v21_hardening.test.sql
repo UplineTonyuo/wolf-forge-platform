@@ -41,7 +41,7 @@ select lives_ok($$ select public.app_touch_team_presence('7ed10000-0000-4000-800
 select pg_temp.become('7ed00000-0000-4000-8000-000000000001');
 select lives_ok($$ select public.app_send_team_message('7ed20000-0000-4000-8000-000000000001', (select conversation_id from v21_direct), 'Live hello') $$, 'an ordinary live message sends');
 select is((select count(*) from public.team_message_deliveries where message_id = (select id from public.team_messages where request_id = '7ed20000-0000-4000-8000-000000000001')), 0::bigint, 'a live recipient does not enter the offline digest ledger');
-select is((select count(*) from public.notifications where entity_type = 'team_message'), 0::bigint, 'a live message creates no bell row');
+select is((select count(*) from public.notifications where entity_type = 'team_message' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 0::bigint, 'a live message creates no bell row');
 
 select pg_temp.become('7ed00000-0000-4000-8000-000000000002');
 select lives_ok($$ select public.app_mark_team_conversation_read((select conversation_id from v21_direct)) $$, 'the live recipient reads the message before going offline');
@@ -53,19 +53,19 @@ where request_id = '7ed20000-0000-4000-8000-000000000002';
 select is((select count(*) from public.team_message_deliveries where message_id = (select id from public.team_messages where request_id = '7ed20000-0000-4000-8000-000000000002')), 1::bigint, 'one offline delivery marker is created');
 select lives_ok($$ select public.app_send_team_message('7ed20000-0000-4000-8000-000000000002', (select conversation_id from v21_direct), '**Bold** [safe](https://example.com)') $$, 'retrying the send replays it');
 select is((select count(*) from public.team_message_deliveries where message_id = (select id from public.team_messages where request_id = '7ed20000-0000-4000-8000-000000000002')), 1::bigint, 'the retry cannot duplicate its delivery marker');
-select is((select count(*) from public.notifications where entity_type = 'team_message'), 0::bigint, 'an offline message still creates no per-message bell row');
+select is((select count(*) from public.notifications where entity_type = 'team_message' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 0::bigint, 'an offline message still creates no per-message bell row');
 
 update public.team_message_deliveries set eligible_at = clock_timestamp() - interval '31 minutes'
 where message_id = (select id from public.team_messages where request_id = '7ed20000-0000-4000-8000-000000000002');
 select pg_temp.become('7ed00000-0000-4000-8000-000000000002');
 select is(public.app_materialize_team_message_digests(), 1, 'one stale unread conversation is materialized');
-select is((select count(*) from public.notifications where event_key like 'team-message-digest:%'), 1::bigint, 'one digest row represents the conversation');
-select is((select title from public.notifications where event_key like 'team-message-digest:%'), 'Vera Owner sent you a message', 'a one-message direct digest uses direct wording');
-select is((select body from public.notifications where event_key like 'team-message-digest:%'), 'Bold safe', 'digest preview strips Markdown and link destinations');
+select is((select count(*) from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 1::bigint, 'one digest row represents the conversation');
+select is((select title from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 'Vera Owner sent you a message', 'a one-message direct digest uses direct wording');
+select is((select body from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 'Bold safe', 'digest preview strips Markdown and link destinations');
 select is(public.app_materialize_team_message_digests(), 1, 'a repeated materialization safely revisits the same unread group');
-select is((select count(*) from public.notifications where event_key like 'team-message-digest:%'), 1::bigint, 'a repeated sync cannot duplicate the digest row');
+select is((select count(*) from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 1::bigint, 'a repeated sync cannot duplicate the digest row');
 select lives_ok($$ select public.app_mark_team_conversation_read((select conversation_id from v21_direct)) $$, 'opening the conversation resolves its digest');
-select ok((select read_at is not null from public.notifications where event_key like 'team-message-digest:%'), 'the resolved digest is marked read');
+select ok((select read_at is not null from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 'the resolved digest is marked read');
 select ok((select resolved_at is not null from public.team_message_deliveries where message_id = (select id from public.team_messages where request_id = '7ed20000-0000-4000-8000-000000000002')), 'the delivery marker is resolved too');
 
 select pg_temp.become('7ed00000-0000-4000-8000-000000000001');
@@ -81,9 +81,9 @@ update public.team_message_deliveries set eligible_at = clock_timestamp() - inte
 where message_id in (select id from public.team_messages where request_id in ('7ed20000-0000-4000-8000-000000000003', '7ed20000-0000-4000-8000-000000000004'));
 select pg_temp.become('7ed00000-0000-4000-8000-000000000002');
 select is(public.app_materialize_team_message_digests(), 1, 'the second stale unread cycle materializes as one group');
-select is((select count(*) from public.notifications where event_key like 'team-message-digest:%'), 2::bigint, 'the new read cycle receives one new digest');
-select is((select title from public.notifications where read_at is null and event_key like 'team-message-digest:%'), 'Vera Owner sent you 2 messages', 'a multi-message direct digest reports its count');
-select is(array_length(string_to_array((select body from public.notifications where read_at is null and event_key like 'team-message-digest:%'), E'\n'), 1), 2, 'a digest contains at most two preview lines');
+select is((select count(*) from public.notifications where event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 2::bigint, 'the new read cycle receives one new digest');
+select is((select title from public.notifications where read_at is null and event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), 'Vera Owner sent you 2 messages', 'a multi-message direct digest reports its count');
+select is(array_length(string_to_array((select body from public.notifications where read_at is null and event_key like 'team-message-digest:%' and recipient_profile_id = '7ed00000-0000-4000-8000-000000000002'), E'\n'), 1), 2, 'a digest contains at most two preview lines');
 
 select pg_temp.become('7ed00000-0000-4000-8000-000000000001');
 select lives_ok($$ select public.app_create_team_task('7ed30000-0000-4000-8000-000000000001', (select conversation_id from v21_direct), 'Direct follow-up', '7ed00000-0000-4000-8000-000000000002') $$, 'a direct task is created');

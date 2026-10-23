@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FormRenderer } from "../../../../components/forms/form-renderer";
+import { SubmissionDetail } from "../../../../components/forms/submission-detail";
 import { formatDate } from "../../../../lib/format";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 import styles from "../../../../components/forms/forms.module.css";
@@ -23,6 +24,21 @@ export default async function AssignedFormPage({
   const [{ assignmentId }, context] = await Promise.all([params, getClientContext()]);
 
   try {
+    const [history, workEnabled] = await Promise.all([
+      context.services.forms.getAssignmentHistory(assignmentId),
+      context.services.forms.workEnabled(),
+    ]);
+    if (history.status === "completed" || !workEnabled) {
+      const receipt = history.latest_submission_id
+        ? await context.services.forms.getSubmission(history.latest_submission_id)
+        : null;
+      return <div className={styles.clientFormPage}>
+        <Link href="/account/onboarding" className={styles.backLink}><ArrowLeft aria-hidden="true" />All onboarding</Link>
+        <h1>{history.title}</h1>
+        {!workEnabled ? <p>Form collection is paused. Your request and submitted responses are retained.</p> : null}
+        {receipt ? <SubmissionDetail detail={receipt} canCorrect={false} /> : <p>No response has been submitted. This request remains outstanding.</p>}
+      </div>;
+    }
     const detail = await context.services.forms.getAssignedForm(assignmentId);
     const { assignment } = detail;
     // 'completed' is the value app_submit_form writes; see the
@@ -38,7 +54,7 @@ export default async function AssignedFormPage({
 
         <section className={styles.clientAssignmentContext}>
           <div>
-            <span>{assignment.order_title ? "Project information" : "Account setup"}</span>
+            <span>{assignment.form_type === "intake" ? "Project information" : "Account setup"}</span>
             <strong>{assignment.title}</strong>
           </div>
           <dl>

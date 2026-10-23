@@ -6,6 +6,10 @@ import {
 import type { ClientNavCounts } from "../../domain/client-portal/summary";
 import { getClientNavCounts } from "../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../lib/supabase/next-server";
+import { WhiteLabelPublicationRepository } from "../../repositories/white-label-publication-repository";
+import { WhiteLabelPublicationService } from "../../services/white-label-publication-service";
+import { ClientDraftProvider } from "../../components/tickets/client-draft-provider";
+import { studioDraftSavingAvailable } from "../../domain/tickets/draft-saving";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +17,9 @@ const emptyChooserCatalog: ServiceChooserCatalog = { folders: [], services: [] }
 
 export default async function ClientAccountLayout({ children }: { children: React.ReactNode }) {
   const context = await getClientContext();
+  const runtimeConfiguration = await new WhiteLabelPublicationService({
+    repository: new WhiteLabelPublicationRepository(context.client),
+  }).getRuntimeConfiguration().catch(() => null);
 
   /**
    * The service chooser reads the same client-visible catalog the Store page
@@ -50,8 +57,10 @@ export default async function ClientAccountLayout({ children }: { children: Reac
   const profile = await context.services.profile.getMine().catch(() => null);
 
   return (
+    <ClientDraftProvider key={`${context.user.companyId}:${context.user.id}`} owner={studioDraftSavingAvailable(process.env) ? `${context.user.companyId}:${context.user.id}` : null}>
     <ClientAccountShell
       user={context.user}
+      runtimeConfiguration={runtimeConfiguration}
       serviceCatalog={serviceCatalog}
       navCounts={navCounts}
       notificationSoundEnabled={profile?.notificationSoundEnabled ?? true}
@@ -59,5 +68,6 @@ export default async function ClientAccountLayout({ children }: { children: Reac
     >
       {children}
     </ClientAccountShell>
+    </ClientDraftProvider>
   );
 }

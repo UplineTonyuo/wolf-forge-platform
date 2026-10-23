@@ -1,3 +1,5 @@
+import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
+import { invoiceVisibility, financialAuthority, financialIdentity } from "../../../../domain/invoices/visibility";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,17 +45,19 @@ export default async function InvoiceDetailPage({
 }) {
   const [{ invoiceId }, query, context] = await Promise.all([params, searchParams, getInternalContext()]);
   try {
-    const detail = await context.services.invoices.get(invoiceId);
+    const [detail, rows, workEnabled] = await Promise.all([context.services.invoices.get(invoiceId), context.services.invoices.list(), context.services.invoices.workEnabled()]);
+    const signature = invoiceVisibility(rows, workEnabled, context.user.invoices, financialIdentity(context.user));
     const closedByRefund = ["partially_refunded", "refunded"].includes(detail.financials.presentation_state);
     const refundable = Math.max(detail.financials.gross_paid_cents - detail.financials.successful_refunds_cents, 0);
     return (
-      <PageFrame
+      <FinancialVisibilityBoundary key={financialAuthority("internal", signature)} signature={signature} scope="internal" invoiceId={invoiceId}><PageFrame
         className={styles.detailPage}
         title={invoiceLabel(detail.invoice.invoice_number)}
         description={<><span>{detail.clientName}</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></>}
-        action={<InvoiceDetailActions invoiceId={detail.invoice.id} status={detail.invoice.status} currency={detail.invoice.currency} totalCents={detail.invoice.total_cents} grossPaidCents={detail.financials.gross_paid_cents} refundedCents={detail.financials.successful_refunds_cents} balanceDueCents={detail.financials.balance_due_cents} hasPendingPayment={detail.payments.some((payment) => payment.status === "pending")} capabilities={context.user.invoices} />}
+        action={workEnabled ? <InvoiceDetailActions invoiceId={detail.invoice.id} status={detail.invoice.status} currency={detail.invoice.currency} totalCents={detail.invoice.total_cents} grossPaidCents={detail.financials.gross_paid_cents} refundedCents={detail.financials.successful_refunds_cents} balanceDueCents={detail.financials.balance_due_cents} hasPendingPayment={detail.payments.some((payment) => payment.status === "pending")} capabilities={context.user.invoices} /> : undefined}
       >
         <div className={styles.pageEnter}>
+          {!workEnabled ? <p role="status">Invoices is disabled. This issued financial history is read-only.</p> : null}
           {query.created ? <SuccessToast title="Invoice draft created." /> : null}
           {query.saved ? <SuccessToast title="Invoice changes saved." /> : null}
           <section className={styles.metadata} aria-label="Invoice information">
@@ -73,15 +77,15 @@ export default async function InvoiceDetailPage({
 
           <div className={styles.historyGrid}>
             <section className={styles.detailSection}><h2>Payment history</h2>{detail.payments.length === 0 ? <p className={styles.emptyLedger}>No payments recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>{detail.payments.map((payment) => <tr key={payment.id}><td>{formatDateTime(payment.settled_at ?? payment.created_at)}</td><td>{formatCurrencyCents(payment.amount_cents, payment.currency)}</td><td>{paymentMethodLabel(payment.payment_method)}</td><td><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.payments.map((payment) => <article key={payment.id}><header><strong>{formatCurrencyCents(payment.amount_cents, payment.currency)}</strong><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></header><span>{paymentMethodLabel(payment.payment_method)} · {formatDateTime(payment.settled_at ?? payment.created_at)}</span></article>)}</div></>}</section>
-            <section className={styles.detailSection}><h2>Refund history</h2>{detail.refunds.length === 0 ? <p className={styles.emptyLedger}>No refunds recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>{detail.refunds.map((refund) => <tr key={refund.id}><td>{formatDateTime(refund.refunded_at ?? refund.created_at)}</td><td>{formatCurrencyCents(refund.amount_cents, refund.currency)}</td><td>{refund.reason}</td><td><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.refunds.map((refund) => <article key={refund.id}><header><strong>{formatCurrencyCents(refund.amount_cents, refund.currency)}</strong><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></header><span>{refund.reason} · {formatDateTime(refund.refunded_at ?? refund.created_at)}</span></article>)}</div></>}</section>
+            <section className={styles.detailSection}><h2>Refund ledger history</h2><p className={styles.closedNote}>Ledger entries record refunds; they do not confirm money was returned to a wallet or payment provider.</p>{detail.refunds.length === 0 ? <p className={styles.emptyLedger}>No refunds recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>{detail.refunds.map((refund) => <tr key={refund.id}><td>{formatDateTime(refund.refunded_at ?? refund.created_at)}</td><td>{formatCurrencyCents(refund.amount_cents, refund.currency)}</td><td>{refund.reason}</td><td><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.refunds.map((refund) => <article key={refund.id}><header><strong>{formatCurrencyCents(refund.amount_cents, refund.currency)}</strong><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></header><span>{refund.reason} · {formatDateTime(refund.refunded_at ?? refund.created_at)}</span></article>)}</div></>}</section>
           </div>
 
           <section className={`${styles.detailSection} ${styles.activity}`}><h2>History</h2>{detail.activity.length === 0 ? <p className={styles.emptyLedger}>No activity recorded.</p> : <ol>{detail.activity.map((event) => <li key={event.id}><span aria-hidden="true" /><div><strong>{event.summary}</strong><small>{formatDateTime(event.created_at)}</small></div></li>)}</ol>}</section>
         </div>
-      </PageFrame>
+      </PageFrame></FinancialVisibilityBoundary>
     );
   } catch (error) {
-    if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    if (["NOT_FOUND", "PERMISSION_DENIED"].includes(toClientSafeError(error).code)) notFound();
     throw error;
   }
 }

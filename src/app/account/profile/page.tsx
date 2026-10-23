@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ClientProfile } from "../../../components/account/profile/client-profile";
+import { clientPushContext } from "../../../lib/notifications/push-server";
 import type { SignInIdentity } from "../../../domain/profile/security";
 import {
   createNextServerSupabaseClient,
@@ -40,9 +41,10 @@ export default async function ClientProfilePage() {
    * account can reach its own profile and no account can reach another's. There
    * is no identifier on this page to get wrong.
    */
-  const [profile, identities] = await Promise.all([
+  const [profile, identities, pushContext] = await Promise.all([
     context.services.profile.getMine().catch(() => null),
     loadSignInIdentities().catch(() => []),
+    clientPushContext().catch(() => null),
   ]);
 
   if (!profile) {
@@ -61,6 +63,7 @@ export default async function ClientProfilePage() {
       profile={profile}
       companyName={context.user.companyName}
       identities={identities}
+      pushConfiguration={pushContext?.config ?? null}
     />
   );
 }

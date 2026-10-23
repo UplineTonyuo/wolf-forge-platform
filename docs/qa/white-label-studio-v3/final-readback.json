@@ -1,0 +1,92 @@
+{
+  "timestamp": "2026-10-12T09:14:51.065Z",
+  "drafts": [
+    {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "haha",
+      "primary_color": "#000d51",
+      "accent_color": "#a8832e",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 13,
+      "updated_at": "2026-10-12T06:58:00.429449+00:00"
+    },
+    {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 3,
+      "updated_at": "2026-10-12T06:58:19.114758+00:00"
+    },
+    {
+      "tenant_id": "f0f0f0f0-0000-4000-8000-000000000001",
+      "tenant_status": "active",
+      "display_name": "Wolf Forge",
+      "primary_color": "#000d51",
+      "accent_color": "#a8832e",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "tickets"
+      ],
+      "revision": 0,
+      "updated_at": null
+    }
+  ],
+  "runtime": {
+    "publications": 0,
+    "invoices": 0,
+    "walletTransactions": 0,
+    "effective": [
+      {
+        "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+        "modules": {
+          "services": true,
+          "tickets": true,
+          "reporting": true,
+          "invoices": true,
+          "forms": true,
+          "projects": true,
+          "subscriptions": true,
+          "coupons": true,
+          "investment_intent": true
+        }
+      },
+      {
+        "tenant": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+        "modules": {
+          "services": true,
+          "tickets": true,
+          "reporting": true,
+          "invoices": true,
+          "forms": true,
+          "projects": true,
+          "subscriptions": true,
+          "coupons": true,
+          "investment_intent": true
+        }
+      }
+    ]
+  },
+  "originalDraftContentsRestored": true,
+  "neverSavedUnchanged": true,
+  "runtimeUnchanged": true
+}

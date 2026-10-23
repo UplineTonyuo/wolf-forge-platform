@@ -80,7 +80,7 @@ export function ClientOnboardingView({ onboarding }: { onboarding: ClientOnboard
                 {outstanding.length} still {outstanding.length === 1 ? "needs" : "need"} your input
               </span>
             ) : (
-              <span>You&rsquo;re all caught up.</span>
+              <span>{groups.some((group) => group.items.some((item) => item.action === "Paused")) ? "Collection is paused. Outstanding requests are retained." : "You’re all caught up."}</span>
             )}
           </p>
 

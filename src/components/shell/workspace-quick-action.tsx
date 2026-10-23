@@ -22,6 +22,7 @@ import type {
 } from "../../lib/supabase/next-server";
 import { useHeaderOverlay } from "./use-header-overlay";
 import styles from "./workspace-quick-action.module.css";
+import { TenantBrandingScope } from "./tenant-branding-provider";
 
 /**
  * Which face of the panel is showing.
@@ -224,7 +225,7 @@ export function WorkspaceQuickAction({
             * in one click; the job is now a structured report rather than a
             * bare link.
             */}
-          <Link
+          {user.modules.reporting && <Link
             href="/reporting/new"
             className={styles.option}
             onClick={closePanel}
@@ -259,7 +260,7 @@ export function WorkspaceQuickAction({
               }
               aria-hidden="true"
             />
-          </Link>
+          </Link>}
 
           <Link
             href="/accounts/member/new"
@@ -318,7 +319,7 @@ export function WorkspaceQuickAction({
 
       {mounted
         ? createPortal(
-            modal,
+            <TenantBrandingScope>{modal}</TenantBrandingScope>,
             document.body,
           )
         : null}

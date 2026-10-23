@@ -160,6 +160,7 @@ export const assignFormSchema = z.object({
   context: z.union([
     z.object({
       order_id: uuidSchema,
+      client_profile_id: uuidSchema,
       required: z.boolean().default(true),
       due_at: z.iso.datetime({ offset: true }).nullable().optional(),
     }).strict(),
@@ -287,6 +288,7 @@ export type FormPublishedSchema = {
 };
 
 export type FormAssignmentSummary = {
+  work_enabled?: boolean;
   assignment_id: string;
   form_id: string;
   form_type: "intake" | "onboarding";
@@ -334,6 +336,7 @@ export type FormSubmissionSummary = {
   submitted_at: string;
   submitted_by_profile_id: string | null;
   supersedes_submission_id: string | null;
+  provenance?: FormSubmissionRow["provenance"];
 };
 
 export type FormSubmissionDetail = {

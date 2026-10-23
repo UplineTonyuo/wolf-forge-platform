@@ -10,7 +10,7 @@ import {
 } from "../../lib/email/client-welcome-email-server";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { enforceServerCostLimit } from "../../lib/security/server-cost-limit";
-import { getInternalContext } from "../../lib/supabase/next-server";
+import { getInternalContext, requestTenantSelector } from "../../lib/supabase/next-server";
 
 export type SendClientWelcomeEmailResult = { ok: boolean; message: string };
 
@@ -20,6 +20,7 @@ const messages: Record<ClientWelcomeEmailOutcome, string> = {
   in_progress: "A welcome email is already being sent to this client.",
   recently_sent: "A welcome email was sent less than a minute ago.",
   activated: "This client has already set their password.",
+  no_verified_host: "This workspace has no verified public web address yet, so welcome emails stay disabled.",
 };
 
 /**
@@ -45,7 +46,7 @@ export async function sendClientWelcomeEmailAction(
     const outcome = await sendClientWelcomeEmail(
       profileId,
       requestId,
-      createClientWelcomeEmailDependencies(context.actor),
+      createClientWelcomeEmailDependencies(context.actor, await requestTenantSelector()),
     );
     return { ok: outcome === "sent", message: messages[outcome] };
   } catch (error) {

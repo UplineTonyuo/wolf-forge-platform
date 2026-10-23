@@ -590,11 +590,12 @@ delete from private.bot_verification_providers where provider_key = 'b2_test_pro
 -- 3. M-04 — Ticket reply abuse
 -- =============================================================================
 
-insert into public.tickets (id, company_id, client_profile_id, subject, created_by_profile_id)
+-- Explicit Tenant: the anon claims set above make the tenant_id default NULL.
+insert into public.tickets (id, tenant_id, company_id, client_profile_id, subject, created_by_profile_id)
 values
-  ('c7000000-0000-0000-0000-000000000001', 'c3000000-0000-0000-0000-00000000000a',
+  ('c7000000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'c3000000-0000-0000-0000-00000000000a',
    'c2000000-0000-0000-0000-000000000001', 'B2 Shared Conversation', 'c2000000-0000-0000-0000-000000000001'),
-  ('c7000000-0000-0000-0000-000000000002', 'c3000000-0000-0000-0000-00000000000b',
+  ('c7000000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-000000000001', 'c3000000-0000-0000-0000-00000000000b',
    'c2000000-0000-0000-0000-000000000003', 'B2 Foreign Conversation', 'c2000000-0000-0000-0000-000000000003');
 
 set local role authenticated;
@@ -1066,7 +1067,7 @@ alter table public.notifications drop constraint notifications_category_valid;
 alter table public.notifications add constraint notifications_category_valid check (
   category = any (array[
     'project', 'client', 'form', 'coupon', 'ticket',
-    'payment', 'wallet', 'store', 'report', 'undecided'
+    'payment', 'wallet', 'store', 'report', 'team', 'undecided'
   ])
 );
 

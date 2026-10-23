@@ -48,6 +48,7 @@ import { normalizeCorrelationId } from "./correlation-id";
  *   auth.login.unassigned                de-provisioned account signal; rare
  *   authorization.context.denied         verified actor on the wrong surface
  *   authorization.team_supervision.read  privileged Team content access
+ *   authorization.white_label.draft_saved  Platform Admin saved a Tenant draft
  *   integration.gmail.connected          external credential state created
  *   integration.gmail.disconnected       external credential state removed
  *   integration.gmail.reauthorization_required   consent lost / identity drift
@@ -58,6 +59,8 @@ export const SECURITY_AUDIT_EVENT_CODES = [
   "auth.login.unassigned",
   "authorization.context.denied",
   "authorization.team_supervision.read",
+  "authorization.white_label.draft_saved",
+  "authorization.white_label.published",
   "integration.gmail.connected",
   "integration.gmail.disconnected",
   "integration.gmail.reauthorization_required",

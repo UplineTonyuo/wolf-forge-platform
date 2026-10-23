@@ -19,8 +19,8 @@ update public.profiles set role_id = (select id from public.roles where name = '
 where id = 'ef000000-0000-0000-0000-000000000004';
 
 insert into public.orders (id, company_id, service_id, title) values
-('ef200000-0000-0000-0000-000000000001', 'ef100000-0000-0000-0000-000000000001', (select id from public.services where archived_at is null limit 1), 'Native Project'),
-('ef200000-0000-0000-0000-000000000002', 'ef100000-0000-0000-0000-000000000001', (select id from public.services where archived_at is null limit 1), 'Historical Project');
+('ef200000-0000-0000-0000-000000000001', 'ef100000-0000-0000-0000-000000000001', (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Native Project'),
+('ef200000-0000-0000-0000-000000000002', 'ef100000-0000-0000-0000-000000000001', (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Historical Project');
 insert into public.tickets (id, company_id, client_profile_id, subject, created_by_profile_id, order_id)
 values ('ef400000-0000-0000-0000-000000000001', 'ef100000-0000-0000-0000-000000000001',
   'ef000000-0000-0000-0000-000000000002', 'Historical Project Ticket',

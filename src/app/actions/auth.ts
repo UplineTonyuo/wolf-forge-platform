@@ -26,10 +26,14 @@ import {
   createNextServerSignInSupabaseClient,
   createNextServerSupabaseClient,
   readLocalFrontendEnvironment,
+  requestTenantSelector,
   resolveClientUser,
   resolveInternalUser,
 } from "../../lib/supabase/next-server";
 import { createUserSupabaseClient, verifyActor } from "../../lib/supabase/user-client";
+import { IDENTITY_UNAVAILABLE_MESSAGE, IdentityLookupError } from "../../lib/supabase/identity-lookup";
+import { clientPushAvailable } from "../../domain/notifications/push";
+import { recordIdentityUnavailable } from "../../lib/supabase/identity-failure-response";
 
 export type LoginState = { error: string | null };
 
@@ -43,6 +47,9 @@ const SIGN_IN_FAILURE_EVENTS: Record<
 };
 
 export async function signInAction(_state: LoginState, formData: FormData): Promise<LoginState> {
+  // The host's Tenant (WL-2.22b), read before any Auth work so a request
+  // without one fails closed instead of leaving a half-made session behind.
+  const tenantSelector = await requestTenantSelector();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
@@ -142,9 +149,27 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
   // login outage. The source/global risk history intentionally remains.
   await clearProtectedLoginPairFailures(protection.context).catch(() => undefined);
 
-  const client = createUserSupabaseClient(readLocalFrontendEnvironment(), data.session.access_token);
-  const actor = await verifyActor(client).catch(() => null);
-  const internalUser = actor ? await resolveInternalUser(client, actor) : null;
+  const client = createUserSupabaseClient(
+    readLocalFrontendEnvironment(),
+    data.session.access_token,
+    tenantSelector,
+  );
+  let actor;
+  let internalUser;
+  let clientUser;
+  try {
+    actor = await verifyActor(client);
+    internalUser = await resolveInternalUser(client, actor);
+    if (!internalUser) clientUser = await resolveClientUser(client, actor);
+  } catch (error) {
+    if (!(error instanceof IdentityLookupError)) throw error;
+    if (error.kind === "unavailable") {
+      await recordIdentityUnavailable(error);
+      return { error: IDENTITY_UNAVAILABLE_MESSAGE };
+    }
+    await supabase.auth.signOut();
+    return signInFailure();
+  }
   if (resolveSignInSurface({ hasInternalUser: Boolean(internalUser), hasClientUser: false }) === "internal") {
     recordSecurityEvent({
       event: "auth.login.succeeded",
@@ -157,7 +182,6 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
     redirect(safeNextPath(formData.get("next")));
   }
 
-  const clientUser = actor ? await resolveClientUser(client, actor) : null;
   if (resolveSignInSurface({ hasInternalUser: false, hasClientUser: Boolean(clientUser) }) !== "client") {
     /*
      * The password was correct but the account belongs to no surface. Worth a
@@ -222,6 +246,14 @@ export async function signOutAction() {
     .then(({ data }) => (typeof data?.claims?.sub === "string" ? data.claims.sub : null))
     .catch(() => null);
 
+  if (clientPushAvailable(process.env)) {
+    try {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (name: string) => PromiseLike<unknown>;
+      await rpc("app_disable_my_push_session");
+    } catch {
+      // Session revocation remains the fallback if push cleanup is unavailable.
+    }
+  }
   await supabase.auth.signOut();
 
   recordSecurityEvent({

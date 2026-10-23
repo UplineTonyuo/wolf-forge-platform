@@ -70,6 +70,7 @@ export function ProjectConversation({
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         optimistic={{ onSend: optimistic.addOptimistic, onSettled: optimistic.settle }}
+        confirmedRequestIds={messages.filter((message) => message.requestId).map((message) => message.requestId!)}
       />
     </>
   );

@@ -4267,6 +4267,89 @@ export type Database = {
       }
     }
     Functions: {
+      app_get_runtime_white_label_configuration: {
+        Args: never
+        Returns: Json
+      }
+      app_preflight_white_label_publication: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number }
+        Returns: Json
+      }
+      app_publish_white_label_draft: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number; p_request_id: string; p_reason: string }
+        Returns: Json
+      }
+      app_reconcile_white_label_publication: {
+        Args: { p_tenant_id: string; p_source_draft_revision: number; p_expected_publication_revision: number; p_request_id: string; p_reason: string }
+        Returns: Json
+      }
+      app_list_my_wallet_history: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount_cents: number
+          balance_after_cents: number
+          created_at: string
+          currency: string
+          id: string
+          reason: string
+          source: string
+        }[]
+      }
+      app_find_invoice_item_by_order_id: {
+        Args: { p_order_id: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          fulfillment_status: string
+          id: string
+          invoice_id: string
+          is_taxable: boolean
+          line_subtotal_cents: number | null
+          name: string
+          order_id: string | null
+          position: number
+          quantity: number
+          service_id: string | null
+          unit_discount_cents: number
+          unit_price_cents: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invoice_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      app_list_invoice_items: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          fulfillment_status: string
+          id: string
+          invoice_id: string
+          is_taxable: boolean
+          line_subtotal_cents: number | null
+          name: string
+          order_id: string | null
+          position: number
+          quantity: number
+          service_id: string | null
+          unit_discount_cents: number
+          unit_price_cents: number
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "invoice_items"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      app_invoices_work_enabled: { Args: never; Returns: boolean }
+      app_forms_work_enabled: { Args: never; Returns: boolean }
+      app_get_form_assignment_history: { Args: { p_assignment_id: string }; Returns: Json }
       app_add_organization_member: {
         Args: { p_contact_id: string; p_organization_id: string }
         Returns: {
@@ -5239,6 +5322,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_current_tenant_membership: {
+        Args: never
+        Returns: {
+          account_class: string
+          role_name: string
+          tenant_id: string
+        }[]
+      }
       app_current_user_modules: {
         Args: never
         Returns: {
@@ -5551,6 +5642,19 @@ export type Database = {
           membership_price_cents: number
         }[]
       }
+      app_get_white_label_draft: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          accent_color: string
+          display_name: string
+          module_keys: string[]
+          primary_color: string
+          revision: number
+          tenant_id: string
+          tenant_status: string
+          updated_at: string | null
+        }[]
+      }
       app_grant_report_send_anytime: {
         Args: { p_profile_id: string }
         Returns: {
@@ -5582,6 +5686,10 @@ export type Database = {
       app_hide_team_message_for_me: {
         Args: { p_message_id: string }
         Returns: undefined
+      }
+      app_is_platform_admin: {
+        Args: never
+        Returns: boolean
       }
       app_issue_invoice: {
         Args: { p_invoice_id: string }
@@ -5616,6 +5724,10 @@ export type Database = {
       app_link_company_stripe_customer: {
         Args: { p_company_id: string; p_stripe_customer_id: string }
         Returns: string
+      }
+      app_list_form_submissions: {
+        Args: { p_form_id?: string; p_order_id?: string }
+        Returns: Database["public"]["Tables"]["form_submissions"]["Row"][]
       }
       app_list_assigned_forms: {
         Args: never
@@ -5811,6 +5923,15 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+        }[]
+      }
+      app_list_onboarding_assignment_candidates: {
+        Args: { p_company_id?: string }
+        Returns: {
+          company_id: string
+          company_name: string
+          display_name: string
+          profile_id: string
         }[]
       }
       app_list_operational_assignees: {
@@ -6019,6 +6140,16 @@ export type Database = {
           subject: string
           ticket_id: string
           updated_at: string
+        }[]
+      }
+      app_list_white_label_tenants: {
+        Args: never
+        Returns: {
+          display_name: string
+          draft_revision: number | null
+          slug: string
+          status: string
+          tenant_id: string
         }[]
       }
       app_login_rate_limit_preflight: {
@@ -6446,6 +6577,10 @@ export type Database = {
         Args: { p_module_key: string }
         Returns: boolean
       }
+      app_resolve_tenant_host: {
+        Args: { p_host: string }
+        Returns: string | null
+      }
       app_restore_subscription_cycle: {
         Args: { p_cycle_id: string }
         Returns: {
@@ -6544,6 +6679,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_save_white_label_draft: {
+        Args: {
+          p_accent_color: string
+          p_display_name: string
+          p_expected_revision: number
+          p_module_keys: string[]
+          p_primary_color: string
+          p_tenant_id: string
+        }
+        Returns: {
+          already_applied: boolean
+          revision: number
+          updated_at: string
+        }[]
       }
       app_schedule_subscription_cancellation: {
         Args: { p_reason?: string; p_subscription_id: string }
@@ -6707,10 +6857,12 @@ export type Database = {
         Args: {
           p_actor_id: string
           p_profile_id: string
+          p_tenant_id: string
           p_request_id: string
           p_token_hash: string
         }
         Returns: {
+          canonical_host: string
           outcome: string
           recipient_email: string
           recipient_name: string
@@ -6725,7 +6877,7 @@ export type Database = {
         Returns: undefined
       }
       app_server_find_client_activation: {
-        Args: { p_token_hash: string }
+        Args: { p_token_hash: string; p_tenant_id: string }
         Returns: string
       }
       app_server_finish_client_welcome_email: {
@@ -6733,6 +6885,7 @@ export type Database = {
           p_actor_id: string
           p_failure_code?: string
           p_profile_id: string
+          p_tenant_id: string
           p_request_id: string
         }
         Returns: undefined
@@ -6892,6 +7045,8 @@ export type Database = {
         Args: { p_other_profile_id: string }
         Returns: string
       }
+      app_store_purchase_projects_enabled: { Args: never; Returns: boolean }
+      app_subscriptions_work_enabled: { Args: never; Returns: boolean }
       app_submit_form: {
         Args: {
           p_context: Json

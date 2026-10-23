@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
+import { SubscriptionHistoryBoundary } from "../../../../components/subscriptions/subscription-history-boundary";
 import { ClientSubscriptionDetail } from "../../../../components/subscriptions/client-subscriptions";
 import type { SubscriptionInvoiceView } from "../../../../components/subscriptions/subscription-detail";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
@@ -19,9 +20,10 @@ export default async function ClientSubscriptionDetailPage({ params }: { params:
     if (!summary) notFound();
     const invoiceIds = new Set(detail.cycles.flatMap((cycle) => cycle.invoice_id ? [cycle.invoice_id] : []));
     const invoices: SubscriptionInvoiceView[] = invoiceSummaries.filter(({ invoice }) => invoiceIds.has(invoice.id)).map(({ invoice, financials }) => ({ id: invoice.id, invoiceNumber: invoice.invoice_number, status: invoice.status, presentationState: financials.presentation_state, totalCents: invoice.total_cents, currency: invoice.currency, dueAt: invoice.due_at }));
-    return <ClientSubscriptionDetail detail={detail} summary={summary} invoices={invoices} />;
+    return <SubscriptionHistoryBoundary key={summary.status} states={[`${subscriptionId}:${summary.status}`]} ids={[subscriptionId]} audience="client"><ClientSubscriptionDetail detail={detail} summary={summary} invoices={invoices} /></SubscriptionHistoryBoundary>;
   } catch (error) {
     if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    if (toClientSafeError(error).code === "PERMISSION_DENIED") forbidden();
     throw error;
   }
 }

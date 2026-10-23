@@ -171,6 +171,22 @@ const detail = {
 const capabilities: SubscriptionCapabilities = { view: true, manage: true, pause: true, cancel: true, billing: true };
 
 describe("Subscriptions admin list", () => {
+  it("opens disabled-work history on canceled records and clears back to that view", () => {
+    const canceled: SubscriptionSummary = { ...baseSummary, subscription_id: "99999999-9999-4999-8999-999999999999", public_ref: "WF-CANCELED", status: "canceled" };
+    render(<SubscriptionsList summaries={[baseSummary, canceled]} canManage={false} initialStatus="canceled" />);
+    expect(screen.getAllByText("WF-CANCELED").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("WF-A13C9F2B")).toHaveLength(0);
+    expect(screen.queryByRole("link", { name: "Subscription" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Active\s*1$/u }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(screen.getAllByText("WF-A13C9F2B").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Filter subscriptions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.getAllByText("WF-CANCELED").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("WF-A13C9F2B")).toHaveLength(0);
+  });
+
   it("renders real summaries with formatted amount, interval, payments, and health", () => {
     render(<SubscriptionsList summaries={[baseSummary, pastDueSummary]} canManage />);
     expect(screen.getAllByText("WF-A13C9F2B").length).toBeGreaterThan(0);

@@ -19,6 +19,12 @@ import type { UserMutationClient } from "./types";
 export class SubscriptionRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  async workEnabled(): Promise<boolean> {
+    const result = await this.client.rpc("app_subscriptions_work_enabled");
+    if (result.error) throw mapDatabaseError(result.error, "Subscriptions");
+    return result.data === true;
+  }
+
   async list(): Promise<SubscriptionSummary[]> {
     const result = await this.client.rpc("app_list_subscription_summaries");
     if (result.error) throw mapDatabaseError(result.error, "Subscriptions");

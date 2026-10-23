@@ -586,8 +586,8 @@ select throws_ok(
 
 reset role;
 
-select is((select count(*) from public.services), 59::bigint, 'Services catalog still contains exactly 59 services');
-select is((select count(*) from public.services where nullif(btrim(description), '') is not null), 59::bigint, 'all 59 services retain descriptions');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), 59::bigint, 'Wolf Forge catalog still contains exactly 59 services');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id() and nullif(btrim(description), '') is not null), 59::bigint, 'all 59 Wolf Forge services retain descriptions');
 
 select * from finish();
 

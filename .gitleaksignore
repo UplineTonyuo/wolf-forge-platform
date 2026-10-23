@@ -38,3 +38,130 @@ c85fd73d80da5cd8356996aab0d415755d0be256:src/tests/stripe-customer-mapping.test.
 3a53ad16b0eb23b6f85dfb53bc2af84a3a203d22:src/tests/security-monitoring.test.ts:stripe-access-token:226
 3a53ad16b0eb23b6f85dfb53bc2af84a3a203d22:src/tests/security-monitoring.test.ts:generic-api-key:227
 3a53ad16b0eb23b6f85dfb53bc2af84a3a203d22:src/tests/security-monitoring.test.ts:generic-api-key:230
+
+# Exact false positives reviewed and approved by 4nthony on 2026-10-23.
+# Evidence: release-secret-scan-human-review-20261023.md in the release task outputs.
+# docs/qa/white-label-preview-premium/after-initial-workflow-failure.json
+# SHA-256 file checksums in saved QA integrity manifests; not issued credentials.
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:sentry-access-token:527
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:sentry-access-token:528
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:200
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:474
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:503
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:521
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:524
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:658
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:895
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:896
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:970
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1119
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1134
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1136
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1141
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1143
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1181
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1182
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1264
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1475
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1519
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1629
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1662
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1673
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-initial-workflow-failure.json:generic-api-key:1755
+# docs/qa/white-label-preview-premium/after-results.json
+# SHA-256 file checksums in saved QA integrity manifests; not issued credentials.
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:200
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:474
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:503
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:521
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:524
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:658
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:895
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:896
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:970
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1119
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1134
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1136
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1141
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1143
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1181
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1182
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1264
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1475
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1519
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1629
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1662
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1673
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:generic-api-key:1755
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:sentry-access-token:527
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/after-results.json:sentry-access-token:528
+# docs/qa/white-label-preview-premium/before-results.json
+# SHA-256 file checksums in saved QA integrity manifests; not issued credentials.
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:200
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:474
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:503
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:521
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:524
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:658
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:895
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:896
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:970
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1119
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1134
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1136
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1141
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1143
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1181
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1182
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1264
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1475
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1519
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1629
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1662
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1673
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:generic-api-key:1755
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:sentry-access-token:527
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/before-results.json:sentry-access-token:528
+# docs/qa/white-label-preview-premium/final-results.json
+# SHA-256 file checksums in saved QA integrity manifests; not issued credentials.
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:200
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:474
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:503
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:521
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:524
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:658
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:895
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:896
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:970
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1119
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1134
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1136
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1141
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1143
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1181
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1182
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1264
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1475
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1519
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1629
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1662
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1673
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:generic-api-key:1755
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:sentry-access-token:527
+b94afedb56e3e89f39efc8745e2a58b6015480ba:docs/qa/white-label-preview-premium/final-results.json:sentry-access-token:528
+# docs/wl-2.36-projects-module-enforcement.md
+# Plain-language synthetic-QA isolation report, not authentication material.
+93f6fa11a921240647f91d42b926d9fab38e51d2:docs/wl-2.36-projects-module-enforcement.md:generic-api-key:57
+# supabase/tests/database/111_tenant_form_authorization.test.sql
+# Rollback-only SQL fixtures: canonical keys and audit event names, not authentication material.
+a027382270eff517fe2f868abd5c04799881052e:supabase/tests/database/111_tenant_form_authorization.test.sql:generic-api-key:185
+a027382270eff517fe2f868abd5c04799881052e:supabase/tests/database/111_tenant_form_authorization.test.sql:generic-api-key:208
+# supabase/tests/database/132_projects_module_enforcement.test.sql
+# Rollback-only SQL fixtures: canonical keys and audit event names, not authentication material.
+93f6fa11a921240647f91d42b926d9fab38e51d2:supabase/tests/database/132_projects_module_enforcement.test.sql:generic-api-key:174
+# supabase/tests/database/134_subscriptions_module_enforcement.test.sql
+# Rollback-only SQL fixtures: canonical keys and audit event names, not authentication material.
+99f1b936924b7e3e2b5367c0f3e4de31de49ff1d:supabase/tests/database/134_subscriptions_module_enforcement.test.sql:generic-api-key:93
+99f1b936924b7e3e2b5367c0f3e4de31de49ff1d:supabase/tests/database/134_subscriptions_module_enforcement.test.sql:generic-api-key:359
+99f1b936924b7e3e2b5367c0f3e4de31de49ff1d:supabase/tests/database/134_subscriptions_module_enforcement.test.sql:generic-api-key:363
+99f1b936924b7e3e2b5367c0f3e4de31de49ff1d:supabase/tests/database/134_subscriptions_module_enforcement.test.sql:generic-api-key:375

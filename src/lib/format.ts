@@ -1,15 +1,21 @@
+function formatCalendarDate(value: string, options: Intl.DateTimeFormatOptions): string {
+  // ISO date-only strings parse at UTC midnight; retain their calendar day.
+  const timeZone = /^\d{4}-\d{2}-\d{2}$/.test(value) ? "UTC" : undefined;
+  return new Intl.DateTimeFormat("en", { ...options, timeZone }).format(new Date(value));
+}
+
 export function formatDate(value: string | null): string {
   if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value));
+  return formatCalendarDate(value, { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** Compact "Aug 12" label used by dense operational tables. */
 export function formatShortDate(value: string | null): string {
   if (!value) return "Not set";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(value));
+  return formatCalendarDate(value, { month: "short", day: "numeric" });
 }
 
-export function formatDateTime(value: string | null): string {
+export function formatDateTime(value: string | null, timeZone?: string): string {
   if (!value) return "Not set";
   return new Intl.DateTimeFormat("en", {
     day: "numeric",
@@ -17,6 +23,7 @@ export function formatDateTime(value: string | null): string {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone,
   }).format(new Date(value));
 }
 

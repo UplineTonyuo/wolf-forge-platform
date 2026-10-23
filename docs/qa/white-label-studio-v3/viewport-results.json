@@ -1,0 +1,86 @@
+[
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  3374,
+        "scrollWidth":  320,
+        "width":  320,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  3000,
+        "scrollWidth":  360,
+        "width":  360,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  2926,
+        "scrollWidth":  390,
+        "width":  390,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  2909,
+        "scrollWidth":  430,
+        "width":  430,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  1889,
+        "scrollWidth":  768,
+        "width":  768,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  935,
+        "scrollWidth":  1280,
+        "width":  1280,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    },
+    {
+        "height":  900,
+        "modules":  9,
+        "scrollHeight":  900,
+        "scrollWidth":  1440,
+        "width":  1440,
+        "mode":  "desktop",
+        "enabledModules":  9,
+        "templates":  6,
+        "interaction":  true,
+        "path":  "/white-label"
+    }
+]

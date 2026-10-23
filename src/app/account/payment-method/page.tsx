@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ClientPaymentMethodView } from "../../../components/account/billing/client-payment-method";
+import { FinancialVisibilityBoundary } from "../../../components/invoices/financial-visibility-boundary";
+import { walletVisibility, financialAuthority, financialIdentity } from "../../../domain/invoices/visibility";
+import styles from "../../../components/account/billing/payment-rails.module.css";
+import { formatCurrencyCents, formatDateTime } from "../../../lib/format";
 import { resolveWalletFunding } from "../../../domain/client-portal/payment-method";
 import { composeClientPaymentRails } from "../../../domain/payments/payment-rails";
 import { toClientSafeError } from "../../../lib/errors/application-error";
@@ -16,6 +20,8 @@ export default async function ClientPaymentMethodPage() {
   let loadError: string | null = null;
   let wallet = null;
   let membership = null;
+  let history: Awaited<ReturnType<typeof context.services.wallets.listMyHistory>> = [];
+  let workEnabled = false;
 
   try {
     /*
@@ -26,9 +32,11 @@ export default async function ClientPaymentMethodPage() {
      * from app_get_client_account_context, never from the browser.
      */
     await context.services.permissions.requireModuleAccess("portal_invoices");
-    [wallet, membership] = await Promise.all([
+    [wallet, membership, history, workEnabled] = await Promise.all([
       context.services.wallets.getForCompany(context.user.companyId),
       context.services.wfCard.getMembership(context.user.companyId),
+      context.services.wallets.listMyHistory(),
+      context.services.invoices.workEnabled(),
     ]);
   } catch (error) {
     const safe = toClientSafeError(error);
@@ -65,7 +73,9 @@ export default async function ClientPaymentMethodPage() {
    * configuration state crosses to the client — a client learns only what this
    * page tells them out loud, which is that neither is connected yet.
    */
+  const signature = walletVisibility(wallet, history, workEnabled, membership?.status ?? null, financialIdentity(context.user));
   return (
+    <FinancialVisibilityBoundary key={financialAuthority("wallet", signature)} signature={signature} scope="wallet">
     <ClientPaymentMethodView
       rails={composeClientPaymentRails({
         wallet: funding,
@@ -73,6 +83,16 @@ export default async function ClientPaymentMethodPage() {
       })}
       wallet={funding}
       holderName={context.user.displayName ?? context.user.companyName}
+      workEnabled={workEnabled}
     />
+    <section className="portal-page portal-section" aria-labelledby="wallet-history-heading">
+      <h2 id="wallet-history-heading">Wallet history</h2>
+      <p className="portal-note">Your latest recorded wallet transactions. Refund ledger entries do not automatically credit this balance.</p>
+      {history.length === 0 ? <p className="portal-empty">No wallet transactions recorded.</p> : <ol className={styles.walletHistory}>{history.map((entry) => <li key={entry.id}>
+        <div><strong>{entry.source.replaceAll("_", " ")}</strong>{entry.reason ? <p>{entry.reason}</p> : null}<small>{formatDateTime(entry.created_at)}</small></div>
+        <div><strong>{formatCurrencyCents(entry.amount_cents, entry.currency)}</strong><small>Balance {formatCurrencyCents(entry.balance_after_cents, entry.currency)}</small></div>
+      </li>)}</ol>}
+    </section>
+    </FinancialVisibilityBoundary>
   );
 }

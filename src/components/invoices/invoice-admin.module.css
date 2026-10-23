@@ -183,13 +183,17 @@
 .dialog header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .dialog h2 { margin: 0; color: var(--wf-navy); font-family: var(--wf-font-display); font-size: 18px; }
 .dialog header p { margin: 7px 0 0; color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; }
-.dialog header button { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 0; color: var(--wf-text-muted); background: transparent; cursor: pointer; }
+.dialog header button { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 auto; padding: 0; border: 0; color: var(--wf-text-muted); background: transparent; cursor: pointer; }
 .dialog header svg { width: 17px; height: 17px; }
 .dialogSummary { margin: 0 0 18px; padding: 12px 14px; border: 1px solid var(--wf-border); border-radius: 7px; }
 .dialogSummary > div { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 5px 0; font-size: 11px; }
 .dialogSummary dt { color: var(--wf-text-muted); }
 .dialogSummary dd { margin: 0; font-weight: 650; }
 .dialog .field + .field { margin-top: 14px; }
+.dialog .field input, .form .field input { min-height: 44px; }
+.dialog :global(button[aria-haspopup="listbox"]), .form :global(button[aria-haspopup="listbox"]) { min-height: 44px; }
+.dialog :global([role="option"]) { min-height: 44px; }
+.field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 2px; }
 .dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--wf-border); }
 
 @media (max-width: 1080px) {

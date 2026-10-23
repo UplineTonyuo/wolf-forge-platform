@@ -18,6 +18,7 @@ vi.mock("../lib/supabase/next-server", () => ({
     context: { actor: { id: "actor-1" }, client: { rpc: async () => ({ data: true, error: null }) } },
     provisioning: { provisionClientAccount: mocks.provisionClientAccount },
   }),
+  requestTenantSelector: async () => "f0f0f0f0-0000-4000-8000-000000000001",
 }));
 vi.mock("../lib/email/client-welcome-email-server", () => ({
   canSendClientWelcomeEmail: mocks.canSend,

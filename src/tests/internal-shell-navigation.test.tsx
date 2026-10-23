@@ -7,6 +7,7 @@ import type { Context, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InternalShell } from "../components/shell/internal-shell";
 import type { InternalUser } from "../lib/supabase/next-server";
+import { notifyTicketAccessUnavailable } from "../components/tickets/ticket-access-boundary";
 
 /*
  * A small stand-in for the App Router: push() commits the new pathname inside
@@ -31,7 +32,7 @@ vi.mock("../components/team/team-presence-provider", () => ({ TeamPresenceProvid
 const modules = Object.fromEntries(
   ["dashboard", "projects", "tickets", "reporting", "clients", "todo", "invoices", "subscriptions", "coupons", "investment_intent", "services", "forms", "team", "team_supervision", "settings"].map((id) => [id, true]),
 );
-const user = { id: "u1", displayName: "Test User", role: "owner", avatarUrl: null, modules, teamMessaging: { use: false } } as unknown as InternalUser;
+const user = { id: "u1", displayName: "Test User", role: "owner", avatarUrl: null, modules, tickets: { view: true }, teamMessaging: { use: false } } as unknown as InternalUser;
 
 const loaded = Object.assign(Promise.resolve(), { status: "fulfilled" as const, value: undefined });
 let payloads: Map<string, () => void>;
@@ -82,6 +83,18 @@ afterEach(() => {
 });
 
 describe("Sidebar navigation renders the destination skeleton", () => {
+  it("redacts an internal Ticket segment from the mounted shell on confirmed denial", () => {
+    const shell = start('/tickets/70000000-0000-4000-8000-000000000010');
+    expect(shell.main.textContent).toContain('Page /tickets/');
+    act(() => notifyTicketAccessUnavailable('70000000-0000-4000-8000-000000000010'));
+    expect(shell.main.textContent).not.toContain('Page /tickets/');
+    expect(shell.main.textContent).toContain('unavailable');
+  });
+  it("leaves independent Team segments visible on a Ticket module denial", () => {
+    const shell = start('/team');
+    act(() => notifyTicketAccessUnavailable());
+    expect(shell.main.textContent).toBe('Page /team');
+  });
   it.each([
     ["/team", "/investment-intent", "investmentIntent"],
     ["/dashboard", "/tickets", "tickets"],

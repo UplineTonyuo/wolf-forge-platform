@@ -9,8 +9,9 @@ import type { ServiceFolderRow } from "../lib/supabase/database-rows";
 
 const getInternalContext = vi.hoisted(() => vi.fn());
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: () => getInternalContext() }));
-vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
+vi.mock("next/navigation", () => ({ notFound: vi.fn(), forbidden: () => { throw new Error("FORBIDDEN"); } }));
 vi.mock("../components/subscriptions/subscription-plan-form", () => ({ SubscriptionPlanForm: () => null }));
+vi.mock("../components/subscriptions/subscription-history-boundary", () => ({ SubscriptionHistoryBoundary: () => null }));
 
 import NewSubscriptionPage from "../app/(internal)/subscriptions/new/page";
 import EditSubscriptionPlanPage from "../app/(internal)/subscriptions/[subscriptionId]/edit/page";
@@ -50,19 +51,21 @@ const catalog = [
 
 const hiddenNames = ["GMB Verification", "GMB Optimization", "Google Business Profile Reviews ( 10 Reviews)", "Franchise in a Box System", "SEO SPRINT", "WEBSITE SPRINT", "Standard 20 Page Web Build", "E-Commerce SEO Package", "On-page SEO"];
 
-function context(detail?: unknown) {
+function context(detail?: unknown, enabled = true, manage = true) {
   return {
+    user: { subscriptions: { manage } },
     services: {
       companies: { listActive: async () => [] },
       catalog: { listCatalog: async () => catalog, listFolders: async () => folders },
-      subscriptions: { get: async () => detail },
+      subscriptions: { get: async () => detail, workEnabled: async () => enabled },
     },
   };
 }
 
-/** The page returns <PageFrame><SubscriptionPlanForm .../></PageFrame>; read the form's props. */
+/** Read the form inside the visibility boundary and PageFrame. */
 function formServices(page: ReactElement): SubscriptionPickerService[] {
-  const form = (page.props as { children: ReactElement }).children;
+  const frame = (page.props as { children: ReactElement }).children;
+  const form = (frame.props as { children: ReactElement }).children;
   expect(isValidElement(form)).toBe(true);
   return (form.props as { services: SubscriptionPickerService[] }).services;
 }
@@ -73,6 +76,13 @@ function openFolder(name: RegExp) {
 }
 
 describe("New Subscription service eligibility", () => {
+  it.each([[false, true], [true, false]])("rejects creation before loading catalog when enabled=%s and manage=%s", async (enabled, manage) => {
+    const ctx = context(undefined, enabled, manage);
+    const catalogRead = vi.spyOn(ctx.services.catalog, "listCatalog");
+    getInternalContext.mockResolvedValue(ctx);
+    await expect(NewSubscriptionPage()).rejects.toThrow("FORBIDDEN");
+    expect(catalogRead).not.toHaveBeenCalled();
+  });
   it("passes only subscription-eligible Services to the form", async () => {
     getInternalContext.mockResolvedValue(context());
     const names = formServices(await NewSubscriptionPage()).map((service) => service.name);
@@ -139,6 +149,13 @@ describe("New Subscription service eligibility", () => {
 });
 
 describe("Edit Subscription service eligibility", () => {
+  it.each([[false, true], [true, false]])("rejects editing before reading terms when enabled=%s and manage=%s", async (enabled, manage) => {
+    const ctx = context(undefined, enabled, manage);
+    const detailRead = vi.spyOn(ctx.services.subscriptions, "get");
+    getInternalContext.mockResolvedValue(ctx);
+    await expect(EditSubscriptionPlanPage({ params: Promise.resolve({ subscriptionId: "sub-1" }) })).rejects.toThrow("FORBIDDEN");
+    expect(detailRead).not.toHaveBeenCalled();
+  });
   it("offers eligible Services plus the subscription's current Service only", async () => {
     const detail = { subscription: { service_id: "gmb-verification" }, plan_items: [{ service_id: "gmb-verification" }] };
     getInternalContext.mockResolvedValue(context(detail));

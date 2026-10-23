@@ -1,6 +1,7 @@
 begin;
 
 select plan(76);
+create temp table form_catalog_baseline as select count(*)::bigint total from public.services where tenant_id=private.wolf_forge_tenant_id();
 
 -- -----------------------------------------------------------------------------
 -- Structure, capabilities, and protected boundaries
@@ -595,7 +596,7 @@ select lives_ok(
     (public.app_assign_form(
       '64000000-0000-0000-0000-000000000003',
       (select id from form_test_ids where label = 'intake-form'),
-      jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000001', 'required', true)
+      jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000001', 'client_profile_id', '1b000000-0000-0000-0000-000000000001', 'required', true)
     )).id
   )$$,
   'Intake Form assigns to an authoritative Order with a linked Service'
@@ -604,7 +605,7 @@ select throws_ok(
   $$select public.app_assign_form(
     '64000000-0000-0000-0000-000000000004',
     (select id from form_test_ids where label = 'intake-form'),
-    jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000002')
+    jsonb_build_object('order_id', '4b000000-0000-0000-0000-000000000002', 'client_profile_id', '1b000000-0000-0000-0000-000000000001')
   )$$,
   '23514', 'Intake Form is not linked to the Order Service',
   'Intake assignment refuses an Order whose Service is not linked'
@@ -646,8 +647,9 @@ select throws_ok(
     '[]'
   )$$,
   '42501', 'Form Order context cannot be spoofed',
-  'Intake Order context cannot be spoofed'
+  'an assigned client cannot spoof a different Project context'
 );
+set local "request.jwt.claim.sub" = '2b000000-0000-0000-0000-000000000001';
 select lives_ok(
   $$insert into form_test_ids values (
     'intake-submission-a',
@@ -659,7 +661,7 @@ select lives_ok(
       '[]'
     )).id
   )$$,
-  'Client A submits assigned Intake Form in the correct Order scope'
+  'authorized internal owner submits assigned Intake in the correct Order scope'
 );
 reset role;
 select ok(
@@ -918,7 +920,7 @@ select ok(
   and (select count(*) >= 1 from public.activity_events where entity_type = 'form_submission' and action = 'form.submission_corrected'),
   'meaningful Form lifecycle, assignment, submission, and correction activity is recorded'
 );
-select is((select count(*) from public.services), 59::bigint, 'Forms preserves the current 59-Service catalog baseline');
+select is((select count(*) from public.services where tenant_id = private.wolf_forge_tenant_id()), (select total from form_catalog_baseline), 'Forms preserves the existing Wolf Forge Service catalogue');
 select ok(
   to_regclass('public.invoices') is not null
   and to_regclass('public.subscriptions') is not null

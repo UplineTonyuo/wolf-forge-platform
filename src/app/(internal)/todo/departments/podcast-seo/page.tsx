@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { loadPodcastWorkflowSnapshotBundleOrNull } from "../../../../../services/podcast-workflow-service";
 import { PodcastSeoLiveView } from "../../../../../components/operations/podcast-seo-live-view";
-import { getInternalContext } from "../../../../../lib/supabase/next-server";
+import { requireWolfForgeOperations } from "../../../../../lib/security/wolf-forge-operations";
 
 export const metadata: Metadata = { title: "Operations — Podcast SEO" };
 
@@ -16,9 +16,9 @@ export const metadata: Metadata = { title: "Operations — Podcast SEO" };
  * `/api/operations/podcast-seo/snapshot` when the Podcast SEO sync webhook
  * (`/api/operations/podcast-seo/sync`) invalidates it. The browser is never
  * given a Supabase token or any other credential to do this — see that
- * route and `use-podcast-live-sync.ts`. `getInternalContext()` is called
- * only to confirm this remains an authenticated internal request — the same
- * gate every other Operations/To Do route already relies on.
+ * route and `use-podcast-live-sync.ts`. `requireWolfForgeOperations()` is called
+ * only to confirm this remains an authenticated internal request in the
+ * Wolf Forge Tenant (D-285) — before any Sheets fetch or cache read.
  *
  * `month` is untrusted input straight from the URL. It is never used to
  * build a Sheets range or tab name directly — `loadPodcastWorkflowSnapshotBundleOrNull`
@@ -32,7 +32,7 @@ export default async function PodcastSeoPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
-  await getInternalContext();
+  await requireWolfForgeOperations();
 
   const { month } = await searchParams;
   const bundle = await loadPodcastWorkflowSnapshotBundleOrNull(month ?? null);

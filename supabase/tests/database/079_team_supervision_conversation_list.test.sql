@@ -2,6 +2,9 @@ begin;
 
 select plan(40);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('7f300000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'list-owner@example.invalid', now(), now()),
@@ -41,40 +44,46 @@ or (profile_row.id = '7f300000-0000-4000-8000-000000000007' and role_row.name = 
 or (profile_row.id = '7f300000-0000-4000-8000-000000000008' and role_row.name = 'staff');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000001',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000005',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-28 12:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000002',
     'group:7f310000-0000-4000-8000-000000000002',
     '7f300000-0000-4000-8000-000000000004', 'group', 'Excluded group',
     '2026-09-29 12:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000003',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000006',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 11:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000004',
     '7f300000-0000-4000-8000-000000000001|7f300000-0000-4000-8000-000000000004',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000005',
     '7f300000-0000-4000-8000-000000000001|7f300000-0000-4000-8000-000000000002',
     '7f300000-0000-4000-8000-000000000001', 'direct', null,
     '2026-09-29 09:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '7f310000-0000-4000-8000-000000000006',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000008',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
@@ -133,9 +142,10 @@ join synthetic_profiles as second_profile on first_profile.profile_id < second_p
 limit 105;
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, last_message_at, created_at
 )
 select
+  private.wolf_forge_tenant_id(),
   ('7f330000-0000-4000-8000-' || lpad(pair_number::text, 12, '0'))::uuid,
   first_id::text || '|' || second_id::text,
   first_id,
@@ -318,8 +328,9 @@ select throws_ok(
 );
 reset role;
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
-values ('7f300000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
+values (private.wolf_forge_tenant_id(), '7f300000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('7f300000-0000-4000-8000-000000000002');
 set local role authenticated;
@@ -511,7 +522,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'),
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'),
   0::bigint,
   'LIST emits no authorization.team_supervision.read event'
 );

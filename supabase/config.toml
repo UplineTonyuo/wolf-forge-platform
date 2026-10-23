@@ -4,6 +4,10 @@
 # working directory name when running `supabase init`.
 project_id = "Wolf-Forge-Platform"
 
+# Service-to-service API-key authentication is enforced by withSupabase(auth: secret).
+[functions.studio-web-push]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.
@@ -217,8 +221,8 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-enable_signup = false
+# Keep the email provider available for password login; auth.enable_signup blocks new accounts.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

@@ -1,5 +1,8 @@
 "use client";
 
+import { PwaInstallButton } from "../pwa/pwa-provider";
+import { ClientDraftSignOut } from "../tickets/client-draft-provider";
+
 import {
   BarChart3,
   CircleUserRound,
@@ -14,6 +17,8 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { signOutAction } from "../../app/actions/auth";
@@ -60,12 +65,19 @@ export function ClientPortalSidebar({
   categories,
   companyName,
   displayName,
+  workspaceName,
+  brandingUnavailable = false,
 }: {
   categories: PortalNavigationCategory[];
   companyName: string;
   displayName: string | null;
+  workspaceName?: string;
+  brandingUnavailable?: boolean;
 }) {
   const pathname = usePathname();
+  const brandName = brandingUnavailable ? "Workspace branding unavailable" : workspaceName ?? "Wolf Forge";
+  const [revokedCategories, setRevokedCategories] = useState<PortalNavigationCategory[] | null>(null);
+  useTicketCacheRevocation(() => setRevokedCategories(categories));
   const drawer = usePortalDrawer();
   const drawerOpen = drawer?.open ?? false;
 
@@ -97,10 +109,11 @@ export function ClientPortalSidebar({
         <Link
           href="/account"
           className="portal-brand"
-          aria-label="Wolf Forge client portal"
+          aria-label={`${brandName} client portal`}
           onClick={closeDrawer}
         >
-          <WolfForgeMark />
+          {brandingUnavailable ? <strong>{brandName}</strong> : <WolfForgeMark />}
+          {workspaceName ? <strong className="tenant-workspace-name">{workspaceName}</strong> : null}
         </Link>
 
         <nav className="portal-nav" aria-label="Client portal">
@@ -134,7 +147,7 @@ export function ClientPortalSidebar({
                     >
                       <Icon aria-hidden={true} />
                       <span>{item.label}</span>
-                      <NavCount item={item} />
+                      {item.id !== "portal_tickets" || revokedCategories !== categories ? <NavCount item={item} /> : null}
                     </Link>
                   );
                 })}
@@ -144,16 +157,17 @@ export function ClientPortalSidebar({
         </nav>
 
         <div className="portal-account">
+          <PwaInstallButton variant="portal" />
           <span className="portal-account-identity">
             <strong>{companyName}</strong>
             {displayName ? <span>{displayName}</span> : null}
           </span>
-          <form action={signOutAction}>
+          <ClientDraftSignOut action={signOutAction}>
             <button type="submit" className="portal-signout">
               <LogOut aria-hidden={true} />
               <span className="sr-only">Sign out</span>
             </button>
-          </form>
+          </ClientDraftSignOut>
         </div>
       </aside>
     </>

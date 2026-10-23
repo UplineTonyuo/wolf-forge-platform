@@ -37,7 +37,7 @@ update public.profiles set role_id = (select id from public.roles where name = '
 where id = 'fd000000-0000-4000-8000-000000000004';
 
 insert into public.orders (id, company_id, service_id, title, assigned_to_profile_id) values
-  ('fd200000-0000-4000-8000-000000000001', 'fd100000-0000-4000-8000-000000000001', (select id from public.services where archived_at is null limit 1), 'Secure delivery order', 'fd000000-0000-4000-8000-000000000001');
+  ('fd200000-0000-4000-8000-000000000001', 'fd100000-0000-4000-8000-000000000001', (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1), 'Secure delivery order', 'fd000000-0000-4000-8000-000000000001');
 insert into public.tickets (id, company_id, client_profile_id, order_id, subject, created_by_profile_id) values
   ('fd300000-0000-4000-8000-000000000001', 'fd100000-0000-4000-8000-000000000001', 'fd000000-0000-4000-8000-000000000002', 'fd200000-0000-4000-8000-000000000001', 'Secure delivery ticket', 'fd000000-0000-4000-8000-000000000001');
 insert into public.ticket_messages (id, ticket_id, author_profile_id, author_type, message_kind, visibility, body) values

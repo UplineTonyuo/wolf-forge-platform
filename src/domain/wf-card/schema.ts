@@ -48,8 +48,8 @@ export type PurchaseServiceWithBalanceInput = z.infer<
  * wallet after the debit it performed.
  */
 export type StorePurchaseResult = {
-  orderId: string;
-  orderNumber: number;
+  orderId: string | null;
+  orderNumber: number | null;
   invoiceId: string;
   invoiceNumber: number | null;
   paymentId: string;

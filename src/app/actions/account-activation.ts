@@ -3,6 +3,7 @@
 import { hashActivationToken } from "../../lib/email/client-welcome-email-server";
 import { readServerEnvironment } from "../../lib/env/server-env";
 import { AuthAdminAdapter, AuthAdminError } from "../../lib/supabase/auth-admin";
+import { requestTenantSelector } from "../../lib/supabase/next-server";
 import { createTrustedServerSupabaseClient } from "../../lib/supabase/trusted-server-client";
 
 export type ActivateAccountState = { error: string | null; done: boolean };
@@ -34,8 +35,10 @@ export async function activateAccountAction(
 
   const trusted = createTrustedServerSupabaseClient(readServerEnvironment());
   const tokenHash = hashActivationToken(token);
+  // The link only spends on the Tenant whose verified host the request came in on.
   const { data: profileId, error } = await trusted.rpc("app_server_find_client_activation", {
     p_token_hash: tokenHash,
+    p_tenant_id: await requestTenantSelector(),
   });
   if (error || !profileId) return { error: INVALID_LINK, done: false };
 

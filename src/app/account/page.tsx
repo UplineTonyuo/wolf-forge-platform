@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { ClientDashboard } from "../../components/account/dashboard/client-dashboard";
+import { FinancialVisibilityBoundary } from "../../components/invoices/financial-visibility-boundary";
+import { invoiceFundingVisibility, financialAuthority, financialIdentity } from "../../domain/invoices/visibility";
 import {
   getClientPortalSummary,
   readClientPaymentRails,
+  readClientInvoices,
 } from "../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../lib/supabase/next-server";
 
@@ -28,7 +31,7 @@ export default async function ClientDashboardPage() {
    * balance — which is why this surface no longer claims the account has no
    * payment method on file.
    */
-  return (
+  const dashboard = (
     <ClientDashboard
       companyName={context.user.companyName}
       displayName={context.user.displayName}
@@ -37,4 +40,12 @@ export default async function ClientDashboardPage() {
       storeGranted={context.user.modules.portal_store === true}
     />
   );
+  if (!context.user.modules.portal_invoices) return dashboard;
+  const [rows, enabled, wallet, membership] = await Promise.all([
+    readClientInvoices(), context.services.invoices.workEnabled(),
+    context.services.wallets.getForCompany(context.user.companyId),
+    context.services.wfCard.getMembership(context.user.companyId),
+  ]);
+  const signature = invoiceFundingVisibility(rows ?? [], enabled, wallet, membership?.status ?? null, financialIdentity(context.user));
+  return <FinancialVisibilityBoundary key={financialAuthority("dashboard", signature)} signature={signature} scope="dashboard">{dashboard}</FinancialVisibilityBoundary>;
 }

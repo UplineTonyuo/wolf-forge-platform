@@ -31,11 +31,13 @@ function tabLabel(tab: Tab) {
 export function SubscriptionsList({
   summaries,
   canManage,
+  initialStatus = "active",
 }: {
   summaries: SubscriptionSummary[];
   canManage: boolean;
+  initialStatus?: Tab;
 }) {
-  const [tab, setTab] = useState<Tab>("active");
+  const [tab, setTab] = useState<Tab>(initialStatus);
   const [query, setQuery] = useState("");
   const [health, setHealth] = useState("all");
   const [interval, setInterval] = useState("all");
@@ -72,9 +74,9 @@ export function SubscriptionsList({
           </label>
 
           <MobileFilterSheet label="Filter subscriptions" alwaysVisible
-            activeCount={Number(tab !== "active") + Number(health !== "all") + Number(interval !== "all")}
+            activeCount={Number(tab !== initialStatus) + Number(health !== "all") + Number(interval !== "all")}
             onOpen={() => setDraft({ status: tab, health, interval })}
-            onClear={() => { setTab("active"); setHealth("all"); setInterval("all"); }}
+            onClear={() => { setTab(initialStatus); setHealth("all"); setInterval("all"); }}
             onApply={() => { setTab(draft.status); setHealth(draft.health); setInterval(draft.interval); }}>
             <FilterOptionGroup label="Status" value={draft.status} onChange={(status) => setDraft({ ...draft, status: status as Tab })}
               options={tabs.map((value) => ({ value, label: tabLabel(value), count: counts[value] }))} />
@@ -111,7 +113,7 @@ export function SubscriptionsList({
                 <td><strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong><small>{summary.currency}</small></td>
                 <td><strong>{summary.paid_cycle_count}</strong></td>
                 <td>{formatDate(summary.last_payment_at)}</td>
-                <td>{summary.status === "canceled" ? "Ã¢â‚¬â€" : formatDate(summary.next_payment_on)}</td>
+                <td>{summary.status === "canceled" ? "\u2014" : formatDate(summary.next_payment_on)}</td>
                 <td><SubscriptionHealthBadge health={summary.health} status={summary.status} /></td>
                 <td><SubscriptionStatusBadge status={summary.status} /></td>
               </tr>)}</tbody>
@@ -120,7 +122,7 @@ export function SubscriptionsList({
           <div className={styles.mobileList}>{visible.map((summary) => <Link className={styles.mobileRow} href={`/subscriptions/${summary.subscription_id}`} key={summary.subscription_id}>
             <header><div><strong>{summary.service_name}</strong><span><span className={styles.subscriptionReference}>{summary.public_ref}</span>{" · "}{summary.company_name}</span></div><SubscriptionStatusBadge status={summary.status} /></header>
             <div className={styles.mobileMoney}><strong>{formatCurrencyCents(summary.amount_cents, summary.currency)}</strong><span>{formatSubscriptionInterval(summary.interval_unit, summary.interval_count)}</span></div>
-            <dl><div><dt>Next payment</dt><dd>{summary.status === "canceled" ? "Ã¢â‚¬â€" : formatDate(summary.next_payment_on)}</dd></div><div><dt>Payments</dt><dd>{summary.paid_cycle_count}</dd></div></dl>
+            <dl><div><dt>Next payment</dt><dd>{summary.status === "canceled" ? "\u2014" : formatDate(summary.next_payment_on)}</dd></div><div><dt>Payments</dt><dd>{summary.paid_cycle_count}</dd></div></dl>
             {summary.health !== summary.status ? <SubscriptionHealthBadge health={summary.health} status={summary.status} /> : null}
           </Link>)}</div>
         </>

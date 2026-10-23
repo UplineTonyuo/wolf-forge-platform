@@ -87,18 +87,18 @@ values
 -- =============================================================================
 -- ISOLATION
 --
--- These assertions count rows rather than name fixture ids, which was only ever
--- correct while the table was empty. A local database accumulates real interest
--- rows as the app is used, so the counts drift and the file starts failing for
--- reasons that have nothing to do with the code under test.
---
--- Clearing inside the transaction makes the file deterministic wherever it
--- runs. The enclosing rollback means no real row is ever actually removed.
+-- Scope probes to fixture companies without deleting existing append-only history.
+-- Security invoker retains the underlying table's API-grant/RLS boundary.
 -- =============================================================================
 
-delete from public.activity_events where entity_type = 'service_interest';
-delete from public.notifications where entity_type = 'service_interest';
-delete from public.service_interests;
+create temp view intent_fixture with (security_invoker=true) as
+select * from public.service_interests
+where company_id in ('71000000-0000-0000-0000-00000000000a','71000000-0000-0000-0000-00000000000b');
+grant select on intent_fixture to authenticated;
+create temp view intent_notification_fixture with (security_invoker=true) as
+select * from public.notifications
+where entity_type='service_interest'
+  and company_id in ('71000000-0000-0000-0000-00000000000a','71000000-0000-0000-0000-00000000000b');
 
 -- =============================================================================
 -- STRUCTURE AND WIRING
@@ -201,7 +201,7 @@ reset role;
 set local "request.jwt.claim.sub" = '';
 
 select is(
-  (select count(*) from public.service_interests),
+  (select count(*) from pg_temp.intent_fixture),
   1::bigint,
   'exactly one interest row exists after the first add'
 );
@@ -211,14 +211,14 @@ select is(
 select is(
   (
     select company_id::text || '|' || status || '|' || in_cart::text || '|' || add_count::text
-    from public.service_interests
+    from pg_temp.intent_fixture
   ),
   '71000000-0000-0000-0000-00000000000a|new|true|1',
   'the interest is recorded for the caller''s own company as a new, in-cart signal'
 );
 
 select is(
-  (select signalled_by_profile_id from public.service_interests),
+  (select signalled_by_profile_id from pg_temp.intent_fixture),
   '70000000-0000-0000-0000-000000000001'::uuid,
   'the signalling client profile is recorded from the session'
 );
@@ -241,7 +241,7 @@ reset role;
 set local "request.jwt.claim.sub" = '';
 
 select is(
-  (select add_count from public.service_interests),
+  (select add_count from pg_temp.intent_fixture),
   1,
   'a repeated add does not inflate the activity count'
 );
@@ -249,7 +249,7 @@ select is(
 -- A repeated add must not reorder the workspace, so activity may not move. The
 -- insert set every timestamp in one statement, so they are still equal.
 select ok(
-  (select last_activity_at = first_added_at from public.service_interests),
+  (select last_activity_at = first_added_at from pg_temp.intent_fixture),
   'a repeated add does not advance the latest activity timestamp'
 );
 
@@ -297,7 +297,7 @@ select throws_ok(
 -- outright rather than being handed an empty result. Both layers say no; this
 -- is the one that answers first.
 select throws_ok(
-  $$ select count(*) from public.service_interests $$,
+  $$ select count(*) from pg_temp.intent_fixture $$,
   '42501',
   null,
   'a client session cannot read the interest table at all, not even its own company''s rows'
@@ -351,7 +351,7 @@ set local "request.jwt.claim.sub" = '';
 select is(
   (
     select count(*)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
       and recipient_profile_id in (
         '70000000-0000-0000-0000-000000000004',
@@ -365,7 +365,7 @@ select is(
 select is(
   (
     select count(*)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
       and recipient_profile_id in (
         '70000000-0000-0000-0000-000000000001',
@@ -381,7 +381,7 @@ select is(
 select is(
   (
     select string_agg(role_row.name, ',' order by role_row.name)
-    from public.notifications as notification
+    from pg_temp.intent_notification_fixture as notification
     join public.profiles as profile_row
       on profile_row.id = notification.recipient_profile_id
     join public.roles as role_row on role_row.id = profile_row.role_id
@@ -398,7 +398,7 @@ select is(
 select is(
   (
     select distinct category || '|' || audience || '|' || left(href, 18)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
   ),
   'store|internal|/investment-intent',
@@ -408,7 +408,7 @@ select is(
 select is(
   (
     select distinct body
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
   ),
   'Northgate Dental showed interest in Local SEO.',
@@ -439,7 +439,7 @@ reset role;
 set local "request.jwt.claim.sub" = '';
 
 select is(
-  (select count(*) from public.service_interests),
+  (select count(*) from pg_temp.intent_fixture),
   1::bigint,
   'a removal never deletes the interest record'
 );
@@ -447,7 +447,7 @@ select is(
 select ok(
   (
     select not in_cart and removed_at is not null and add_count = 1
-    from public.service_interests
+    from pg_temp.intent_fixture
   ),
   'the removed interest keeps its history and reports itself out of cart'
 );
@@ -455,7 +455,7 @@ select ok(
 select is(
   (
     select count(*)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
       and recipient_profile_id in (
         '70000000-0000-0000-0000-000000000004',
@@ -479,7 +479,7 @@ select is(
 -- aged two hours is one whose next re-add is a real change of mind and must be
 -- signalled. The suppressed case -- a rapid remove/re-add loop inside the
 -- cooldown -- is covered in 036_b2_abuse_resistance.
-update public.service_interests
+update pg_temp.intent_fixture
 set first_added_at = now() - interval '2 hours',
     last_added_at = now() - interval '1 hour',
     removed_at = now() - interval '1 hour',
@@ -487,7 +487,7 @@ set first_added_at = now() - interval '2 hours',
     last_notified_at = now() - interval '2 hours';
 
 create temporary table intent_probe as
-select id, first_added_at, last_activity_at from public.service_interests;
+select id, first_added_at, last_activity_at from pg_temp.intent_fixture;
 
 set local role authenticated;
 set local "request.jwt.claim.role" = 'authenticated';
@@ -509,7 +509,7 @@ select ok(
       and interest.add_count = 2
       and interest.first_added_at = probe.first_added_at
       and interest.last_activity_at > probe.last_activity_at
-    from public.service_interests as interest
+    from pg_temp.intent_fixture as interest
     join intent_probe as probe on probe.id = interest.id
   ),
   're-adding restores the active signal, increments the count and keeps the original first_added_at'
@@ -518,7 +518,7 @@ select ok(
 select is(
   (
     select count(*)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where event_key like 'service-interest-renewed:%'
       and recipient_profile_id in (
         '70000000-0000-0000-0000-000000000004',
@@ -532,7 +532,7 @@ select is(
 select is(
   (
     select distinct body
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where event_key like 'service-interest-renewed:%'
   ),
   'Northgate Dental added Local SEO back to their cart.',
@@ -557,7 +557,7 @@ reset role;
 set local "request.jwt.claim.sub" = '';
 
 select is(
-  (select count(*) from public.service_interests),
+  (select count(*) from pg_temp.intent_fixture),
   2::bigint,
   'the same investment carries one independent interest row per company'
 );
@@ -565,7 +565,7 @@ select is(
 select is(
   (
     select company_id
-    from public.service_interests
+    from pg_temp.intent_fixture
     where signalled_by_profile_id = '70000000-0000-0000-0000-000000000002'
   ),
   '71000000-0000-0000-0000-00000000000b'::uuid,
@@ -574,14 +574,14 @@ select is(
 
 -- Both companies acted at the same transaction timestamp, so the older signal is
 -- aged deliberately to give the ordering assertion something real to sort.
-update public.service_interests
+update pg_temp.intent_fixture
 set last_activity_at = now() - interval '30 minutes'
 where company_id = '71000000-0000-0000-0000-00000000000a';
 
 -- Captured before any internal triage, to prove triage does not disturb it.
 create temporary table activity_probe as
 select id, last_activity_at
-from public.service_interests
+from pg_temp.intent_fixture
 where company_id = '71000000-0000-0000-0000-00000000000a';
 
 -- =============================================================================
@@ -608,7 +608,7 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ select count(*) from public.service_interests $$,
+  $$ select count(*) from pg_temp.intent_fixture $$,
   '42501',
   null,
   'a staff session cannot read the interest table directly either'
@@ -634,9 +634,10 @@ set local "request.jwt.claim.role" = 'authenticated';
 set local "request.jwt.claim.sub" = '70000000-0000-0000-0000-000000000004';
 
 select is(
-  (select count(*) from public.app_list_investment_intents()),
+  (select count(*) from public.app_list_investment_intents()
+   where company_id in ('71000000-0000-0000-0000-00000000000a', '71000000-0000-0000-0000-00000000000b')),
   2::bigint,
-  'an admin session reads every recorded interest'
+  'an admin session reads every interest recorded by the fixtures'
 );
 
 select is(
@@ -704,7 +705,7 @@ set local "request.jwt.claim.sub" = '';
 select ok(
   (
     select interest.last_activity_at = probe.last_activity_at
-    from public.service_interests as interest
+    from pg_temp.intent_fixture as interest
     join activity_probe as probe on probe.id = interest.id
     where interest.status = 'contacted'
   ),
@@ -717,6 +718,7 @@ select is(
     from public.activity_events
     where entity_type = 'service_interest'
       and action = 'service_interest.status_changed'
+      and entity_id in (select id from pg_temp.intent_fixture)
   ),
   2::bigint,
   'each internal status change is written to the audit trail'
@@ -781,7 +783,7 @@ set local "request.jwt.claim.sub" = '';
 select is(
   (
     select status || '|' || add_count::text
-    from public.service_interests
+    from pg_temp.intent_fixture
     where company_id = '71000000-0000-0000-0000-00000000000a'
   ),
   'closed|3',
@@ -795,9 +797,13 @@ select is(
 select is(
   (
     select count(*)
-    from public.notifications
+    from pg_temp.intent_notification_fixture
     where entity_type = 'service_interest'
       and company_id = '71000000-0000-0000-0000-00000000000a'
+      and recipient_profile_id in (
+        '70000000-0000-0000-0000-000000000004',
+        '70000000-0000-0000-0000-000000000005'
+      )
   ),
   4::bigint,
   'a re-add inside the cooldown advances the intent without manufacturing a second signal'

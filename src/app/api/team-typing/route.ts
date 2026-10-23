@@ -4,6 +4,7 @@ import { readBoundedJson } from "../../../lib/security/bounded-json";
 import { requestIsSameOrigin } from "../../../lib/security/same-origin";
 import { recordTeamRouteRefusal } from "../../../lib/security/team-route-refusal";
 import { getTeamActorContext } from "../../../lib/supabase/next-server";
+import { identityFailureResponse } from "../../../lib/supabase/identity-failure-response";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: "Invalid typing request." }, { status: 400 });
   }
 
-  const context = await getTeamActorContext();
+  const context = await getTeamActorContext().catch(identityFailureResponse);
+  if (context instanceof Response) return context;
   if (!context) {
     return Response.json({ ok: false, error: "Session expired." }, { status: 401 });
   }

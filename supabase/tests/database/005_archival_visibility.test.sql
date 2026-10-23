@@ -152,8 +152,8 @@ select is((select count(*) from public.orders), 0::bigint, 'an archived client c
 select is((select count(*) from public.order_tasks), 0::bigint, 'an archived client cannot read company tasks');
 select is(
   (select count(*) from public.services where id = '40000000-0000-0000-0000-000000000001'),
-  1::bigint,
-  'an archived profile can still read the fixture active service because the policy applies to authenticated users'
+  0::bigint,
+  'an archived profile has no active Tenant membership, so it reads no Services (WL-2.7)'
 );
 
 select * from finish();

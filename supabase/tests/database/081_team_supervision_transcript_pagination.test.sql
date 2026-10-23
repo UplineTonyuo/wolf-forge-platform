@@ -2,6 +2,9 @@ begin;
 
 select plan(76);
 
+create temp table supervision_audit_before on commit drop as
+select id from public.security_audit_events;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('8f400000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'page-owner@example.invalid', now(), now()),
@@ -35,28 +38,32 @@ or (profile_row.id = '8f400000-0000-4000-8000-000000000005' and role_row.name = 
 or (profile_row.id = '8f400000-0000-4000-8000-000000000007' and role_row.name = 'admin');
 
 insert into public.team_conversations (
-  id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
+  tenant_id, id, conversation_key, created_by_profile_id, kind, title, last_message_at, created_at
 )
 values
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000001',
     '8f400000-0000-4000-8000-000000000004|8f400000-0000-4000-8000-000000000005',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 10:06:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000002',
     'group:8f410000-0000-4000-8000-000000000002',
     '8f400000-0000-4000-8000-000000000004', 'group', 'Page group',
     '2026-09-29 11:00:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000003',
     '8f400000-0000-4000-8000-000000000004|8f400000-0000-4000-8000-000000000006',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,
     '2026-09-29 11:01:00+00', '2026-09-01 00:00:00+00'
   ),
   (
+    private.wolf_forge_tenant_id(),
     '8f410000-0000-4000-8000-000000000004',
     '8f400000-0000-4000-8000-000000000001|8f400000-0000-4000-8000-000000000004',
     '8f400000-0000-4000-8000-000000000004', 'direct', null,
@@ -234,7 +241,8 @@ create temp table page_audit_before (count bigint not null) on commit drop;
 insert into page_audit_before
 select count(*)
 from public.security_audit_events
-where event_code = 'authorization.team_supervision.read'
+where id not in (select id from supervision_audit_before)
+  and event_code = 'authorization.team_supervision.read'
   and action_slug = 'team.supervision.page';
 
 select has_function(
@@ -410,8 +418,9 @@ select throws_ok(
 );
 reset role;
 
-insert into public.profile_permission_overrides (profile_id, permission_key, allowed)
-values ('8f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
+-- Wolf Forge overrides; written as a trusted fixture, so the Tenant is explicit.
+insert into public.profile_permission_overrides (tenant_id, profile_id, permission_key, allowed)
+values (private.wolf_forge_tenant_id(), '8f400000-0000-4000-8000-000000000002', 'team_messages.supervise', false);
 
 select pg_temp.become('8f400000-0000-4000-8000-000000000002');
 set local role authenticated;
@@ -442,7 +451,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 3 from page_audit_before),
   'Owner history, Admin history and Owner window each append one PAGE audit'
@@ -624,7 +634,8 @@ select throws_ok(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 9 from page_audit_before),
   'invalid cursor adds no successful PAGE audit'
@@ -835,7 +846,8 @@ reset role;
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.page'),
   (select count + 13 from page_audit_before),
   'each successful history page or window has exactly one PAGE audit and failed reads have none'
@@ -843,14 +855,16 @@ select is(
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('b', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('b', 32)),
   '{"read_kind":"page","conversation_kind":"direct","result_count":5}'::jsonb,
   'history PAGE audit metadata contains only bounded non-content fields'
 );
 
 select is(
   (select metadata from public.security_audit_events
-   where correlation_id = repeat('c', 32)),
+   where id not in (select id from supervision_audit_before)
+     and correlation_id = repeat('c', 32)),
   '{"read_kind":"page","conversation_kind":"direct","result_count":5}'::jsonb,
   'window PAGE audit metadata contains only bounded non-content fields'
 );
@@ -858,7 +872,8 @@ select is(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and metadata::text ~ '(HIDDEN_PAGE|DELETED_PAGE|VOICE_PAGE|private-page-secret|query|body|reply|storage)'
   ),
   'PAGE audit metadata contains no body, reply, query or voice-storage content'
@@ -867,12 +882,13 @@ select ok(
 select ok(
   not exists (
     select 1 from public.security_audit_events
-    where event_code = 'authorization.team_supervision.read'
+    where id not in (select id from supervision_audit_before)
+      and event_code = 'authorization.team_supervision.read'
       and action_slug = 'team.supervision.page'
-      and actor_profile_id not in (
+      and (actor_profile_id is null or actor_profile_id not in (
         '8f400000-0000-4000-8000-000000000001',
         '8f400000-0000-4000-8000-000000000002'
-      )
+      ))
   ),
   'every PAGE audit actor is the authenticated Owner or Admin'
 );
@@ -902,7 +918,8 @@ select is(
 
 select is(
   (select count(*) from public.security_audit_events
-   where event_code = 'authorization.team_supervision.read'
+   where id not in (select id from supervision_audit_before)
+     and event_code = 'authorization.team_supervision.read'
      and action_slug = 'team.supervision.open'),
   1::bigint, 'the detail cursor source emitted only its one OPEN event'
 );

@@ -30,7 +30,7 @@ export type OnboardingItem = {
   dueLabel: string | null;
   completedLabel: string | null;
   /** Start / Continue / View — chosen from the item's real state. */
-  action: "Start" | "Continue" | "View";
+  action: "Start" | "Continue" | "View" | "Paused";
   href: string;
 };
 
@@ -63,7 +63,8 @@ function isRetired(status: FormAssignmentSummary["status"]): boolean {
 
 function toItem(assignment: FormAssignmentSummary): OnboardingItem {
   const hasDraft = assignment.status === "assigned" && assignment.latest_submission_id !== null;
-  const attention = onboardingAttention(assignment.status, hasDraft);
+  const paused = assignment.work_enabled === false && assignment.status === "assigned";
+  const attention: AttentionState = paused ? { tone: "idle", label: "Collection paused" } : onboardingAttention(assignment.status, hasDraft);
 
   const context = assignment.order_title
     ? assignment.order_title
@@ -79,7 +80,7 @@ function toItem(assignment: FormAssignmentSummary): OnboardingItem {
     required: assignment.required,
     dueLabel: assignment.due_at ? formatDate(assignment.due_at) : null,
     completedLabel: assignment.completed_at ? formatDate(assignment.completed_at) : null,
-    action: assignment.status === "completed" ? "View" : hasDraft ? "Continue" : "Start",
+    action: assignment.status === "completed" ? "View" : paused ? "Paused" : hasDraft ? "Continue" : "Start",
     href: `/account/onboarding/${assignment.assignment_id}`,
   };
 }

@@ -1,6 +1,6 @@
 begin;
 
-select plan(78);
+select plan(79);
 
 -- Catalog-driven guardrail for current and future Wolf Forge public tables.
 -- Extension-owned relations and views are excluded; ordinary and partitioned
@@ -286,22 +286,21 @@ select is((select count(*) from public.roles), 5::bigint, 'service_role can exec
 
 select lives_ok(
   $$
-    insert into public.companies (id, name)
+    insert into public.companies (id, tenant_id, name)
     values
-      ('30000000-0000-0000-0000-000000000001', 'ACL Test Company'),
-      ('30000000-0000-0000-0000-000000000002', 'ACL Other Company')
+      ('30000000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Test Company'),
+      ('30000000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Other Company')
   $$,
-  'service_role can insert companies'
+  'service_role can insert companies with an explicit Tenant'
 );
 
 select lives_ok(
   $$
     update public.profiles
-    set role_id = (select id from public.roles where name = 'owner'),
-        company_id = '30000000-0000-0000-0000-000000000001'
+    set role_id = (select id from public.roles where name = 'owner')
     where id = '20000000-0000-0000-0000-000000000001'
   $$,
-  'service_role can perform trusted role and company profile administration'
+  'service_role can perform trusted role administration'
 );
 
 select lives_ok(
@@ -326,9 +325,10 @@ select is(
 
 select lives_ok(
   $$
-    insert into public.client_contacts (id, company_id, profile_id, name)
+    insert into public.client_contacts (id, tenant_id, company_id, profile_id, name)
     values (
       '35000000-0000-0000-0000-000000000001',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '10000000-0000-0000-0000-000000000001',
       'ACL Client Contact'
@@ -348,8 +348,8 @@ select lives_ok(
 
 select lives_ok(
   $$
-    insert into public.services (id, name)
-    values ('40000000-0000-0000-0000-000000000001', 'ACL Test Service')
+    insert into public.services (id, tenant_id, name)
+    values ('40000000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'ACL Test Service')
   $$,
   'service_role can insert services'
 );
@@ -365,9 +365,10 @@ select lives_ok(
 
 select isnt_empty(
   $$
-    insert into public.orders (id, company_id, service_id, title)
+    insert into public.orders (id, tenant_id, company_id, service_id, title)
     values (
       '50000000-0000-0000-0000-000000000001',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'service_role Identity Order'
@@ -518,7 +519,7 @@ values (
   '70000000-0000-0000-0000-000000000002',
   '20000000-0000-0000-0000-000000000001',
   'order',
-  '50000000-0000-0000-0000-000000000002',
+  '50000000-0000-0000-0000-000000000001',
   'order.updated',
   'Trusted audit row for privilege assertions',
   now()
@@ -639,8 +640,9 @@ set local role service_role;
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, title, status)
+    insert into public.orders (tenant_id, company_id, service_id, title, status)
     values (
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Invalid Complete Order',
@@ -654,8 +656,9 @@ select throws_ok(
 
 select throws_ok(
   $$
-    insert into public.orders (company_id, service_id, title, status, completed_at)
+    insert into public.orders (tenant_id, company_id, service_id, title, status, completed_at)
     values (
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Invalid Pending Completed Order',
@@ -670,9 +673,10 @@ select throws_ok(
 
 select lives_ok(
   $$
-    insert into public.orders (id, company_id, service_id, title, status, completed_at)
+    insert into public.orders (id, tenant_id, company_id, service_id, title, status, completed_at)
     values (
       '50000000-0000-0000-0000-000000000003',
+      'f0f0f0f0-0000-4000-8000-000000000001',
       '30000000-0000-0000-0000-000000000001',
       '40000000-0000-0000-0000-000000000001',
       'Valid Complete Order',
@@ -800,9 +804,16 @@ select throws_ok(
       'Later-phase entity test'
     )
   $$,
-  '23514',
-  'new row for relation "activity_events" violates check constraint "activity_events_entity_type_valid"',
-  'unsupported activity entity types remain rejected'
+  '42501',
+  'activity event Tenant cannot be derived',
+  'unsupported activity entity types remain rejected (WL-2.8: no Tenant can be derived for them)'
+);
+select ok(
+  exists (select 1 from pg_constraint
+    where conrelid = 'public.activity_events'::regclass and conname = 'activity_events_entity_type_valid'
+      and pg_get_constraintdef(oid) ~ '''order_task'''
+      and pg_get_constraintdef(oid) !~ 'external_accounting_export'),
+  'the activity entity type check constraint still exists behind the Tenant trigger'
 );
 
 select throws_ok(
@@ -811,8 +822,8 @@ select throws_ok(
     set company_id = '30000000-0000-0000-0000-000000000002'
     where id = '10000000-0000-0000-0000-000000000001'
   $$,
-  '23514',
-  'linked contact profile must remain a client in the same company',
+  '23503',
+  'update or delete on table "tenant_memberships" violates foreign key constraint "client_contacts_profile_membership_fkey" on table "client_contacts"',
   'profile administration cannot move a linked contact profile to another company'
 );
 
@@ -823,7 +834,7 @@ select throws_ok(
     where id = '10000000-0000-0000-0000-000000000001'
   $$,
   '23514',
-  'linked contact profile must remain a client in the same company',
+  'new row for relation "tenant_memberships" violates check constraint "tenant_memberships_internal_has_no_company"',
   'profile administration cannot promote a linked client contact to an internal role'
 );
 

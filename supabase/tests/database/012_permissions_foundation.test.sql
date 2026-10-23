@@ -146,6 +146,13 @@ and role.name in (
   'staff'
 );
 
+-- D-275: a new profile has no Tenant membership; this client is provisioned
+-- into Wolf Forge explicitly (no Client link).
+insert into public.tenant_memberships (tenant_id, profile_id, account_class, role_id)
+select private.wolf_forge_tenant_id(), '25000000-0000-0000-0000-000000000005', 'client', role_row.id
+from public.roles as role_row
+where role_row.name = 'client';
+
 
 -- ============================================================
 -- OWNER

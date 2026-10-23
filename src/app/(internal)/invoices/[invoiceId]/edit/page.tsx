@@ -1,3 +1,5 @@
+import { FinancialVisibilityBoundary } from "../../../../../components/invoices/financial-visibility-boundary";
+import { invoiceWorkVisibility, financialAuthority, financialIdentity } from "../../../../../domain/invoices/visibility";
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import { forbidden, notFound } from "next/navigation";
@@ -12,7 +14,7 @@ export const metadata: Metadata = { title: "Edit Invoice" };
 
 export default async function EditInvoicePage({ params }: { params: Promise<{ invoiceId: string }> }) {
   const [{ invoiceId }, context] = await Promise.all([params, getInternalContext()]);
-  if (!context.user.invoices.manage) forbidden();
+  if (!context.user.invoices.manage || !await context.services.invoices.workEnabled()) forbidden();
   try {
     const [detail, companies, services, folders] = await Promise.all([
       context.services.invoices.get(invoiceId),
@@ -21,6 +23,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ in
       context.services.catalog.listFolders(),
     ]);
     if (!["draft", "unpaid", "payment_pending"].includes(detail.invoice.status)) notFound();
+    const signature = invoiceWorkVisibility(true, context.user.invoices, { id: detail.invoice.id, status: detail.invoice.status }, financialIdentity(context.user));
     const folderNames = new Map(folders.map((folder) => [folder.id, folder.name]));
     const serviceOptions: InvoiceServiceOption[] = services.map((service) => ({
       id: service.id,
@@ -41,9 +44,9 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ in
       taxTotalCents: detail.invoice.tax_total_cents,
       items: detail.items.map((item) => ({ id: item.id, serviceId: item.service_id, name: item.name, description: serviceDescriptionToPlainText(item.description), quantity: item.quantity, unitPriceCents: item.unit_price_cents, unitDiscountCents: item.unit_discount_cents, taxable: item.is_taxable })),
     };
-    return <PageFrame title={detail.invoice.status === "draft" ? "Edit Invoice Draft" : `Edit Invoice #WF-${String(detail.invoice.invoice_number).padStart(4, "0")}`}><InvoiceForm mode="edit" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} initial={initial} /></PageFrame>;
+    return <FinancialVisibilityBoundary key={financialAuthority("internal-work", signature)} signature={signature} scope="internal-work" invoiceId={invoiceId}><PageFrame title={detail.invoice.status === "draft" ? "Edit Invoice Draft" : `Edit Invoice #WF-${String(detail.invoice.invoice_number).padStart(4, "0")}`}><InvoiceForm mode="edit" requestId={randomUUID()} companies={companies.map(({ id, name }) => ({ id, name }))} services={serviceOptions} folders={folders} initial={initial} /></PageFrame></FinancialVisibilityBoundary>;
   } catch (error) {
-    if (toClientSafeError(error).code === "NOT_FOUND") notFound();
+    if (["NOT_FOUND", "PERMISSION_DENIED"].includes(toClientSafeError(error).code)) notFound();
     throw error;
   }
 }

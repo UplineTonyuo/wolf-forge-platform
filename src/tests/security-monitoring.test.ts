@@ -715,7 +715,9 @@ describe("authorization denial is observable", () => {
     const source = read("src/lib/supabase/next-server.ts");
     /* `redirect()` throws, so an unawaited record would be lost. */
     const refusals = source.match(/await recordContextRefusal\(/g) ?? [];
-    expect(refusals.length).toBe(8);
+    const callsAndDeclaration = source.match(/\brecordContextRefusal\(/g) ?? [];
+    expect(refusals.length).toBeGreaterThan(0);
+    expect(refusals.length).toBe(callsAndDeclaration.length - 1);
   });
 });
 
@@ -770,29 +772,19 @@ describe("login failure classification (KI-029 observability)", () => {
     expect(source).toContain("auth.login.succeeded");
   });
 
-  it("still gives the browser one non-enumerating message", () => {
+  it("keeps credential failures uniform and bounds the identity-outage response", () => {
     const source = read("src/app/actions/auth.ts");
 
-    /*
-     * The production login hardening pass added early refusal branches
-     * (oversized input, bot detection, limiter preflight failure) ahead of
-     * the credential check itself — each must ALSO give the browser the
-     * exact same uniform message, so each legitimately has its own
-     * `return signInFailure(...)` call site. What must never happen is a
-     * second, different wording: every failure return in this action funnels
-     * through the shared `signInFailure` / `signInUnassigned` helpers, with
-     * no ad-hoc `return { error: ... }` literal anywhere else.
-     */
     expect(source.match(/return signInFailure\(/g)?.length).toBeGreaterThanOrEqual(1);
-    const bareErrorReturns = source.match(/return \{\s*error:/g) ?? [];
-    expect(bareErrorReturns).toHaveLength(0);
+    const bareErrorReturns = source.match(/return \{\s*error:[^}]*\}/g) ?? [];
+    expect(bareErrorReturns).toEqual(["return { error: IDENTITY_UNAVAILABLE_MESSAGE }"]);
+    expect(source).toMatch(/if \(error\.kind === "unavailable"\)\s*\{\s*await recordIdentityUnavailable\(error\);\s*return \{ error: IDENTITY_UNAVAILABLE_MESSAGE \};\s*\}/);
     /* No provider wording reaches the response or the log. */
     expect(source).not.toMatch(/error\.message/);
     expect(source).not.toMatch(/metadata:\s*\{[^}]*\bemail\b/);
     /*
-     * The unassigned refusal is the only other failure return, and it is the
-     * POST-authentication message — safe to distinguish, because reaching it
-     * required already proving the password (see `login-flow.ts`).
+     * Assignment and identity lookup run after successful authentication.
+     * Neither response may expose the provider's error details.
      */
     expect(source.match(/return signInUnassigned\(\)/g)).toHaveLength(1);
   });

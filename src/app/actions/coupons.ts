@@ -1,10 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { toClientSafeError } from "../../lib/errors/application-error";
+import { mapDatabaseError } from "../../lib/errors/map-database-error";
 import { parseCouponFormData } from "../../lib/coupons/form-data";
 import { getInternalContext } from "../../lib/supabase/next-server";
+
+export async function loadCouponAccessAction(): Promise<{ ok: true; allowed: boolean } | { ok: false; denied: boolean }> {
+  try {
+    const context = await getInternalContext();
+    const access = await context.client.rpc("app_has_permission", { p_permission_key: "coupons.manage" });
+    if (access.error) throw mapDatabaseError(access.error);
+    return { ok: true, allowed: access.data === true };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false, denied: ["PERMISSION_DENIED", "NOT_FOUND"].includes(toClientSafeError(error).code) };
+  }
+}
 
 export type CouponActionState = {
   error: string | null;

@@ -1,7 +1,9 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -89,6 +91,39 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+it.each([true, false])("hydrates saved messages across time zones without replacing the transcript (client=%s)", async (clientView) => {
+  const RealDateTimeFormat = Intl.DateTimeFormat;
+  let localTimeZone = "UTC";
+  vi.spyOn(Intl, "DateTimeFormat").mockImplementation(function (locales, options) {
+    return new RealDateTimeFormat(locales, {
+      ...options,
+      timeZone: options?.timeZone ?? localTimeZone,
+    });
+  });
+  const savedMessage = message({ created_at: "2026-10-19T23:35:00Z" });
+  const element = <TicketConversation orderChat clientView={clientView} viewerProfileId={clientView ? CLIENT_PROFILE : STAFF_PROFILE} messages={[savedMessage]} />;
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(element);
+  document.body.append(container);
+  const serverTime = container.querySelector("time");
+  expect(serverTime?.textContent).toContain("11:35 PM");
+  localTimeZone = "Asia/Singapore";
+  const recoverableError = vi.fn();
+  let root: ReturnType<typeof hydrateRoot> | undefined;
+  try {
+    await act(async () => {
+      root = hydrateRoot(container, element, { onRecoverableError: recoverableError });
+    });
+    expect(recoverableError).not.toHaveBeenCalled();
+    expect(container.querySelector("time")).toBe(serverTime);
+    expect(serverTime?.textContent).toContain("7:35 AM");
+    expect(container.textContent).toContain("Hello");
+  } finally {
+    await act(async () => root?.unmount());
+    container.remove();
+  }
+});
 
 describe("Ticket conversation ownership — internal / staff POV", () => {
   it("is the connected chat surface, not the divided message feed", () => {

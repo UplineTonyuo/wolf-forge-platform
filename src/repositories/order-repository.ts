@@ -7,11 +7,10 @@ import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { ListOrdersFilter, UserMutationClient } from "./types";
 
 /**
- * One round trip resolves the Client, Service and assignee through their real
- * foreign keys. PostgREST applies RLS to every embedded resource, so this never
- * widens visibility, and it avoids a per-row lookup.
+ * Client and Service use their real foreign keys. Assignees now belong through
+ * Tenant memberships; the authorized operational projection resolves them.
  */
-const projectRelationSelect = "*, companies(id, name), services(id, name), profiles(id, display_name, avatar_url)";
+const projectRelationSelect = "*, companies(id, name), services(id, name)";
 
 export type ProjectLabelRow = Pick<OrderRow, "id" | "order_number" | "title">;
 
@@ -28,12 +27,11 @@ export class OrderRepository {
   constructor(private readonly client: UserMutationClient) {}
 
   /**
-   * RLS embeds the assignee when the caller may read that profile directly.
-   * A task-scoped operator may still need the assignee label without receiving
-   * the rest of that teammate's profile row, so fill only missing labels from
-   * the narrow operational projection.
+   * Resolve assignee labels through the Tenant membership projection without
+   * exposing the rest of a teammate's profile. One request covers every row.
    */
-  private async hydrateMissingAssignees(rows: ProjectRelationRow[]): Promise<ProjectRelationRow[]> {
+  private async hydrateMissingAssignees(sourceRows: ProjectRelationRow[]): Promise<ProjectRelationRow[]> {
+    const rows = sourceRows.map((row) => ({ ...row, profiles: row.profiles ?? null }));
     const missingIds = new Set(
       rows
         .filter((row) => row.assigned_to_profile_id && !row.profiles)
@@ -45,7 +43,7 @@ export class OrderRepository {
     const namesById = new Map(
       assignees
         .filter((assignee) => missingIds.has(assignee.profile_id))
-        .map((assignee) => [assignee.profile_id, assignee.display_name] as const),
+        .map((assignee) => [assignee.profile_id, assignee] as const),
     );
 
     return rows.map((row) => {
@@ -55,8 +53,8 @@ export class OrderRepository {
         ...row,
         profiles: {
           id: row.assigned_to_profile_id,
-          display_name: namesById.get(row.assigned_to_profile_id) ?? null,
-          avatar_url: null,
+          display_name: namesById.get(row.assigned_to_profile_id)?.display_name ?? null,
+          avatar_url: namesById.get(row.assigned_to_profile_id)?.avatar_url ?? null,
         },
       };
     });

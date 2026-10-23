@@ -96,13 +96,26 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
 export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
   const context = await getClientContext();
   try {
-    await context.services.permissions.requireModuleAccess("portal_forms");
     const submission = await context.services.forms.submit(input, context.actor);
     revalidatePath("/account/onboarding");
     revalidatePath("/account");
     return { ok: true, data: { id: submission.id } };
   } catch (error) {
     return failure(error);
+  }
+}
+
+export async function loadFormCollectionAvailability(canonicalKey?: string, expectedVersionId?: string): Promise<boolean> {
+  try {
+    if (canonicalKey) {
+      const repository = new FormRepository(await createNextServerSupabaseClient());
+      const schema = await repository.getPublishedSchema(canonicalKey);
+      return !expectedVersionId || schema.form_version_id === expectedVersionId;
+    }
+    const repository = new FormRepository(await createNextServerSupabaseClient());
+    return await repository.workEnabled();
+  } catch {
+    return false;
   }
 }
 

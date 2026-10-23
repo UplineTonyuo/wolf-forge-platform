@@ -1,0 +1,88 @@
+{
+  "phase": "shot",
+  "origin": "http://127.0.0.1:3015",
+  "startedAt": "2026-10-12T20:01:30.617Z",
+  "baseline": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "haha",
+      "primary_color": "#000d51",
+      "accent_color": "#a8832e",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 23,
+      "updated_at": "2026-10-12T19:59:12.200667+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 5,
+      "updated_at": "2026-10-12T17:18:02.093222+00:00"
+    },
+    "runtime": "{\"publications\" : 0, \"invoices\" : 0, \"walletTransactions\" : 0}"
+  },
+  "widths": [],
+  "presets": [],
+  "modules": [],
+  "checks": [],
+  "attempts": [],
+  "errors": [],
+  "consoleErrors": [
+    "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.",
+    "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "failedResponses": [],
+  "status": "SHOT",
+  "final": {
+    "a": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724859",
+      "tenant_status": "active",
+      "display_name": "haha",
+      "primary_color": "#000d51",
+      "accent_color": "#a8832e",
+      "module_keys": [
+        "forms",
+        "invoices",
+        "projects",
+        "reporting",
+        "services",
+        "subscriptions",
+        "tickets"
+      ],
+      "revision": 23,
+      "updated_at": "2026-10-12T19:59:12.200667+00:00"
+    },
+    "b": {
+      "tenant_id": "c70b73ea-99d9-4c1f-9b0c-f7087a724860",
+      "tenant_status": "active",
+      "display_name": "Builder QA Draft B",
+      "primary_color": "#234567",
+      "accent_color": "#a8732e",
+      "module_keys": [
+        "coupons",
+        "forms",
+        "services"
+      ],
+      "revision": 5,
+      "updated_at": "2026-10-12T17:18:02.093222+00:00"
+    },
+    "runtime": "{\"publications\" : 0, \"invoices\" : 0, \"walletTransactions\" : 0}"
+  },
+  "finishedAt": "2026-10-12T20:02:12.848Z"
+}

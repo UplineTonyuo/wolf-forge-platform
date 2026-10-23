@@ -17,13 +17,14 @@ import { getClientContext, getInternalContext } from "../../lib/supabase/next-se
 export type StorePurchaseActionResult =
   | {
       ok: true;
-      orderId: string;
-      orderNumber: number;
+      orderId: string | null;
+      orderNumber: number | null;
       amountCents: number;
       currency: string;
       walletBalanceCents: number;
       serviceName: string;
       replayed: boolean;
+      destinationHref: string;
     }
   | {
       ok: false;
@@ -33,6 +34,8 @@ export type StorePurchaseActionResult =
         | "RECURRING_UNSUPPORTED"
         | "NOT_PRICED"
         | "RATE_LIMITED"
+        | "PROJECTS_DISABLED"
+        | "INVOICES_DISABLED"
         | "PURCHASE_FAILED";
       error: string;
     };
@@ -57,11 +60,12 @@ export async function purchaseServiceWithBalanceAction(input: {
       context.actor,
     );
 
-    // The purchase touches four surfaces the client can see.
+    // Refresh the purchase and any newly assigned intake forms.
     revalidatePath("/account");
     revalidatePath("/account/projects");
     revalidatePath("/account/invoices");
     revalidatePath("/account/store");
+    revalidatePath("/account/onboarding");
     revalidatePath(`/account/store/${input.serviceId}`);
 
     return {
@@ -73,6 +77,9 @@ export async function purchaseServiceWithBalanceAction(input: {
       walletBalanceCents: purchase.walletBalanceCents,
       serviceName: purchase.serviceName,
       replayed: purchase.replayed,
+      destinationHref: purchase.replayed || context.user.modules.portal_projects !== true
+        ? `/account/invoices/${purchase.invoiceId}`
+        : "/account/projects",
     };
   } catch (error) {
     const raw =
@@ -94,7 +101,11 @@ export async function purchaseServiceWithBalanceAction(input: {
      * because the only authoritative copy of those lives inside the database
      * transaction that just rolled back.
      */
-    const denial = raw.includes("WF_CARD_INSUFFICIENT_BALANCE")
+    const denial = raw.includes("WF_INVOICES_DISABLED")
+      ? ({ code: "INVOICES_DISABLED", reason: "invoices_disabled", error: "New service purchases are unavailable while Invoices is disabled. Your wallet balance remains available." } as const)
+      : raw.includes("WF_PROJECTS_DISABLED")
+      ? ({ code: "PROJECTS_DISABLED", reason: "projects_disabled", error: "New service purchases are unavailable while Projects is disabled." } as const)
+      : raw.includes("WF_CARD_INSUFFICIENT_BALANCE")
       ? ({ code: "INSUFFICIENT_BALANCE", reason: "insufficient_balance", error: "Your Wolf Forge Balance no longer covers this investment." } as const)
       : raw.includes("WF_PURCHASE_RECURRING_UNSUPPORTED")
         ? ({ code: "RECURRING_UNSUPPORTED", reason: "recurring_unsupported", error: "Recurring investments are arranged with your Wolf Forge team." } as const)

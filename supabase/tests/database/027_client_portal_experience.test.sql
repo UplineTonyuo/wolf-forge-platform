@@ -69,7 +69,7 @@ values
    'draft', 'USD', null, null, 25000, 25000,
    '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000003'),
   ('65000000-0000-0000-0000-00000000000b', '61000000-0000-0000-0000-00000000000b',
-   'unpaid', 'USD', 6, now(), 90000, 90000,
+   'unpaid', 'USD', private.next_invoice_number(), now(), 90000, 90000,
    '60000000-0000-0000-0000-000000000003', '60000000-0000-0000-0000-000000000003');
 
 -- One conversation per company.
@@ -235,7 +235,7 @@ select is(
 
 update public.invoices
 set status = 'unpaid',
-    invoice_number = 7,
+    invoice_number = private.next_invoice_number(),
     issued_at = now(),
     due_at = now() + interval '14 days'
 where id = '65000000-0000-0000-0000-00000000000a';

@@ -1,0 +1,121 @@
+import { chromium } from "playwright";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import assert from "node:assert/strict";
+import { createServerClient } from "@supabase/ssr";
+
+// Credentials stay in the existing gitignored file; this runner performs no draft writes.
+const credentials = JSON.parse(await readFile(resolve(process.env.WF_QA_CREDENTIALS), "utf8"));
+const origin = "http://127.0.0.1:3013";
+const output = resolve("docs/qa/white-label-studio");
+await mkdir(output, { recursive: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const page = await context.newPage();
+const errors = [];
+const failedResponses = [];
+page.on("response", (response) => { if (response.status() >= 400) failedResponses.push({ path: new URL(response.url()).pathname, status: response.status() }); });
+page.on("pageerror", (error) => errors.push(error.message));
+page.on("console", (entry) => { if (entry.type() === "error") errors.push(entry.text()); });
+const environment = Object.fromEntries((await readFile(".env.local", "utf8")).split(/\r?\n/).map((line) => line.split(/=(.*)/s).slice(0, 2)).filter((entry) => entry.length === 2));
+assert.equal(new URL(environment.SUPABASE_URL).hostname, "127.0.0.1");
+const cookies = [];
+const auth = createServerClient(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+  cookies: { getAll: () => cookies, setAll: (values) => cookies.push(...values) },
+});
+const login = await auth.auth.signInWithPassword(credentials);
+assert.equal(login.error, null, "Normal password grant must succeed");
+await context.addCookies(cookies.map(({ name, value }) => ({ name, value, url: origin, httpOnly: true, sameSite: "Lax" })));
+await page.goto(`${origin}/white-label?tenant=f0f0f0f0-0000-4000-8000-000000002601`, { waitUntil: "load", timeout: 60000 });
+await page.getByRole("heading", { name: "White Label Studio" }).waitFor();
+console.log("Authenticated studio rendered");
+assert.equal(await page.getByRole("navigation", { name: "Settings sections" }).count(), 0);
+assert.equal(await page.getByRole("navigation", { name: "Primary", exact: true }).getByRole("link", { name: "White Label", exact: true }).getAttribute("aria-current"), "page");
+await page.getByLabel("Workspace display name").waitFor();
+await page.screenshot({ path: `${output}/initial-authenticated.png`, fullPage: true, caret: "initial" });
+const loadedName = await page.getByLabel("Workspace display name").inputValue();
+const tenantUrl = page.url();
+const results = [];
+async function settle() {
+  await page.evaluate(() => Promise.all(document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).map((animation) => animation.finished.catch(() => {}))));
+}
+for (const width of [320, 360, 390, 430, 768, 1280, 1440]) {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.evaluate(() => scrollTo(0, 0));
+  await settle();
+  await page.screenshot({ path: `${output}/editor-${width}.png`, fullPage: true, caret: "initial" });
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  assert.equal(overflow, false, `Page overflow at ${width}`);
+  await page.getByRole("button", { name: /^Tenant:/ }).click();
+  await page.getByRole("listbox").waitFor();
+  await settle();
+  await page.screenshot({ path: `${output}/dropdown-${width}.png`, fullPage: false, caret: "initial" });
+  await page.keyboard.press("Escape");
+  await page.getByRole("listbox").waitFor({ state: "detached" });
+  assert.equal(await page.getByRole("listbox").count(), 0);
+  await page.getByRole("button", { name: "Review Draft", exact: true }).click();
+  await settle();
+  assert.equal(await page.getByRole("heading", { name: "Review draft", exact: true }).evaluate((el) => el === document.activeElement), true);
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: `${output}/review-${width}.png`, fullPage: true, caret: "initial" });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await page.getByRole("button", { name: "Back to editing", exact: true }).click();
+  await settle();
+  assert.equal(await page.getByRole("button", { name: "Review Draft", exact: true }).evaluate((el) => el === document.activeElement), true);
+  await page.getByRole("button", { name: "Mobile", exact: true }).click();
+  await settle();
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({ path: `${output}/mobile-preview-${width}.png`, fullPage: true, caret: "initial" });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await page.getByRole("button", { name: "Desktop", exact: true }).click();
+  results.push({ width, overflow: false, dropdownEscape: true, reviewFocusReturn: true });
+}
+await page.getByLabel("Workspace display name").fill("Studio QA unsaved preview");
+assert.equal(await page.getByTestId("preview-brand-name").textContent(), "Studio QA unsaved preview");
+assert.equal(await page.getByText("Unsaved changes", { exact: true }).count(), 1);
+await page.setViewportSize({ width: 390, height: 1000 });
+await page.getByRole("button", { name: "Open navigation", exact: true }).click();
+await page.locator("dialog[open]").getByRole("link", { name: "Dashboard", exact: true }).click();
+assert.equal(await page.locator("dialog[open]").count(), 0);
+assert.equal(await page.getByRole("button", { name: "Keep editing", exact: true }).evaluate((el) => el === document.activeElement), true);
+await page.keyboard.press("Escape");
+assert.equal(await page.getByRole("button", { name: "Open navigation", exact: true }).evaluate((el) => el === document.activeElement), true);
+await page.setViewportSize({ width: 1440, height: 1000 });
+for (const name of ["Services", "Projects", "Tickets", "Reporting", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Forms"]) {
+  const choice = page.getByRole("checkbox", { name, exact: true });
+  const initial = await choice.isChecked();
+  await choice.click();
+  assert.equal(await choice.isChecked(), !initial);
+  if (name === "Services") assert.equal(await page.locator('[data-module="projects"]').getAttribute("aria-hidden"), "true");
+  await choice.click();
+  assert.equal(await choice.isChecked(), initial);
+}
+await page.getByRole("button", { name: /^Tenant:/ }).click();
+await page.getByRole("option").filter({ hasText: /^Wolf Forge/ }).click();
+await page.getByRole("button", { name: "Keep editing", exact: true }).click();
+assert.equal(await page.getByLabel("Workspace display name").inputValue(), "Studio QA unsaved preview");
+const color = page.locator('input[type="color"]').first();
+const initialColor = await color.inputValue();
+await color.fill("#000d51");
+assert.equal(await page.getByTestId("preview-frame").evaluate((el) => el.style.getPropertyValue("--preview-primary")), "#000d51");
+await color.fill(initialColor);
+await page.getByLabel("Workspace display name").focus();
+await page.keyboard.press("Tab");
+assert.notEqual(await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle), "none");
+await page.getByRole("button", { name: "Mobile", exact: true }).click();
+assert.equal(await page.getByTestId("preview-frame").getAttribute("data-device"), "mobile");
+await page.screenshot({ path: `${output}/mobile-preview-1440.png`, fullPage: true, caret: "initial" });
+await page.getByLabel("Workspace display name").fill(loadedName);
+await page.emulateMedia({ reducedMotion: "reduce" });
+assert.equal(await page.getByRole("button", { name: "Mobile", exact: true }).evaluate((el) => getComputedStyle(el).transitionDuration), "0s");
+await page.goto(tenantUrl.replace("/white-label", "/settings/white-label"));
+await page.waitForURL((url) => url.pathname === "/white-label" && url.search === new URL(tenantUrl).search).catch(async (error) => {
+  await page.screenshot({ path: `${output}/redirect-diagnostic.png`, fullPage: true, caret: "initial" });
+  await writeFile(`${output}/diagnostic.json`, JSON.stringify({ results, errors, url: page.url(), body: (await page.locator("body").innerText()).slice(0, 1500) }, null, 2));
+  throw error;
+});
+assert.equal(page.url(), tenantUrl);
+await writeFile(`${output}/results.json`, JSON.stringify({ results, errors, failedResponses, oldRouteRedirect: true, brandingParity: true, reducedMotion: true, allNineChoices: true, mobileDepartureWarning: true, tenantSwitchWarning: true, keyboardFocus: true, draftWrites: false }, null, 2));
+assert.equal(errors.some((error) => error.includes("hydrated") || error.includes("TypeError")), false);
+console.log(JSON.stringify({ results, errors, oldRouteRedirect: true, draftWrites: false }));
+await browser.close();

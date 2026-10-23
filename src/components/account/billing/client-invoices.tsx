@@ -23,7 +23,7 @@ function invoiceLabel(value: number | null): string {
   return value == null ? "Invoice draft" : `Invoice #WF-${String(value).padStart(4, "0")}`;
 }
 
-export function ClientInvoicesView({ invoices }: { invoices: ClientInvoiceSummary[] }) {
+export function ClientInvoicesView({ invoices, workEnabled = true }: { invoices: ClientInvoiceSummary[]; workEnabled?: boolean }) {
   const balance = composeClientBalance(invoices);
 
   const outstanding = invoices.filter((entry) => invoiceIsCollectible(entry.financials));
@@ -78,7 +78,7 @@ export function ClientInvoicesView({ invoices }: { invoices: ClientInvoiceSummar
     <div className="portal-page">
       <header className="portal-page-head">
         <h1>Invoices</h1>
-        <p>Everything Wolf Forge has billed your account, and what remains outstanding.</p>
+        <p>{workEnabled ? "Everything Wolf Forge has billed your account, and what remains outstanding." : "Invoices is disabled. Your authorized issued financial history remains available as read-only."}</p>
       </header>
 
       <section className="portal-balance" aria-labelledby="portal-balance-heading">

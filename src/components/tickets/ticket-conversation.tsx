@@ -32,6 +32,7 @@ import {
 import styles from "./tickets.module.css";
 import type { TicketMutationResult } from "../../app/actions/tickets";
 import { OrderMessageActions, type OrderReplyTarget } from "./order-message-actions";
+import { useBrowserTimeZone } from "../../lib/use-browser-time-zone";
 
 function renderTicketInline(
   text: string,
@@ -562,6 +563,7 @@ export function TicketConversation({
   onToggleReaction?: (messageId: string, reactionCode: string) => Promise<TicketMutationResult>;
   onRetryMessage?: (message: TicketDetailMessage) => void;
 }) {
+  const timeZone = useBrowserTimeZone();
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
   const lightboxTriggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -779,7 +781,7 @@ export function TicketConversation({
                           className={styles.messageIdentityTime}
                           dateTime={message.created_at}
                         >
-                          {formatDateTime(message.created_at)}
+                          {formatDateTime(message.created_at, timeZone)}
                         </time>
                       ) : null}
 
@@ -928,6 +930,7 @@ export function TicketConversation({
                         >
                           {formatDateTime(
                             message.created_at,
+                            timeZone,
                           )}
                         </time>
                       ) : null}

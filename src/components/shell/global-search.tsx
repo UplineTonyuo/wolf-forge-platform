@@ -31,6 +31,7 @@ import {
 } from "../../app/actions/global-search";
 
 import styles from "./global-search.module.css";
+import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 
 
 function resultIcon(
@@ -175,7 +176,7 @@ function HighlightedTitle({
 }
 
 
-export function GlobalSearch() {
+export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true }: { ticketsAvailable?: boolean; projectsAvailable?: boolean } = {}) {
 
   const router =
     useRouter();
@@ -205,12 +206,14 @@ export function GlobalSearch() {
   ] = useState("");
 
   const [
-    results,
+    cachedResults,
     setResults,
   ] =
     useState<
       GlobalSearchItem[]
     >([]);
+
+  const results = cachedResults.filter((item) => (ticketsAvailable || item.kind !== "ticket") && (projectsAvailable || item.kind !== "project"));
 
   const [
     open,
@@ -221,6 +224,12 @@ export function GlobalSearch() {
     loading,
     setLoading,
   ] = useState(false);
+
+  useTicketCacheRevocation(() => {
+    requestRef.current += 1;
+    setResults((items) => items.filter((item) => item.kind !== "ticket"));
+    setLoading(false);
+  });
 
   const [
     error,

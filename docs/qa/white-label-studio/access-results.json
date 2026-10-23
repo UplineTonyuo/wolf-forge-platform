@@ -1,0 +1,69 @@
+{
+  "results": [
+    {
+      "identity": "owner",
+      "role": "owner",
+      "platformAdmin": false,
+      "route": "/white-label",
+      "denied": true,
+      "destination": "/white-label"
+    },
+    {
+      "identity": "owner",
+      "role": "owner",
+      "platformAdmin": false,
+      "route": "/settings/white-label",
+      "denied": true,
+      "destination": "/settings/white-label"
+    },
+    {
+      "identity": "staff",
+      "role": "no Wolf Forge membership",
+      "platformAdmin": false,
+      "route": "/white-label",
+      "denied": true,
+      "destination": "/login"
+    },
+    {
+      "identity": "staff",
+      "role": "no Wolf Forge membership",
+      "platformAdmin": false,
+      "route": "/settings/white-label",
+      "denied": true,
+      "destination": "/login"
+    },
+    {
+      "identity": "client",
+      "role": "client",
+      "platformAdmin": false,
+      "route": "/white-label",
+      "denied": true,
+      "destination": "/login"
+    },
+    {
+      "identity": "client",
+      "role": "client",
+      "platformAdmin": false,
+      "route": "/settings/white-label",
+      "denied": true,
+      "destination": "/login"
+    },
+    {
+      "identity": "quick-access",
+      "role": "owner",
+      "platformAdmin": false,
+      "route": "/white-label",
+      "denied": true,
+      "destination": "/white-label"
+    },
+    {
+      "identity": "quick-access",
+      "role": "owner",
+      "platformAdmin": false,
+      "route": "/settings/white-label",
+      "denied": true,
+      "destination": "/settings/white-label"
+    }
+  ],
+  "draftWrites": false
+}

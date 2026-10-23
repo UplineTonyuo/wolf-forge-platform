@@ -20,7 +20,7 @@ where id = 'fa000000-0000-4000-8000-000000000003';
 insert into public.orders (id, company_id, service_id, title) values (
   'fa200000-0000-4000-8000-000000000001',
   'fa100000-0000-4000-8000-000000000001',
-  (select id from public.services where archived_at is null limit 1),
+  (select id from public.services where archived_at is null and tenant_id = private.wolf_forge_tenant_id() order by id limit 1),
   'Internal note unsend order'
 );
 insert into public.tickets (id, company_id, client_profile_id, order_id, subject, created_by_profile_id) values (

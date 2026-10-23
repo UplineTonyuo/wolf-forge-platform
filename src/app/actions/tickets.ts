@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import type { TicketDetail, TicketSummary } from "../../domain/tickets/schema";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
 import { toClientSafeError } from "../../lib/errors/application-error";
@@ -11,9 +11,12 @@ import { getClientContext, getInternalContext } from "../../lib/supabase/next-se
 import { createTrustedServerSupabaseClient } from "../../lib/supabase/trusted-server-client";
 import { TicketAttachmentStorageRepository } from "../../repositories/ticket-attachment-storage-repository";
 
-export type TicketMutationResult = { ok: true } | { ok: false; error: string };
+export type TicketMutationResult = { ok: true } | { ok: false; error: string; code?: string };
 
-const failure = (error: unknown): TicketMutationResult => ({ ok: false, error: toClientSafeError(error).message });
+const failure = (error: unknown): TicketMutationResult => {
+  const safe = toClientSafeError(error);
+  return { ok: false, error: safe.message, code: safe.code };
+};
 
 function refreshTicket(ticketId: string) {
   revalidatePath("/tickets");
@@ -223,10 +226,10 @@ export async function sendTicketComposerAction(
       );
       const checksum = storage.checksum(bytes);
 
-      const stored = await storage.storeOrConfirm(claim.storage_key, bytes, validated.mimeType, checksum);
+      await storage.storeOrConfirm(claim.storage_key, bytes, validated.mimeType, checksum);
 
-      try {
-        await context.services.tickets.sendWithAttachment({
+      // Another finalization may have accepted these bytes; never delete them on a refused retry.
+      await context.services.tickets.sendWithAttachment({
           ...attachmentTarget,
           body,
           attachment: {
@@ -236,10 +239,6 @@ export async function sendTicketComposerAction(
             checksum_sha256: checksum,
           },
         }, context.actor);
-      } catch (error) {
-        if (stored) await storage.remove(claim.storage_key).catch(() => undefined);
-        throw error;
-      }
     } else if (input.replyTo && input.target.kind === "order") {
       await context.services.tickets.replyToOrderMessage(input.target.orderId, {
         request_id: input.requestId,
@@ -473,7 +472,7 @@ export async function assignTicketAction(ticketId: string, profileId: string | n
   return { ok: true };
 }
 
-export type TicketSummariesResult = { ok: true; data: TicketSummary[] } | { ok: false; error: string };
+export type TicketSummariesResult = { ok: true; data: TicketSummary[] } | { ok: false; error: string; code?: string };
 
 /**
  * Backs the Inbox drawer's Tickets pane list: the accessible Tickets whose
@@ -481,16 +480,17 @@ export type TicketSummariesResult = { ok: true; data: TicketSummary[] } | { ok: 
  * never Tickets that are only managed from /tickets.
  */
 export async function listTicketSummariesAction(): Promise<TicketSummariesResult> {
-  const context = await getInternalContext();
-  if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view Tickets." };
   try {
+    const context = await getInternalContext();
+    if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view Tickets.", code: "PERMISSION_DENIED" };
     return { ok: true, data: await context.services.tickets.listInbox() };
   } catch (error) {
+    unstable_rethrow(error);
     return failure(error) as TicketSummariesResult;
   }
 }
 
-export type TicketInboxConversationResult = { ok: true; data: TicketDetail } | { ok: false; error: string };
+export type TicketInboxConversationResult = { ok: true; data: TicketDetail } | { ok: false; error: string; code?: string };
 
 /**
  * Backs a selected Ticket row inside the Inbox drawer. Same read as
@@ -498,11 +498,12 @@ export type TicketInboxConversationResult = { ok: true; data: TicketDetail } | {
  * reachable from a client component instead of a server render.
  */
 export async function getTicketInboxConversationAction(ticketId: string): Promise<TicketInboxConversationResult> {
-  const context = await getInternalContext();
-  if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view this Ticket." };
   try {
+    const context = await getInternalContext();
+    if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view this Ticket.", code: "PERMISSION_DENIED" };
     return { ok: true, data: await context.services.tickets.get(ticketId) };
   } catch (error) {
+    unstable_rethrow(error);
     return failure(error) as TicketInboxConversationResult;
   }
 }

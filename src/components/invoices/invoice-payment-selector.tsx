@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { payInvoiceWithWfCardAction } from "../../app/actions/wf-card";
 import {
@@ -201,6 +202,7 @@ export function InvoicePaymentSelector({
   collectible,
   paymentRails,
 }: Props) {
+  const router = useRouter();
   const [membershipOpen, setMembershipOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<
@@ -228,6 +230,7 @@ export function InvoicePaymentSelector({
       const payment = await payInvoiceWithWfCardAction(invoiceId, requestId());
       if (payment.ok) {
         setResult({ kind: "success", walletBalanceCents: payment.walletBalanceCents });
+        router.refresh();
         return;
       }
       if (payment.code === "MEMBERSHIP_REQUIRED") setMembershipOpen(true);

@@ -23,6 +23,9 @@ import { randomUuid } from "../../lib/random-uuid";
 import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-file";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketRichTextEditor } from "./ticket-rich-text-editor";
+import { usePersistentReplyDraft } from "./use-persistent-reply-draft";
+import { useClientDraftSession } from "./client-draft-provider";
+import { PortalDialog } from "../account/ui/portal-dialog";
 import styles from "./tickets.module.css";
 
 type TicketComposerMode =
@@ -55,15 +58,22 @@ type TicketComposerOptimistic = {
   onSettled: (requestId: string, ok: boolean) => void;
 };
 
-export function TicketComposer({
+export function TicketComposer(props: Parameters<typeof TicketComposerBody>[0]) {
+  const { enabled } = useClientDraftSession();
+  const conversation = props.target.kind === "ticket" ? props.target.ticketId : props.target.orderId;
+  return <TicketComposerBody key={enabled ? `${props.target.kind}:${conversation}` : "legacy"} {...props} />;
+}
+
+function TicketComposerBody({
   target,
   mode,
   disabled = false,
   attached = false,
-  replyTo = null,
+  replyTo: suppliedReplyTo = null,
   onCancelReply,
   hideSubmitIcon = false,
-  optimistic,
+  optimistic: requestedOptimistic,
+  confirmedRequestIds = [],
   compact = false,
   contactName = null,
 }: {
@@ -75,6 +85,7 @@ export function TicketComposer({
   onCancelReply?: () => void;
   hideSubmitIcon?: boolean;
   optimistic?: TicketComposerOptimistic;
+  confirmedRequestIds?: string[];
   /** Compact icon-only footer + real-name placeholder, used only by the staff Ticket surfaces. */
   compact?: boolean;
   contactName?: string | null;
@@ -118,6 +129,32 @@ export function TicketComposer({
   const submittingRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [savingForSend, setSavingForSend] = useState(false);
+  const [restoredReply, setRestoredReply] = useState<OrderReplyTarget | null>(null);
+  const replyTo = suppliedReplyTo ?? restoredReply;
+  const persistent = usePersistentReplyDraft(
+    target.kind === "ticket" ? `ticket:${target.ticketId}` : `order:${target.orderId}`,
+    confirmedRequestIds,
+    (draft) => {
+      setBody(draft.body);
+      pickAttachment(draft.attachment);
+      setRestoredReply(draft.replyTo ? { ...draft.replyTo, body: "", authorName: "a message", replyPreview: "Original message",
+        replyAttachment: draft.replyTo.attachmentId ? { id: draft.replyTo.attachmentId, isImage: false, originalName: "Attachment" } : null } : null);
+      requestIdRef.current = draft.requestId;
+      requestSignatureRef.current = `${draft.replyTo?.messageId ?? ""}\0${draft.body.trim()}\0${draft.attachment?.name ?? ""}\0${draft.attachment?.size ?? 0}\0${draft.attachment?.lastModified ?? 0}`;
+      setResetKey((value) => value + 1);
+    },
+  );
+  // Durable drafts stay in the composer until the server confirms the send.
+  const optimistic = persistent.enabled ? undefined : requestedOptimistic;
+
+  function saveDraft(nextBody: string, nextAttachment: File | null) {
+    if (!persistent.enabled || persistent.loading) return;
+    void persistent.save(nextBody, nextAttachment, undefined, replyTo ? {
+      ticketId: replyTo.ticketId, messageId: replyTo.messageId, attachmentId: replyTo.replyAttachment?.id ?? null,
+    } : null).catch(() => undefined);
+  }
 
   useEffect(() => {
     if (!replyTo) return;
@@ -167,7 +204,7 @@ export function TicketComposer({
    * a pending bubble, so an in-flight request must not block typing the next
    * message — only the external `disabled` prop should. */
   const busy =
-    disabled || (!optimistic && pending);
+    disabled || persistent.loading || savingForSend || (!optimistic && pending);
 
   async function submit(
     event:
@@ -201,6 +238,19 @@ export function TicketComposer({
     const pendingReplyTo = replyTo;
 
     submittingRef.current = true;
+    if (persistent.enabled) {
+      setSavingForSend(true);
+      try { await persistent.save(body, attachment, requestId, replyTo ? {
+        ticketId: replyTo.ticketId, messageId: replyTo.messageId, attachmentId: replyTo.replyAttachment?.id ?? null,
+      } : null); }
+      catch {
+        setError("Your draft could not be saved on this device. Keep this window open and try again.");
+        submittingRef.current = false;
+        setSavingForSend(false);
+        return;
+      }
+      setSavingForSend(false);
+    }
 
     if (optimistic) {
       optimistic.onSend({
@@ -249,6 +299,8 @@ export function TicketComposer({
           if (optimistic) {
             optimistic.onSettled(requestId, true);
           } else {
+            if (persistent.enabled) await persistent.clear();
+            setRestoredReply(null);
             requestIdRef.current = "";
             requestSignatureRef.current = "";
 
@@ -315,7 +367,10 @@ export function TicketComposer({
                 : replyTo.replyPreview}
             </p>
           </div>
-          <button type="button" onClick={onCancelReply} disabled={busy} aria-label="Cancel reply">
+          <button type="button" onClick={() => {
+            setRestoredReply(null); onCancelReply?.();
+            if (persistent.enabled) void persistent.save(body, attachment, undefined, null).catch(() => undefined);
+          }} disabled={busy} aria-label="Cancel reply">
             Cancel
           </button>
         </div>
@@ -341,8 +396,9 @@ export function TicketComposer({
           disabled={busy}
           label={composerPlaceholder ?? "Write a reply"}
           placeholder={composerPlaceholder}
-          onChange={setBody}
-          onPasteFile={pickAttachment}
+          onChange={(value) => { setBody(value); saveDraft(value, attachment); }}
+          initialValue={body}
+          onPasteFile={(file) => { pickAttachment(file); saveDraft(body, file); }}
         />
       )}
 
@@ -374,6 +430,7 @@ export function TicketComposer({
             disabled={busy}
             onClick={() => {
               clearAttachment();
+              saveDraft(body, null);
               if (fileInputRef.current) fileInputRef.current.value = "";
             }}
           >
@@ -410,6 +467,7 @@ export function TicketComposer({
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0] ?? null;
                   pickAttachment(file);
+                  saveDraft(body, file);
                 }}
               />
               <button
@@ -440,6 +498,24 @@ export function TicketComposer({
           </button>
         </div>
       </footer>
+      {persistent.enabled ? <div role="status" className={styles.draftStatus}>
+        <span>{persistent.loading ? "Restoring draft…" : persistent.status === "saving" ? "Saving draft…" : persistent.status === "saved"
+          ? "Draft saved on this device for 30 days. Signing out clears it."
+          : persistent.status === "error" ? "Draft not saved. Keep this window open; device storage may be unavailable or another window changed this draft."
+          : "Unsent text and files are saved on this device. Signing out clears them."}</span>
+        {(body || attachment) && !persistent.loading ? <button className="button button-secondary" type="button" disabled={busy} onClick={() => setDiscardOpen(true)}>Discard draft</button> : null}
+      </div> : null}
+      <PortalDialog open={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard unsent draft?">
+        <p>This removes the unsent text and attachment from this device.</p>
+        <div className={styles.draftActions}>
+        <button className="button button-secondary" type="button" onClick={() => setDiscardOpen(false)}>Keep draft</button>
+        <button className="button button-primary" type="button" onClick={() => { void persistent.clear().then(() => {
+          setBody(""); clearAttachment(); setRestoredReply(null); onCancelReply?.(); setResetKey((value) => value + 1);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          setDiscardOpen(false);
+        }).catch(() => setError("Could not discard the saved draft. Please try again.")); }}>Discard draft</button>
+        </div>
+      </PortalDialog>
     </form>
   );
 }

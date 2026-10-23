@@ -14,8 +14,16 @@ const trusted = vi.hoisted(() => ({
   auth: { admin: { updateUserById: vi.fn() } },
 }));
 
+const headersState = vi.hoisted(() => ({
+  tenant: "f0f0f0f0-0000-4000-8000-000000000001",
+}));
+
 vi.mock("../lib/env/server-env", () => ({ readServerEnvironment: () => ({}) }));
 vi.mock("../lib/supabase/trusted-server-client", () => ({ createTrustedServerSupabaseClient: () => trusted }));
+vi.mock("next/headers", () => ({
+  headers: async () => ({ get: (key: string) => (key === "x-wf-tenant" ? headersState.tenant : null) }),
+}));
+vi.mock("server-only", () => ({}));
 
 const base = {
   name: "Jane Doe",
@@ -115,10 +123,10 @@ function dependencies() {
       outcome: "claimed",
       email: "jane@acme.test",
       name: "Jane Doe",
+      host: "portal.wolfforge.test",
     })),
     finish: vi.fn<ClientWelcomeEmailDependencies["finish"]>(async () => undefined),
     send: vi.fn<ClientWelcomeEmailDependencies["send"]>(async () => "gmail-id"),
-    origin: "https://portal.wolfforge.test",
   };
 }
 
@@ -161,7 +169,7 @@ describe("welcome email delivery", () => {
   });
 
   it("sends nothing when the claim is refused or was already answered", async () => {
-    for (const outcome of ["sent", "failed", "in_progress", "recently_sent", "activated"] as const) {
+    for (const outcome of ["sent", "failed", "in_progress", "recently_sent", "activated", "no_verified_host"] as const) {
       const deps = dependencies();
       deps.claim.mockResolvedValue({ outcome });
 
@@ -169,6 +177,17 @@ describe("welcome email delivery", () => {
       expect(deps.send).not.toHaveBeenCalled();
       expect(deps.finish).not.toHaveBeenCalled();
     }
+  });
+
+  it("builds the link from the Tenant's claim host, never a fixed deployment origin", async () => {
+    const deps = dependencies();
+    deps.claim.mockResolvedValue({ outcome: "claimed", email: "jane@acme.test", name: "Jane Doe", host: "tenant-b.test" });
+
+    await sendClientWelcomeEmail("profile-1", "request-1", deps);
+    const token = sentToken(deps);
+
+    expect(deps.send.mock.calls[0]?.[0]?.html).toContain(`https://tenant-b.test/activate#token=${token}`);
+    expect(deps.send.mock.calls[0]?.[0]?.html).not.toContain("portal.wolfforge.test");
   });
 });
 
@@ -203,7 +222,10 @@ describe("set-password link", () => {
     expect(trusted.rpc).not.toHaveBeenCalled();
 
     expect((await submit({})).error).toMatch(/invalid, already used or expired/u);
-    expect(trusted.rpc).toHaveBeenCalledWith("app_server_find_client_activation", { p_token_hash: tokenHash });
+    expect(trusted.rpc).toHaveBeenCalledWith("app_server_find_client_activation", {
+      p_token_hash: tokenHash,
+      p_tenant_id: "f0f0f0f0-0000-4000-8000-000000000001",
+    });
     expect(trusted.auth.admin.updateUserById).not.toHaveBeenCalled();
   });
 
@@ -225,5 +247,19 @@ describe("set-password link", () => {
       p_token_hash: tokenHash,
     });
     expect(JSON.stringify(trusted.rpc.mock.calls)).not.toContain(token);
+  });
+
+  it("looks the link up in the request host's Tenant", async () => {
+    headersState.tenant = "f0f0f0f0-0000-4000-8000-000000002601";
+    mockLink(null);
+    try {
+      expect((await submit({})).error).toMatch(/invalid, already used or expired/u);
+      expect(trusted.rpc).toHaveBeenCalledWith("app_server_find_client_activation", {
+        p_token_hash: tokenHash,
+        p_tenant_id: "f0f0f0f0-0000-4000-8000-000000002601",
+      });
+    } finally {
+      headersState.tenant = "f0f0f0f0-0000-4000-8000-000000000001";
+    }
   });
 });

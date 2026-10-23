@@ -1,0 +1,62 @@
+[
+    {
+        "served":  "33bd2a97ad44362e121b7f04878b5d9fc6f79b74303a8b1450fb3d2e46d4919d",
+        "source":  "33bd2a97ad44362e121b7f04878b5d9fc6f79b74303a8b1450fb3d2e46d4919d",
+        "file":  "src/app/(internal)/white-label/page.tsx",
+        "match":  true
+    },
+    {
+        "served":  "76698596c40bf1a864be12eed268f8d8ceccb05478d756a1ec1dabc5ac16fe3f",
+        "source":  "76698596c40bf1a864be12eed268f8d8ceccb05478d756a1ec1dabc5ac16fe3f",
+        "file":  "src/app/actions/white-label.ts",
+        "match":  true
+    },
+    {
+        "served":  "c5c42e8f2acbae13dbe3f51a8fb733d9b824debf1145b0713c043c08e1030057",
+        "source":  "c5c42e8f2acbae13dbe3f51a8fb733d9b824debf1145b0713c043c08e1030057",
+        "file":  "src/components/white-label/white-label-builder.module.css",
+        "match":  true
+    },
+    {
+        "served":  "4be0c4854a6e206b19e5d42ec47e91f885d3e4b48d251b84194b423551b9c531",
+        "source":  "4be0c4854a6e206b19e5d42ec47e91f885d3e4b48d251b84194b423551b9c531",
+        "file":  "src/components/white-label/white-label-builder.tsx",
+        "match":  true
+    },
+    {
+        "served":  "b7ecbdaaa43c51d24dec001d20bcff77d6a67516b2099db35644eef41a1d344d",
+        "source":  "b7ecbdaaa43c51d24dec001d20bcff77d6a67516b2099db35644eef41a1d344d",
+        "file":  "src/components/white-label/white-label-color-controls.tsx",
+        "match":  true
+    },
+    {
+        "served":  "14a4769d3fc31ddf25d01293b4eb44bc7c95fcf081df24930dabb3a770010ea7",
+        "source":  "14a4769d3fc31ddf25d01293b4eb44bc7c95fcf081df24930dabb3a770010ea7",
+        "file":  "src/components/white-label/white-label-draft-editor.tsx",
+        "match":  true
+    },
+    {
+        "served":  "9a84240a7f59672f252fb543ae0a219fc61aa9d551fac4eb880952af9e37ef41",
+        "source":  "9a84240a7f59672f252fb543ae0a219fc61aa9d551fac4eb880952af9e37ef41",
+        "file":  "src/components/white-label/white-label-draft-list.tsx",
+        "match":  true
+    },
+    {
+        "served":  "81600c9b6300f826624a4e7a20ac5285638115fd9468ad1d229246830a049de2",
+        "source":  "81600c9b6300f826624a4e7a20ac5285638115fd9468ad1d229246830a049de2",
+        "file":  "src/components/white-label/white-label-preview.tsx",
+        "match":  true
+    },
+    {
+        "served":  "2de927b6d1446b84194016988984aefb847fde59dedcd6937f3d88ab7385afcd",
+        "source":  "2de927b6d1446b84194016988984aefb847fde59dedcd6937f3d88ab7385afcd",
+        "file":  "src/domain/white-label/draft.ts",
+        "match":  true
+    },
+    {
+        "served":  "9d6748774b36259ff856e002a96643f518a51cb6be87f28ca46e8069912e4673",
+        "source":  "9d6748774b36259ff856e002a96643f518a51cb6be87f28ca46e8069912e4673",
+        "file":  "src/services/white-label-service.ts",
+        "match":  true
+    }
+]

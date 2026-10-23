@@ -3,6 +3,11 @@ begin;
 
 select plan(20);
 
+create temp table gmail_connection_before on commit drop as
+select
+  (select jsonb_agg(to_jsonb(c) order by c.id) from public.integration_connections c where provider = 'gmail') as connections,
+  (select jsonb_agg(to_jsonb(r) order by r.provider) from private.integration_credential_references r where provider = 'gmail') as credential_references;
+
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
   ('a1100000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'gmail-admin@example.invalid', now(), now()),
@@ -45,8 +50,8 @@ select throws_ok(
 );
 
 reset role;
-select is((select count(*) from public.integration_connections where provider = 'gmail'), 0::bigint, 'failed secret write creates no fake Connected metadata');
-select is((select count(*) from private.integration_credential_references where provider = 'gmail'), 0::bigint, 'failed connection creates no credential reference');
+select is((select jsonb_agg(to_jsonb(c) order by c.id) from public.integration_connections c where provider = 'gmail'), (select connections from gmail_connection_before), 'failed connection leaves existing connection metadata unchanged');
+select is((select jsonb_agg(to_jsonb(r) order by r.provider) from private.integration_credential_references r where provider = 'gmail'), (select credential_references from gmail_connection_before), 'failed connection leaves existing credential references unchanged');
 
 set local role service_role;
 select lives_ok(

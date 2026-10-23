@@ -135,6 +135,13 @@ describe("cart interest signalling", () => {
 });
 
 describe("cart survival when tracking fails", () => {
+  it("keeps the cart when disabled telemetry returns a refusal", async () => {
+    recordStoreInterestAction.mockResolvedValue({ ok: false });
+    addItem(item({ id: "service-disabled-intent" }));
+    await Promise.resolve();
+    expect(readCart()[0]?.id).toBe("service-disabled-intent");
+  });
+
   it("keeps the added investment when the server rejects the signal", async () => {
     recordStoreInterestAction.mockRejectedValue(new Error("network down"));
 
