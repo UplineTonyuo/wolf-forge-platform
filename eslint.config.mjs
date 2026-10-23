@@ -26,5 +26,7 @@ export default defineConfig([
     "coverage/**",
     "supabase/.temp/**",
     "src/lib/supabase/database.types.ts",
+    // Standalone video build tooling (Playwright + ffmpeg), not app code.
+    "marketing/showreel/**",
   ]),
 ]);

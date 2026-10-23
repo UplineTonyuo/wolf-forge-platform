@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Wolf Forge Portal Showreel</title>
+<!--
+  Wolf Forge Portal — 25s showreel composition (1920x1080, 30fps).
+  Every visual is a pure function of time: window.seek(t) poses the whole frame,
+  so render.mjs can step it frame by frame. Open with ?t=12.4 to inspect a frame,
+  or ?play to watch it run in real time.
+  Served from the repo root (see render.mjs) so it can use the real brand art in
+  public/ and the real product screenshots in docs/qa/.
+-->
+<style>
+  @font-face { font-family: "Sora"; src: url("fonts/sora-latin-wght-normal.woff2") format("woff2"); font-weight: 100 800; }
+  @font-face { font-family: "Inter"; src: url("fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+
+  :root {
+    --navy: #000d51;
+    --deep: #00062f;
+    --gold: #d9a92f;
+    --gold-bright: #f1c85a;
+    --gold-ink: #a8832e;
+    --blue: #3e6cff;
+    --text: #f8f9ff;
+    --muted: #9ca5c4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+  #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; background: #01041f; font-family: "Inter", system-ui, sans-serif; color: var(--text); }
+  canvas.full { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+  #grain { mix-blend-mode: overlay; opacity: 0.22; image-rendering: pixelated; }
+  #vignette { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 72% 70% at 50% 50%, rgba(0,0,0,0) 52%, rgba(0,2,14,0.55) 82%, rgba(0,1,8,0.92) 100%); }
+  #flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #fff6d8 0%, #f1c85a 45%, rgba(217,169,47,0) 100%); opacity: 0; mix-blend-mode: screen; }
+  #world { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .scene { position: absolute; inset: 0; display: none; }
+  .persp { perspective: 2200px; perspective-origin: 50% 50%; }
+  .p3d { transform-style: preserve-3d; }
+  .abs { position: absolute; }
+
+  .kicker { font-family: "Inter"; font-weight: 600; font-size: 26px; letter-spacing: 0.55em; text-transform: uppercase; color: #c9cfe8; white-space: nowrap; }
+  .gold-text { background: linear-gradient(180deg, #fff1c2 0%, #f1c85a 32%, #d9a92f 62%, #8f6d22 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sora { font-family: "Sora"; }
+  .char { display: inline-block; will-change: transform, opacity, filter; }
+
+  .screen { position: absolute; border-radius: 18px; overflow: hidden; background: #fff;
+    box-shadow: 0 0 0 1.5px rgba(241,200,90,0.55), 0 40px 120px rgba(0,0,0,0.65), 0 0 80px rgba(62,108,255,0.18); }
+  .screen img { display: block; width: 100%; height: 100%; }
+  .layer { position: absolute; overflow: hidden; border-radius: 10px; }
+  .layer img { position: absolute; display: block; }
+  .phone { position: absolute; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.6)); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="mesh" class="full" width="480" height="270"></canvas>
+  <canvas id="embers" class="full" width="1920" height="1080"></canvas>
+
+  <div id="world">
+    <!-- A · 0.0–3.5  Wolf mark reveal -->
+    <div id="sA" class="scene">
+      <div id="aWolfWrap" class="abs" style="inset:0">
+        <img id="aWolf" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px" />
+        <img id="aWolfGlow" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px;filter:brightness(2.4) blur(6px);mix-blend-mode:screen" />
+      </div>
+      <div id="aLine1" class="abs kicker" style="left:0;right:0;top:860px;text-align:center">Every pack</div>
+      <div id="aLine2" class="abs kicker" style="left:0;right:0;top:910px;text-align:center;color:#f1c85a">needs a leader</div>
+    </div>
+
+    <!-- B · 3.5–5.5  Title slam -->
+    <div id="sB" class="scene persp">
+      <img id="bWolf" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px;opacity:0.12" />
+      <div id="bTitle" class="abs p3d" style="left:0;right:0;top:330px;text-align:center">
+        <div id="bTitleTop" class="sora" style="font-weight:800;font-size:200px;line-height:1;letter-spacing:-0.02em"></div>
+        <div id="bTitleBot" class="sora" style="font-weight:300;font-size:64px;letter-spacing:0.9em;margin-top:26px;padding-left:0.9em;color:#f8f9ff"></div>
+      </div>
+    </div>
+
+    <!-- C · 5.5–9.5  Product showcase: real desktop + kinetic nav words -->
+    <div id="sC" class="scene persp">
+      <div id="cScreenWrap" class="abs p3d" style="left:640px;top:150px;width:1200px;height:750px">
+        <div class="screen" style="inset:0">
+          <img src="/docs/qa/white-label-studio-v5-refine/desktop-normal-1440.png" />
+          <div id="cPill" class="abs" style="left:10px;width:172px;height:30px;border-radius:8px;border:2px solid #f1c85a;box-shadow:0 0 24px rgba(241,200,90,0.85), inset 0 0 18px rgba(241,200,90,0.35)"></div>
+        </div>
+      </div>
+      <div id="cWords" class="abs sora" style="left:110px;top:250px;font-weight:800;font-size:104px;line-height:1.12;letter-spacing:-0.02em">
+        <div class="cw">Projects</div><div class="cw">Tickets</div><div class="cw">Clients</div><div class="cw">Billing</div>
+      </div>
+      <div id="cKicker" class="abs kicker" style="left:114px;top:190px;font-size:20px;color:#f1c85a">Wolf Forge Portal</div>
+    </div>
+
+    <!-- D · 9.5–12.5  Wall of real screens collapses into one place -->
+    <div id="sD" class="scene persp">
+      <div id="dPlane" class="abs p3d" style="left:960px;top:540px;width:0;height:0"></div>
+      <div id="dScrim" class="abs" style="left:0;right:0;top:700px;height:380px;background:radial-gradient(ellipse 55% 60% at 50% 62%, rgba(0,4,30,0.85) 0%, rgba(0,4,30,0) 100%)"></div>
+      <div id="dKicker" class="abs kicker" style="left:0;right:0;top:120px;text-align:center">Your entire operation</div>
+      <div id="dBig" class="abs sora gold-text" style="left:0;right:0;top:830px;text-align:center;font-weight:800;font-size:120px;letter-spacing:-0.01em">In one place.</div>
+    </div>
+
+    <!-- E · 12.5–16.0  UI explode -->
+    <div id="sE" class="scene persp" style="perspective:2600px">
+      <div id="eRig" class="abs p3d" style="left:210px;top:71px;width:1500px;height:938px"></div>
+      <div id="eText1" class="abs sora" style="left:120px;top:110px;font-weight:800;font-size:92px;letter-spacing:-0.02em">Built in layers.</div>
+      <div id="eText2" class="abs sora gold-text" style="right:120px;top:52px;font-weight:800;font-size:92px;letter-spacing:-0.02em;text-align:right">Engineered to move.</div>
+    </div>
+
+    <!-- F · 16.0–18.0  Desktop + Mobile -->
+    <div id="sF" class="scene persp">
+      <div id="fDesk" class="abs p3d" style="left:120px;top:170px;width:1180px;height:738px">
+        <div class="screen" style="inset:0"><img src="/docs/qa/white-label-studio-v5/final-desktop-1440.png" /></div>
+      </div>
+      <img id="fPhone1" class="phone" src="/docs/qa/white-label-preview-premium/final-mobile-1440.png" style="left:1190px;top:150px;width:412px;height:777px" />
+      <img id="fPhone2" class="phone" src="/docs/qa/white-label-preview-premium/after-mobile-menu-1440.png" style="left:1480px;top:220px;width:374px;height:705px" />
+      <div id="fK1" class="abs kicker" style="left:126px;top:96px;font-size:22px">Desktop</div>
+      <div id="fK2" class="abs kicker" style="left:1196px;top:96px;font-size:22px;color:#f1c85a">Mobile</div>
+    </div>
+
+    <!-- G · 18.0–21.0  Your brand, your colors (real Forest Premium template) -->
+    <div id="sG" class="scene persp">
+      <div id="gRig" class="abs p3d" style="left:330px;top:70px;width:1260px;height:788px">
+        <div class="screen" style="inset:0">
+          <img src="/docs/qa/white-label-studio-v3/editor-1440-final.png" />
+          <img id="gGreen" class="abs" src="/docs/qa/white-label-studio-v3/editor-1440-900.png" style="left:0;top:0;width:100%;height:100%" />
+        </div>
+      </div>
+      <div id="gChips" class="abs" style="left:110px;top:360px">
+        <div id="gChipA" class="abs" style="width:150px;height:150px;border-radius:30px;box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.25)"></div>
+        <div id="gChipB" class="abs" style="left:60px;top:110px;width:110px;height:110px;border-radius:24px;box-shadow:0 20px 50px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.25)"></div>
+        <div id="gHex" class="abs kicker" style="top:250px;font-size:18px;letter-spacing:0.3em"></div>
+      </div>
+      <div id="gText" class="abs sora" style="left:0;right:0;top:900px;text-align:center;font-weight:800;font-size:96px;letter-spacing:-0.02em;white-space:nowrap">
+        <span id="gW1">Your brand.</span>&nbsp;<span id="gW2" class="gold-text">Your colors.</span>
+      </div>
+    </div>
+
+    <!-- H · 21.0–25.0  App icon lockup -->
+    <div id="sH" class="scene">
+      <div id="hRing" class="abs" style="left:960px;top:540px;width:10px;height:10px;border-radius:50%;border:3px solid #f1c85a"></div>
+      <div id="hIconWrap" class="abs" style="left:770px;top:350px;width:380px;height:380px">
+        <div id="hGlow" class="abs" style="inset:-160px;border-radius:50%;background:radial-gradient(circle, rgba(241,200,90,0.55) 0%, rgba(217,169,47,0.18) 38%, rgba(217,169,47,0) 70%)"></div>
+        <div class="abs" style="inset:0;border-radius:86px;overflow:hidden;box-shadow:0 0 0 2px rgba(241,200,90,0.7), 0 50px 120px rgba(0,0,0,0.7)">
+          <img src="/public/branding/app-512.png" style="width:100%;height:100%;display:block" />
+          <div id="hSweep" class="abs" style="top:-40%;bottom:-40%;width:42%;background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,246,216,0.75) 50%, rgba(255,255,255,0) 100%);transform:rotate(20deg);mix-blend-mode:screen"></div>
+        </div>
+      </div>
+      <div id="hWordWrap" class="abs" style="left:900px;top:395px;width:960px;height:300px;overflow:hidden">
+        <div id="hWord" class="sora gold-text" style="font-weight:800;font-size:150px;line-height:1;letter-spacing:-0.02em;white-space:nowrap">Wolf Forge</div>
+        <div id="hPortal" class="sora" style="font-weight:300;font-size:58px;letter-spacing:0.95em;margin-top:20px;color:#f8f9ff;white-space:nowrap">PORTAL</div>
+      </div>
+      <div id="hTag" class="abs kicker" style="left:0;right:0;top:850px;text-align:center;font-size:28px;color:#f1c85a">Lead the pack.</div>
+    </div>
+  </div>
+
+  <div id="flash"></div>
+  <div id="vignette"></div>
+  <canvas id="grain" class="full" width="960" height="540"></canvas>
+</div>
+
+<script>
+// ---------- math ----------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const E = {
+  outExpo: (k) => (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k)),
+  inExpo: (k) => (k <= 0 ? 0 : Math.pow(2, 10 * k - 10)),
+  outCubic: (k) => 1 - Math.pow(1 - k, 3),
+  inCubic: (k) => k * k * k,
+  inOutCubic: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  inOutQuint: (k) => (k < 0.5 ? 16 * k ** 5 : 1 - Math.pow(-2 * k + 2, 5) / 2),
+  outBack: (k) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); },
+  outElastic: (k) => (k <= 0 ? 0 : k >= 1 ? 1 : Math.pow(2, -10 * k) * Math.sin((k * 10 - 0.75) * (2 * Math.PI) / 3) + 1),
+};
+function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let r = Math.imul(s ^ (s >>> 15), 1 | s); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+const $ = (id) => document.getElementById(id);
+const st = (el, css) => { for (const k in css) el.style[k] = css[k]; };
+
+// ---------- timeline (seconds) — cuts land on the 120 BPM grid of the score ----------
+const SCENES = { sA: [0, 3.5], sB: [3.5, 5.5], sC: [5.5, 9.5], sD: [9.5, 12.5], sE: [12.5, 16.0], sF: [16.0, 18.0], sG: [18.0, 21.0], sH: [21.0, 25.01] };
+// Hits drive flash + camera shake: [time, strength]
+const HITS = [[3.5, 1.0], [5.5, 0.35], [9.5, 0.35], [12.5, 0.3], [14.56, 0.55], [16.0, 0.3], [17.23, 0.25], [19.31, 0.3], [21.0, 1.0]];
+// Spoken-word cues from the placed voice-over (see audio/mix.py)
+const CUE = { projects: 5.67, tickets: 6.72, clients: 7.58, billing: 8.49, place: 11.43, layers: 12.95, engineered: 14.56, desktop: 16.25, mobile: 17.23, brand: 18.25, colors: 19.31, portal: 21.3, lead: 23.05 };
+
+// ---------- text helpers ----------
+function splitChars(el, text) {
+  el.innerHTML = '';
+  return [...text].map((ch) => { const s = document.createElement('span'); s.className = 'char'; s.textContent = ch === ' ' ? ' ' : ch; el.appendChild(s); return s; });
+}
+const bTop = splitChars($('bTitleTop'), 'WOLF FORGE');
+bTop.forEach((s) => s.classList.add('gold-text'));
+const bBot = splitChars($('bTitleBot'), 'PORTAL');
+
+// ---------- mesh gradient ----------
+const mesh = $('mesh').getContext('2d');
+function drawMesh(t, mood) {
+  const W = 480, H = 270;
+  mesh.globalCompositeOperation = 'source-over';
+  mesh.fillStyle = '#01041f'; mesh.fillRect(0, 0, W, H);
+  const blobs = [
+    { c: [0, 13, 81], a: 0.95, r: 260, x: 0.3 + 0.12 * Math.sin(t * 0.31), y: 0.4 + 0.15 * Math.cos(t * 0.27) },
+    { c: [27, 60, 255], a: 0.42 * mood.blue, r: 210, x: 0.78 + 0.1 * Math.cos(t * 0.23 + 1), y: 0.3 + 0.14 * Math.sin(t * 0.37) },
+    { c: [217, 169, 47], a: 0.30 * mood.gold, r: 170, x: 0.55 + 0.18 * Math.sin(t * 0.19 + 2), y: 0.78 + 0.08 * Math.cos(t * 0.41) },
+    { c: [58, 31, 140], a: 0.35, r: 190, x: 0.12 + 0.08 * Math.cos(t * 0.29 + 3), y: 0.85 + 0.1 * Math.sin(t * 0.33) },
+    { c: [23, 92, 64], a: 0.55 * mood.green, r: 240, x: 0.5 + 0.2 * Math.sin(t * 0.5), y: 0.5 + 0.1 * Math.cos(t * 0.45) },
+    { c: [62, 108, 255], a: 0.22 * mood.blue, r: 150, x: 0.92 + 0.05 * Math.sin(t * 0.6), y: 0.88 + 0.06 * Math.cos(t * 0.52) },
+  ];
+  mesh.globalCompositeOperation = 'lighter';
+  for (const b of blobs) {
+    if (b.a <= 0.001) continue;
+    const g = mesh.createRadialGradient(b.x * W, b.y * H, 0, b.x * W, b.y * H, b.r);
+    g.addColorStop(0, `rgba(${b.c},${b.a})`); g.addColorStop(0.55, `rgba(${b.c},${b.a * 0.35})`); g.addColorStop(1, `rgba(${b.c},0)`);
+    mesh.fillStyle = g; mesh.fillRect(0, 0, W, H);
+  }
+  mesh.globalCompositeOperation = 'source-over';
+  mesh.fillStyle = `rgba(0,0,0,${1 - mood.bright})`; mesh.fillRect(0, 0, W, H);
+}
+
+// ---------- embers ----------
+const emb = $('embers').getContext('2d');
+const EMBERS = (() => { const r = rng(7); return Array.from({ length: 150 }, () => ({ x: r() * 1920, y: r() * 1300, sp: 30 + r() * 120, sz: 0.8 + r() * 2.6, ph: r() * 6.28, sw: 10 + r() * 40, f: 0.3 + r() * 1.2, tw: 1 + r() * 4 })); })();
+function drawEmbers(t, amount, boost) {
+  emb.clearRect(0, 0, 1920, 1080);
+  if (amount <= 0) return;
+  for (const p of EMBERS) {
+    const y = ((p.y - t * p.sp * (1 + boost * 3)) % 1300 + 1300) % 1300 - 110;
+    const x = p.x + Math.sin(t * p.f + p.ph) * p.sw;
+    const a = amount * (0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * p.tw + p.ph)));
+    const r = p.sz * 4;
+    const g = emb.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(255,232,170,${a})`); g.addColorStop(0.3, `rgba(241,200,90,${a * 0.6})`); g.addColorStop(1, 'rgba(217,169,47,0)');
+    emb.fillStyle = g; emb.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}
+
+// ---------- film grain (pre-baked plates, a new one every frame) ----------
+const grain = $('grain').getContext('2d');
+const PLATES = (() => { const out = []; const r = rng(99); for (let i = 0; i < 10; i++) { const im = grain.createImageData(960, 540); const d = im.data; for (let j = 0; j < d.length; j += 4) { const v = 128 + (r() + r() + r() - 1.5) * 150; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; } out.push(im); } return out; })();
+
+// ---------- scene builders ----------
+// D: wall of real screens
+const D_IMGS = [
+  'white-label-studio-v5/final-desktop-1440.png', 'white-label-studio-v5-refine/drafts-landing-1440.png', 'white-label-studio-v3/editor-1440-900.png',
+  'white-label-studio-v5/template-menu-1440.png', 'white-label-studio-v3/dropdown-1440-final.png', 'white-label-studio-v5/mobile-drawer-1440.png',
+  'white-label-studio-v5-refine/desktop-edit-1440.png', 'white-label-studio-v5/all-drafts-1440.png', 'white-label-studio-v5-refine/mobile-preview-1440.png',
+  'white-label-studio-v5/mobile-1440.png', 'white-label-studio-v3/editor-1440-final.png', 'white-label-studio-v5-refine/mobile-preset-pixel9-1440.png',
+  'white-label-studio-v5/desktop-1440.png', 'white-label-studio-v5/mobile-edit-mode-1440.png',
+];
+const D_TILES = [];
+(() => {
+  const plane = $('dPlane'); let k = 0;
+  for (let r = -2; r <= 2; r++) for (let c = -3; c <= 3; c++) {
+    const center = r === 0 && c === 0;
+    const src = center ? 'white-label-studio-v5-refine/desktop-normal-1440.png' : D_IMGS[k++ % D_IMGS.length];
+    const d = document.createElement('div'); d.className = 'screen'; d.style.width = '720px'; d.style.height = '450px'; d.style.borderRadius = '12px';
+    d.innerHTML = `<img src="/docs/qa/${src}">`; plane.appendChild(d);
+    D_TILES.push({ el: d, r, c, center, seed: rng(r * 31 + c * 7 + 100)() });
+  }
+})();
+
+// E: exploded layers cut from the real desktop screenshot (coords in the 1440x900 source)
+const E_SRC = '/docs/qa/white-label-studio-v5-refine/desktop-normal-1440.png';
+const E_LAYERS = [
+  { box: [0, 0, 1440, 900], z: 0, base: true },
+  { box: [0, 0, 230, 900], z: 70, d: 0.00 },
+  { box: [274, 25, 1400, 128], z: 120, d: 0.05 },
+  { box: [275, 153, 555, 900], z: 95, d: 0.08 },
+  { box: [576, 153, 1396, 895], z: 60, d: 0.03 },
+  { box: [596, 244, 1375, 873], z: 150, d: 0.12 },
+  { box: [295, 643, 534, 689], z: 230, d: 0.2 },
+  { box: [1151, 174, 1375, 229], z: 215, d: 0.18 },
+  { box: [826, 403, 945, 583], z: 265, d: 0.22 },
+  { box: [957, 403, 1077, 583], z: 290, d: 0.25 },
+  { box: [1089, 403, 1209, 583], z: 315, d: 0.28 },
+  { box: [1221, 403, 1341, 583], z: 340, d: 0.31 },
+  { box: [826, 598, 1122, 862], z: 245, d: 0.26 },
+  { box: [1136, 598, 1341, 862], z: 280, d: 0.3 },
+];
+const E_SCALE = 1500 / 1440;
+(() => {
+  const rig = $('eRig');
+  for (const L of E_LAYERS) {
+    const [x0, y0, x1, y1] = L.box; const d = document.createElement('div'); d.className = 'layer';
+    st(d, { left: x0 * E_SCALE + 'px', top: y0 * E_SCALE + 'px', width: (x1 - x0) * E_SCALE + 'px', height: (y1 - y0) * E_SCALE + 'px', borderRadius: L.base ? '18px' : '10px' });
+    d.innerHTML = `<img src="${E_SRC}" style="left:${-x0 * E_SCALE}px;top:${-y0 * E_SCALE}px;width:${1440 * E_SCALE}px;height:${900 * E_SCALE}px">`;
+    rig.appendChild(d); L.el = d;
+  }
+})();
+
+// ---------- per-scene posing ----------
+function poseA(t) {
+  const k = prog(t, 0.1, 3.3);
+  const reveal = E.inOutCubic(prog(t, 0.15, 2.4));
+  const push = E.inExpo(prog(t, 3.05, 3.5));
+  const scale = lerp(1.22, 1.0, E.outCubic(k)) + push * 2.4;
+  st($('aWolfWrap'), { transform: `translateY(${-70 * (1 - push)}px) scale(${scale * 0.74})`, opacity: String(clamp(prog(t, 0.05, 0.9)) * (1 - push)), filter: `blur(${push * 18}px)` });
+  const edge = lerp(-20, 120, reveal);
+  const mask = `linear-gradient(100deg, #000 ${edge - 12}%, rgba(0,0,0,0) ${edge + 6}%)`;
+  st($('aWolf'), { webkitMaskImage: mask, maskImage: mask });
+  const sweep = lerp(-30, 130, E.inOutCubic(prog(t, 0.4, 2.9)));
+  const band = `linear-gradient(100deg, rgba(0,0,0,0) ${sweep - 9}%, #000 ${sweep}%, rgba(0,0,0,0) ${sweep + 9}%)`;
+  st($('aWolfGlow'), { webkitMaskImage: band, maskImage: band, opacity: String(0.95) });
+  const l1 = E.outCubic(prog(t, 0.45, 1.3)), l2 = E.outCubic(prog(t, 1.3, 2.1)), out = prog(t, 2.95, 3.3);
+  st($('aLine1'), { opacity: String(l1 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l1) + 'em', filter: `blur(${(1 - l1) * 8}px)` });
+  st($('aLine2'), { opacity: String(l2 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l2) + 'em', filter: `blur(${(1 - l2) * 8}px)` });
+}
+
+function poseB(t) {
+  const lt = t - 3.5;
+  bTop.forEach((s, i) => {
+    const k = E.outExpo(prog(lt, i * 0.035, i * 0.035 + 0.45));
+    st(s, { transform: `translateZ(${lerp(900, 0, k)}px) translateY(${lerp(40, 0, k)}px)`, opacity: String(clamp(k * 1.6)), filter: `blur(${(1 - k) * 22}px)` });
+  });
+  bBot.forEach((s, i) => {
+    const k = E.outCubic(prog(lt, 0.35 + i * 0.06, 0.85 + i * 0.06));
+    st(s, { opacity: String(k), transform: `translateY(${lerp(30, 0, k)}px)`, filter: `blur(${(1 - k) * 10}px)` });
+  });
+  const out = E.inExpo(prog(t, 5.2, 5.5));
+  st($('bTitle'), { transform: `scale(${lerp(1, 1.06, prog(lt, 0, 2)) + out * 0.6}) translateX(${-out * 900}px)`, opacity: String(1 - out), filter: `blur(${out * 14}px)` });
+  st($('bWolf'), { transform: `scale(${lerp(1.5, 1.7, prog(lt, 0, 2))}) rotate(${lerp(-2, 2, prog(lt, 0, 2))}deg)`, opacity: String(0.13 * (1 - out)) });
+}
+
+function poseC(t) {
+  const lt = t - 5.5;
+  const enter = E.outExpo(prog(lt, 0, 0.75));
+  const exit = E.inExpo(prog(t, 9.15, 9.5));
+  const ry = lerp(-48, -16, enter) + lt * 0.9, rx = lerp(18, 6, enter);
+  st($('cScreenWrap'), { transform: `translateX(${lerp(700, 0, enter) - exit * 300}px) translateZ(${lerp(-900, 0, enter) + exit * 1400}px) rotateY(${ry}deg) rotateX(${rx}deg)`, opacity: String(1 - exit * 0.6) });
+  // gold pill walks the real sidebar (Projects, Tickets, Clients, Invoices rows)
+  const rows = [209, 249, 329, 476].map((y) => y * (1200 / 1440) - 15);
+  const cues = [CUE.projects, CUE.tickets, CUE.clients, CUE.billing];
+  let y = rows[0];
+  for (let i = 1; i < 4; i++) y = lerp(y, rows[i], E.outBack(prog(t, cues[i] - 0.05, cues[i] + 0.25)));
+  st($('cPill'), { top: y + 'px', opacity: String(prog(t, cues[0] - 0.1, cues[0] + 0.05)) });
+  [...document.querySelectorAll('.cw')].forEach((w, i) => {
+    const k = E.outExpo(prog(t, cues[i] - 0.06, cues[i] + 0.4));
+    const active = i === 3 ? 1 : 1 - E.outCubic(prog(t, cues[i + 1] - 0.05, cues[i + 1] + 0.25));
+    st(w, { opacity: String(k * lerp(0.22, 1, active)), transform: `translateX(${lerp(-120, 0, k)}px) scale(${lerp(1.25, 1, k)})`, transformOrigin: '0 50%', filter: `blur(${(1 - k) * 12}px)` });
+    w.className = 'cw' + (active > 0.5 ? ' gold-text' : '');
+  });
+  st($('cKicker'), { opacity: String(E.outCubic(prog(lt, 0.2, 0.8)) * (1 - exit)) });
+  st($('cWords'), { opacity: String(1 - exit), transform: `translateX(${-exit * 200}px)` });
+}
+
+function poseD(t) {
+  const lt = t - 9.5;
+  const enter = E.outExpo(prog(lt, 0, 0.6));
+  const merge = E.inOutQuint(prog(t, 11.15, 12.35));
+  const rx = lerp(52, 0, merge), rz = lerp(-22, 0, merge);
+  const scale = lerp(lerp(0.45, 0.62, enter), 1500 / 720, merge);
+  const drift = lerp(380, -220, prog(lt, 0, 1.8)) * (1 - merge);
+  st($('dPlane'), { transform: `translateZ(${lerp(-600, 0, enter)}px) rotateX(${rx}deg) rotateZ(${rz}deg) scale(${scale}) translateY(${drift}px)` });
+  for (const tile of D_TILES) {
+    const spread = 1 - merge;
+    const x = tile.c * 768 * spread - 360, y = tile.r * 498 * spread - 225;
+    const lift = tile.center ? 2 : -merge * 40;
+    const wave = Math.sin(t * 2 + tile.seed * 6) * 18 * spread;
+    st(tile.el, { transform: `translate3d(${x}px, ${y}px, ${lift + wave}px)`, opacity: String(tile.center ? 1 : clamp(1 - merge * 1.3) * clamp(enter * 1.5)) });
+  }
+  const k1 = E.outCubic(prog(t, 9.62, 10.2));
+  st($('dKicker'), { opacity: String(k1 * (1 - merge)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
+  const k2 = E.outExpo(prog(t, CUE.place - 0.08, CUE.place + 0.4)), o2 = prog(t, 12.15, 12.45);
+  st($('dScrim'), { opacity: String(k2 * (1 - o2)) });
+  st($('dBig'), { opacity: String(k2 * (1 - o2)), transform: `scale(${lerp(1.4, 1, k2)})`, filter: `blur(${(1 - k2) * 16 + o2 * 10}px)` });
+}
+
+function poseE(t) {
+  const tilt = E.inOutCubic(prog(t, 12.55, 13.35));
+  const collapse = E.inExpo(prog(t, CUE.engineered - 0.32, CUE.engineered));
+  const flat = E.outExpo(prog(t, CUE.engineered, CUE.engineered + 0.58));
+  const r = tilt * (1 - flat);
+  const orbit = lerp(-6, 22, prog(t, 13.0, 14.6));
+  const exit = E.inExpo(prog(t, 15.65, 16.0));
+  const zoom = lerp(1, 1.08, prog(t, CUE.engineered, 15.65));
+  st($('eRig'), { transform: `translateX(${-exit * 2200}px) scale(${lerp(lerp(1, 0.8, flat), 0.84, r) * zoom}) translateY(${flat * 70}px) rotateX(${54 * r}deg) rotateZ(${(-34 - orbit) * r}deg)`, filter: `blur(${exit * 10}px)` });
+  for (const L of E_LAYERS) {
+    if (L.base) { st(L.el, { filter: `brightness(${lerp(1, 0.45, r)})`, boxShadow: '0 40px 120px rgba(0,0,0,.6)' }); continue; }
+    const lift = E.outExpo(prog(t, 12.75 + L.d, 13.6 + L.d)) * (1 - collapse);
+    const hover = Math.sin(t * 3 + L.z) * 10 * lift;
+    st(L.el, { transform: `translateZ(${(L.z * 4.2) * lift + hover}px)`, boxShadow: `0 ${20 * lift}px ${60 * lift}px rgba(0,0,0,${0.55 * lift}), 0 0 0 ${1.5 * lift}px rgba(241,200,90,${0.8 * lift})` });
+  }
+  const k1 = E.outExpo(prog(t, CUE.layers, CUE.layers + 0.5)), o1 = prog(t, CUE.engineered - 0.22, CUE.engineered);
+  st($('eText1'), { opacity: String(k1 * (1 - o1)), transform: `translateY(${lerp(60, 0, k1)}px)`, filter: `blur(${(1 - k1) * 12}px)` });
+  const k2 = E.outExpo(prog(t, CUE.engineered, CUE.engineered + 0.45));
+  st($('eText2'), { opacity: String(k2 * (1 - exit)), transform: `translateX(${lerp(260, 0, k2) - exit * 1200}px) skewX(${lerp(-14, 0, k2)}deg)` });
+}
+
+function poseF(t) {
+  const lt = t - 16.0;
+  const enter = E.outExpo(prog(lt, 0, 0.6));
+  const ph = E.outBack(prog(t, CUE.mobile - 0.05, CUE.mobile + 0.5));
+  const ph2 = E.outBack(prog(t, CUE.mobile + 0.08, CUE.mobile + 0.62));
+  const exit = E.inExpo(prog(t, 17.7, 18.0));
+  st($('fDesk'), { transform: `translateX(${lerp(1400, 0, enter) - exit * 300}px) rotateY(${lerp(-30, 14, enter) + lt * 2}deg) scale(${lerp(1, 0.94, ph)})`, opacity: String(1 - exit), filter: `brightness(${lerp(1, 0.7, ph)})` });
+  st($('fPhone1'), { transform: `translateY(${lerp(1100, 0, ph) + exit * -200}px) rotate(${lerp(14, -4, ph)}deg)`, opacity: String(1 - exit) });
+  st($('fPhone2'), { transform: `translateY(${lerp(1100, 0, ph2) + exit * -260}px) rotate(${lerp(18, 6, ph2)}deg)`, opacity: String(1 - exit) });
+  const k1 = E.outCubic(prog(t, CUE.desktop - 0.1, CUE.desktop + 0.35)), k2 = E.outCubic(prog(t, CUE.mobile, CUE.mobile + 0.35));
+  st($('fK1'), { opacity: String(k1 * (1 - exit)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
+  st($('fK2'), { opacity: String(k2 * (1 - exit)), letterSpacing: lerp(1, 0.55, k2) + 'em' });
+}
+
+function poseG(t) {
+  const lt = t - 18.0;
+  const enter = E.outExpo(prog(lt, 0, 0.7));
+  const wipe = E.inOutCubic(prog(t, CUE.colors - 0.05, CUE.colors + 0.65));
+  const push = E.inExpo(prog(t, 20.35, 21.0));
+  st($('gRig'), { transform: `translateZ(${lerp(-700, 0, enter) + push * 1500}px) rotateX(${lerp(20, 4, enter) - push * 4}deg) rotateY(${lerp(-10, 3, enter) + lt * 1.2}deg)`, filter: `blur(${push * 8}px)` });
+  // circle wipe radiates from the real "Brand colors" control
+  const ox = 290 * (1260 / 1440), oy = 168 * (788 / 900);
+  st($('gGreen'), { clipPath: `circle(${wipe * 1700}px at ${ox}px ${oy}px)` });
+  const navy = ['#000d51', '#a8832e'], green = ['#173c32', '#d2b777'];
+  st($('gChipA'), { background: wipe < 0.5 ? navy[0] : green[0], transform: `scale(${1 + Math.sin(wipe * Math.PI) * 0.25}) rotate(${lerp(-8, 6, enter)}deg)` });
+  st($('gChipB'), { background: wipe < 0.5 ? navy[1] : green[1], transform: `scale(${1 + Math.sin(wipe * Math.PI) * 0.3}) rotate(${lerp(10, -4, enter)}deg)` });
+  $('gHex').textContent = wipe < 0.5 ? '#000D51  #A8832E' : '#173C32  #D2B777';
+  const chips = E.outBack(prog(lt, 0.25, 0.85));
+  st($('gChips'), { opacity: String(chips * (1 - push)), transform: `translateX(${lerp(-300, 0, chips)}px)` });
+  const w1 = E.outExpo(prog(t, CUE.brand - 0.05, CUE.brand + 0.4)), w2 = E.outExpo(prog(t, CUE.colors - 0.05, CUE.colors + 0.4));
+  st($('gW1'), { opacity: String(w1 * (1 - push)), display: 'inline-block', transform: `translateY(${lerp(50, 0, w1)}px)`, filter: `blur(${(1 - w1) * 10}px)` });
+  st($('gW2'), { opacity: String(w2 * (1 - push)), display: 'inline-block', transform: `translateY(${lerp(50, 0, w2)}px) scale(${lerp(1.3, 1, w2)})`, filter: `blur(${(1 - w2) * 10}px)` });
+}
+
+function poseH(t) {
+  const lt = t - 21.0;
+  const pop = E.outBack(prog(lt, 0, 0.55));
+  const slide = E.inOutCubic(prog(t, CUE.portal - 0.05, CUE.portal + 0.75));
+  const fade = E.inCubic(prog(t, 24.25, 25.0));
+  st($('hIconWrap'), { transform: `translateX(${-slide * 420}px) scale(${lerp(0.4, 1, pop) * lerp(1, 0.78, slide)})`, opacity: String(clamp(pop * 2) * (1 - fade)) });
+  st($('hGlow'), { opacity: String((0.6 + 0.4 * Math.sin(lt * 3)) * clamp(pop)), transform: `scale(${1 + 0.06 * Math.sin(lt * 2)})` });
+  st($('hSweep'), { left: lerp(-60, 160, E.inOutCubic(prog(lt, 0.25, 1.1))) + '%' });
+  const ring = E.outExpo(prog(lt, 0, 1.4));
+  st($('hRing'), { transform: `translate(-50%,-50%) scale(${ring * 160})`, opacity: String((1 - ring) * 0.9), borderWidth: lerp(3, 0.05, ring) + 'px' });
+  const w = E.outExpo(prog(t, CUE.portal + 0.15, CUE.portal + 0.95));
+  st($('hWordWrap'), { left: lerp(900, 740, slide) + 'px', opacity: String(1 - fade) });
+  st($('hWord'), { transform: `translateY(${lerp(320, 0, w)}px)`, filter: `blur(${(1 - w) * 8}px)` });
+  const p = E.outCubic(prog(t, CUE.portal + 0.45, CUE.portal + 1.2));
+  st($('hPortal'), { opacity: String(p), letterSpacing: lerp(1.6, 0.95, p) + 'em' });
+  const tg = E.outCubic(prog(t, CUE.lead - 0.05, CUE.lead + 0.6));
+  st($('hTag'), { opacity: String(tg * (1 - fade)), letterSpacing: lerp(1.2, 0.55, tg) + 'em', filter: `blur(${(1 - tg) * 6}px)` });
+}
+
+const POSE = { sA: poseA, sB: poseB, sC: poseC, sD: poseD, sE: poseE, sF: poseF, sG: poseG, sH: poseH };
+
+function moodAt(t) {
+  const green = Math.sin(Math.PI * prog(t, 19.3, 21.0)) * 1.0;
+  const intro = E.outCubic(prog(t, 0, 1.2));
+  const outro = 1 - E.inCubic(prog(t, 24.3, 25));
+  return { blue: 1 - green * 0.6, gold: (t > 21 ? 1.6 : 1) * (1 - green * 0.5), green, bright: clamp(intro * outro * (t < 3.5 ? 0.7 : 1)) };
+}
+
+// ---------- frame ----------
+window.seek = function seek(t) {
+  for (const id in SCENES) {
+    const [a, b] = SCENES[id]; const on = t >= a && t < b;
+    $(id).style.display = on ? 'block' : 'none';
+    if (on) POSE[id](t);
+  }
+  // hits: flash + camera shake
+  let flash = 0, shake = 0;
+  for (const [ht, s] of HITS) { const d = t - ht; if (d >= -0.02 && d < 0.6) { flash = Math.max(flash, s * Math.exp(-d * 9)); shake = Math.max(shake, s * Math.exp(-d * 7)); } }
+  const r = rng(Math.floor(t * 30) + 1);
+  const breathe = 1 + 0.004 * Math.sin(t * 0.9);
+  $('world').style.transform = `translate(${(r() - 0.5) * 28 * shake}px, ${(r() - 0.5) * 28 * shake}px) scale(${breathe + shake * 0.025})`;
+  $('flash').style.opacity = String(clamp(flash * 0.85));
+  const mood = moodAt(t);
+  drawMesh(t, mood);
+  const emberAmt = (t < 3.5 ? E.outCubic(prog(t, 0.3, 2)) : t >= 21 ? 1 : 0.35) * mood.bright;
+  drawEmbers(t, emberAmt, t >= 21 ? Math.exp(-(t - 21) * 2) : 0);
+  grain.putImageData(PLATES[Math.floor(t * 30) % PLATES.length], 0, 0);
+  $('grain').style.transform = `translate(${(r() - 0.5) * 6}px, ${(r() - 0.5) * 6}px) scale(1.01)`;
+  $('vignette').style.opacity = String(0.92 + 0.08 * Math.sin(t * 1.3));
+};
+
+window.ready = (async () => {
+  await document.fonts.ready;
+  await Promise.all([...document.images].map((im) => (im.complete ? im.decode().catch(() => {}) : new Promise((res) => { im.onload = im.onerror = res; }))));
+  return true;
+})();
+
+const q = new URLSearchParams(location.search);
+window.ready.then(() => {
+  if (q.has('play')) { const t0 = performance.now(); const loop = () => { const t = ((performance.now() - t0) / 1000) % 25; window.seek(t); requestAnimationFrame(loop); }; loop(); }
+  else window.seek(parseFloat(q.get('t') || '0'));
+});
+</script>
+</body>
+</html>
