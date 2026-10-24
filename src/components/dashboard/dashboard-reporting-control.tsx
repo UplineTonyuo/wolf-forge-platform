@@ -57,6 +57,9 @@ export function DashboardReportingControl({
   const from = searchParams.get("from") ?? undefined;
   const to = searchParams.get("to") ?? undefined;
   const date = searchParams.get("date") ?? undefined;
+  const servicesPeriod = searchParams.get("servicesPeriod");
+  const servicesSuffix = servicesPeriod && ["week", "month", "year"].includes(servicesPeriod)
+    ? `&servicesPeriod=${servicesPeriod}` : "";
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -204,7 +207,7 @@ export function DashboardReportingControl({
 
   const applyPreset = (next: DashboardPreset) => {
     close();
-    router.push(`/dashboard?period=${next}`);
+    router.push(`/dashboard?period=${next}${servicesSuffix}`, { scroll: false });
   };
 
   const yearlyRange = yearToDateRange(businessToday);
@@ -216,7 +219,8 @@ export function DashboardReportingControl({
   const applyYearly = () => {
     close();
     router.push(
-      `/dashboard?period=custom_range&from=${yearlyRange.from}&to=${yearlyRange.to}`,
+      `/dashboard?period=custom_range&from=${yearlyRange.from}&to=${yearlyRange.to}${servicesSuffix}`,
+      { scroll: false },
     );
   };
 
@@ -232,7 +236,8 @@ export function DashboardReportingControl({
     if (!draft) return;
     close();
     router.push(
-      `/dashboard?period=custom_range&from=${draft.from}&to=${draft.to}`,
+      `/dashboard?period=custom_range&from=${draft.from}&to=${draft.to}${servicesSuffix}`,
+      { scroll: false },
     );
   };
 

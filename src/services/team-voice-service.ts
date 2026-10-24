@@ -15,6 +15,7 @@ import {
 } from "../lib/errors/application-error";
 import { readTeamVoiceRetentionDays } from "../lib/env/team-voice-env";
 import { inspectTeamVoiceBytes } from "../lib/team-voice/media-inspection";
+import { enforceServerCostLimit } from "../lib/security/server-cost-limit";
 import type { TeamRepository } from "../repositories/team-repository";
 import type { TeamVoiceStorageRepository } from "../repositories/team-voice-storage-repository";
 import { requireVerifiedActor, type UserMutationActor } from "./mutation-context";
@@ -50,6 +51,7 @@ export class TeamVoiceService {
     if (detail.my_capabilities?.can_send_voice !== true) throw new PermissionDeniedError();
     if (upload.status === "abandoned") throw new ValidationError("Voice upload has expired.");
 
+    await enforceServerCostLimit({ actorId: actor.id, action: "team.voice.finalize" });
     const object = await this.storage.inspectObject(upload.storage_path);
     const inspected = await inspectTeamVoiceBytes({
       bytes: object.bytes,

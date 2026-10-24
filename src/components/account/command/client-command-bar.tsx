@@ -81,6 +81,7 @@ function CommandBarActions({
         className="portal-drawer-toggle"
         aria-expanded={drawer?.open ?? false}
         aria-controls="portal-navigation"
+        aria-haspopup="dialog"
         onClick={() => drawer?.toggle()}
       >
         {drawer?.open ? <X aria-hidden={true} /> : <Menu aria-hidden={true} />}

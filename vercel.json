@@ -1,8 +1,17 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "codex/client-navigation-skeletons-20261023": false
+    }
+  },
   "crons": [
     {
       "path": "/api/internal/team-voice-cleanup",
       "schedule": "17 3 * * *"
+    },
+    {
+      "path": "/api/internal/intake-maintenance",
+      "schedule": "47 3 * * *"
     }
   ]
 }

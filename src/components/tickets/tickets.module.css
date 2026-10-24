@@ -2675,6 +2675,10 @@
   background: var(--wf-navy);
 }
 
+@media (max-width: 640px) {
+  .composer[data-client-view="true"] .ticketRichToolbar { display: none; }
+}
+
 .ticketRichToolbar > button,
 .ticketRichLinkControl > button,
 .ticketRichHistoryGroup > button {

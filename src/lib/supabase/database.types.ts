@@ -5346,6 +5346,40 @@ export type Database = {
           permission_key: string
         }[]
       }
+      app_server_claim_contact_email: {
+        Args: { p_actor_id: string; p_tenant_id: string; p_request_id: string; p_contact_id: string; p_subject: string; p_body: string }
+        Returns: Json
+      }
+      app_server_finish_contact_email: {
+        Args: { p_actor_id: string; p_tenant_id: string; p_request_id: string; p_provider_message_id?: string }
+        Returns: undefined
+      }
+      app_get_intake_follow_up: { Args: { p_submission_id: string }; Returns: string }
+      app_server_run_intake_job: { Args: { p_submission_id: string }; Returns: Json }
+      app_server_intake_maintenance: { Args: never; Returns: Json }
+      app_server_finish_expired_intake_file: { Args: { p_id: string }; Returns: undefined }
+      app_prepare_intake_file: {
+        Args: { p_id: string; p_assignment_id: string; p_field_key: string; p_name: string; p_mime: string; p_size: number; p_checksum: string }
+        Returns: string
+      }
+      app_finish_intake_file: { Args: { p_id: string }; Returns: undefined }
+      app_get_intake_file: { Args: { p_id: string }; Returns: Json }
+      app_save_intake_draft: {
+        Args: { p_assignment_id: string; p_values: Json }
+        Returns: string
+      }
+      app_get_intake_draft: {
+        Args: { p_assignment_id: string }
+        Returns: Json
+      }
+      app_dashboard_history_start: {
+        Args: { p_currency: string }
+        Returns: string | null
+      }
+      app_dashboard_top_services: {
+        Args: { p_start: string; p_end: string }
+        Returns: Json
+      }
       app_dashboard_overview: {
         Args: {
           p_bucket: string

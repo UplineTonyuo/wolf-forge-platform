@@ -17,6 +17,18 @@ import type { ServiceDependencies } from "./mutation-context";
 export class DashboardService {
   constructor(private readonly dependencies: ServiceDependencies<DashboardRepository>) {}
 
+  getHistoryStart(currency: string) { return this.dependencies.repository.getHistoryStart(currency); }
+
+  async getTopServices(input: ResolveRangeInput) {
+    const range = resolveDashboardRange(input);
+    const query = parseInput(dashboardQuerySchema, {
+      start: range.start, end: range.end,
+      previous_start: range.previous.start, previous_end: range.previous.end,
+      bucket: range.bucket, time_zone: range.timeZone,
+    });
+    return { range, services: await this.dependencies.repository.getTopServices(query) };
+  }
+
   /**
    * Resolves a preset (or custom dates) and returns the whole dashboard.
    *

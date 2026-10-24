@@ -23,6 +23,8 @@ vi.mock("../app/actions/forms", () => ({
   submitPublicFormAction: vi.fn(), correctFormSubmissionAction: vi.fn(),
   loadFormCollectionAvailability: vi.fn().mockResolvedValue(true),
 }));
+vi.mock("../app/actions/intake-drafts", () => ({ loadIntakeDraft: vi.fn().mockResolvedValue({ ok: true, draft: null }), saveIntakeDraft: vi.fn().mockResolvedValue({ ok: true }), loadIntakeFollowUp: vi.fn().mockResolvedValue("not_required") }));
+vi.mock("../app/actions/intake-files", () => ({ loadIntakeFileInfo: vi.fn(), uploadIntakeFile: vi.fn() }));
 
 beforeAll(() => {
   Object.defineProperty(globalThis, "crypto", { value: { randomUUID: vi.fn(() => `10000000-0000-4000-8000-${String(Math.random()).slice(2, 14).padEnd(12, "0")}`) }, configurable: true });
@@ -39,7 +41,7 @@ beforeEach(() => {
   vi.mocked(actions.correctFormSubmissionAction).mockResolvedValue({ ok: true, data: { id: "correction-new" } });
   vi.mocked(actions.archiveFormAction).mockResolvedValue({ ok: true, data: undefined });
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 const capabilities: FormCapabilities = { view: true, manage: true, publish: true, assign: true, submissionsView: true, submissionsManage: true };
 const service = { id: "20000000-0000-4000-8000-000000000001", name: "SEO Strategy", price: 497, currency: "USD", is_active: true, folder_id: null } as ServiceRow;
@@ -145,8 +147,8 @@ describe("visual builder", () => {
     render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
     fireEvent.click(screen.getByText("Priority"));
     fireEvent.click(screen.getByRole("button", { name: "Add condition" }));
-    expect(screen.getByLabelText("Condition field")).toBeInTheDocument();
-    expect(screen.getByLabelText("Comparator")).toHaveValue("equals");
+    expect(screen.getByRole("button", { name: /Condition field:/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Comparator: equals" })).toBeInTheDocument();
     expect(screen.queryByText(/OR group/i)).not.toBeInTheDocument();
   });
 
@@ -192,6 +194,78 @@ describe("visual builder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     expect(screen.getAllByText("Draft Preview").length).toBeGreaterThan(0);
     expect(screen.getByRole("dialog", { name: "Project Brief" })).toBeInTheDocument();
+  });
+
+  it("contains preview focus, dismisses with Escape, and returns to the opener without saving", async () => {
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    const opener = screen.getByRole("button", { name: "Preview" });
+    opener.focus();
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Project Brief" });
+    expect(dialog).toHaveFocus();
+    const close = within(dialog).getByRole("button", { name: "Close" });
+    close.focus();
+    expect(fireEvent.keyDown(close, { key: "Tab" })).toBe(false);
+    expect(close).toHaveFocus();
+    fireEvent.keyDown(close, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(opener).toHaveFocus();
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("cancels publication with Escape while preserving unsaved edits and making no mutation", async () => {
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "Unsaved title" } });
+    const opener = screen.getByRole("button", { name: "Publish" }); opener.focus();
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Publish this version?" });
+    const cancel = within(dialog).getByRole("button", { name: "Keep editing" });
+    const confirm = within(dialog).getByRole("button", { name: "Publish" });
+    cancel.focus(); fireEvent.keyDown(cancel, { key: "Tab", shiftKey: true });
+    expect(confirm).toHaveFocus();
+    fireEvent.keyDown(confirm, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByLabelText("Label")).toHaveValue("Unsaved title");
+    expect(opener).toHaveFocus();
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("retains selected field edits after dismissing and reopening the mobile settings sheet", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("760px"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    const opener = screen.getByRole("button", { name: "Field settings" }); opener.focus();
+    fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Text settings" });
+    fireEvent.change(within(dialog).getByLabelText("Label"), { target: { value: "Mobile unsaved title" } });
+    fireEvent.keyDown(within(dialog).getByLabelText("Label"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(opener).toHaveFocus();
+    fireEvent.click(opener);
+    expect(within(screen.getByRole("dialog", { name: "Text settings" })).getByLabelText("Label")).toHaveValue("Mobile unsaved title");
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("dismisses a nested comparator before its settings sheet and retains the unsaved field", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("760px"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Field settings" }));
+    const dialog = screen.getByRole("dialog", { name: "Text settings" });
+    fireEvent.change(within(dialog).getByLabelText("Label"), { target: { value: "Nested Escape unsaved field" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add condition" }));
+    const comparator = within(dialog).getByRole("button", { name: "Comparator: equals" });
+    comparator.focus(); fireEvent.click(comparator);
+    expect(within(dialog).getByRole("listbox", { name: "Condition comparators" })).toBeInTheDocument();
+    expect(fireEvent.keyDown(comparator, { key: "Escape" })).toBe(false);
+    expect(screen.getByRole("dialog", { name: "Text settings" })).toBe(dialog);
+    await waitFor(() => expect(within(dialog).queryByRole("listbox")).not.toBeInTheDocument());
+    expect(comparator).toHaveFocus();
+    fireEvent.keyDown(comparator, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Field settings" }));
+    expect(within(screen.getByRole("dialog", { name: "Text settings" })).getByLabelText("Label")).toHaveValue("Nested Escape unsaved field");
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
   });
 
   it("publishes only after saving and explains immutability", async () => {
@@ -255,7 +329,7 @@ describe("renderer and safety", () => {
       { stable_field_key: "html", sort_order: 3, field_type: "html", label: "HTML", placeholder: null, help_html: null, default_value: null, required: false, settings: { html: "<p>Safe</p><script>alert(1)</script>" }, options: [], services: [] },
     ])} />);
     expect(screen.getByText(/Secure secret collection is unavailable/)).toBeInTheDocument();
-    expect(screen.getByText(/File upload is not enabled/)).toBeInTheDocument();
+    expect(screen.getByText(/Images and PDFs up to 4 MB/)).toBeInTheDocument();
     expect(screen.getByText("Safe")).toBeInTheDocument();
     expect(document.querySelector("script")).toBeNull();
     expect(screen.queryByLabelText("Credentials")).not.toBeInTheDocument();
@@ -318,7 +392,8 @@ describe("assignments, submissions, and client experience", () => {
     render(<FormAssignments formId="form" formType="intake" assignments={[]}
       options={[{ id: "project", label: "QA Project", detail: "Acme", companyId: "company" }]}
       recipients={[{ id: "client", label: "Jane Client", detail: "Acme", companyId: "company" }, { id: "foreign", label: "Other Client", detail: "Other", companyId: "other" }]} />);
-    fireEvent.change(screen.getByLabelText("Project"), { target: { value: "project" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Project" }), { target: { value: "QA" } });
+    fireEvent.click(await screen.findByRole("option", { name: /QA Project/ }));
     expect(screen.getByRole("button", { name: "Assign Form" })).toBeDisabled();
     fireEvent.change(screen.getByRole("combobox", { name: "Client recipient" }), { target: { value: "Jane" } });
     fireEvent.click(await screen.findByRole("option", { name: /Jane Client/ }));
@@ -334,7 +409,8 @@ describe("assignments, submissions, and client experience", () => {
    */
   it("assigns Onboarding Forms through the real client boundary", async () => {
     render(<FormAssignments formId="form" formType="onboarding" assignments={[]} options={[{ id: "client", label: "Jane Client", detail: "Acme" }]} />);
-    fireEvent.change(screen.getByLabelText("Client"), { target: { value: "client" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Client" }), { target: { value: "Jane" } });
+    fireEvent.click(await screen.findByRole("option", { name: /Jane Client/ }));
     fireEvent.click(screen.getByRole("button", { name: "Assign Form" }));
     await waitFor(() => expect(actions.assignFormAction).toHaveBeenCalledTimes(1));
     expect(vi.mocked(actions.assignFormAction).mock.calls[0]![1].context).toMatchObject({ client_profile_id: "client" });

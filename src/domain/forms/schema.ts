@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formReminderDaysSchema, requestAutomationSchema } from "./request-options";
 import type {
   FormAssignmentRow,
   FormFieldOptionRow,
@@ -105,6 +106,13 @@ export const formDefinitionSchema = z.object({
   rules: z.array(formRuleSchema).max(500).default([]),
   service_links: z.array(formServiceLinkSchema).max(500).default([]),
 }).strict().superRefine((definition, context) => {
+  if (definition.type_config.automation !== undefined) {
+    const actions = requestAutomationSchema.safeParse(definition.type_config.automation);
+    if (!actions.success) context.addIssue({ code: "custom", path: ["type_config", "automation"], message: actions.error.issues[0]?.message ?? "Invalid submission actions." });
+  }
+  if (definition.type_config.reminder_days !== undefined && !formReminderDaysSchema.safeParse(definition.type_config.reminder_days).success) {
+    context.addIssue({ code: "custom", path: ["type_config", "reminder_days"], message: "Choose a reminder interval from 0 to 30 days." });
+  }
   const fieldKeys = definition.fields.map((field) => field.stable_field_key);
   if (new Set(fieldKeys).size !== fieldKeys.length) {
     context.addIssue({ code: "custom", path: ["fields"], message: "Field keys must be unique." });

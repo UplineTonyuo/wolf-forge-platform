@@ -3,6 +3,7 @@
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DatePicker } from "../components/ui/date-picker";
 
 const push = vi.fn();
 let params = new URLSearchParams();
@@ -195,6 +196,25 @@ describe("MobileFilterSheet", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(screen.getByRole("button", { name: "Filter things" }).getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("dismisses a nested calendar before the sheet without applying or changing the date", async () => {
+    const onApply = vi.fn(); const onDateChange = vi.fn();
+    render(<MobileFilterSheet label="Filter dates" onClear={() => {}} onApply={onApply}>
+      <DatePicker name="due" label="Due date" menuLabel="Choose due date" value="2026-10-24" onChange={onDateChange} />
+    </MobileFilterSheet>);
+    openTrigger("Filter dates");
+    const outer = screen.getByRole("dialog", { name: "Filter dates" });
+    const trigger = within(outer).getByRole("button", { name: "Due date: Oct 24, 2026" });
+    fireEvent.click(trigger);
+    const calendar = within(outer).getByRole("dialog", { name: "Choose due date" });
+    expect(fireEvent.keyDown(within(calendar).getByRole("button", { name: "Next month" }), { key: "Escape" })).toBe(false);
+    expect(screen.getByRole("dialog", { name: "Filter dates" })).toBe(outer);
+    await waitFor(() => expect(within(outer).queryByRole("dialog", { name: "Choose due date" })).toBeNull());
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Filter dates" })).toBeNull();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onDateChange).not.toHaveBeenCalled();
   });
 
   it("renders authoritative counts only where the caller supplies one", () => {

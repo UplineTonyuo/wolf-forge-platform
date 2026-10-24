@@ -1093,6 +1093,7 @@ export function TeamConversationPane({
             </div>
           ) : null}
           <TeamRichComposer
+            mentionMembers={detail.kind === "group" ? detail.members : undefined}
             placeholder={`Message ${detail.name}…`}
             ariaLabel={`Message ${detail.name}`}
             onChange={handleDraftChange}

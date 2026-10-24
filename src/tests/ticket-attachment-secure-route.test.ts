@@ -19,6 +19,8 @@ import { NotFoundError, PermissionDeniedError, ValidationError } from "../lib/er
 const attachmentDownloadMock = vi.fn();
 const storageDownloadMock = vi.fn();
 
+vi.mock("../lib/security/server-cost-limit", () => ({ enforceServerCostLimit: vi.fn().mockResolvedValue(undefined) }));
+
 vi.mock("../lib/supabase/next-server", () => ({
   getSelfServiceContext: vi.fn(async () => ({ actor: { profileId: "actor-1" }, client: {} })),
 }));

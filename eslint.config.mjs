@@ -19,6 +19,7 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    ".next-studio-qa/**",
     ".agents/**",
     ".claude/**",
     ".codex/**",

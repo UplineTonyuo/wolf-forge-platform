@@ -52,6 +52,8 @@ import {
 import { normalizeTeamLinkTarget } from "../../domain/team/formatting";
 import { teamTransformers } from "./team-composer-format";
 import styles from "./team-messages.module.css";
+import { TeamMentionPlugin } from "./team-mention-plugin";
+import type { TeamMemberView } from "../../domain/team/projections";
 
 /**
  * The Team composer, as rich text.
@@ -395,6 +397,7 @@ function ClearOnSendPlugin({ signal }: { signal: number }) {
 }
 
 export type TeamRichComposerProps = {
+  mentionMembers?: TeamMemberView[];
   placeholder: string;
   ariaLabel: string;
   /** Markdown, so the parent counts and sends exactly what will be stored. */
@@ -415,6 +418,7 @@ export function TeamRichComposer({
   canSubmit,
   resetKey,
   clearSignal,
+  mentionMembers,
 }: TeamRichComposerProps) {
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
   const [formatError, setFormatError] = useState<string | null>(null);
@@ -567,6 +571,7 @@ export function TeamRichComposer({
       </div>
 
       <HistoryPlugin />
+      {mentionMembers ? <TeamMentionPlugin members={mentionMembers} /> : null}
       <ListPlugin />
       {/* Only a protocol normalizeTeamLinkTarget accepts survives. */}
       <LinkPlugin validateUrl={(url) => normalizeTeamLinkTarget(url) !== null} />

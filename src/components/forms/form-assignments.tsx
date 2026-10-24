@@ -8,6 +8,7 @@ import type { FormAssignmentSummary } from "../../domain/forms/schema";
 import { formatDate } from "../../lib/format";
 import { titleCaseState } from "../../lib/forms/presentation";
 import { SearchableSelect } from "../ui/searchable-select";
+import { DatePicker } from "../ui/date-picker";
 import styles from "./forms.module.css";
 
 export type AssignmentOption = { id: string; label: string; detail: string; companyId?: string };
@@ -51,7 +52,21 @@ export function FormAssignments({
   }
 
   return <div className={styles.assignmentRoot}>
-    <section className={styles.assignPanel}><header><span>New assignment</span><h2>{formType === "intake" ? "Assign to a Project" : "Assign to a client"}</h2><p>{formType === "intake" ? "Only Projects whose Service is linked to this Form can be assigned." : "The backend derives company scope from the selected client profile."}</p></header><div className={styles.assignFields}><label><span>{formType === "intake" ? "Project" : "Client"}</span><select value={targetId} onChange={(event) => { setTargetId(event.currentTarget.value); setRecipientId(""); }}><option value="">Choose {formType === "intake" ? "a Project" : "a client"}</option>{options.map((option) => <option value={option.id} key={option.id}>{option.label} — {option.detail}</option>)}</select></label>{formType === "intake" ? <SearchableSelect label="Client recipient" menuLabel="Project client recipients" value={recipientId} onChange={setRecipientId} disabled={!targetId || pending} placeholder="Choose the client who should complete this Form" emptyMessage="No eligible client accounts for this Project." options={eligibleRecipients.map((recipient) => ({ id: recipient.id, label: recipient.label, sublabel: recipient.detail, kind: "client" }))} /> : null}<label><span>Due date</span><input type="date" value={dueAt} onChange={(event) => setDueAt(event.currentTarget.value)} /></label><label className={styles.toggle}><input type="checkbox" checked={required} onChange={(event) => setRequired(event.currentTarget.checked)} /><span><strong>Required</strong><small>Show this Form in the client’s required queue.</small></span></label><button className="button-primary" type="button" aria-busy={pending || undefined} disabled={!canAssign || pending} onClick={assign}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Send aria-hidden="true" />}Assign Form</button></div>{error ? <p className={styles.actionError} role="alert">{error}</p> : null}</section>
+    <section className={styles.assignPanel}>
+      <header><span>New assignment</span><h2>{formType === "intake" ? "Assign to a Project" : "Assign to a client"}</h2><p>{formType === "intake" ? "Only Projects whose Service is linked to this Form can be assigned." : "Select the client who should complete this Form."}</p></header>
+      <div className={styles.assignFields}>
+        <div className={styles.customField}><span>{formType === "intake" ? "Project" : "Client"}</span>
+          <SearchableSelect label={formType === "intake" ? "Project" : "Client"} menuLabel={formType === "intake" ? "Eligible Projects" : "Eligible clients"}
+            value={targetId} disabled={pending} onChange={(value) => { setTargetId(value); setRecipientId(""); }}
+            placeholder={`Choose ${formType === "intake" ? "a Project" : "a client"}`} options={options.map((option) => ({ id: option.id, label: option.label, sublabel: option.detail }))} />
+        </div>
+        {formType === "intake" ? <SearchableSelect label="Client recipient" menuLabel="Project client recipients" value={recipientId} onChange={setRecipientId} disabled={!targetId || pending} placeholder="Choose the client who should complete this Form" emptyMessage="No eligible client accounts for this Project." options={eligibleRecipients.map((recipient) => ({ id: recipient.id, label: recipient.label, sublabel: recipient.detail, kind: "client" }))} /> : null}
+        <div className={styles.customField}><span>Due date</span><DatePicker name="due_at" label="Due date" menuLabel="Assignment due date" value={dueAt} onChange={setDueAt} clearable /></div>
+        <label className={styles.toggle}><input type="checkbox" checked={required} onChange={(event) => setRequired(event.currentTarget.checked)} /><span><strong>Required</strong><small>Show this Form in the client’s required queue.</small></span></label>
+        <button className="button-primary" type="button" aria-busy={pending || undefined} disabled={!canAssign || pending} onClick={assign}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <Send aria-hidden="true" />}Assign Form</button>
+      </div>
+      {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
+    </section>
     <section className={styles.assignmentHistory}><header><div><span>Assignment history</span><h2>{assignments.length} {assignments.length === 1 ? "assignment" : "assignments"}</h2></div></header>{assignments.length === 0 ? <p className={styles.sectionEmpty}>This Form has not been assigned yet.</p> : <div className={styles.tableWrap}><table><thead><tr><th>Client / Company</th><th>Project</th><th>Version</th><th>Required</th><th>Due</th><th>Status</th></tr></thead><tbody>{assignments.map((assignment) => <tr key={assignment.assignment_id}><td><strong>{assignment.client_name ?? assignment.company_name}</strong><span className={styles.cellSubline}>{assignment.company_name}</span></td><td>{assignment.order_title ?? "—"}{assignment.order_number ? <span className={styles.cellSubline}>Project #{assignment.order_number}</span> : null}</td><td>Version {assignment.version_number}</td><td>{assignment.required ? "Yes" : "No"}</td><td>{formatDate(assignment.due_at)}</td><td><span className={styles.status} data-state={assignment.status}>{titleCaseState(assignment.status)}</span></td></tr>)}</tbody></table></div>}</section>
   </div>;
 }

@@ -15,15 +15,17 @@ import {
   ReceiptText,
   ShoppingCart,
   Wallet,
+  X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { usePathname } from "next/navigation";
 import type { ComponentType, MouseEvent } from "react";
 import { signOutAction } from "../../app/actions/auth";
 import { WolfForgeMark } from "../shell/wolf-forge-mark";
 import { usePortalDrawer } from "./command/portal-drawer";
+import { useMediaQuery } from "../ui/use-media-query";
 import {
   portalRouteIsCurrent,
   type PortalNavigationCategory,
@@ -84,27 +86,33 @@ export function ClientPortalSidebar({
   useTicketCacheRevocation(() => setRevokedCategories(categories));
   const drawer = usePortalDrawer();
   const drawerOpen = drawer?.open ?? false;
+  const mobile = useMediaQuery("(max-width: 900px)");
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const setDrawerOpen = drawer?.setOpen;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!mobile) {
+      if (drawerOpen) setDrawerOpen?.(false);
+      return;
+    }
+    if (drawerOpen && !dialog?.open) dialog?.showModal();
+    else if (!drawerOpen && dialog?.open) dialog.close();
+  }, [drawerOpen, mobile, setDrawerOpen]);
+
+  useEffect(() => {
+    if (!mobile || !drawerOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [mobile, drawerOpen]);
 
   // Choosing a destination closes the mobile drawer. Handled on the event
   // rather than in an effect on pathname, so re-selecting the current route
   // still dismisses it and no cascading render is triggered.
   const closeDrawer = () => drawer?.setOpen(false);
 
-  return (
-    <>
-      {drawerOpen ? (
-        <button
-          type="button"
-          className="portal-scrim"
-          aria-label="Close menu"
-          onClick={closeDrawer}
-        />
-      ) : null}
-
-      <aside
-        id="portal-navigation"
-        className={`portal-sidebar${drawerOpen ? " is-open" : ""}`}
-      >
+  const content = <>
         {/*
          * The mark alone. The wordmark that sat beside it repeated what the
          * page title and the browser tab already say, and crowded a rail this
@@ -174,7 +182,18 @@ export function ClientPortalSidebar({
             </button>
           </ClientDraftSignOut>
         </div>
-      </aside>
-    </>
-  );
+  </>;
+
+  return mobile ? <dialog
+    ref={dialogRef}
+    id="portal-navigation"
+    className="portal-sidebar portal-sidebar-dialog"
+    aria-label={`${brandName} navigation`}
+    onCancel={closeDrawer}
+    onClose={closeDrawer}
+    onClick={(event) => { if (event.target === event.currentTarget) closeDrawer(); }}
+  >
+    <button type="button" className="portal-drawer-close" aria-label="Close menu" onClick={closeDrawer}><X aria-hidden="true" /></button>
+    {content}
+  </dialog> : <aside id="portal-navigation" className="portal-sidebar">{content}</aside>;
 }

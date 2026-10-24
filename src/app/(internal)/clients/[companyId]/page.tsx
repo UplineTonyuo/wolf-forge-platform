@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClientContactEmail } from "../../../../components/clients/client-contact-email";
 import {
   Activity,
   ArrowLeft,
@@ -144,8 +145,9 @@ export default async function ClientDetailPage({
       null;
 
     // The primary contact's portal login, when this viewer may email it a set-password link.
+    const emailAvailable = await canSendClientWelcomeEmail(context);
     const welcomeEmailProfileId =
-      primaryContact?.profile_id && (await canSendClientWelcomeEmail(context))
+      primaryContact?.profile_id && emailAvailable
         ? primaryContact.profile_id
         : null;
 
@@ -358,7 +360,9 @@ export default async function ClientDetailPage({
                     Email
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.email ?? "Not available" : "Restricted"}
+                    {context.user.clients.privateManage ? primaryContact?.email
+                      ? <ClientContactEmail contactId={primaryContact.id} name={primaryContact.name} email={primaryContact.email} available={emailAvailable} />
+                      : "Not available" : "Restricted"}
                   </dd>
                 </div>
 

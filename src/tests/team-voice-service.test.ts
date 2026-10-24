@@ -9,6 +9,8 @@ const OTHER_CONVERSATION = "20000000-0000-4000-8000-000000000002";
 const UPLOAD = "30000000-0000-4000-8000-000000000001";
 const MESSAGE = "40000000-0000-4000-8000-000000000001";
 
+vi.mock("../lib/security/server-cost-limit", () => ({ enforceServerCostLimit: vi.fn().mockResolvedValue(undefined) }));
+
 async function actor() {
   const client = createUserSupabaseClient(
     { SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHABLE_KEY: "local-key" },
