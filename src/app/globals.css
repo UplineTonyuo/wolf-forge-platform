@@ -15451,3 +15451,27 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
   .portal-overlay-close { width: 44px; height: 44px; }
   .portal-overlay-foot > button { min-height: 44px; }
 }
+
+/* Keep the decorative stage out of the single-column sign-in layout. */
+@media (max-width: 900px) {
+  .login-page.wf-cinematic-login {
+    align-content: center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .login-page.wf-cinematic-login .wf-cinematic-wolf-stage { display: none; }
+  .login-page.wf-cinematic-login .wf-cinematic-access-stage { min-height: 0; }
+  .login-page.wf-cinematic-login .login-card.wf-cinematic-panel {
+    padding: 28px 24px 24px;
+    /* Decorative overflow must not scroll the form when a field receives focus. */
+    overflow: clip;
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .login-page.wf-cinematic-login .wf-cinematic-heading { margin-bottom: 24px; }
+  .login-page.wf-cinematic-login .wf-cinematic-heading h1 { font-size: clamp(26px, 5vw, 34px); }
+  .login-page.wf-cinematic-login .login-form { gap: 18px; }
+  .login-page.wf-cinematic-login .login-form input { font-size: 16px; }
+}
