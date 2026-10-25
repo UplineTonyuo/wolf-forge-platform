@@ -2,6 +2,10 @@ begin;
 
 select plan(40);
 
+create temp table supervision_fixture_anchor on commit drop as
+select greatest(coalesce(max(last_message_at), '1970-01-01'::timestamptz), now()) + interval '1 day' as fixture_time
+from public.team_conversations;
+
 create temp table supervision_audit_before on commit drop as
 select id from public.security_audit_events;
 
@@ -52,7 +56,7 @@ values
     '7f310000-0000-4000-8000-000000000001',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000005',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
-    '2026-09-28 12:00:00+00', '2026-09-01 00:00:00+00'
+    (select fixture_time from supervision_fixture_anchor), '2026-09-01 00:00:00+00'
   ),
   (
     private.wolf_forge_tenant_id(),
@@ -87,7 +91,7 @@ values
     '7f310000-0000-4000-8000-000000000006',
     '7f300000-0000-4000-8000-000000000004|7f300000-0000-4000-8000-000000000008',
     '7f300000-0000-4000-8000-000000000004', 'direct', null,
-    '2026-09-28 12:00:00+00', '2026-09-01 00:00:00+00'
+    (select fixture_time from supervision_fixture_anchor), '2026-09-01 00:00:00+00'
   );
 
 insert into public.team_conversation_members (conversation_id, profile_id, last_read_at)
@@ -112,7 +116,7 @@ values (
   '7f310000-0000-4000-8000-000000000001',
   '7f300000-0000-4000-8000-000000000004',
   'SUPERVISION_LIST_MUST_NOT_EXPOSE_THIS_BODY',
-  '2026-09-28 12:00:00+00'
+  (select fixture_time from supervision_fixture_anchor)
 );
 
 create temp table synthetic_profiles (profile_id uuid primary key) on commit drop;

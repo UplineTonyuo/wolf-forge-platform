@@ -1,6 +1,11 @@
 begin;
 select no_plan();
 
+-- Isolate the push fixture from retained configuration; rollback restores it.
+delete from private.push_deliveries;
+delete from private.push_subscriptions;
+delete from private.studio_push_configuration;
+
 insert into auth.users(id,aud,role,email,created_at,updated_at)
 select ('20000000-0000-4000-8000-00000000'||n)::uuid,'authenticated','authenticated','push-'||n||'@example.invalid',now(),now()
 from unnest(array['1901','1902','1903','1904']) n;
