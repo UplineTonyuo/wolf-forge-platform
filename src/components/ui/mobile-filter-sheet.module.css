@@ -611,6 +611,10 @@
   }
 }
 
+@media (max-width: 760px) {
+  .closeButton { width: 44px; height: 44px; }
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   .trigger,

@@ -4,6 +4,7 @@
 !.env.example
 dist/
 .next/
+/.next-studio-qa/
 coverage/
 .netlify/
 *.log

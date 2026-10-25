@@ -6420,6 +6420,12 @@ td {
 .portal-main { min-width: 0; background: var(--wf-white); }
 .portal-main-inner { width: min(100%, 1040px); margin: 0 auto; padding: 44px 40px 80px; }
 
+@media (min-width: 1024px) {
+  .client-portal { background: var(--wf-navy); }
+  .portal-main { margin: 20px 20px 0; min-height: calc(100vh - 20px); border-radius: 14px 14px 0 0; }
+  .portal-main > .portal-command-bar { border-radius: inherit; }
+}
+
 /* --- Portal page furniture ------------------------------------------------ */
 
 .portal-page { display: flex; flex-direction: column; gap: 28px; }
@@ -13498,7 +13504,8 @@ td {
   .invoice-payment-selector,
   .skip-link { display: none !important; }
 
-  .client-portal { display: block; }
+  .client-portal { display: block; background: var(--wf-white); }
+  .portal-main { margin: 0; min-height: 0; border-radius: 0; }
   .portal-main-inner { width: 100%; max-width: none; padding: 0; }
   .portal-main-inner > * { animation: none; }
   .portal-invoice-content { grid-template-columns: minmax(0, 1fr) 260px; }
@@ -15419,4 +15426,52 @@ body:has(.mobile-nav-drawer[open]) { overflow: hidden; }
     width: auto;
     max-height: calc(100dvh - 88px);
   }
+}
+.client-email-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--wf-navy); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.client-email-link svg { flex-shrink: 0; }
+.client-email-link:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.client-email-form { display: grid; gap: 18px; padding: 4px; min-width: 0; }
+.client-email-form label { display: grid; gap: 8px; color: var(--wf-navy); font-weight: 600; }
+.client-email-form input, .client-email-form textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid #c7cfdf; border-radius: 8px; background: white; color: var(--wf-navy); font-weight: 400; }
+.client-email-form input:focus-visible, .client-email-form textarea:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 2px; }
+.client-email-form footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.client-email-form footer button { min-height: 44px; }
+
+.portal-sidebar-dialog { margin: 0; border: 0; max-width: min(100vw - 24px, 320px); max-height: none; height: 100dvh; transform: none; }
+.portal-sidebar-dialog:not([open]) { display: none; }
+.portal-sidebar-dialog::backdrop { background: rgba(0, 13, 81, .42); backdrop-filter: blur(3px); }
+.portal-drawer-close { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgba(255,255,255,.25); border-radius: 7px; color: #fff; background: transparent; cursor: pointer; }
+.portal-drawer-close svg { width: 20px; height: 20px; }
+.portal-drawer-close:focus-visible { outline: 2px solid var(--wf-gold); outline-offset: 2px; }
+.service-field > div { min-width: 0; }
+@media(max-width:900px) { .portal-sidebar-dialog { transform: none; } }
+@media(max-width:767px) {
+  .service-form-fields input:not([type=checkbox]), .service-form-fields textarea { min-height: 44px; font-size: 16px; }
+  .service-field button[aria-haspopup=listbox], .service-field button[role=option] { min-height: 44px; }
+  .portal-overlay-close { width: 44px; height: 44px; }
+  .portal-overlay-foot > button { min-height: 44px; }
+}
+
+/* Keep the decorative stage out of the single-column sign-in layout. */
+@media (max-width: 900px) {
+  .login-page.wf-cinematic-login {
+    align-content: center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+
+  .login-page.wf-cinematic-login .wf-cinematic-wolf-stage { display: none; }
+  .login-page.wf-cinematic-login .wf-cinematic-access-stage { min-height: 0; }
+  .login-page.wf-cinematic-login .login-card.wf-cinematic-panel {
+    padding: 28px 24px 24px;
+    /* Decorative overflow must not scroll the form when a field receives focus. */
+    overflow: clip;
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  .login-page.wf-cinematic-login .wf-cinematic-heading { margin-bottom: 24px; }
+  .login-page.wf-cinematic-login .wf-cinematic-heading h1 { font-size: clamp(26px, 5vw, 34px); }
+  .login-page.wf-cinematic-login .login-form { gap: 18px; }
+  .login-page.wf-cinematic-login .login-form input { font-size: 16px; }
 }

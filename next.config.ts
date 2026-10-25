@@ -7,6 +7,7 @@ import {
 } from "./src/lib/security/response-headers";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.WOLF_FORGE_STUDIO_QA_BUILD === "1" && process.env.VERCEL !== "1" ? ".next-studio-qa" : ".next",
   // No X-Powered-By: it names the framework and version to every caller.
   poweredByHeader: false,
   devIndicators: false,

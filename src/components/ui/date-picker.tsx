@@ -255,6 +255,7 @@ export function DatePicker({
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               event.preventDefault();
+              event.stopPropagation();
               closeCalendar();
             }
           }}

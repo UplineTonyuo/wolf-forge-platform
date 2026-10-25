@@ -1,6 +1,7 @@
 export function normalizeTeamLinkTarget(value: string): string | null {
   const candidate = value.trim();
   if (!candidate) return null;
+  if (/^mention:(?:everyone|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(candidate)) return candidate.toLowerCase();
   try {
     const url = new URL(candidate);
     if (!(["http:", "https:", "mailto:"] as string[]).includes(url.protocol)) return null;

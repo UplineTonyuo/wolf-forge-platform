@@ -9,6 +9,7 @@ import { readOperationsSyncEnvironment } from "../../../../../lib/env/operations
 import { PODCAST_SHEET_CACHE_TAG } from "../../../../../lib/integrations/google-sheets-source";
 import { PODCAST_SYNC_VERSION_CACHE_TAG } from "../../../../../lib/integrations/podcast-sync-version";
 import { operationsWebhookSignatureMatches } from "../../../../../lib/security/operations-webhook-hmac";
+import { readBoundedText } from "../../../../../lib/security/bounded-text";
 import { shouldTriggerPodcastSyncEffect } from "../../../../../lib/security/podcast-sync-guard";
 import { currentCorrelationId } from "../../../../../lib/security/request-correlation";
 import { recordSecurityEvent } from "../../../../../lib/security/security-log";
@@ -71,18 +72,13 @@ export async function POST(request: Request): Promise<Response> {
     return rejected("not_configured", 503);
   }
 
-  const declaredLength = request.headers.get("content-length");
-  if (declaredLength && /^\d+$/.test(declaredLength) && Number(declaredLength) > MAX_BODY_BYTES) {
-    return rejected("malformed_payload", 413);
-  }
-
-  const rawBody = await request.text();
-  if (new TextEncoder().encode(rawBody).length > MAX_BODY_BYTES) {
-    return rejected("malformed_payload", 413);
-  }
-
   const signatureHeader = request.headers.get(SIGNATURE_HEADER);
   if (!signatureHeader) return rejected("missing_signature", 401);
+  if (!/^[0-9a-f]{64}$/i.test(signatureHeader)) return rejected("invalid_signature", 401);
+
+  const body = await readBoundedText(request, MAX_BODY_BYTES);
+  if (!body.ok) return rejected("malformed_payload", body.status);
+  const rawBody = body.value;
   if (
     !operationsWebhookSignatureMatches(
       rawBody,

@@ -1,4 +1,5 @@
 import {
+  dashboardTopServicesSchema,
   toComparison,
   type DashboardOverview,
   type DashboardQuery,
@@ -30,6 +31,25 @@ function comparison(pair: RawPair | null | undefined): MetricComparison {
 
 export class DashboardRepository {
   constructor(private readonly client: UserMutationClient) {}
+
+  async getHistoryStart(currency: string): Promise<string | null> {
+    const result = await this.client.rpc("app_dashboard_history_start", { p_currency: currency });
+    if (result.error) throw mapDatabaseError(result.error, "Revenue history");
+    if (result.data === null) return null;
+    if (typeof result.data !== "string" || !Number.isFinite(Date.parse(result.data))) {
+      throw new Error("Invalid revenue history date.");
+    }
+    return result.data;
+  }
+
+  async getTopServices(query: DashboardQuery) {
+    const result = await this.client.rpc("app_dashboard_top_services", {
+      p_start: query.start,
+      p_end: query.end,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Top services");
+    return dashboardTopServicesSchema.parse(result.data);
+  }
 
   /**
    * One round trip and one MVCC snapshot for the whole screen. The RPC

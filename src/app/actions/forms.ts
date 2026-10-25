@@ -15,6 +15,7 @@ import { toClientSafeError } from "../../lib/errors/application-error";
 import { observeActionFailure } from "../../lib/security/observed-failure";
 import { createNextServerSupabaseClient, getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 import { FormRepository } from "../../repositories/form-repository";
+import { runIntakeSubmissionJob } from "../../lib/forms/intake-jobs";
 
 export type FormMutationResult<T = undefined> =
   | { ok: true; data: T }
@@ -93,13 +94,16 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
   }
 }
 
-export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
+export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string; followUp?: string }>> {
   const context = await getClientContext();
   try {
     const submission = await context.services.forms.submit(input, context.actor);
+    const queued = await context.client.rpc("app_get_intake_follow_up", { p_submission_id: submission.id });
+    const followUp = !queued.error && queued.data === "not_required" ? "not_required"
+      : await runIntakeSubmissionJob(submission.id).catch(() => "queued");
     revalidatePath("/account/onboarding");
     revalidatePath("/account");
-    return { ok: true, data: { id: submission.id } };
+    return { ok: true, data: { id: submission.id, followUp } };
   } catch (error) {
     return failure(error);
   }

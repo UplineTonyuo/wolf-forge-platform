@@ -1,10 +1,13 @@
 "use client";
 
+import { startTransition, useOptimistic, type MouseEvent } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { ClientNavCounts } from "../../domain/client-portal/summary";
 import type { ServiceChooserCatalog } from "../../domain/client-portal/service-chooser";
 import type { ClientUser } from "../../lib/supabase/next-server";
 import { ClientCommandBar } from "./command/client-command-bar";
 import { ClientPortalSidebar } from "./client-portal-sidebar";
+import { ClientRouteSkeleton } from "./client-route-skeleton";
 import { PortalDrawerProvider } from "./command/portal-drawer";
 import { ServiceChooserProvider } from "./services/service-chooser-context";
 import { portalNavigationFor } from "./portal-nav-registry";
@@ -46,10 +49,23 @@ export function ClientAccountShell({
   readRuntimeConfiguration?: RuntimeBrandingReader;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [pendingRoute, setPendingRoute] = useOptimistic<string | null>(null);
   const categories = portalNavigationFor(user.modules, navCounts);
   const storeGranted = user.modules.portal_store === true;
   const brandingState = useRuntimeBranding(runtimeConfiguration, `${user.id}:${user.companyId}`, true, readRuntimeConfiguration);
   const { branding, unavailable } = brandingState;
+
+  function navigate(route: string, event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (route === pathname && !pendingRoute) return;
+    startTransition(() => {
+      setPendingRoute(route === pathname ? null : route);
+      router.push(route);
+    });
+  }
 
   return (
     <TenantBrandingProvider value={brandingState}>
@@ -74,11 +90,14 @@ export function ClientAccountShell({
           displayName={user.displayName}
           workspaceName={branding?.name}
           brandingUnavailable={unavailable}
+          pendingRoute={pendingRoute}
+          onNavigate={navigate}
         />
 
         <main id="portal-main" className="portal-main">
           {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
           <ClientCommandBar
+            pendingRoute={pendingRoute}
             displayName={user.displayName}
             companyName={user.companyName}
             avatarUrl={avatarUrl}
@@ -87,7 +106,11 @@ export function ClientAccountShell({
             notificationSoundEnabled={notificationSoundEnabled}
           />
 
-          <div className="portal-main-inner">{children}</div>
+          <div className="portal-main-inner" aria-busy={pendingRoute !== null}>
+            {pendingRoute ? <ClientRouteSkeleton pathname={pendingRoute} /> : null}
+            {/* Keep unsent editor state mounted until navigation commits. */}
+            <div hidden={pendingRoute !== null}>{children}</div>
+          </div>
         </main>
       </div>
       </PortalDrawerProvider>

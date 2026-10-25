@@ -151,7 +151,7 @@ select is(pg_temp.resolve_as_anon('wolf-forge-platform-woad.vercel.app'), privat
   'seeded Wolf Forge production alias');
 select is(pg_temp.resolve_as_anon('wolf-forge-platform-wolf-forge.vercel.app'), private.wolf_forge_tenant_id(),
   'seeded Wolf Forge project alias');
-select is(pg_temp.resolve_as_anon('wolf-forge-platform-git-main-wolf-forge.vercel.app'), null,
+select is(pg_temp.resolve_as_anon('wolf-forge-platform-git-rehearsal14-unregistered-wolf-forge.vercel.app'), null,
   'branch alias is not registered (fails closed)');
 
 -- Access follows the host's Tenant; membership decides.

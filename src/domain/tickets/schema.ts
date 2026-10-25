@@ -86,16 +86,16 @@ export const ticketForwardToTeamInputSchema = z.object({
 });
 
 /**
- * The live lane's request. The browser supplies a Ticket id and the
+ * The live lane's request. The browser supplies one Ticket or Project id and the
  * fingerprint it already holds — never an actor, a company or a role. Who is
  * asking is derived from the session cookie inside the route, exactly as the
  * page render derives it.
  */
-export const ticketLiveRequestSchema = z.object({
-  ticket_id: uuidSchema,
-  /* Bounded: it is a structural signature, never free text. */
-  fingerprint: z.string().max(20_000).nullable(),
-});
+const conversationFingerprintSchema = z.string().max(20_000).nullable();
+export const ticketLiveRequestSchema = z.union([
+  z.object({ ticket_id: uuidSchema, fingerprint: conversationFingerprintSchema }).strict(),
+  z.object({ order_id: uuidSchema, fingerprint: conversationFingerprintSchema }).strict(),
+]);
 
 export const updateTicketStatusSchema = z.object({
   status: z.enum(ticketStatuses),

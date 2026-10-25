@@ -1,6 +1,6 @@
 import { ticketLiveRequestSchema } from "../../../domain/tickets/schema";
 import { ticketConversationFingerprint } from "../../../domain/tickets/live-scheduler";
-import { toClientSafeError } from "../../../lib/errors/application-error";
+import { NotFoundError, toClientSafeError } from "../../../lib/errors/application-error";
 import { readBoundedJson } from "../../../lib/security/bounded-json";
 import { requestIsSameOrigin } from "../../../lib/security/same-origin";
 import { getTicketActorContext } from "../../../lib/supabase/next-server";
@@ -9,9 +9,9 @@ import { identityFailureResponse } from "../../../lib/supabase/identity-failure-
 export const dynamic = "force-dynamic";
 
 /**
- * The Ticket conversation's live lane.
+ * The shared Ticket and Project conversation live lane.
  *
- * One Ticket, one call, one read. Modeled on `/api/team-live`: same-origin
+ * One conversation, one canonical read. Modeled on `/api/team-live`: same-origin
  * only, bounded JSON, a verified actor resolved from the HttpOnly session
  * cookie, and no actor identity, company or role supplied by the browser — so
  * there is no bearer token or subject for a caller to forge, and the route
@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
  * in place — no `router.refresh()`, no RSC round trip.
  *
  * Internal notes are not filtered here on purpose: `app_get_ticket_detail`
- * already refuses them to a client actor inside Postgres, and re-implementing
+ * and the canonical Project conversation RPC refuse them to client actors in Postgres, and re-implementing
  * that rule in TypeScript would create a second, driftable copy of a security
  * boundary.
  */
@@ -52,7 +52,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const detail = await context.tickets.get(input.data.ticket_id);
+    const target = "order_id" in input.data
+      ? { kind: "project" as const, id: input.data.order_id }
+      : { kind: "ticket" as const, id: input.data.ticket_id };
+    const detail = target.kind === "project"
+      ? await context.tickets.getForOrder(target.id)
+      : await context.tickets.get(target.id);
+    if (!detail) throw new NotFoundError("Conversation");
     const messages = detail.messages ?? [];
     const fingerprint = ticketConversationFingerprint(messages);
     const changed = fingerprint !== input.data.fingerprint;
@@ -61,7 +67,7 @@ export async function POST(request: Request) {
       {
         ok: true,
         data: {
-          ticketId: input.data.ticket_id,
+          ...(target.kind === "project" ? { orderId: target.id } : { ticketId: target.id }),
           fingerprint,
           changed,
           messages: changed ? messages : null,

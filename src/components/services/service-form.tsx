@@ -22,6 +22,7 @@ import {
 } from "../../app/actions/services";
 import type { ServiceFolderRow, ServiceRow } from "../../lib/supabase/database-rows";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
+import { AnimatedSelect } from "../ui/animated-select";
 
 function SubmitButton({ mode }: { mode: "create" | "edit" }) {
   const { pending } = useFormStatus();
@@ -150,6 +151,12 @@ export function ServiceForm({
 }) {
   const [requestId] = useState(() => crypto.randomUUID());
   const [recurring, setRecurring] = useState(service?.recurring ?? false);
+  const [folderId, setFolderId] = useState(preselectedFolderId ?? service?.folder_id ?? "");
+  const [currency, setCurrency] = useState(service?.currency ?? "USD");
+  const [intervalUnit, setIntervalUnit] = useState<string>(service?.recurring_interval_unit ?? "M");
+  const [recurringAction, setRecurringAction] = useState<string>(service?.recurring_action ?? "none");
+  const [assigneeId, setAssigneeId] = useState(service?.assigned_to_profile_id ?? "");
+  const [deadlineUnit, setDeadlineUnit] = useState<string>(service?.deadline_unit ?? "D");
   const initialState: CatalogFormState = { error: null };
   const updateAction = service ? updateServiceAction.bind(null, service.id) : null;
   const [state, action] = useActionState(
@@ -173,21 +180,18 @@ export function ServiceForm({
             <span>Service name</span>
             <input id="service-name" name="name" defaultValue={service?.name ?? ""} maxLength={200} required />
           </label>
-          <label className="service-field service-field-folder" htmlFor="service-folder">
+          <div className="service-field service-field-folder">
             <span>Folder</span>
-            <select
-              id="service-folder"
+            <AnimatedSelect
               name="folder_id"
-              defaultValue={preselectedFolderId ?? service?.folder_id ?? ""}
+              label="Folder"
+              menuLabel="Service folders"
+              value={folderId}
+              onChange={setFolderId}
               disabled={preselectedFolderId != null}
-            >
-              <option value="">Unfiled</option>
-              {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-            </select>
-            {preselectedFolderId != null ? (
-              <input type="hidden" name="folder_id" value={preselectedFolderId} />
-            ) : null}
-          </label>
+              options={[{ value: "", label: "Unfiled" }, ...folders.map((folder) => ({ value: folder.id, label: folder.name }))]}
+            />
+          </div>
           <div className="service-field service-field-wide">
             <label htmlFor="service-description">Description <small>optional</small></label>
             <RichTextDescription
@@ -212,12 +216,10 @@ export function ServiceForm({
             <span>Price</span>
             <input id="service-price" name="price" type="number" min="0" step="0.01" defaultValue={service?.price ?? 0} required />
           </label>
-          <label className="service-field" htmlFor="service-currency">
+          <div className="service-field">
             <span>Currency</span>
-            <select id="service-currency" name="currency" defaultValue={service?.currency ?? "USD"}>
-              {['USD', 'PHP', 'EUR', 'GBP', 'CAD', 'AUD'].map((currency) => <option key={currency}>{currency}</option>)}
-            </select>
-          </label>
+            <AnimatedSelect name="currency" label="Currency" menuLabel="Currencies" value={currency} onChange={setCurrency} options={['USD', 'PHP', 'EUR', 'GBP', 'CAD', 'AUD'].map((value) => ({ value, label: value }))} />
+          </div>
           <label className="service-toggle service-field-wide">
             <input
               name="recurring"
@@ -237,21 +239,14 @@ export function ServiceForm({
                 <span>Every</span>
                 <input id="service-interval-length" name="recurring_interval_length" type="number" min="1" step="1" defaultValue={service?.recurring_interval_length ?? 1} required />
               </label>
-              <label className="service-field" htmlFor="service-interval-unit">
+              <div className="service-field">
                 <span>Interval unit</span>
-                <select id="service-interval-unit" name="recurring_interval_unit" defaultValue={service?.recurring_interval_unit ?? "M"} required>
-                  <option value="D">Day</option><option value="W">Week</option><option value="M">Month</option><option value="Y">Year</option>
-                </select>
-              </label>
-              <label className="service-field service-field-wide" htmlFor="service-recurring-action">
+                <AnimatedSelect name="recurring_interval_unit" label="Interval unit" menuLabel="Recurring intervals" value={intervalUnit} onChange={setIntervalUnit} required options={[{ value: "D", label: "Day" }, { value: "W", label: "Week" }, { value: "M", label: "Month" }, { value: "Y", label: "Year" }]} />
+              </div>
+              <div className="service-field service-field-wide">
                 <span>Recurring action</span>
-                <select id="service-recurring-action" name="recurring_action" defaultValue={service?.recurring_action ?? "none"} required>
-                  <option value="none">Do nothing</option>
-                  <option value="reopen_order">Reopen Project</option>
-                  <option value="create_order">Create new Project</option>
-                  <option value="client_request">Allow client-requested Projects</option>
-                </select>
-              </label>
+                <AnimatedSelect name="recurring_action" label="Recurring action" menuLabel="Recurring actions" value={recurringAction} onChange={setRecurringAction} required options={[{ value: "none", label: "Do nothing" }, { value: "reopen_order", label: "Reopen Project" }, { value: "create_order", label: "Create new Project" }, { value: "client_request", label: "Allow client-requested Projects" }]} />
+              </div>
             </div>
           ) : null}
         </div>
@@ -266,29 +261,24 @@ export function ServiceForm({
             <input name="group_quantities" type="checkbox" defaultChecked={service?.group_quantities ?? false} />
             <span><strong>Group multiple quantities into one Project</strong><small>Keep one delivery record when quantity is greater than one.</small></span>
           </label>
-          <label className="service-field" htmlFor="service-assignee">
+          <div className="service-field">
             <span>Assigned teammate <small>optional</small></span>
-            <select id="service-assignee" name="assigned_to_profile_id" defaultValue={service?.assigned_to_profile_id ?? ""}>
-              <option value="">None</option>
-              {assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.displayName}</option>)}
-            </select>
-          </label>
+            <AnimatedSelect name="assigned_to_profile_id" label="Assigned teammate" menuLabel="Teammates" value={assigneeId} onChange={setAssigneeId} options={[{ value: "", label: "None" }, ...assignees.map((assignee) => ({ value: assignee.id, label: assignee.displayName }))]} />
+          </div>
           <div className="service-deadline-field">
             <label className="service-field" htmlFor="service-deadline-amount">
               <span>Deadline <small>optional</small></span>
               <input id="service-deadline-amount" name="deadline_amount" type="number" min="1" step="1" defaultValue={service?.deadline_amount ?? ""} />
             </label>
-            <label className="service-field" htmlFor="service-deadline-unit">
+            <div className="service-field">
               <span>Unit</span>
-              <select id="service-deadline-unit" name="deadline_unit" defaultValue={service?.deadline_unit ?? "D"}>
-                <option value="D">Day(s)</option><option value="H">Hour(s)</option>
-              </select>
-            </label>
+              <AnimatedSelect name="deadline_unit" label="Deadline unit" menuLabel="Deadline units" value={deadlineUnit} onChange={setDeadlineUnit} options={[{ value: "D", label: "Day(s)" }, { value: "H", label: "Hour(s)" }]} />
+            </div>
           </div>
           <div className="service-field service-field-wide">
-            <span>Intake form <small>unavailable</small></span>
-            <select disabled aria-label="Intake form unavailable"><option>Forms domain is not implemented</option></select>
-            <small className="service-field-help">This will become selectable after real intake forms exist.</small>
+            <span>Intake forms</span>
+            <p className="service-field-help">In Forms, link this Service to an intake form and publish it to request the form after a new purchase.</p>
+            <Link href="/forms">Manage intake forms</Link>
           </div>
           <label className="service-toggle service-field-wide">
             <input name="require_client_profile" type="checkbox" defaultChecked={service?.require_client_profile ?? false} />

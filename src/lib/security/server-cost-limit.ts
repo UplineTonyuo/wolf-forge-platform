@@ -10,7 +10,11 @@ export type ServerCostAction =
   | "report.send"
   | "integration.gmail.verify"
   | "account.provision"
-  | "billing.stripe_customer";
+  | "billing.stripe_customer"
+  | "intake.file_upload"
+  | "intake.file_download"
+  | "ticket.file_download"
+  | "team.voice.finalize";
 
 /**
  * Durable, multi-instance preflight for authenticated application work that

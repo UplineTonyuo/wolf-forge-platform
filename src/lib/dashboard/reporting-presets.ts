@@ -194,6 +194,7 @@ export function reportingButtonLabel(input: {
   to?: string;
   date?: string;
 }): string {
+  if (input.preset === "last_30_days") return "30 days";
   if (input.preset === "custom_range") {
     return isReportingDateKey(input.from) && isReportingDateKey(input.to)
       ? compactRangeLabel(input.from, input.to)

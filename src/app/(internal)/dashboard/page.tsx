@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
+  ArrowUpRight,
   CircleDollarSign,
   Repeat2,
   ShoppingBag,
@@ -7,6 +9,9 @@ import {
   UsersRound,
 } from "lucide-react";
 import { DashboardReportingControl } from "../../../components/dashboard/dashboard-reporting-control";
+import { SalesTrendChart } from "../../../components/dashboard/sales-trend-chart";
+import { TopServicesPanel } from "../../../components/dashboard/top-services-panel";
+import { assignServiceIconsById } from "../../../components/services/service-icons";
 import { DataError } from "../../../components/ui/list-states";
 import {
   dashboardPresets,
@@ -20,12 +25,12 @@ import {
 } from "../../../lib/dashboard/date-range";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { formatCurrencyCents } from "../../../lib/format";
+import { defaultReportingPreset, yearToDateRange } from "../../../lib/dashboard/reporting-presets";
+import { emptyRevenuePoints } from "../../../lib/dashboard/empty-revenue-points";
 import { getInternalContext } from "../../../lib/supabase/next-server";
 import styles from "./dashboard.module.css";
 
 export const metadata: Metadata = { title: "Dashboard" };
-
-const zeroColumns = [3, 5, 2, 6, 4, 7, 3, 5, 2, 6, 4, 5];
 
 function isPreset(value: string | undefined): value is DashboardPreset {
   return Boolean(value) &&
@@ -115,6 +120,7 @@ export default async function DashboardPage({
     date?: string;
     from?: string;
     to?: string;
+    servicesPeriod?: string;
   }>;
 }) {
   const [params, context] = await Promise.all([
@@ -124,9 +130,21 @@ export default async function DashboardPage({
 
   const preset: DashboardPreset = isPreset(params.period)
     ? params.period
-    : "last_30_days";
+    : defaultReportingPreset;
+
+  const businessToday = toBusinessDateKey(new Date());
+  const servicesPeriod = params.servicesPeriod === "week" || params.servicesPeriod === "year"
+    ? params.servicesPeriod : "month";
+  const topServicesRequest = Promise.all([
+    context.services.dashboard.getTopServices({ preset: "last_7_days" }).catch(() => null),
+    context.services.dashboard.getTopServices({ preset: "this_month" }).catch(() => null),
+    context.services.dashboard.getTopServices({ preset: "custom_range", ...yearToDateRange(businessToday) }).catch(() => null),
+  ]);
+  const catalogRequest = context.user.modules.services
+    ? context.services.catalog.listCatalog().catch(() => []) : Promise.resolve([]);
 
   let overview;
+  let historyStart: string | null;
 
   try {
     overview = await context.services.dashboard.getOverview({
@@ -135,6 +153,7 @@ export default async function DashboardPage({
       from: params.from,
       to: params.to,
     });
+    historyStart = await context.services.dashboard.getHistoryStart(overview.revenue.headline_currency);
   } catch (error) {
     return (
       <main className={styles.page}>
@@ -147,8 +166,12 @@ export default async function DashboardPage({
     revenue,
     clients,
     sales_trend: salesTrend,
-    client_growth: growth,
   } = overview;
+
+  const [topServices, catalog] = await Promise.all([topServicesRequest, catalogRequest]);
+  const serviceIcons = assignServiceIconsById(catalog.map((service) => ({
+    id: service.id, name: service.name, folderId: service.folder_id,
+  })));
 
   const headline = revenue.current.find(
     (entry) => entry.currency === revenue.headline_currency,
@@ -180,12 +203,7 @@ export default async function DashboardPage({
     (series) => series.currency === revenue.headline_currency,
   );
 
-  const trendPoints = headlineTrend?.points ?? [];
-  const trendMax = trendPoints.reduce(
-    (max, point) => Math.max(max, Math.abs(point.net_cents)),
-    0,
-  );
-
+  const trendPoints = headlineTrend?.points.length ? headlineTrend.points : emptyRevenuePoints(overview.range);
   const tz = overview.range.timeZone;
   const bucketLabel = (bucketStart: string) =>
     overview.range.bucket === "hour"
@@ -201,20 +219,27 @@ export default async function DashboardPage({
   const rangeLabel =
     startLabel === endLabel ? startLabel : `${startLabel} to ${endLabel}`;
 
-  const totalGrowth = growth.points.reduce(
-    (totals, point) => ({
-      contact: totals.contact + point.to_contact,
-      lead: totals.lead + point.to_lead,
-      client: totals.client + point.to_client,
-      clientTeam: totals.clientTeam + point.to_client_team,
-    }),
-    {
-      contact: 0,
-      lead: 0,
-      client: 0,
-      clientTeam: 0,
-    },
-  );
+  const shortDate = new Intl.DateTimeFormat("en", {
+    timeZone: tz, month: "short", ...(trendPoints.length <= 31 ? { day: "numeric" as const } : {}),
+  });
+  function servicePanel(result: typeof topServices[number]) {
+    return {
+      rangeLabel: result
+        ? `${formatBusinessDate(result.range.start, tz)} to ${formatBusinessDate(new Date(Date.parse(result.range.end) - 1).toISOString(), tz)}` : "",
+      content: result ? result.services.length ? <ol className={styles.topServicesList}>
+        {result.services.map((service, index) => {
+          const ServiceIcon = serviceIcons.get(service.service_id ?? "") ?? ShoppingBag;
+          return <li key={service.service_id ?? service.name}>
+            <span className={styles.serviceRank} aria-hidden="true">{index + 1}</span>
+            <span className={styles.serviceGlyph}><ServiceIcon size={19} aria-hidden="true" /></span>
+            <strong className={styles.serviceName}>{service.name}</strong>
+            <span className={styles.serviceCount}><strong>{service.paid_orders}</strong><small>paid {service.paid_orders === 1 ? "order" : "orders"}</small></span>
+          </li>;
+        })}
+      </ol> : <div className={styles.softEmpty}>No paid orders in this period.</div>
+        : <div className={styles.softEmpty} role="status">Top services couldn’t be loaded. Try refreshing.</div>,
+    };
+  }
 
   const headlineMoney = formatCurrencyCents(
     headline?.net_cents ?? 0,
@@ -231,13 +256,13 @@ export default async function DashboardPage({
               : "Welcome back"}
           </h1>
           <p>
-            Paid revenue, completed sales, client growth, and recurring
+            Paid revenue, top services, client activity, and recurring
             business in one live view.
           </p>
         </div>
         <DashboardReportingControl
           preset={preset}
-          businessToday={toBusinessDateKey(new Date())}
+          businessToday={businessToday}
         />
       </section>
 
@@ -309,7 +334,7 @@ export default async function DashboardPage({
               <span>Sales trend</span>
               <h2>{headlineMoney}</h2>
               <p>
-                Paid revenue in {revenue.headline_currency} / {rangeLabel}
+                Collected revenue, net of refunds / {revenue.headline_currency} / {rangeLabel}
               </p>
             </div>
           </div>
@@ -317,133 +342,27 @@ export default async function DashboardPage({
           <div className={styles.legend}>
             <span>
               <i />
-              Paid revenue
+              Net revenue
             </span>
-            <strong>{overview.range.bucket} buckets</strong>
+            <strong>{overview.range.bucket === "hour" ? "Hourly" : overview.range.bucket === "week" ? "Weekly" : "Daily"}</strong>
           </div>
         </div>
 
-        {trendPoints.length && trendMax > 0 ? (
-          <div className={styles.chartViewport}>
-            <div className={styles.chart}>
-              {trendPoints.map((point) => {
-                const ratio = Math.abs(point.net_cents) / trendMax;
-                const filled = Math.max(1, Math.round(ratio * 10));
-
-                return (
-                  <div className={styles.chartColumn} key={point.bucket_start}>
-                    <div
-                      className={styles.chartBlocks}
-                      title={`${bucketLabel(
-                        point.bucket_start,
-                      )}: ${formatCurrencyCents(
-                        point.net_cents,
-                        revenue.headline_currency,
-                      )}`}
-                    >
-                      {Array.from({ length: 10 }).map((_, index) => (
-                        <span
-                          key={index}
-                          className={
-                            index >= 10 - filled
-                              ? styles.blockFilled
-                              : styles.blockGhost
-                          }
-                        />
-                      ))}
-                    </div>
-
-                    <time
-                      className={styles.chartLabel}
-                      dateTime={point.bucket_start}
-                    >
-                      {bucketLabel(point.bucket_start)}
-                    </time>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className={styles.zeroChart} aria-label="No paid revenue">
-            <div className={styles.zeroGrid} aria-hidden="true">
-              {zeroColumns.map((height, index) => (
-                <div className={styles.zeroColumn} key={index}>
-                  {Array.from({ length: 8 }).map((_, blockIndex) => (
-                    <span
-                      key={blockIndex}
-                      className={
-                        blockIndex >= 8 - height
-                          ? styles.zeroBlockActive
-                          : styles.zeroBlock
-                      }
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <SalesTrendChart key={`${overview.range.start}:${overview.range.end}`} currency={revenue.headline_currency}
+          window={{ from: toBusinessDateKey(new Date(overview.range.start), tz), to: toBusinessDateKey(new Date(lastDayInRange), tz), today: businessToday,
+            earliest: historyStart ? toBusinessDateKey(new Date(historyStart), tz) : null }}
+          points={trendPoints.map((point) => ({
+          value: point.net_cents,
+          label: bucketLabel(point.bucket_start),
+          axisLabel: overview.range.bucket === "hour" ? formatBusinessHour(point.bucket_start, tz) : shortDate.format(new Date(point.bucket_start)),
+          money: formatCurrencyCents(point.net_cents, revenue.headline_currency),
+        }))} />
       </section>
 
       <section className={styles.insightGrid}>
-        <article className={styles.clientPanel}>
-          <div className={styles.panelHead}>
-            <div className={styles.panelTitle}>
-              <span className={styles.panelIcon}>
-                <UsersRound size={17} aria-hidden="true" />
-              </span>
-              <div>
-                <span>Client growth</span>
-                <h2>{clients.converted.current}</h2>
-                <p>Conversions into Client during the selected period</p>
-              </div>
-            </div>
-          </div>
-
-          {growth.supported ? (
-            <>
-              <div className={styles.pipeline}>
-                <div className={styles.pipelineStage}>
-                  <span>Contact</span>
-                  <strong>{totalGrowth.contact}</strong>
-                </div>
-                <div className={styles.pipelineLine}>
-                  <span />
-                </div>
-                <div className={styles.pipelineStage}>
-                  <span>Lead</span>
-                  <strong>{totalGrowth.lead}</strong>
-                </div>
-                <div className={styles.pipelineLine}>
-                  <span />
-                </div>
-                <div className={styles.pipelineStage}>
-                  <span>Client</span>
-                  <strong>{totalGrowth.client}</strong>
-                </div>
-                <div className={styles.pipelineLine}>
-                  <span />
-                </div>
-                <div className={styles.pipelineStage}>
-                  <span>Client Team</span>
-                  <strong>{totalGrowth.clientTeam}</strong>
-                </div>
-              </div>
-
-              <p className={styles.supportNote}>
-                Based on persisted company status transitions available to
-                the platform.
-              </p>
-            </>
-          ) : (
-            <div className={styles.softEmpty}>
-              Historical client status tracking is unavailable for this
-              reporting window.
-            </div>
-          )}
-        </article>
-
+        <TopServicesPanel key={servicesPeriod} initialPeriod={servicesPeriod} periods={{
+          week: servicePanel(topServices[0] ?? null), month: servicePanel(topServices[1] ?? null), year: servicePanel(topServices[2] ?? null),
+        }} />
         <article className={styles.subscriptionPanel}>
           <div className={styles.subscriptionOrb} aria-hidden="true" />
 
@@ -476,6 +395,11 @@ export default async function DashboardPage({
               <span className={styles.noStatus}>No active subscriptions.</span>
             )}
           </div>
+          {context.user.modules.subscriptions ? (
+            <Link href="/subscriptions" className={styles.subscriptionLink}>
+              View subscriptions <ArrowUpRight size={15} aria-hidden="true" />
+            </Link>
+          ) : null}
         </article>
       </section>
     </main>

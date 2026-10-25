@@ -10,6 +10,7 @@ import {
   type CatalogFormState,
 } from "../../app/actions/services";
 import type { ServiceFolderRow } from "../../lib/supabase/database-rows";
+import { AnimatedSelect } from "../ui/animated-select";
 
 function SubmitButton({ editing }: { editing: boolean }) {
   const { pending } = useFormStatus();
@@ -23,6 +24,7 @@ function SubmitButton({ editing }: { editing: boolean }) {
 
 export function FolderForm({ folder, folders }: { folder?: ServiceFolderRow; folders: ServiceFolderRow[] }) {
   const [requestId] = useState(() => crypto.randomUUID());
+  const [parentId, setParentId] = useState(folder?.parent_id ?? "");
   const updateAction = folder ? updateServiceFolderAction.bind(null, folder.id) : null;
   const initialState: CatalogFormState = { error: null };
   const [state, action] = useActionState(updateAction ?? createServiceFolderAction, initialState);
@@ -45,15 +47,10 @@ export function FolderForm({ folder, folders }: { folder?: ServiceFolderRow; fol
             <span>Description <small>optional</small></span>
             <textarea id="folder-description" name="description" defaultValue={folder?.description ?? ""} rows={4} maxLength={2000} />
           </label>
-          <label className="service-field" htmlFor="folder-parent">
+          <div className="service-field">
             <span>Parent folder <small>optional</small></span>
-            <select id="folder-parent" name="parent_id" defaultValue={folder?.parent_id ?? ""}>
-              <option value="">Root</option>
-              {folders.filter((candidate) => candidate.id !== folder?.id).map((candidate) => (
-                <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
-              ))}
-            </select>
-          </label>
+            <AnimatedSelect name="parent_id" label="Parent folder" menuLabel="Parent folders" value={parentId} onChange={setParentId} options={[{ value: "", label: "Root" }, ...folders.filter((candidate) => candidate.id !== folder?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} />
+          </div>
           <label className="service-field" htmlFor="folder-sort-order">
             <span>Sort order</span>
             <input id="folder-sort-order" name="sort_order" type="number" min="0" step="1" defaultValue={folder?.sort_order ?? 0} required />

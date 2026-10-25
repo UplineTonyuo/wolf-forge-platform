@@ -28,3 +28,45 @@
 .renderField>fieldset{min-width:0;margin:0;padding:0;border:0}
 .builderTop{flex-wrap:wrap}.builderTop>div:first-child{min-width:0}.builderTop h1{overflow-wrap:anywhere}.builderActions{flex-wrap:wrap}.formSettingsBar>label{min-width:0}.formSettingsBar input{min-width:0;width:100%}
 @media(min-width:761px) and (max-width:1100px){.builderGrid{grid-template-columns:200px minmax(0,1fr)}.settings{grid-column:1/-1;border-top:1px solid #dfe2e8}.formSettingsBar{grid-template-columns:repeat(2,minmax(0,1fr))}.palette,.canvas{min-width:0}.palette section>div{grid-template-columns:repeat(2,minmax(0,1fr))}.palette section button{min-width:0}}
+.signatureControl { display: grid; gap: 14px; }
+.signatureControl > input { font-family: Georgia, serif; font-size: 22px; }
+.signatureControl .checkControl { align-items: flex-start; line-height: 1.5; }
+.signatureControl .checkControl input { margin-top: 4px; flex-shrink: 0; }
+.draftBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 20px 28px; border-top: 1px solid #e2e7f0; }
+.draftBar p { flex: 1 1 200px; margin: 0; color: #56647a; font-size: 12px; line-height: 1.6; }
+.draftBar button { min-height: 44px; white-space: normal; }
+.intakeFile { display: grid; gap: 10px; min-width: 0; }
+.intakeFile > div { display: flex; align-items: center; gap: 12px; justify-content: space-between; min-width: 0; }
+.intakeFile a { overflow-wrap: anywhere; color: var(--wf-navy); text-decoration: underline; }
+.intakeFile button { min-height: 44px; padding: 8px 12px; border: 1px solid #c7cfdf; border-radius: 6px; color: var(--wf-navy); background: white; cursor: pointer; }
+.intakeFile small { font-size: 12px; color: #56647a; }
+.intakeFile input { max-width: 100%; }
+.requestOptions { display: grid; gap: 18px; padding: 24px; margin-bottom: 24px; border: 1px solid #dce2ed; border-radius: 10px; background: #fff; min-width: 0; }
+.requestOptions header > span { color: #9b761d; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.requestOptions h2 { margin: 8px 0; color: var(--wf-navy); font-size: 22px; }
+.requestOptions p, .requestOptions small { margin: 0; color: #56647a; font-size: 13px; line-height: 1.6; }
+.requestOptions > label:not(.toggle), .requestOptionsGrid > label { display: grid; gap: 8px; min-width: 0; color: var(--wf-navy); font-size: 14px; }
+.requestOptions input:not([type="checkbox"]), .requestOptions textarea { min-width: 0; width: 100%; padding: 10px 12px; border: 1px solid #c7cfdf; border-radius: 6px; }
+.requestOptions .toggle { justify-content: flex-start; gap: 12px; min-height: 44px; }
+.requestOptionsGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+@media(max-width:640px) { .requestOptions { padding: 18px; } .requestOptionsGrid { grid-template-columns: minmax(0,1fr); } }
+
+.assignFields > * { min-width: 0; }
+.logicCondition > div, .logicRule > div { min-width: 0; }
+.logicCondition button[aria-haspopup=listbox], .logicRule > div > button[aria-haspopup=listbox] { justify-self: stretch; padding: 0 12px; color: var(--wf-text); font-size: 12px; }
+.canvasFields article > div:nth-child(2), .canvasPage > header { min-width: 0; overflow-wrap: anywhere; }
+@media(max-width:760px) {
+  .palette.sheetPanel, .settings.sheetPanel { display: block; position: static; max-height: none; overflow: visible; border: 0; border-radius: 0; box-shadow: none; padding: 0; }
+  .sheetPanel .settingsBody { max-height: none; overflow: visible; padding: 0; }
+  .sheetPanel section:first-child { margin-top: 0; }
+  .palette section button, .fieldActions button, .archiveZone button, .dangerButton, .logicRule button, .addRule, .optionsEditor > header button { min-height: 44px; }
+  .fieldActions { flex-wrap: wrap; gap: 8px; }
+  .fieldActions button { width: 44px; height: 44px; }
+  .optionsEditor > div { grid-template-columns: 16px repeat(3, 44px); justify-content: start; gap: 8px; }
+  .optionsEditor > div > input { grid-column: 2 / -1; grid-row: 1; }
+  .optionsEditor > div > svg { grid-column: 1; grid-row: 1; }
+  .optionsEditor > div > button { width: 44px; height: 44px; }
+  .optionsEditor > div > button:first-of-type { grid-column: 2; }
+  .formSettingsBar input, .settings input:not([type=checkbox]), .settings textarea, .createFields input, .assignFields input:not([type=checkbox]), .renderField input:not([type=checkbox]):not([type=radio]), .renderField textarea { min-height: 44px; font-size: 16px; }
+  .renderField .signatureControl > input { font-size: 22px; }
+}

@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toggleClientOrderMessageReactionAction } from "../../app/actions/tickets";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
 import { TicketConversation } from "./ticket-conversation";
-import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
+import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
 import type { OrderReplyTarget } from "./order-message-actions";
 
@@ -30,25 +29,17 @@ export function ProjectConversation({
   viewerProfileId: string;
   repliesDisabled: boolean;
 }) {
-  const router = useRouter();
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
-  useClientConversationPresence("project", orderId);
-  const optimistic = useOptimisticTicketMessages(messages, { mode: "client", viewerProfileId });
+  const optimistic = useTicketConversationMessages({ projectId: orderId, serverMessages: messages, mode: "client", viewerProfileId });
+  useClientConversationPresence("project", orderId, !optimistic.unavailable);
 
-  useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState === "visible") router.refresh();
-    };
-    const poll = window.setInterval(refresh, 4_000);
-    document.addEventListener("visibilitychange", refresh);
-    return () => {
-      window.clearInterval(poll);
-      document.removeEventListener("visibilitychange", refresh);
-    };
-  }, [router]);
+  const toggleReaction = async (messageId: string, reactionCode: string) => {
+    const result = await toggleClientOrderMessageReactionAction(orderId, messageId, reactionCode);
+    if (result.ok) optimistic.wake();
+    return result;
+  };
 
-  const toggleReaction = (messageId: string, reactionCode: string) =>
-    toggleClientOrderMessageReactionAction(orderId, messageId, reactionCode);
+  if (optimistic.unavailable) return <p role="alert">This conversation is unavailable.</p>;
 
   return (
     <>

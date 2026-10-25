@@ -18,6 +18,7 @@ function renderInlineTokens(tokens: TeamInlineToken[], keyPrefix: string): React
 
     const label = renderInlineTokens(token.children, key);
     if (!token.href) return <Fragment key={key}>{label}</Fragment>;
+    if (token.href.startsWith("mention:")) return <span key={key} className={styles.messageMention}>{label}</span>;
     return (
       <a
         key={key}

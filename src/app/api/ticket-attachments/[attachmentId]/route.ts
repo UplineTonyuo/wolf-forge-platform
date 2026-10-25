@@ -1,5 +1,6 @@
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { readServerEnvironment } from "../../../../lib/env/server-env";
+import { enforceServerCostLimit } from "../../../../lib/security/server-cost-limit";
 import { getSelfServiceContext } from "../../../../lib/supabase/next-server";
 import { createTrustedServerSupabaseClient } from "../../../../lib/supabase/trusted-server-client";
 import { TicketRepository } from "../../../../repositories/ticket-repository";
@@ -33,6 +34,7 @@ export async function GET(
     // visibility) — see app_get_ticket_attachment_download. Nothing below
     // this line re-derives or bypasses that check.
     const attachment = await tickets.attachmentDownload(attachmentId, context.actor);
+    await enforceServerCostLimit({ actorId: context.actor.id, action: "ticket.file_download" });
     const storage = new TicketAttachmentStorageRepository(
       createTrustedServerSupabaseClient(environment),
     );
@@ -53,8 +55,8 @@ export async function GET(
   } catch (error) {
     const safe = toClientSafeError(error);
     return new Response(safe.message, {
-      status: safe.code === "NOT_FOUND" ? 404 : safe.code === "PERMISSION_DENIED" ? 403 : 400,
-      headers: { "Cache-Control": "private, no-store" },
+      status: safe.code === "RATE_LIMITED" ? 429 : safe.code === "NOT_FOUND" ? 404 : safe.code === "PERMISSION_DENIED" ? 403 : 400,
+      headers: { "Cache-Control": "private, no-store", ...(safe.code === "RATE_LIMITED" ? { "Retry-After": "60" } : {}) },
     });
   }
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ticketConversationFingerprint } from "../../domain/tickets/live-scheduler";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
-import { useTicketLiveSync } from "./use-ticket-live-sync";
+import { useTicketLiveSync, type ConversationLiveTarget } from "./use-ticket-live-sync";
 import { notifyTicketAccessUnavailable } from "./ticket-access-boundary";
 
 /**
@@ -30,28 +30,31 @@ import { notifyTicketAccessUnavailable } from "./ticket-access-boundary";
  */
 export function useTicketConversationMessages({
   ticketId,
+  projectId,
   serverMessages,
   mode,
   viewerProfileId,
   onUnavailable,
-}: {
-  ticketId: string;
+}: ConversationLiveTarget & {
   serverMessages: TicketDetailMessage[];
   mode: "admin" | "client";
   viewerProfileId?: string | null;
   onUnavailable?: () => void;
 }) {
   const router = useRouter();
-  const [deniedTicketId, setDeniedTicketId] = useState<string | null>(null);
-  const unavailable = deniedTicketId === ticketId;
+  const conversationId = projectId ?? ticketId;
+  const conversationKey = `${projectId ? "project" : "ticket"}:${conversationId}`;
+  const [deniedConversation, setDeniedConversation] = useState<string | null>(null);
+  const unavailable = deniedConversation === conversationKey;
   const deny = useCallback(() => {
-    setDeniedTicketId(ticketId);
-    notifyTicketAccessUnavailable(ticketId);
+    setDeniedConversation(conversationKey);
+    if (!projectId) notifyTicketAccessUnavailable(conversationId);
     onUnavailable?.();
     router.refresh();
-  }, [ticketId, onUnavailable, router]);
+  }, [conversationKey, conversationId, projectId, onUnavailable, router]);
   const [override, setOverride] = useState<TicketDetailMessage[] | null>(null);
   const [overrideBase, setOverrideBase] = useState(serverMessages);
+  const [overrideConversation, setOverrideConversation] = useState(conversationKey);
 
   /*
    * A fresh server render — `router.refresh()` after a send — is at least as
@@ -60,8 +63,9 @@ export function useTicketConversationMessages({
    * pattern, so the first paint after the prop changes already shows the
    * server's list rather than painting one frame of superseded live data.
    */
-  if (overrideBase !== serverMessages) {
+  if (overrideBase !== serverMessages || overrideConversation !== conversationKey) {
     setOverrideBase(serverMessages);
+    setOverrideConversation(conversationKey);
     setOverride(null);
   }
 
@@ -105,7 +109,7 @@ export function useTicketConversationMessages({
   }, []);
 
   const { wake } = useTicketLiveSync({
-    ticketId,
+    ...(projectId ? { projectId } : { ticketId: conversationId }),
     active: !unavailable,
     getFingerprint,
     onMessages: applyLive,

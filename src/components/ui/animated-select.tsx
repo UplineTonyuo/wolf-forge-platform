@@ -146,6 +146,7 @@ export function AnimatedSelect({
     } else if (event.key === "Escape") {
       if (render) {
         event.preventDefault();
+        event.stopPropagation();
         closeMenu();
       }
     }

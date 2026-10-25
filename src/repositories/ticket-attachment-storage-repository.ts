@@ -7,14 +7,14 @@ import type { TrustedServerClient } from "../lib/supabase/trusted-server-client"
 export const TICKET_ATTACHMENT_BUCKET = "ticket-attachments";
 
 export class TicketAttachmentStorageRepository {
-  constructor(private readonly client: TrustedServerClient) {}
+  constructor(private readonly client: TrustedServerClient, private readonly bucketName = TICKET_ATTACHMENT_BUCKET) {}
 
   checksum(bytes: Uint8Array): string {
     return createHash("sha256").update(bytes).digest("hex");
   }
 
   async storeOrConfirm(path: string, bytes: Uint8Array, mimeType: string, checksum: string): Promise<boolean> {
-    const bucket = this.client.storage.from(TICKET_ATTACHMENT_BUCKET);
+    const bucket = this.client.storage.from(this.bucketName);
     const existing = await bucket.download(path);
     if (existing.data) {
       const existingBytes = new Uint8Array(await existing.data.arrayBuffer());
@@ -28,7 +28,7 @@ export class TicketAttachmentStorageRepository {
   }
 
   async remove(path: string): Promise<void> {
-    await this.client.storage.from(TICKET_ATTACHMENT_BUCKET).remove([path]);
+    await this.client.storage.from(this.bucketName).remove([path]);
   }
 
   /**
@@ -37,7 +37,7 @@ export class TicketAttachmentStorageRepository {
    * signed URL (or its bucket/token), only the streamed bytes.
    */
   async download(path: string): Promise<Blob> {
-    const result = await this.client.storage.from(TICKET_ATTACHMENT_BUCKET).download(path);
+    const result = await this.client.storage.from(this.bucketName).download(path);
     if (result.error || !result.data) throw new DatabaseError(result.error);
     return result.data;
   }

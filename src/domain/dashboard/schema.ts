@@ -75,6 +75,13 @@ export type MetricComparison = {
 
 export type TrendPoint = { bucket_start: string; net_cents: number };
 
+export const dashboardTopServicesSchema = z.array(z.object({
+  service_id: z.uuid().nullable(),
+  name: z.string().min(1),
+  paid_orders: z.coerce.number().int().positive(),
+})).max(5);
+export type DashboardTopService = z.infer<typeof dashboardTopServicesSchema>[number];
+
 export type ClientGrowthPoint = {
   bucket_start: string;
   to_contact: number;

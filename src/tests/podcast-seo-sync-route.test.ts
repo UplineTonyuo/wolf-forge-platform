@@ -103,6 +103,60 @@ describe("POST /api/operations/podcast-seo/sync", () => {
     expect(revalidatedTags).toEqual([]);
   });
 
+  it.each([null, "not-a-sha256-signature"])("refuses signature %s without consuming the body", async (signature) => {
+    const { POST } = await import("../app/api/operations/podcast-seo/sync/route");
+    const request = buildRequest(validPayload(), { signature });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(401);
+    expect(request.bodyUsed).toBe(false);
+    expect(revalidatedTags).toEqual([]);
+  });
+
+  it("cancels an oversized chunked body at the 2 KiB boundary", async () => {
+    const { POST } = await import("../app/api/operations/podcast-seo/sync/route");
+    let pulled = 0;
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled <= 8) controller.enqueue(new Uint8Array(512));
+        else controller.close();
+      },
+      cancel,
+    }, { highWaterMark: 0 });
+    const request = new Request("http://localhost:3100/api/operations/podcast-seo/sync", {
+      method: "POST", body: stream, duplex: "half",
+      headers: { "x-wolf-forge-signature": "0".repeat(64) },
+    } as RequestInit & { duplex: "half" });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    expect(pulled).toBe(5);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(revalidatedTags).toEqual([]);
+  });
+
+  it("rejects a declared length that does not match the body", async () => {
+    const { POST } = await import("../app/api/operations/podcast-seo/sync/route");
+    const body = validPayload();
+    const request = buildRequest(body);
+    request.headers.set("content-length", "2");
+
+    expect((await POST(request)).status).toBe(400);
+    expect(revalidatedTags).toEqual([]);
+  });
+
+  it("preserves signed Unicode, whitespace and line endings", async () => {
+    const { POST } = await import("../app/api/operations/podcast-seo/sync/route");
+    const body = ` {\r\n "eventType": "podcast_seo_changed", "timestamp": ${Date.now()}, "nonce": "unicode-ñ-λ-123"\r\n } `;
+
+    expect((await POST(buildRequest(body))).status).toBe(200);
+    expect(revalidatedTags).toHaveLength(2);
+  });
+
   it("rejects a stale timestamp", async () => {
     const { POST } = await import("../app/api/operations/podcast-seo/sync/route");
     const body = validPayload({ timestamp: Date.now() - 10 * 60 * 1000 });

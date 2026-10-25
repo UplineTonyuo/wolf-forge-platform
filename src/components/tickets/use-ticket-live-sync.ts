@@ -7,9 +7,11 @@ import {
   type TicketLiveTier,
 } from "../../domain/tickets/live-scheduler";
 
-type TicketLiveSyncOptions = {
-  /** The ONLY Ticket this lane may ever ask about. */
-  ticketId: string;
+export type ConversationLiveTarget =
+  | { ticketId: string; projectId?: never }
+  | { ticketId?: never; projectId: string };
+
+type TicketLiveSyncOptions = ConversationLiveTarget & {
   /**
    * Whether the conversation is mounted. False tears the scheduler down
    * completely — no timer, no listener, no request.
@@ -60,11 +62,13 @@ type TicketLiveSyncOptions = {
  */
 export function useTicketLiveSync({
   ticketId,
+  projectId,
   active,
   getFingerprint,
   onMessages,
   onUnavailable,
 }: TicketLiveSyncOptions) {
+  const conversationId = projectId ?? ticketId;
   const fingerprintRef = useRef(getFingerprint);
   const onMessagesRef = useRef(onMessages);
   const onUnavailableRef = useRef(onUnavailable);
@@ -90,12 +94,13 @@ export function useTicketLiveSync({
   const wakeRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (!active || !ticketId) return;
+    if (!active || !conversationId) return;
     let cancelled = false;
     let inFlight = false;
     let pendingWake = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let controller: AbortController | null = null;
+    let requestDeadline: ReturnType<typeof setTimeout> | null = null;
     let unavailable = false;
 
     const suspended = () =>
@@ -133,6 +138,7 @@ export function useTicketLiveSync({
       try {
         const abort = new AbortController();
         controller = abort;
+        requestDeadline = setTimeout(() => abort.abort(), 15_000);
         const response = await fetch("/api/ticket-live", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -140,7 +146,7 @@ export function useTicketLiveSync({
           cache: "no-store",
           signal: abort.signal,
           body: JSON.stringify({
-            ticket_id: ticketId,
+            ...(projectId ? { order_id: projectId } : { ticket_id: conversationId }),
             fingerprint: fingerprintRef.current(),
           }),
         });
@@ -149,7 +155,7 @@ export function useTicketLiveSync({
           | {
               ok?: boolean;
               code?: string;
-              data?: { ticketId?: string; fingerprint?: string; changed?: boolean; messages?: unknown[] | null };
+              data?: { ticketId?: string; orderId?: string; fingerprint?: string; changed?: boolean; messages?: unknown[] | null };
             }
           | null;
 
@@ -168,7 +174,9 @@ export function useTicketLiveSync({
            */
           if (
             data.changed &&
-            data.ticketId === ticketId &&
+            (projectId
+              ? data.orderId === projectId && data.ticketId === undefined
+              : data.ticketId === conversationId && data.orderId === undefined) &&
             Array.isArray(data.messages) &&
             typeof data.fingerprint === "string"
           ) {
@@ -180,6 +188,8 @@ export function useTicketLiveSync({
       } catch {
         if (!cancelled) scheduleState.current.failures += 1;
       } finally {
+        if (requestDeadline !== null) clearTimeout(requestDeadline);
+        requestDeadline = null;
         controller = null;
         inFlight = false;
       }
@@ -207,8 +217,13 @@ export function useTicketLiveSync({
     }
     wakeRef.current = wake;
 
+    const suspend = () => {
+      clearTimer();
+      controller?.abort();
+    };
     const handleVisible = () => {
       if (document.visibilityState === "visible") wake();
+      else suspend();
     };
     const handleOnline = () => {
       if (navigator.onLine) wake();
@@ -216,6 +231,7 @@ export function useTicketLiveSync({
 
     window.addEventListener("focus", wake);
     window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", suspend);
     document.addEventListener("visibilitychange", handleVisible);
 
     wake();
@@ -225,8 +241,10 @@ export function useTicketLiveSync({
       clearTimer();
       controller?.abort();
       controller = null;
+      if (requestDeadline !== null) clearTimeout(requestDeadline);
       window.removeEventListener("focus", wake);
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", suspend);
       document.removeEventListener("visibilitychange", handleVisible);
     };
     /*
@@ -234,7 +252,7 @@ export function useTicketLiveSync({
      * scheduler down and rebuild it against the new id, so a tick can never
      * carry a fingerprint computed for a different conversation.
      */
-  }, [active, ticketId]);
+  }, [active, conversationId, projectId]);
 
   return { wake: useCallback(() => wakeRef.current(), []) };
 }
