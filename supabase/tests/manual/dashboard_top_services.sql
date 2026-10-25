@@ -1,5 +1,6 @@
--- Standalone rollback-only checks; runs without Docker or a pgTAP installation.
+-- Self-contained pgTAP contract; all fixtures roll back.
 begin;
+select plan(1);
 set local statement_timeout = '30s';
 set local plpgsql.check_asserts = on;
 
@@ -145,5 +146,6 @@ reset role;
 do $test$ begin
   assert not has_function_privilege('anon', 'public.app_dashboard_top_services(timestamptz,timestamptz)', 'execute'), 'Anonymous execute denied';
 end; $test$;
+select pass('Top services ranking, payment eligibility and tenant authorization assertions passed');
+select * from finish();
 rollback;
-select 'All dashboard top-services assertions passed; fixture transaction rolled back.' as result;

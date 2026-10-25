@@ -1,8 +1,25 @@
--- Execute only against isolated Studio. Every fixture and notification rolls back.
+-- Isolated fixture only. Every record and notification rolls back.
 begin;
+select plan(1);
 set local plpgsql.check_asserts = on;
-select set_config('request.headers','{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000000001"}',true);
-select set_config('request.jwt.claims','{"sub":"53fd4f26-34a0-4965-97b8-87e876a3fd1d","role":"authenticated"}',true);
+insert into auth.users(id,aud,role,email,created_at,updated_at)
+values
+ ('20000000-0000-4000-8000-000000008901','authenticated','authenticated','intake-owner@example.invalid',now(),now()),
+ ('20000000-0000-4000-8000-000000008902','authenticated','authenticated','intake-client@example.invalid',now(),now());
+insert into public.tenants(id,slug,display_name,status)
+values('f0f0f0f0-0000-4000-8000-000000008901','intake-rollback-fixture','Intake fixture','active');
+insert into public.companies(id,tenant_id,name,status)
+values('e7360000-0000-4000-8000-000000008901','f0f0f0f0-0000-4000-8000-000000008901','Synthetic intake client','client');
+insert into public.tenant_memberships(tenant_id,profile_id,account_class,role_id,company_id)
+select 'f0f0f0f0-0000-4000-8000-000000008901',v.id::uuid,v.account_class,r.id,v.company_id::uuid
+from (values
+ ('20000000-0000-4000-8000-000000008901','internal','owner',null),
+ ('20000000-0000-4000-8000-000000008902','client','client','e7360000-0000-4000-8000-000000008901')
+) v(id,account_class,role_name,company_id) join public.roles r on r.name=v.role_name;
+insert into public.services(id,tenant_id,name,price,currency,is_active,is_public,recurring,sort_order)
+values('e7360000-0000-4000-8000-000000008902','f0f0f0f0-0000-4000-8000-000000008901','Synthetic intake service',10,'USD',true,true,false,0);
+select set_config('request.headers','{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000008901"}',true);
+select set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000008901","role":"authenticated"}',true);
 do $test$
 declare
   form public.forms;
@@ -23,7 +40,7 @@ declare
   correction public.form_submissions;
   corrected_values jsonb;
 begin
-  select id into service_id from public.services where tenant_id='f0f0f0f0-0000-4000-8000-000000000001' and archived_at is null and is_active order by created_at limit 1;
+  select id into service_id from public.services where tenant_id='f0f0f0f0-0000-4000-8000-000000008901' and archived_at is null and is_active order by created_at limit 1;
   assert service_id is not null,'synthetic Service fixture missing';
   form := public.app_create_form(gen_random_uuid(),jsonb_build_object('form_type','onboarding','canonical_key','qa-intake-'||gen_random_uuid()::text,
     'definition',jsonb_build_object('name','Synthetic intake expansion QA','title','Synthetic intake expansion QA','visibility','assigned','type_config',jsonb_build_object('reminder_days',3,'automation',jsonb_build_object('create_project',true,'service_id',service_id,'project_title','Synthetic intake project','task_title','Review intake','crm_status','lead','workflow_steps',jsonb_build_array('Plan work','Deliver work'))),
@@ -33,17 +50,17 @@ begin
         jsonb_build_object('stable_field_key',file_key,'sort_order',2,'field_type','file','label','File','required',true)
       ),'rules','[]'::jsonb,'service_links','[]'::jsonb)));
   version := public.app_publish_form(gen_random_uuid(),form.id);
-  assignment := public.app_assign_form(gen_random_uuid(),form.id,jsonb_build_object('client_profile_id','e6cfa06d-666d-4629-9591-ddc6a55b5798','required',true));
-  perform set_config('request.jwt.claims','{"sub":"e6cfa06d-666d-4629-9591-ddc6a55b5798","role":"authenticated"}',true);
+  assignment := public.app_assign_form(gen_random_uuid(),form.id,jsonb_build_object('client_profile_id','20000000-0000-4000-8000-000000008902','required',true));
+  perform set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000008902","role":"authenticated"}',true);
   answers := jsonb_build_array(jsonb_build_object('field_key',text_key,'value','Partial draft'));
   perform public.app_save_intake_draft(assignment.id,answers);
   assert public.app_get_intake_draft(assignment.id)->'values'=answers,'draft round trip';
-  perform set_config('request.jwt.claims','{"sub":"53fd4f26-34a0-4965-97b8-87e876a3fd1d","role":"authenticated"}',true);
+  perform set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000008901","role":"authenticated"}',true);
   begin
     perform public.app_get_intake_draft(assignment.id);
     raise exception 'another account read a private draft';
   exception when insufficient_privilege then null; end;
-  perform set_config('request.jwt.claims','{"sub":"e6cfa06d-666d-4629-9591-ddc6a55b5798","role":"authenticated"}',true);
+  perform set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000008902","role":"authenticated"}',true);
   path := public.app_prepare_intake_file(upload_id,assignment.id,file_key,'synthetic.pdf','application/pdf',12,repeat('a',64));
   assert path like '%/'||assignment.id::text||'/'||upload_id::text,'scoped object path';
   begin
@@ -89,7 +106,7 @@ begin
   assert not has_function_privilege('anon','public.app_get_intake_file(uuid)','EXECUTE'),'anonymous file access';
   assert not exists(select 1 from storage.buckets where id='intake-files' and public),'public intake bucket';
   assert (select file_size_limit=4194304 from storage.buckets where id='intake-files'),'hosted upload limit';
-  perform set_config('request.jwt.claims','{"sub":"53fd4f26-34a0-4965-97b8-87e876a3fd1d","role":"authenticated"}',true);
+  perform set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000008901","role":"authenticated"}',true);
   select jsonb_agg(jsonb_build_object('field_key',stable_field_key,'value',value) order by sort_order_snapshot)
     into corrected_values from public.form_submission_values where submission_id=submission.id;
   begin
@@ -99,7 +116,7 @@ begin
   correction:=public.app_correct_form_submission(gen_random_uuid(),submission.id,jsonb_set(corrected_values,'{0,value}','"Corrected business"'::jsonb));
   assert correction.root_submission_id=submission.id,'correction lost its root';
   assert (select value from public.form_submission_values where submission_id=correction.id and field_type_snapshot='signature')=corrected_values#>'{1,value}','correction changed signature evidence';
-  assert (select count(*) from private.intake_submission_jobs)=1,'correction queued duplicate actions';
+  assert (select count(*) from private.intake_submission_jobs where tenant_id='f0f0f0f0-0000-4000-8000-000000008901')=1,'correction queued duplicate actions';
   assert (select status from private.intake_submission_jobs where submission_id=submission.id)='queued','follow-up not queued';
   perform set_config('request.jwt.claims','{"role":"service_role"}',true);
   result:=public.app_server_run_intake_job(submission.id);
@@ -109,17 +126,17 @@ begin
   perform public.app_server_run_intake_job(submission.id);
   assert (select count(*) from public.orders where notes='Created automatically from intake submission '||submission.id::text)=1,'duplicate project';
   assert (select count(*) from public.order_tasks where order_id=(result#>>'{result,project_id}')::uuid)=3,'duplicate workflow';
-  update private.intake_submission_jobs set status='queued',authorizer_id='e6cfa06d-666d-4629-9591-ddc6a55b5798' where submission_id=submission.id;
+  update private.intake_submission_jobs set status='queued',authorizer_id='20000000-0000-4000-8000-000000008902' where submission_id=submission.id;
   result:=public.app_server_run_intake_job(submission.id);
   assert result->>'status'='blocked','unauthorized publisher accepted';
   assert (select count(*) from public.orders where notes='Created automatically from intake submission '||submission.id::text)=1,'unauthorized duplicate project';
-  update private.intake_submission_jobs set status='queued',authorizer_id='53fd4f26-34a0-4965-97b8-87e876a3fd1d',
+  update private.intake_submission_jobs set status='queued',authorizer_id='20000000-0000-4000-8000-000000008901',
     configuration=jsonb_set(configuration,'{service_id}',to_jsonb(gen_random_uuid()::text)) where submission_id=submission.id;
   result:=public.app_server_run_intake_job(submission.id);
   assert result->>'status'='blocked','unknown or foreign Service accepted';
   assert (select count(*) from public.orders where notes='Created automatically from intake submission '||submission.id::text)=1,'foreign Service created a project';
   insert into public.form_assignments(form_id,form_version_id,company_id,client_profile_id,assigned_by_profile_id,assigned_at)
-  values(form.id,version.id,assignment.company_id,assignment.client_profile_id,'53fd4f26-34a0-4965-97b8-87e876a3fd1d',now()-interval '4 days') returning id into reminder_assignment;
+  values(form.id,version.id,assignment.company_id,assignment.client_profile_id,'20000000-0000-4000-8000-000000008901',now()-interval '4 days') returning id into reminder_assignment;
   perform public.app_server_intake_maintenance();
   assert (select cleanup_claimed_at is not null from private.intake_uploads where id=expired_id),'orphan not durably claimed';
   perform public.app_server_finish_expired_intake_file(expired_id);
@@ -131,5 +148,6 @@ begin
   assert not has_function_privilege('authenticated','public.app_server_run_intake_job(uuid)','EXECUTE'),'client follow-up escalation';
 end;
 $test$;
+select pass('Intake draft, upload binding, signature, follow-up, reminder, retention, idempotency and ACL assertions passed');
+select * from finish();
 rollback;
-select 'intake draft, upload binding, signature, idempotency and ACL assertions passed; fixtures rolled back' as result;
