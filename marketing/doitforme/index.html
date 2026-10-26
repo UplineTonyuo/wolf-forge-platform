@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>DoItForMe App Flow</title>
+<!--
+  DoItForMe — app-flow motion piece for the October 2026 team presentation slide
+  "SECOND WIN – Built the tool called DoItForMe". 42s, 1920x1080, captions only.
+
+  Every frame is a pure function of time: window.seek(t) poses the page, render.mjs
+  steps it at 30 fps. Open with ?t=31 to inspect a frame, or ?play to watch it.
+  Only the numbers from the brief appear (501, 70 → 56, 2 → 0, 96, ~18 hours,
+  ~30 minutes). UI cards are generic mockups: no logos, no client names.
+-->
+<style>
+  @font-face { font-family: "Poppins"; font-weight: 400; src: url("fonts/poppins-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Poppins"; font-weight: 500; src: url("fonts/poppins-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Poppins"; font-weight: 600; src: url("fonts/poppins-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Poppins"; font-weight: 700; src: url("fonts/poppins-latin-700-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Poppins"; font-weight: 800; src: url("fonts/poppins-latin-800-normal.woff2") format("woff2"); }
+
+  :root {
+    --bg: #0e0f12; --panel: #16181d; --panel-2: #1c1f26; --line: #2a2e38; --muted: #8b90a0; --text: #ffffff;
+    --gold-a: #f5d547; --gold-b: #b8a03a;
+    --red: #ef5b5b; --red-bg: rgba(239, 91, 91, 0.14);
+    --yellow: #f5d547; --yellow-bg: rgba(245, 213, 71, 0.13);
+    --green: #3dd68c; --green-bg: rgba(61, 214, 140, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Poppins", sans-serif; }
+  #glow { position: absolute; inset: -200px; background:
+    radial-gradient(ellipse 45% 40% at 50% 38%, rgba(245, 213, 71, 0.07), rgba(245, 213, 71, 0) 70%),
+    radial-gradient(ellipse 60% 50% at 50% 110%, rgba(184, 160, 58, 0.08), rgba(184, 160, 58, 0) 70%); }
+  #grid { position: absolute; inset: 0; opacity: 0.35;
+    background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 64px 64px; -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 100%); mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 30%, transparent 100%); }
+  .scene { position: absolute; inset: 0; display: none; }
+  .abs { position: absolute; }
+  .gold { background: linear-gradient(90deg, var(--gold-a), var(--gold-b)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.06em; }
+  .card { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); }
+  .chip { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px; font: 600 18px "Poppins"; letter-spacing: 0.04em; }
+  .chip .d { width: 10px; height: 10px; border-radius: 50%; }
+  .red { color: var(--red); background: var(--red-bg); } .red .d { background: var(--red); }
+  .yellow { color: var(--yellow); background: var(--yellow-bg); } .yellow .d { background: var(--yellow); }
+  .green { color: var(--green); background: var(--green-bg); } .green .d { background: var(--green); }
+
+  /* caption bar */
+  #cap { position: absolute; left: 0; right: 0; bottom: 70px; display: flex; justify-content: center; }
+  #capBox { display: flex; align-items: center; gap: 20px; padding: 20px 34px; border-radius: 18px; background: rgba(22, 24, 29, 0.92); border: 1px solid var(--line); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+  #capBar { width: 6px; align-self: stretch; border-radius: 3px; background: linear-gradient(180deg, var(--gold-a), var(--gold-b)); }
+  #capTxt { font: 600 40px "Poppins"; letter-spacing: -0.01em; white-space: nowrap; }
+  /* step tracker */
+  #steps { position: absolute; top: 56px; left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+  .step { display: flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: 999px; border: 1px solid var(--line); font: 600 19px "Poppins"; color: var(--muted); background: rgba(22,24,29,0.7); }
+  .step .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 14px "Poppins"; background: var(--panel-2); color: var(--muted); }
+  .step.on { color: #fff; border-color: rgba(245, 213, 71, 0.55); }
+  .step.on .n, .step.done .n { background: linear-gradient(180deg, var(--gold-a), var(--gold-b)); color: #0e0f12; }
+  .step.done { color: #cfd2da; }
+
+  /* scene pieces */
+  .skel { position: absolute; width: 230px; height: 150px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+  .skel i { position: absolute; left: 16px; height: 10px; border-radius: 5px; background: #262a33; }
+  .search { position: absolute; left: 360px; top: 300px; width: 1200px; height: 104px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 16px 0 34px; gap: 22px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); }
+  .search .url { flex: 1; font: 500 34px "Poppins"; color: #fff; white-space: nowrap; overflow: hidden; }
+  .search .caret { display: inline-block; width: 3px; height: 38px; margin-left: 3px; vertical-align: -6px; background: var(--gold-a); }
+  .btn { padding: 18px 34px; border-radius: 14px; font: 700 26px "Poppins"; color: #0e0f12; background: linear-gradient(90deg, var(--gold-a), var(--gold-b)); }
+  .track { position: absolute; left: 360px; top: 470px; width: 1200px; height: 18px; border-radius: 9px; background: #23262e; overflow: hidden; }
+  .fill { height: 100%; width: 0; border-radius: 9px; background: linear-gradient(90deg, var(--gold-b), var(--gold-a)); box-shadow: 0 0 24px rgba(245, 213, 71, 0.5); }
+  .colhead { position: absolute; top: 200px; width: 640px; display: flex; align-items: center; gap: 16px; font: 700 30px "Poppins"; }
+  .finding { position: absolute; width: 640px; height: 112px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+  .finding .t { font: 600 32px "Poppins"; }
+  .flip { position: absolute; width: 1200px; height: 132px; left: 360px; perspective: 1400px; }
+  .flip .face { position: absolute; inset: 0; display: flex; align-items: center; gap: 26px; padding: 0 34px; backface-visibility: hidden; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 20px 50px rgba(0,0,0,0.45); }
+  .flip .back { transform: rotateX(180deg); border-color: rgba(61, 214, 140, 0.5); }
+  .flip .inner { position: absolute; inset: 0; transform-style: preserve-3d; }
+  .flip .what { flex: 1; min-width: 0; }
+  .flip .what b { display: block; font: 600 30px "Poppins"; }
+  .flip .what span { display: block; font: 400 22px "Poppins"; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .box { width: 40px; height: 40px; border-radius: 10px; border: 2.5px solid #4a4f5c; display: grid; place-items: center; flex: none; }
+  .appr { display: flex; align-items: center; gap: 16px; font: 600 24px "Poppins"; color: #e8eaf0; white-space: nowrap; }
+  .check { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--green-bg); border: 2px solid var(--green); flex: none; }
+  .cursor { position: absolute; width: 34px; height: 34px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
+  .bar { position: absolute; left: 520px; height: 64px; border-radius: 14px; }
+  .barlbl { position: absolute; left: 140px; width: 360px; text-align: right; font: 600 30px "Poppins"; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <div id="grid"></div>
+
+  <!-- 1 · hook -->
+  <div id="s1" class="scene">
+    <div id="s1Wall" class="abs" style="inset:0"></div>
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse 52% 30% at 50% 47%, rgba(14,15,18,0.92) 40%, rgba(14,15,18,0) 100%)"></div>
+    <div id="s1Txt" class="abs" style="left:0;right:0;top:396px;text-align:center">
+      <div style="font:800 76px Poppins;letter-spacing:-0.02em"><span class="gold">Before:</span> every client site checked by hand.</div>
+      <div style="font:600 46px Poppins;color:#cfd2da;margin-top:18px">No proof anything was fixed.</div>
+    </div>
+  </div>
+
+  <!-- 2 · audit -->
+  <div id="s2" class="scene">
+    <div class="search" id="s2Search">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8b90a0" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <div class="url"><span id="s2Url"></span><span id="s2Caret" class="caret"></span></div>
+      <div id="s2Btn" class="btn">Audit site</div>
+    </div>
+    <div class="track" id="s2Track"><div id="s2Fill" class="fill"></div></div>
+    <div id="s2Count" class="abs" style="left:0;right:0;top:530px;text-align:center">
+      <span id="s2Num" style="font:800 120px Poppins;letter-spacing:-0.03em" class="gold">0</span>
+      <span style="font:600 44px Poppins;color:#cfd2da;margin-left:18px">pages crawled</span>
+    </div>
+  </div>
+
+  <!-- 3 · findings -->
+  <div id="s3" class="scene">
+    <div class="colhead" style="left:300px"><span class="chip red"><span class="d"></span>RED</span> Needs a human</div>
+    <div class="colhead" style="left:980px"><span class="chip yellow"><span class="d"></span>YELLOW</span> Robot can fix · approve</div>
+    <div id="f1" class="card finding" style="left:980px;top:290px"><span class="t">Too-long titles</span><span class="chip yellow"><span class="d"></span>Approve</span></div>
+    <div id="f2" class="card finding" style="left:300px;top:290px"><span class="t">Broken links</span><span class="chip red"><span class="d"></span>Needs a human</span></div>
+    <div id="f3" class="card finding" style="left:980px;top:428px"><span class="t">Long descriptions</span><span class="chip yellow"><span class="d"></span>Approve</span></div>
+  </div>
+
+  <!-- 4 · drafts -->
+  <div id="s4" class="scene">
+    <div class="card" id="s4Card" style="left:140px;top:250px;width:1640px;height:400px;padding:48px 56px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font:600 26px Poppins;color:#8b90a0;letter-spacing:0.12em">PAGE TITLE · DRAFTED FIX</div>
+        <div id="s4Counter" style="display:flex;align-items:baseline;gap:12px"><span id="s4Num" style="font:800 64px Poppins">70</span><span style="font:600 26px Poppins;color:#8b90a0">characters</span></div>
+      </div>
+      <div id="s4Title" style="margin-top:56px;font:600 37px Poppins;line-height:1.35;white-space:nowrap"></div>
+      <div id="s4Arrow" style="margin-top:34px;font:600 26px Poppins;color:#8b90a0"></div>
+    </div>
+  </div>
+
+  <!-- 5 + 6 · approve, then fix + verify (same cards) -->
+  <div id="s5" class="scene">
+    <div id="cards"></div>
+    <svg id="s5Cursor" class="cursor" viewBox="0 0 30 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25.2 L13 16.8 L21 16.8 Z" fill="#fff" stroke="#0e0f12" stroke-width="1.8" stroke-linejoin="round"/></svg>
+  </div>
+
+  <!-- 7 · result -->
+  <div id="s7" class="scene">
+    <div class="abs" style="left:0;right:0;top:170px;text-align:center;font:600 30px Poppins;color:#8b90a0;letter-spacing:0.14em">ONE CLIENT SITE · ONE DAY</div>
+    <div id="s7A" class="abs" style="left:0;right:0;top:250px;text-align:center;white-space:nowrap">
+      <span id="s7From" style="font:800 200px Poppins;letter-spacing:-0.04em">2</span>
+      <span style="font:600 56px Poppins;color:#cfd2da;margin:0 24px">issue types</span>
+      <span id="s7Arrow" class="gold" style="font:800 140px Poppins;display:inline-block">→</span>
+      <span id="s7To" class="gold" style="font:800 200px Poppins;letter-spacing:-0.04em;margin-left:24px;display:inline-block">0</span>
+    </div>
+    <div id="s7B" class="abs" style="left:0;right:0;top:560px;text-align:center;white-space:nowrap">
+      <span id="s7Num" class="gold" style="font:800 150px Poppins;letter-spacing:-0.03em">96</span>
+      <span style="font:600 56px Poppins;margin-left:22px">fixes verified in one day</span>
+    </div>
+    <div id="s7Line" class="abs" style="left:560px;top:520px;width:800px;height:2px;background:linear-gradient(90deg,transparent,#2a2e38,transparent)"></div>
+  </div>
+
+  <!-- 8 · time saved -->
+  <div id="s8" class="scene">
+    <div class="abs" style="left:140px;top:200px;font:700 40px Poppins">Time to fix one client site</div>
+    <div class="barlbl" style="top:330px">By hand</div>
+    <div id="s8A" class="bar" style="top:318px;background:#3a3f4b;width:0"></div>
+    <div id="s8AL" class="abs" style="top:330px;font:700 32px Poppins;white-space:nowrap">~18 hours</div>
+    <div class="barlbl gold" style="top:470px">DoItForMe</div>
+    <div id="s8B" class="bar" style="top:458px;background:linear-gradient(90deg,#b8a03a,#f5d547);box-shadow:0 0 24px rgba(245,213,71,0.45);width:0"></div>
+    <div id="s8BL" class="abs gold" style="top:470px;font:700 32px Poppins;white-space:nowrap">~30 minutes</div>
+    <div id="s8Note" class="abs" style="left:520px;top:580px;font:400 22px Poppins;color:#8b90a0">manual time estimated; tool time measured</div>
+  </div>
+
+  <!-- 9 · end card -->
+  <div id="s9" class="scene">
+    <div class="abs" style="left:0;right:0;top:380px;text-align:center">
+      <div id="s9Name" style="font:800 120px Poppins;letter-spacing:-0.03em">DoItForMe</div>
+      <div id="s9Line" style="margin:22px auto 0;height:8px;width:0;border-radius:4px;background:linear-gradient(90deg,#f5d547,#b8a03a);box-shadow:0 0 24px rgba(245,213,71,0.45)"></div>
+      <div id="s9Tag" style="margin-top:34px;font:600 52px Poppins;letter-spacing:0.02em"><span id="w1">Audit.</span> <span id="w2">Fix.</span> <span id="w3" class="gold">Verify.</span></div>
+    </div>
+  </div>
+
+  <div id="steps"></div>
+  <div id="cap"><div id="capBox"><div id="capBar"></div><div id="capTxt"></div></div></div>
+</div>
+
+<script>
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, k) => a + (b - a) * k;
+const E = {
+  outExpo: (k) => (k >= 1 ? 1 : 1 - Math.pow(2, -10 * k)),
+  outCubic: (k) => 1 - Math.pow(1 - k, 3),
+  inCubic: (k) => k * k * k,
+  inOutCubic: (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2),
+  outBack: (k) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); },
+};
+const $ = (id) => document.getElementById(id);
+const st = (el, css) => { for (const k in css) el.style[k] = css[k]; };
+
+// ---------- timeline (seconds) ----------
+const DURATION = 42;
+const SCENES = [ // id, start, end, caption (null: the scene's own type carries the words), active step
+  ['s1', 0, 3, null, 0],
+  ['s2', 3, 8, '1. Audit – crawls the whole site in minutes', 1],
+  ['s3', 8, 13, '2. Finds what’s broken – and sorts what a robot can fix', 2],
+  ['s4', 13, 18, '3. Drafts the fix', 3],
+  ['s5', 18, 22, '4. A human approves – nothing changes without it', 4],
+  ['s6', 22, 28, '5. Applies it, then proves it on the live page', 5],
+  ['s7', 28, 34, 'Real result: one client site, one day', 0],
+  ['s8', 34, 39, null, 0],
+  ['s9', 39, 42, null, 0],
+];
+const XF = 0.4; // scene cross-fade
+
+// ---------- builders ----------
+const STEPS = ['Audit', 'Find', 'Draft', 'Approve', 'Verify'];
+STEPS.forEach((s, i) => { const d = document.createElement('div'); d.className = 'step'; d.innerHTML = `<span class="n">${i + 1}</span>${s}`; $('steps').appendChild(d); });
+
+// hook: a wall of page skeletons being checked one by one
+(() => {
+  const wall = $('s1Wall');
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) {
+    const s = document.createElement('div'); s.className = 'skel';
+    st(s, { left: 70 + c * 260 + 'px', top: 120 + r * 200 + 'px' });
+    s.innerHTML = '<i style="top:18px;width:120px"></i><i style="top:46px;width:190px"></i><i style="top:70px;width:160px"></i><i style="top:94px;width:180px"></i><i style="top:118px;width:90px"></i>';
+    s.dataset.i = r * 7 + c; wall.appendChild(s);
+  }
+})();
+
+// approve + verify cards
+const FIXES = [
+  ['Too-long title', 'Emergency Plumbing Repair Services Near You | Example Co'],
+  ['Long description', 'Same-day emergency plumbing repair. Book online in minutes.'],
+  ['Too-long title', 'Drain Cleaning and Unblocking Services | Example Co'],
+];
+const CARDS = FIXES.map(([kind, value], i) => {
+  const f = document.createElement('div'); f.className = 'flip'; f.style.top = 250 + i * 160 + 'px';
+  f.innerHTML = `<div class="inner">
+    <div class="face front"><span class="chip yellow"><span class="d"></span>Approve</span>
+      <div class="what"><b>${kind}</b><span>${value}</span></div>
+      <div class="appr"><div class="box"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0e0f12" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="opacity:0"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>Approve this exact value</div></div>
+    <div class="face back"><span class="chip green"><span class="d"></span>Verified live</span>
+      <div class="what"><b>${kind}</b><span>${value}</span></div>
+      <div class="check"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#3dd68c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div></div>
+  </div>`;
+  $('cards').appendChild(f);
+  return { el: f, inner: f.querySelector('.inner'), box: f.querySelector('.box'), tick: f.querySelector('.box svg'), path: f.querySelector('.back path') };
+});
+
+// drafts: the title as words so the redundant ones can collapse out
+const LONG = ['Fast', 'Emergency', 'Plumbing', 'Repair', 'Services', 'Near', 'You', '|', 'Example', 'Co', 'Plumbers'];
+const CUT = new Set([0, 10]); // "Fast " and " Plumbers": 70 → 56 characters
+const TITLE_WORDS = LONG.map((w, i) => { const s = document.createElement('span'); s.textContent = w; s.style.display = 'inline-block'; s.style.whiteSpace = 'pre'; s.dataset.cut = CUT.has(i) ? '1' : ''; $('s4Title').appendChild(s); return s; });
+
+// ---------- posing ----------
+function scenePresence(t, a, b) { // 0..1 opacity with cross-fades at both ends
+  if (t < a - XF / 2 || t >= b + XF / 2) return 0;
+  return Math.min(E.outCubic(prog(t, a - XF / 2, a + XF / 2)), 1 - E.inCubic(prog(t, b - XF / 2, b + XF / 2)));
+}
+
+function pose1(t) {
+  [...$('s1Wall').children].forEach((s) => {
+    const i = +s.dataset.i, on = 0.1 + i * 0.06, k = E.outCubic(prog(t, on, on + 0.35));
+    st(s, { opacity: String(0.15 + 0.45 * k), transform: `translateY(${(1 - k) * 18}px)`, borderColor: t > on && t < on + 0.25 ? 'rgba(245,213,71,0.6)' : '#2a2e38' });
+  });
+  const k = E.outExpo(prog(t, 0.25, 0.9));
+  st($('s1Txt'), { opacity: String(k), transform: `translateY(${(1 - k) * 30}px)` });
+}
+function pose2(t) {
+  const url = 'https://www.example-client-site.com';
+  const n = Math.floor(url.length * prog(t, 3.35, 4.55));
+  $('s2Url').textContent = url.slice(0, n);
+  $('s2Caret').style.opacity = t < 4.75 && Math.floor(t * 3) % 2 === 0 ? '1' : t < 4.6 ? '1' : '0';
+  const press = t > 4.7 && t < 4.95 ? Math.sin(prog(t, 4.7, 4.95) * Math.PI) : 0;
+  st($('s2Btn'), { transform: `scale(${1 - press * 0.07})`, filter: `brightness(${1 + press * 0.25})` });
+  const k = E.inOutCubic(prog(t, 4.95, 7.35));
+  $('s2Fill').style.width = k * 100 + '%';
+  $('s2Num').textContent = String(Math.round(k * 501));
+  const done = E.outBack(prog(t, 7.35, 7.7));
+  st($('s2Count'), { opacity: String(clamp(prog(t, 4.95, 5.2))), transform: `scale(${1 + (t > 7.35 ? Math.sin(prog(t, 7.35, 7.75) * Math.PI) * 0.06 : 0)})` });
+  st($('s2Search'), { transform: `translateY(${(1 - E.outExpo(prog(t, 3.0, 3.5))) * 40}px)` });
+  void done;
+}
+function pose3(t) {
+  [['f1', 8.6], ['f2', 9.3], ['f3', 10.0]].forEach(([id, on]) => {
+    const k = E.outBack(prog(t, on, on + 0.55));
+    st($(id), { opacity: String(clamp(prog(t, on, on + 0.15))), transform: `translateY(${(1 - k) * -120}px) rotate(${(1 - k) * -3}deg)` });
+  });
+}
+function pose4(t) {
+  const shrink = E.inOutCubic(prog(t, 14.4, 16.0));
+  TITLE_WORDS.forEach((w, i) => {
+    const cut = w.dataset.cut === '1';
+    const strike = cut ? E.outCubic(prog(t, 13.9, 14.4)) : 0;
+    w.textContent = (i > 0 && !(i === 1 && shrink >= 1) ? ' ' : '') + LONG[i];
+    if (cut) {
+      st(w, { color: `rgb(${lerp(255, 239, strike)}, ${lerp(255, 91, strike)}, ${lerp(255, 91, strike)})`, textDecoration: strike > 0.05 ? 'line-through' : 'none',
+        maxWidth: (1 - shrink) * 300 + 'px', opacity: String(1 - shrink), overflow: 'hidden', verticalAlign: 'bottom' });
+    } else st(w, { color: '#fff' });
+  });
+  const n = Math.round(lerp(70, 56, shrink));
+  $('s4Num').textContent = String(n);
+  const ok = prog(t, 15.6, 16.2);
+  $('s4Num').style.color = ok > 0 ? `rgb(${lerp(239, 61, ok)}, ${lerp(91, 214, ok)}, ${lerp(91, 140, ok)})` : '#ef5b5b';
+  $('s4Arrow').innerHTML = t > 16.0 ? '<span style="color:#3dd68c">✓</span>&nbsp; Clean draft ready for approval' : 'Cutting the words that add nothing…';
+  st($('s4Arrow'), { opacity: String(t > 16.0 ? E.outCubic(prog(t, 16.0, 16.4)) : clamp(prog(t, 13.9, 14.3))) });
+}
+// approve (18–22) and flip to verified (22–28) share the cards
+const TICKS = [18.85, 19.75, 20.65], FLIPS = [22.6, 23.9, 25.2];
+function pose5(t) {
+  CARDS.forEach((c, i) => {
+    const enter = E.outExpo(prog(t, 18.0 + i * 0.12, 18.6 + i * 0.12));
+    const ticked = prog(t, TICKS[i], TICKS[i] + 0.2);
+    st(c.box, { background: ticked > 0 ? `rgba(245,213,71,${ticked})` : 'transparent', borderColor: ticked > 0 ? '#f5d547' : '#4a4f5c', transform: `scale(${1 + Math.sin(ticked * Math.PI) * 0.2})` });
+    c.tick.style.opacity = String(ticked);
+    const f = E.inOutCubic(prog(t, FLIPS[i], FLIPS[i] + 0.7));
+    st(c.inner, { transform: `rotateX(${f * 180}deg)` });
+    c.path.style.strokeDashoffset = String(24 * (1 - E.outCubic(prog(t, FLIPS[i] + 0.55, FLIPS[i] + 0.95))));
+    const glow = t > FLIPS[i] + 0.6 ? Math.exp(-(t - FLIPS[i] - 0.6) * 3) : 0;
+    st(c.el, { opacity: String(enter), transform: `translateX(${(1 - enter) * 120}px) scale(${1 + glow * 0.02})`, filter: `drop-shadow(0 0 ${glow * 30}px rgba(61,214,140,${glow * 0.7}))` });
+  });
+  // cursor: tick each "Approve this exact value" box, then leave
+  const P = [[18.2, 1500, 900], ...TICKS.flatMap((tt, i) => [[tt - 0.02, 1215, 316 + i * 160 + 0], [tt + 0.4, 1240, 360 + i * 160]]), [21.6, 1600, 960]];
+  let x = P[0][1], y = P[0][2];
+  for (let i = 0; i < P.length - 1; i++) if (t >= P[i][0] && t < P[i + 1][0]) { const k = E.inOutCubic(prog(t, P[i][0], P[i + 1][0])); x = lerp(P[i][1], P[i + 1][1], k); y = lerp(P[i][2], P[i + 1][2], k); }
+  if (t >= P[P.length - 1][0]) { x = P[P.length - 1][1]; y = P[P.length - 1][2]; }
+  const press = TICKS.reduce((m, tt) => Math.max(m, t > tt - 0.05 && t < tt + 0.15 ? Math.sin(prog(t, tt - 0.05, tt + 0.15) * Math.PI) : 0), 0);
+  st($('s5Cursor'), { left: x + 'px', top: y + 'px', transform: `scale(${1 - press * 0.18})`, opacity: String(t < 21.9 ? clamp(prog(t, 18.2, 18.5)) : 0) });
+}
+function pose7(t) {
+  const a = E.outExpo(prog(t, 28.2, 28.9));
+  st($('s7A'), { opacity: String(a), transform: `translateY(${(1 - a) * 40}px)` });
+  const ar = E.outBack(prog(t, 29.2, 29.7));
+  st($('s7Arrow'), { transform: `translateX(${(1 - ar) * -60}px)`, opacity: String(clamp(ar)) });
+  const z = E.outBack(prog(t, 29.7, 30.3));
+  st($('s7To'), { transform: `scale(${lerp(0.3, 1, z)})`, opacity: String(clamp(z * 2)) });
+  $('s7From').style.color = t > 29.7 ? '#6b7080' : '#fff';
+  const b = E.outExpo(prog(t, 30.4, 31.0));
+  st($('s7B'), { opacity: String(b), transform: `translateY(${(1 - b) * 40}px)` });
+  $('s7Num').textContent = String(Math.round(96 * E.outCubic(prog(t, 30.5, 32.2))));
+  st($('s7Line'), { opacity: String(b) });
+}
+function pose8(t) {
+  const W = 1200, a = E.inOutCubic(prog(t, 34.5, 36.3)), b = E.outCubic(prog(t, 36.5, 37.0));
+  const short = Math.max(W * (0.5 / 18), 22); // 30 minutes against 18 hours, with a visible minimum
+  $('s8A').style.width = a * W + 'px';
+  st($('s8AL'), { left: 520 + a * W + 24 - (a > 0.98 ? W + 24 - W + 24 : 0) + 'px', opacity: String(prog(t, 35.9, 36.3)) });
+  $('s8AL').style.left = Math.min(520 + a * W + 24, 520 + W - 210) + 'px';
+  $('s8AL').style.color = a > 0.9 ? '#0e0f12' : '#fff';
+  $('s8B').style.width = b * short + 'px';
+  st($('s8BL'), { left: 520 + short + 26 + 'px', opacity: String(prog(t, 36.8, 37.2)) });
+  st($('s8Note'), { opacity: String(prog(t, 37.3, 37.8)) });
+}
+function pose9(t) {
+  const n = E.outExpo(prog(t, 39.1, 39.7));
+  st($('s9Name'), { opacity: String(n), transform: `translateY(${(1 - n) * 30}px)` });
+  $('s9Line').style.width = E.inOutCubic(prog(t, 39.5, 40.3)) * 560 + 'px';
+  ['w1', 'w2', 'w3'].forEach((id, i) => { const k = E.outCubic(prog(t, 40.1 + i * 0.25, 40.5 + i * 0.25)); st($(id), { opacity: String(k), display: 'inline-block', transform: `translateY(${(1 - k) * 20}px)` }); });
+}
+const POSE = { s1: pose1, s2: pose2, s3: pose3, s4: pose4, s5: pose5, s6: pose5, s7: pose7, s8: pose8, s9: pose9 };
+
+window.seek = function seek(t) {
+  let cap = null, capK = 0, step = 0;
+  const shown = {};
+  for (const [id, a, b, caption, s] of SCENES) {
+    const k = scenePresence(t, a, b);
+    const dom = id === 's6' ? 's5' : id;
+    if (k > 0) {
+      shown[dom] = Math.max(shown[dom] || 0, id === 's5' || id === 's6' ? scenePresence(t, 18, 28) : k);
+      POSE[id](t);
+      if (caption && k > capK) { cap = caption; capK = k; }
+    }
+    if (t >= a && t < b) step = s;
+  }
+  for (const id of ['s1', 's2', 's3', 's4', 's5', 's7', 's8', 's9']) {
+    const k = shown[id] || 0;
+    st($(id), { display: k > 0 ? 'block' : 'none', opacity: String(k), transform: `scale(${lerp(0.97, 1, k)})` });
+  }
+  // captions: hold for the whole scene, swap with the cross-fade
+  $('capTxt').textContent = cap || '';
+  st($('cap'), { opacity: String(cap ? capK : 0), transform: `translateY(${(1 - capK) * 16}px)` });
+  // step tracker only during the five steps
+  const trackK = Math.min(scenePresence(t, 3, 28), 1);
+  [...$('steps').children].forEach((d, i) => { d.className = 'step' + (step === i + 1 ? ' on' : step > i + 1 ? ' done' : ''); });
+  st($('steps'), { opacity: String(trackK), transform: `translateY(${(1 - trackK) * -20}px)` });
+  $('glow').style.transform = `translate(${Math.sin(t * 0.3) * 30}px, ${Math.cos(t * 0.25) * 20}px)`;
+};
+window.DURATION = DURATION;
+window.ready = (async () => { await document.fonts.ready; return true; })();
+const q = new URLSearchParams(location.search);
+window.ready.then(() => {
+  if (q.has('play')) { const t0 = performance.now(); const loop = () => { window.seek(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); }; loop(); }
+  else window.seek(parseFloat(q.get('t') || '0'));
+});
+</script>
+</body>
+</html>
