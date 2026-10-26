@@ -89,7 +89,7 @@ describe("single-stream Ogg Opus gate", () => {
     [], [0xf9, 1], [0xfa], [0xfa, 252], [0xfa, 3, 1],
     [0xfb], [0xfb, 0], [0xfb, 7], [0xfb, 0x43, 255],
     [0xfb, 0x43, 4, 1, 2], [0xfb, 0x83, 252], [0xfb, 0x83, 3, 3, 1],
-  ])("rejects malformed Opus packet framing %j", (packet) => {
+  ].map((packet) => ({ packet })))("rejects malformed Opus packet framing $packet", ({ packet }) => {
     expect(() => oggOpusDurationMs(stream([packet], 1272))).toThrow();
   });
 
