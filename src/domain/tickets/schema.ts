@@ -62,6 +62,7 @@ export const ticketAttachmentSubmissionSchema = ticketAttachmentTargetSchema.and
     mime_type: z.enum([
       "image/jpeg", "image/png", "image/webp", "image/gif",
       "video/mp4", "video/quicktime", "video/webm", "application/pdf",
+      "audio/webm", "audio/ogg",
     ]),
     size_bytes: z.number().int().positive().max(5 * 1024 * 1024),
     checksum_sha256: z.string().regex(/^[a-f0-9]{64}$/),

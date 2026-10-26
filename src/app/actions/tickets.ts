@@ -6,6 +6,7 @@ import type { TicketDetail, TicketSummary } from "../../domain/tickets/schema";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { TICKET_ATTACHMENT_MAX_BYTES, validateTicketAttachment } from "../../lib/tickets/ticket-attachment-file";
+import { validateTicketVoiceFile } from "../../lib/tickets/ticket-voice-file";
 import { readServerEnvironment } from "../../lib/env/server-env";
 import { getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 import { createTrustedServerSupabaseClient } from "../../lib/supabase/trusted-server-client";
@@ -210,17 +211,22 @@ export async function sendTicketComposerAction(
 
   try {
     if (file) {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const validated = validateTicketAttachment(file, bytes);
-      if (!validated.ok) return { ok: false, error: validated.error };
-
+      const isVoice = file.type.toLowerCase().startsWith("audio/");
+      if (isVoice && (input.target.kind !== "ticket" || input.target.ticketId !== target.ticket_id)) {
+        return { ok: false, error: "Voice messages are available only in Ticket conversations." };
+      }
       const attachmentTarget = {
         request_id: input.requestId,
         ...target,
         reply_to_message_id: input.replyTo?.messageId ?? null,
       };
+      // Admit voice attempts before parsing so rejected media still spends the existing upload quota.
+      const voiceClaim = isVoice ? await context.services.tickets.prepareAttachment(attachmentTarget, context.actor) : null;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const validated = isVoice ? await validateTicketVoiceFile(file, bytes) : validateTicketAttachment(file, bytes);
+      if (!validated.ok) return { ok: false, error: validated.error };
 
-      const claim = await context.services.tickets.prepareAttachment(attachmentTarget, context.actor);
+      const claim = voiceClaim ?? await context.services.tickets.prepareAttachment(attachmentTarget, context.actor);
       const storage = new TicketAttachmentStorageRepository(
         createTrustedServerSupabaseClient(readServerEnvironment()),
       );

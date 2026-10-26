@@ -859,6 +859,8 @@ export function TicketConversation({
                                         alt={attachment.original_name}
                                       />
                                     </button>
+                                  ) : attachment.mime_type.startsWith("audio/") ? (
+                                    <audio controls preload="none" src={attachmentUrl} aria-label={`Voice message: ${attachment.original_name}`} style={{ maxWidth: "100%" }} />
                                   ) : (
                                     <a
                                       className={styles.attachmentLink}
