@@ -86,6 +86,7 @@ function CallSession({ ticketId, mode, onClose }: { ticketId: string; mode: Call
   const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestIdRef = useRef(randomUuid());
   const callIdRef = useRef<string | null>(null);
+  const joinedRef = useRef(false);
   const [status, setStatus] = useState<CallStatus>("ready");
   const [message, setMessage] = useState("");
 
@@ -103,6 +104,9 @@ function CallSession({ ticketId, mode, onClose }: { ticketId: string; mode: Call
   }, []);
 
   const endRemote = useCallback(() => {
+    // A cancelled prejoin must not hang up another participant's active call.
+    if (!joinedRef.current) return;
+    joinedRef.current = false;
     const callId = callIdRef.current;
     callIdRef.current = null;
     if (callId) void fetch("/api/ticket-calls", {
@@ -168,9 +172,16 @@ function CallSession({ ticketId, mode, onClose }: { ticketId: string; mode: Call
       frameRef.current = frame;
       const iframe = frame.iframe();
       if (iframe) iframe.title = mode === "audio" ? "Private voice call" : "Private video call";
+      // Once Prebuilt loads, its permission screen can wait until room expiry.
+      frame.on("loaded", () => {
+        if (!current()) return;
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        connectTimeoutRef.current = null;
+      });
       frame.on("left-meeting", () => {
         if (!current()) return;
         release();
+        endRemote();
         setStatus("ended");
         setMessage("Call ended.");
       });
@@ -181,6 +192,7 @@ function CallSession({ ticketId, mode, onClose }: { ticketId: string; mode: Call
       frame.on("error", () => {
         if (!current()) return;
         release();
+        endRemote();
         setStatus("error");
         setMessage("We couldn’t connect the call. Check your connection and device permissions, then try again.");
       });
@@ -192,6 +204,7 @@ function CallSession({ ticketId, mode, onClose }: { ticketId: string; mode: Call
       }, Math.min(expiresAt - Date.now(), 2_147_483_647));
       await frame.join({ url: data.roomUrl, token: data.token, ...(mode === "audio" ? { videoSource: false, startVideoOff: true } : {}) });
       if (current()) {
+        joinedRef.current = true;
         if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
         connectTimeoutRef.current = null;
         requestRef.current = null;

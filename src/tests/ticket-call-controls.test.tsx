@@ -121,6 +121,7 @@ describe("Daily local pilot controls", () => {
     await waitFor(() => expect(frame.join).toHaveBeenCalledOnce());
     fireEvent.keyDown(document, { key: "Escape" });
     expect(frame.destroy).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
     await act(async () => { resolveJoin?.(); });
     expect(screen.queryByRole("button", { name: "End call" })).not.toBeInTheDocument();
   });
@@ -133,6 +134,47 @@ describe("Daily local pilot controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
     expect(screen.getByRole("dialog", { name: "Voice call" })).toBeInTheDocument();
     expect(frame.destroy).not.toHaveBeenCalled();
+  });
+
+  it("waits for permission after loading without hanging up the shared room on cancel", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    frame.join.mockImplementation(() => new Promise(() => {}));
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) => response(init?.method === "POST" ? callDetails("audio", new Date(Date.now() + 900_000).toISOString()) : { ok: true, enabled: true }));
+    render(<TicketCallControls ticketId={TICKET} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "Voice call" }));
+    fireEvent.click(screen.getByRole("button", { name: "Join call" }));
+    await act(async () => {});
+    act(() => events.get("loaded")?.());
+    await act(async () => { vi.advanceTimersByTime(60_000); });
+    expect(frame.destroy).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "End call" }));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false);
+  });
+
+  it("bounds a stalled frame load to 45 seconds", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    frame.join.mockImplementation(() => new Promise(() => {}));
+    render(<TicketCallControls ticketId={TICKET} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "Voice call" }));
+    fireEvent.click(screen.getByRole("button", { name: "Join call" }));
+    await act(async () => {});
+    await act(async () => { vi.advanceTimersByTime(45_000); });
+    expect(screen.getByRole("alert")).toHaveTextContent("The call did not connect.");
+    expect(frame.destroy).toHaveBeenCalledOnce();
+  });
+
+  it("ends the shared room when a connected participant uses Daily Leave", async () => {
+    render(<TicketCallControls ticketId={TICKET} />);
+    fireEvent.click(await openCall());
+    await waitFor(() => expect(frame.join).toHaveBeenCalledOnce());
+    act(() => events.get("left-meeting")?.());
+    expect(screen.getByRole("status")).toHaveTextContent("Call ended.");
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === "DELETE")).toHaveLength(1);
   });
 
   it.each([403, 404])("ends a stale or unauthorized %i join without creating a frame", async (status) => {
