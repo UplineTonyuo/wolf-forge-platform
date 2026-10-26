@@ -256,6 +256,13 @@ export function TeamRolesPanel({
   }
 
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const permissionHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (view !== "roles") return;
+    permissionHeadingRef.current?.focus({ preventScroll: true });
+    permissionHeadingRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [view]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -495,45 +502,49 @@ export function TeamRolesPanel({
 
                     <button
                       type="button"
-                      className={`${styles.rolePill} ${roleClass(member.preset_key)}`}
+                      className={styles.rolePill}
                       onClick={() => openRole(member.preset_key)}
                     >
-                      {member.preset_name}
-                    </button>
-
-                    <button
-                      type="button"
-                      className={styles.sendAnytimeToggle}
-                      aria-pressed={member.report_send_anytime}
-                      aria-label={`Send reports anytime for ${name}: ${member.report_send_anytime ? "on" : "off"}`}
-                      title={
-                        sendAnytimeBlocked
-                          ?? "Allows this user to send monthly reports outside the normal reporting window."
-                      }
-                      disabled={sendAnytimeBlocked !== null || togglingThis}
-                      onClick={() => toggleSendAnytime(member)}
-                    >
-                      {togglingThis ? (
-                        <LoaderCircle size={13} aria-hidden="true" />
-                      ) : (
-                        <Send size={13} aria-hidden="true" />
-                      )}
-                      <span className={styles.roleChangeLabel}>
-                        Send anytime: {member.report_send_anytime ? "On" : "Off"}
+                      <span className={`${styles.roleBadge} ${roleClass(member.preset_key)}`}>
+                        {member.preset_name}
                       </span>
                     </button>
 
-                    <button
-                      type="button"
-                      className={styles.roleChangeButton}
-                      aria-label={`Change role for ${name}`}
-                      title={blocked ?? `Change role for ${name}`}
-                      disabled={blocked !== null}
-                      onClick={() => openRoleChange(member)}
-                    >
-                      <UserCog size={15} aria-hidden="true" />
-                      <span className={styles.roleChangeLabel}>Change role</span>
-                    </button>
+                    <div className={styles.memberActions}>
+                      <button
+                        type="button"
+                        className={styles.sendAnytimeToggle}
+                        aria-pressed={member.report_send_anytime}
+                        aria-label={`Send reports anytime for ${name}: ${member.report_send_anytime ? "on" : "off"}`}
+                        title={
+                          sendAnytimeBlocked
+                            ?? "Allows this user to send monthly reports outside the normal reporting window."
+                        }
+                        disabled={sendAnytimeBlocked !== null || togglingThis}
+                        onClick={() => toggleSendAnytime(member)}
+                      >
+                        {togglingThis ? (
+                          <LoaderCircle size={13} aria-hidden="true" />
+                        ) : (
+                          <Send size={13} aria-hidden="true" />
+                        )}
+                        <span className={styles.roleChangeLabel}>
+                          Send anytime: {member.report_send_anytime ? "On" : "Off"}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.roleChangeButton}
+                        aria-label={`Change role for ${name}`}
+                        title={blocked ?? `Change role for ${name}`}
+                        disabled={blocked !== null}
+                        onClick={() => openRoleChange(member)}
+                      >
+                        <UserCog size={15} aria-hidden="true" />
+                        <span className={styles.roleChangeLabel}>Change role</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -595,7 +606,7 @@ export function TeamRolesPanel({
             <div className={styles.permissionHeader}>
               <div>
                 <div className={styles.permissionTitle}>
-                  <h2>{selected?.preset_name ?? "Role"}</h2>
+                  <h2 ref={permissionHeadingRef} tabIndex={-1}>{selected?.preset_name ?? "Role"}</h2>
 
                   {selected?.preset_key === "owner" ? (
                     <span>Locked full access</span>
