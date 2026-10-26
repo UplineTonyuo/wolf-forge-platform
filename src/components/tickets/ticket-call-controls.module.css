@@ -1,0 +1,57 @@
+.controls {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--wf-border);
+}
+
+/* Calls can open from the Inbox drawer, whose top overlay tier is 12200. */
+:global(.portal-overlay):has(.session) { z-index: 12300; }
+
+.callButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--wf-border);
+  border-radius: 6px;
+  background: var(--wf-white, #fff);
+  color: var(--wf-navy);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.callButton svg { width: 16px; height: 16px; flex-shrink: 0; }
+.callButton:hover:not(:disabled) { background: #f4f6fc; border-color: #b5bdd5; }
+.callButton:focus-visible { outline: 3px solid #5b76d6; outline-offset: 3px; }
+.callButton:disabled { cursor: not-allowed; opacity: .55; }
+.joinButton { background: var(--wf-navy); color: var(--wf-white, #fff); border-color: var(--wf-navy); }
+.joinButton:hover:not(:disabled) { background: #172960; border-color: #172960; }
+.endButton { color: #a42b2b; border-color: #e3bbbb; }
+.session { display: grid; gap: 16px; min-width: 0; }
+.hint { margin: 0; color: var(--wf-text-muted); font-size: 14px; line-height: 1.6; }
+.frame { display: none; min-width: 0; }
+.frame[data-active] { display: block; height: min(440px, 52dvh); min-height: 230px; overflow: hidden; border: 1px solid var(--wf-border); border-radius: 6px; background: #f4f6fc; }
+.frame iframe { display: block; width: 100%; max-width: 100%; height: 100%; border: 0; }
+.actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 420px) {
+  .controls { justify-content: stretch; }
+  .controls > button { flex: 1 1 110px; }
+  .actions > button { flex: 1 1 100px; }
+  .frame[data-active] { height: 42dvh; min-height: 180px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .callButton { transition: none; }
+}

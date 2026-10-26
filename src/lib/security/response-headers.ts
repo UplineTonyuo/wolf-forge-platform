@@ -28,6 +28,7 @@
 export type SecurityHeaderEnvironment = {
   isProduction: boolean;
   supabaseUrl?: string | undefined;
+  dailyCalls?: boolean;
 };
 
 export type ResponseHeader = { key: string; value: string };
@@ -92,6 +93,7 @@ export function buildReportOnlyContentSecurityPolicy(
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     `connect-src ${connect.join(" ")}`,
+    ...(environment.dailyCalls ? ["frame-src 'self' https://wolfforge.daily.co", "media-src 'self' blob:"] : []),
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -121,7 +123,9 @@ export function buildSecurityHeaders(
       // An empty `()` allowlist denies a feature to the page itself, not just
       // cross-origin frames — `(self)` keeps that same third-party denial
       // while unblocking the one feature this app actually uses.
-      value: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
+      value: environment.dailyCalls
+        ? 'accelerometer=(), camera=(self "https://wolfforge.daily.co"), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self "https://wolfforge.daily.co"), payment=(), usb=()'
+        : "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
     },
     { key: "X-DNS-Prefetch-Control", value: "off" },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
@@ -151,6 +155,7 @@ export function readSecurityHeaderEnvironment(
   return {
     isProduction: source.NODE_ENV === "production",
     supabaseUrl: source.SUPABASE_URL,
+    dailyCalls: source.DAILY_CALLS_ENABLED === "1" && source.DAILY_DOMAIN === "wolfforge.daily.co",
   };
 }
 
