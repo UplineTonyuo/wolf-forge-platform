@@ -238,6 +238,10 @@
   overflow: hidden;
 }
 
+.directoryPanel {
+  container-type: inline-size;
+}
+
 /* ---------------------------------------------------- Team directory */
 
 .panelHeader {
@@ -404,6 +408,18 @@
 .memberActions button {
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+@container (max-width: 700px) {
+  .memberActions .roleChangeLabel {
+    display: none;
+  }
+
+  .memberActions button {
+    min-width: 44px;
+    justify-content: center;
+    padding: 0 9px;
+  }
 }
 
 .permissionTitle h2 {
