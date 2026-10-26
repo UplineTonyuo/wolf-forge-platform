@@ -1,0 +1,10 @@
+.recorder { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.recorder button { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.recorder svg { width: 17px; height: 17px; flex-shrink: 0; }
+.recorder span { font-size: 12px; }
+.error { color: var(--color-danger, #a1132a); flex-basis: 100%; }
+.preview { width: min(100%, 320px); min-width: 0; }
+.draft[data-voice] { grid-template-columns: minmax(0, 1fr) auto; }
+.draft .preview { grid-column: 1 / -1; }
+.actions { min-width: 0; flex-wrap: wrap; }
+.recorder[data-recording] { flex-basis: 100%; }

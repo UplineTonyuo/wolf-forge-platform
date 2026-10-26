@@ -23,6 +23,8 @@ import { randomUuid } from "../../lib/random-uuid";
 import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-file";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketRichTextEditor } from "./ticket-rich-text-editor";
+import { TicketVoiceRecorder } from "./ticket-voice-recorder";
+import voiceStyles from "./ticket-voice-recorder.module.css";
 import { usePersistentReplyDraft } from "./use-persistent-reply-draft";
 import { useClientDraftSession } from "./client-draft-provider";
 import { PortalDialog } from "../account/ui/portal-dialog";
@@ -131,6 +133,7 @@ function TicketComposerBody({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [savingForSend, setSavingForSend] = useState(false);
+  const [recordingVoice, setRecordingVoice] = useState(false);
   const [restoredReply, setRestoredReply] = useState<OrderReplyTarget | null>(null);
   const replyTo = suppliedReplyTo ?? restoredReply;
   const persistent = usePersistentReplyDraft(
@@ -183,7 +186,7 @@ function TicketComposerBody({
     setAttachment(file);
     // Note: there is no client-side MIME/size validation here — that check
     // only happens server-side in sendTicketComposerAction / the DB RPC.
-    if (file?.type.startsWith("image/") && typeof URL.createObjectURL === "function") {
+    if ((file?.type.startsWith("image/") || file?.type.startsWith("audio/")) && typeof URL.createObjectURL === "function") {
       const url = URL.createObjectURL(file);
       previewUrlRef.current = url;
       setPreviewUrl(url);
@@ -216,7 +219,7 @@ function TicketComposerBody({
       body.trim();
 
     if (
-      busy || submittingRef.current ||
+      busy || recordingVoice || submittingRef.current ||
       (!normalized && !attachment)
     ) {
       return;
@@ -399,7 +402,7 @@ function TicketComposerBody({
           placeholder={composerPlaceholder}
           onChange={(value) => { setBody(value); saveDraft(value, attachment); }}
           initialValue={body}
-          onPasteFile={(file) => { pickAttachment(file); saveDraft(body, file); }}
+          onPasteFile={(file) => { if (!recordingVoice) { pickAttachment(file); saveDraft(body, file); } }}
         />
       )}
 
@@ -415,8 +418,10 @@ function TicketComposerBody({
       ) : null}
 
       {attachment ? (
-        <div className={styles.attachmentDraft}>
-          {previewUrl ? (
+        <div className={`${styles.attachmentDraft} ${attachment.type.startsWith("audio/") ? voiceStyles.draft : ""}`} data-voice={attachment.type.startsWith("audio/") || undefined}>
+          {previewUrl && attachment.type.startsWith("audio/") ? (
+            <audio controls preload="metadata" src={previewUrl} aria-label="Voice message preview" className={voiceStyles.preview} />
+          ) : previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- local blob: preview URL, not eligible for next/image optimization
             <img src={previewUrl} alt="" />
           ) : attachment.type.startsWith("video/") ? (
@@ -456,7 +461,14 @@ function TicketComposerBody({
           ) : null}
         </div>
 
-        <div className={styles.composerActions}>
+        <div className={`${styles.composerActions} ${voiceStyles.actions}`}>
+          {!isNote && target.kind === "ticket" ? <TicketVoiceRecorder
+            key={target.ticketId}
+            ticketId={target.ticketId}
+            disabled={busy || !!attachment}
+            onRecordingChange={setRecordingVoice}
+            onPickAttachment={(file) => { pickAttachment(file); saveDraft(body, file); }}
+          /> : null}
           {!isNote ? (
             <>
               <input
@@ -474,7 +486,7 @@ function TicketComposerBody({
               <button
                 type="button"
                 className={styles.addFileButton}
-                disabled={busy}
+                disabled={busy || recordingVoice}
                 aria-label="Add file"
                 title="Add file"
                 onClick={() => {
@@ -492,7 +504,7 @@ function TicketComposerBody({
             aria-label={compact && !isNote ? (!optimistic && pending ? "Sending..." : "Send reply") : undefined}
             title={compact && !isNote ? "Send reply" : undefined}
             className="button-primary"
-            disabled={busy || (!body.trim() && !attachment)}
+            disabled={busy || recordingVoice || (!body.trim() && !attachment)}
           >
             {!hideSubmitIcon ? <Send aria-hidden="true" /> : null}
             {!compact || isNote ? (!optimistic && pending ? "Sending..." : isNote ? "Add note" : "Send reply") : null}

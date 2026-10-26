@@ -1,4 +1,6 @@
 export const TICKET_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+export const TICKET_AUDIO_MIME_TYPES = ["audio/webm", "audio/ogg"] as const;
+export const TICKET_AUDIO_MAX_DURATION_MS = 5 * 60 * 1000;
 export const TICKET_ATTACHMENT_ACCEPT = [
   "image/jpeg",
   "image/png",
