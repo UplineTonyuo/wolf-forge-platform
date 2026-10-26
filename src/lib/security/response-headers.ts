@@ -41,6 +41,13 @@ export type ResponseHeader = { key: string; value: string };
  */
 const HSTS_MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
 
+// daily-js can fail over to these domains; keep delegation workspace-specific.
+const DAILY_FRAME_ORIGINS = [
+  "https://wolfforge.daily.co",
+  "https://wolfforge.dailywebrtc.com",
+  "https://wolfforge.dailywebrtc.net",
+];
+
 /**
  * The enforced policy. Every directive here is independent of Next's script and
  * style emission, so enforcing it can never break a page.
@@ -93,7 +100,7 @@ export function buildReportOnlyContentSecurityPolicy(
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     `connect-src ${connect.join(" ")}`,
-    ...(environment.dailyCalls ? ["frame-src 'self' https://wolfforge.daily.co", "media-src 'self' blob:"] : []),
+    ...(environment.dailyCalls ? [`frame-src 'self' ${DAILY_FRAME_ORIGINS.join(" ")}`, "media-src 'self' blob:"] : []),
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -124,7 +131,7 @@ export function buildSecurityHeaders(
       // cross-origin frames — `(self)` keeps that same third-party denial
       // while unblocking the one feature this app actually uses.
       value: environment.dailyCalls
-        ? 'accelerometer=(), camera=(self "https://wolfforge.daily.co"), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self "https://wolfforge.daily.co"), payment=(), usb=()'
+        ? `accelerometer=(), camera=(self ${DAILY_FRAME_ORIGINS.map((origin) => `"${origin}"`).join(" ")}), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self ${DAILY_FRAME_ORIGINS.map((origin) => `"${origin}"`).join(" ")}), payment=(), usb=()`
         : "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()",
     },
     { key: "X-DNS-Prefetch-Control", value: "off" },
