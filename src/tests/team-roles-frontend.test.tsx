@@ -25,6 +25,7 @@ vi.mock("../app/actions/member-account-provisioning", () => ({
 }));
 
 beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   HTMLDialogElement.prototype.showModal = vi.fn(function showModal(this: HTMLDialogElement) {
     this.setAttribute("open", "");
   });
@@ -237,6 +238,25 @@ describe("Role change protection", () => {
 });
 
 describe("Roles and permissions tab", () => {
+  it("brings the selected role into view on entry without jumping on later preset changes", () => {
+    renderPanel();
+    expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Manager.*View permissions/u }));
+
+    expect(screen.getByRole("heading", { name: "Manager", level: 2 })).toHaveFocus();
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledExactlyOnceWith({
+      block: "start",
+      behavior: "instant",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Staff.*8 of/u }));
+    expect(screen.getByRole("heading", { name: "Staff", level: 2 })).toBeInTheDocument();
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(setMemberPresetAction).not.toHaveBeenCalled();
+    expect(setReportSendAnytimeAction).not.toHaveBeenCalled();
+  });
+
   it("renders real preset grants with no editing affordance", () => {
     renderPanel();
 
