@@ -1,56 +1,64 @@
-# Wolf Forge Portal — showreel
+# Wolf Forge Portal — 60s client story
 
-`wolf-forge-portal-showreel.mp4` — 28s, 1920×1080, 30 fps, H.264 + AAC, -14 LUFS.
+`wolf-forge-portal-showreel.mp4` — 60s, 1920×1080, 30 fps, H.264 + AAC, -14 LUFS.
 
-The piece follows a user through the app, from the Dashboard to Settings. A POV cursor clicks
-each sidebar item. One in-app camera pulls out to the navigation before every click, then zooms
-in on the detail that matters (revenue, a project status, an urgent ticket, a lead, a paid
-invoice).
+The film is made for Wolf Forge's clients. It follows one project from start to finish
+(sample client **Harbor Fitness**, **SEO Growth Plan**) and shows both sides: the client
+portal ("You") and the Wolf Forge team ("Team"). A chip at the top of the frame says
+whose screen we are on. Communication comes first: the film opens on a message arriving.
 
-| Time | Scene | Camera | VO |
+| Time | Chapter | What happens | VO |
 | --- | --- | --- | --- |
-| 0.0–3.5 | Gold wolf mark draws on | slow push | "Every pack… needs a leader." |
-| 3.5–5.0 | Title slam | dives through the title | "Wolf Forge Portal." |
-| 5.0–7.2 | **01 Dashboard** | far, tilted → full app → zoom to Total Revenue | — |
-| 7.2–10.0 | **02 Projects · 03 Tickets · 04 Clients · 05 Billing** | out to the nav, click, in to the status / Urgent / Lead / Paid detail | "Projects. Tickets. Clients. Billing." |
-| 10.0–11.0 | Back to Dashboard | click Dashboard, pull to full | — |
-| 11.0–14.5 | Every page as a wall | zoom out, then collapse back into the Dashboard | "Your entire operation — in one place." |
-| 14.5–18.0 | UI explode of the real Dashboard | 3D tilt, layers lift, snap back | "Built in layers. Engineered to move." |
-| 18.0–20.0 | Desktop + real mobile renders | — | "Desktop. Mobile." |
-| 20.0–23.5 | **06 Settings → White Label Studio** | zoom to sidebar, click Settings, zoom to tabs, then the Navy → Forest Premium recolor | "Your brand. Your colors." |
-| 23.5–28.0 | App icon lockup | — | "Wolf Forge Portal. Lead the pack." |
+| 0:00 | — | Gold wolf mark, title slam | "Every great project starts with a conversation." |
+| 0:06 | Hook | Phone buzzes: "New message on your project". Tap opens the project, then a rewind to "How it started" | "With Wolf Forge, you're never left wondering." |
+| 0:10 | 01 Your portal | Client dashboard → Investments (Store) → SEO Growth Plan → **Talk to your team** | "It starts in your portal. Pick your plan, and talk to us right there." |
+| 0:16 | 02 Project live | Team side: the project slides into Projects, already assigned | "The moment you're in, your project is live, and our team already has it." |
+| 0:21 | 03 Team on it | The team's own chat about the new project, message by message | "Behind the scenes, we're already planning your first win." |
+| 0:26 | 04 Project chat | Split screen: the same project chat on the client side and the team side, each message landing on both | "Talk to us inside your project. Ask, approve, share. Every message, one place." |
+| 0:34 | 05 Support | Client sends a ticket; a person on the team replies from the Inbox; the reply lands for the client | "Need something else? Send a message. A real person replies." |
+| 0:39 | 06 Progress | The project page explodes into layers; delivery progress (3 of 5) glows | "Every task, tracked. You can watch the work move." |
+| 0:44 | 07 Billing | Invoice Unpaid → one tap → Paid | "Billing is just as simple. One tap, and it's paid." |
+| 0:49 | 08 Results | The October report, stepped through: +38% traffic, #3 (was #11), 5,120 profile views | "And every month, your results: clear, honest, yours." |
+| 0:55 | — | App icon lockup, **Start your project today**, `portal.wolfforge.com` | "Wolf Forge Portal. Start your project today." |
 
-Mesh gradient, gold embers, film grain and a vignette run throughout. Cuts and clicks land on
-the 120 BPM grid of the score.
+The effects from the first cut carry through: mesh gradient, gold embers, film grain,
+vignette, light sweeps, UI explode, in/out camera zooms, a POV cursor with click ripples,
+and focus rings.
 
 ## Sources
 
-- **Screens (`captures/`)** are real renders of this app, captured by `capture/capture.mjs` from
-  the local stack with the demo data in `capture/seed-demo.sql`. The demo companies and
-  "Alex Morgan" are sample data, not customers.
-- **White Label Studio** frames are the QA screenshots in `docs/qa/white-label-studio-v3/`.
-- **Brand:** `public/branding/` (wolf mark, app icon), Sora and Inter, plus the navy and gold palette.
-- **Voice-over:** ElevenLabs `eleven_v4`, voice "Don – Movie Trailers"
-  (`audio/source/vo-take-b.mp3`). `audio/mix.py` splits it at the pauses and places each phrase.
-- **SFX:** ElevenLabs `eleven_text_to_sound_v2`: boom, whoosh, riser, glitch. The mouse clicks
-  and focus pings are synthesised.
-- **Music:** synthesised in `audio/mix.py` (D minor, 120 BPM). It ducks under the VO.
+- **Screens (`captures/story/`)** are real renders of this app, captured by
+  `capture/capture-story.mjs` from the local stack with sample data
+  (`capture/seed-demo.sql`, then `capture/seed-story.sql`). Harbor Fitness, Maya Chen,
+  Alex Morgan, Jordan Reyes and Sam Carter are demo people, not customers.
+  `captures/story/boxes.json` records where each zoom, click and message sits on screen.
+- **Voice-over:** ElevenLabs `eleven_v4`, voice "Don – Movie Trailers", with a warm read
+  (`audio/source/vo-60s.mp3`).
+- **SFX:** ElevenLabs boom, whoosh, riser and glitch. The mouse clicks, message pops,
+  notification chime and phone buzz are synthesised in `audio/mix.py`.
+- **Music:** synthesised in `audio/mix.py` (D minor, 120 BPM). It has a heartbeat intro,
+  a groove from the portal, a breakdown under support, and a build into the lockup. It
+  ducks under the VO.
+- **Timing:** `timeline.json` holds every cue and sound-effect time. Both `index.html` and
+  `audio/mix.py` read it.
 
 ## Rebuild
 
 ```bash
-# 1. (only to refresh the screens) local stack + demo data + capture
+# 1. (only to refresh the screens) local stack, sample data, capture
 npx supabase start
-npm run qa:local-login                       # local QA accounts
+npm run qa:local-login
 psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f marketing/showreel/capture/seed-demo.sql
-echo LOCAL_UI_QA_BYPASS=true >> .env.local   # local-only auto sign-in for the QA account
+psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f marketing/showreel/capture/seed-story.sql
+echo LOCAL_UI_QA_BYPASS=true >> .env.local   # local-only quick access for the staff side
 npm run dev
-node marketing/showreel/capture/capture.mjs
+node marketing/showreel/capture/capture-story.mjs
 
 # 2. frames + soundtrack
 cd marketing/showreel
-CHROMIUM_PATH=/path/to/chrome node render.mjs   # -> out/frames.mp4 (~6 min)
+CHROMIUM_PATH=/path/to/chrome node render.mjs   # -> out/frames.mp4 (~12 min)
 python3 audio/mix.py                            # -> out/soundtrack.wav + final MP4
 ```
 
-`render.mjs` needs Playwright (a repo dev dependency) resolvable from this folder. `node render.mjs --stills 6.9,8.6` renders single frames.
+`node render.mjs --stills 29.6,46.3` renders single frames. When the folder is served
+through `render.mjs`, `index.html?t=29.6` inspects one frame and `?play` runs it in real time.

@@ -4,66 +4,76 @@
 <meta charset="utf-8" />
 <title>Wolf Forge Portal Showreel</title>
 <!--
-  Wolf Forge Portal — 28s showreel composition (1920x1080, 30fps).
-  The story is a user's walk through the app: Dashboard → Projects → Tickets →
-  Clients → Invoices → back to Dashboard → the whole workspace → Settings →
-  White Label. One in-app camera zooms in on what the user is looking at and
-  pulls out to the navigation before each click.
+  Wolf Forge Portal — 60s client story (1920x1080, 30fps).
+  One project, start to finish, told from both sides: a message lands on the client's
+  phone, then we rewind to how it started — the client portal and Store, the project
+  landing for the team, the team's own chat, the project chat seen by client and team
+  side by side, a support ticket, delivery progress, the invoice getting paid and the
+  monthly report — ending on "Start your project today".
 
-  Every visual is a pure function of time: window.seek(t) poses the whole frame,
-  so render.mjs can step it frame by frame. Open with ?t=12.4 to inspect a frame,
-  or ?play to watch it in real time.
-
-  Screens in captures/ are real renders of this app (local Supabase, demo data).
-  Brand art comes from public/branding, White Label Studio frames from docs/qa.
+  Every visual is a pure function of time: window.seek(t) poses the whole frame, so
+  render.mjs can step it frame by frame. Open with ?t=29.4 to inspect a frame, or ?play.
+  Cue and sound-effect times live in timeline.json, shared with audio/mix.py.
+  Screens in captures/story are real renders of this app (local stack, sample data:
+  Harbor Fitness is a demo client).
 -->
 <style>
   @font-face { font-family: "Sora"; src: url("fonts/sora-latin-wght-normal.woff2") format("woff2"); font-weight: 100 800; }
   @font-face { font-family: "Inter"; src: url("fonts/inter-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
 
-  :root { --navy: #000d51; --gold: #d9a92f; --gold-bright: #f1c85a; --text: #f8f9ff; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
-  #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; background: #01041f; font-family: "Inter", system-ui, sans-serif; color: var(--text); }
+  #stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; background: #01041f; font-family: "Inter", system-ui, sans-serif; color: #f8f9ff; }
   canvas.full { position: absolute; inset: 0; width: 1920px; height: 1080px; }
   #grain { mix-blend-mode: overlay; opacity: 0.22; image-rendering: pixelated; }
   #vignette { position: absolute; inset: 0; pointer-events: none;
     background: radial-gradient(ellipse 72% 70% at 50% 50%, rgba(0,0,0,0) 52%, rgba(0,2,14,0.55) 82%, rgba(0,1,8,0.92) 100%); }
   #flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #fff6d8 0%, #f1c85a 45%, rgba(217,169,47,0) 100%); opacity: 0; mix-blend-mode: screen; }
   #world { position: absolute; inset: 0; transform-origin: 50% 50%; }
-  .scene { position: absolute; inset: 0; display: none; }
-  .persp { perspective: 2200px; perspective-origin: 50% 50%; }
+  .scene { position: absolute; inset: 0; display: none; perspective: 2400px; }
   .p3d { transform-style: preserve-3d; }
   .abs { position: absolute; }
 
   .kicker { font-family: "Inter"; font-weight: 600; font-size: 26px; letter-spacing: 0.55em; text-transform: uppercase; color: #c9cfe8; white-space: nowrap; }
   .gold-text { background: linear-gradient(180deg, #fff1c2 0%, #f1c85a 32%, #d9a92f 62%, #8f6d22 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .sora { font-family: "Sora"; }
-  .char { display: inline-block; will-change: transform, opacity, filter; }
+  .char { display: inline-block; }
+  .big { font-family: "Sora"; font-weight: 800; font-size: 92px; letter-spacing: -0.02em; white-space: nowrap; }
 
-  .screen { position: absolute; border-radius: 18px; overflow: hidden; background: #fff;
-    box-shadow: 0 0 0 1.5px rgba(241,200,90,0.55), 0 40px 120px rgba(0,0,0,0.65), 0 0 80px rgba(62,108,255,0.18); }
-  .screen img { display: block; width: 100%; height: 100%; }
-  .layer { position: absolute; overflow: hidden; border-radius: 10px; }
-  .layer img { position: absolute; display: block; }
-
-  /* the in-app camera */
-  .app { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; border-radius: 16px; overflow: hidden; background: #000d51;
-    box-shadow: 0 0 0 1.5px rgba(241,200,90,0.6), 0 50px 140px rgba(0,0,0,0.7), 0 0 90px rgba(62,108,255,0.2); }
-  .app > img { position: absolute; inset: 0; width: 1440px; height: 900px; display: block; }
+  /* app windows (see Win below) */
+  .win { position: absolute; }
+  .win.clip { overflow: hidden; border-radius: 22px; box-shadow: 0 0 0 2px rgba(241,200,90,0.55), 0 40px 110px rgba(0,0,0,0.65); background: #fff; }
+  .card { position: absolute; left: 0; top: 0; width: 1440px; transform-origin: 0 0; }
+  .win:not(.clip) .card { border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1.5px rgba(241,200,90,0.6), 0 50px 140px rgba(0,0,0,0.7), 0 0 90px rgba(62,108,255,0.2); }
+  .pg { position: absolute; left: 0; top: 0; width: 1440px; }
+  .pg > img { display: block; width: 1440px; }
+  .cover, .crop { position: absolute; }
+  .crop { overflow: hidden; border-radius: 12px; }
+  .crop img { position: absolute; width: 1440px; }
   .ring { position: absolute; border-radius: 10px; border: 2.5px solid #f1c85a; box-shadow: 0 0 22px rgba(241,200,90,0.9), inset 0 0 14px rgba(241,200,90,0.35); opacity: 0; }
   .ripple { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; border: 2px solid #f1c85a; opacity: 0; }
   .cursor { position: absolute; width: 30px; height: 30px; transform-origin: 0 0; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.45)); }
 
-  .lt { position: absolute; left: 110px; bottom: 104px; display: flex; align-items: center; gap: 22px; padding: 18px 34px 18px 22px; border-radius: 22px;
-    background: rgba(0, 6, 47, 0.72); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(241,200,90,0.35), 0 24px 60px rgba(0,0,0,0.5); }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 12px 22px 12px 14px; border-radius: 999px; background: rgba(0,6,47,0.78); backdrop-filter: blur(12px);
+    box-shadow: 0 0 0 1px rgba(241,200,90,0.45), 0 16px 40px rgba(0,0,0,0.45); font: 700 20px "Inter"; letter-spacing: 0.18em; text-transform: uppercase; white-space: nowrap; }
+  .chip .dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 13px "Sora"; letter-spacing: 0; color: #00062f; background: linear-gradient(180deg, #f1c85a, #a8832e); }
+  .chip.team .dot { background: #fff; }
+  .lt { position: absolute; left: 110px; bottom: 96px; display: flex; align-items: center; gap: 22px; padding: 18px 34px 18px 22px; border-radius: 22px;
+    background: rgba(0, 6, 47, 0.74); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(241,200,90,0.35), 0 24px 60px rgba(0,0,0,0.5); }
   .lt .idx { font-family: "Sora"; font-weight: 300; font-size: 26px; color: #f1c85a; letter-spacing: 0.08em; padding-right: 22px; border-right: 1px solid rgba(241,200,90,0.4); }
-  .lt .lbl { font-family: "Sora"; font-weight: 800; font-size: 56px; letter-spacing: -0.02em; line-height: 1; }
+  .lt .lbl { font-family: "Sora"; font-weight: 800; font-size: 54px; letter-spacing: -0.02em; line-height: 1; }
 
-  .phoneFrame { position: absolute; width: 400px; height: 838px; padding: 12px; border-radius: 58px; background: linear-gradient(160deg, #23263a, #07080f 60%);
-    box-shadow: 0 0 0 2px rgba(241,200,90,0.45), 0 40px 90px rgba(0,0,0,0.65); }
-  .phoneFrame img { width: 376px; height: 814px; border-radius: 46px; display: block; }
-  .phoneFrame .notch { position: absolute; left: 50%; top: 24px; width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #05060b; }
+  .phone { position: absolute; left: 760px; top: 70px; width: 400px; height: 838px; padding: 12px; border-radius: 58px; background: linear-gradient(160deg, #23263a, #07080f 60%);
+    box-shadow: 0 0 0 2px rgba(241,200,90,0.45), 0 50px 110px rgba(0,0,0,0.7); transform-origin: 50% 16%; }
+  .phone .screen { position: relative; width: 376px; height: 814px; border-radius: 46px; overflow: hidden; background: radial-gradient(ellipse at 50% 30%, #0b1b7a 0%, #000d51 45%, #00031c 100%); }
+  .phone .notch { position: absolute; left: 50%; top: 24px; width: 112px; height: 32px; margin-left: -56px; border-radius: 20px; background: #05060b; z-index: 5; }
+  .push { position: absolute; left: 12px; right: 12px; top: 64px; padding: 14px 16px; border-radius: 26px; background: rgba(245,246,250,0.93); color: #0b1033; box-shadow: 0 12px 30px rgba(0,0,0,0.4); z-index: 4; }
+  .push .row { display: flex; align-items: center; gap: 10px; font: 600 13px "Inter"; color: #555b75; letter-spacing: 0.04em; }
+  .push .row img { width: 26px; height: 26px; border-radius: 7px; }
+  .push .t { font: 700 16px "Inter"; margin-top: 8px; }
+  .push .b { font: 400 15px "Inter"; margin-top: 3px; color: #2b3150; }
+  .url { display: inline-flex; align-items: center; gap: 14px; padding: 16px 30px; border-radius: 999px; font: 700 34px "Inter"; letter-spacing: 0.02em; color: #fff;
+    background: rgba(0,6,47,0.7); box-shadow: 0 0 0 2px rgba(241,200,90,0.75), 0 0 40px rgba(241,200,90,0.35); }
 </style>
 </head>
 <body>
@@ -72,18 +82,18 @@
   <canvas id="embers" class="full" width="1920" height="1080"></canvas>
 
   <div id="world">
-    <!-- A · 0.0–3.5  Wolf mark reveal -->
+    <!-- A · wolf mark -->
     <div id="sA" class="scene">
       <div id="aWolfWrap" class="abs" style="inset:0">
         <img id="aWolf" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px" />
         <img id="aWolfGlow" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px;filter:brightness(2.4) blur(6px);mix-blend-mode:screen" />
       </div>
-      <div id="aLine1" class="abs kicker" style="left:0;right:0;top:860px;text-align:center">Every pack</div>
-      <div id="aLine2" class="abs kicker" style="left:0;right:0;top:910px;text-align:center;color:#f1c85a">needs a leader</div>
+      <div id="aLine1" class="abs kicker" style="left:0;right:0;top:860px;text-align:center">Every great project</div>
+      <div id="aLine2" class="abs kicker" style="left:0;right:0;top:910px;text-align:center;color:#f1c85a">starts with a conversation</div>
     </div>
 
-    <!-- B · 3.5–5.0  Title slam, then the camera dives through it -->
-    <div id="sB" class="scene persp">
+    <!-- B · title -->
+    <div id="sB" class="scene">
       <img id="bWolf" class="abs" src="/public/branding/wolf-head-mark.png" style="left:0;top:0;width:1920px;height:1080px;opacity:0.12" />
       <div id="bTitle" class="abs p3d" style="left:0;right:0;top:330px;text-align:center">
         <div id="bTitleTop" class="sora" style="font-weight:800;font-size:200px;line-height:1;letter-spacing:-0.02em"></div>
@@ -91,70 +101,67 @@
       </div>
     </div>
 
-    <!-- APP · one camera for the in-app walkthroughs (5.0–11.0 and 20.0–23.5) -->
-    <div id="sApp" class="scene persp" style="perspective:2400px">
-      <div id="app" class="app">
-        <img data-page="dashboard" src="captures/dashboard.jpg" />
-        <img data-page="orders" src="captures/orders.jpg" />
-        <img data-page="tickets" src="captures/tickets.jpg" />
-        <img data-page="clients" src="captures/clients.jpg" />
-        <img data-page="invoices" src="captures/invoices.jpg" />
-        <img data-page="settings" src="captures/settings.jpg" />
-        <img data-page="wl" src="/docs/qa/white-label-studio-v3/editor-1440-final.png" />
-        <img data-page="wlGreen" src="/docs/qa/white-label-studio-v3/editor-1440-900.png" />
-        <div id="ring" class="ring"></div>
-        <div id="ripple" class="ripple"></div>
-        <svg id="cursor" class="cursor" viewBox="0 0 30 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25.2 L13 16.8 L21 16.8 Z" fill="#fff" stroke="#0b1033" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    <!-- P · the hook: a message lands on the client's phone -->
+    <div id="sP" class="scene">
+      <div id="phone" class="phone">
+        <div class="screen">
+          <div class="notch"></div>
+          <img src="/public/branding/wolf-head-mark.png" class="abs" style="left:-560px;top:120px;width:1500px;opacity:0.16" />
+          <div id="lockClock" class="abs sora" style="left:0;right:0;top:250px;text-align:center;font-weight:200;font-size:96px;color:#fff">9:41</div>
+          <div class="abs" style="left:0;right:0;top:232px;text-align:center;font:500 18px Inter;color:#cfd5f0">Monday, October 26</div>
+          <div id="push" class="push">
+            <div class="row"><img src="/public/branding/app-192.png" /> WOLF FORGE PORTAL <span style="margin-left:auto;font-weight:500">now</span></div>
+            <div class="t">New message on your project</div>
+            <div class="b">Jordan: Westside is first in the sprint.</div>
+          </div>
+          <img id="phoneApp" class="abs" src="captures/story/m-c-project.jpg" style="left:0;top:0;width:376px;height:814px;opacity:0" />
+          <div id="phoneRipple" class="ripple" style="left:188px;top:120px"></div>
+        </div>
       </div>
-      <div id="lt" class="lt"><span id="ltIdx" class="idx">01</span><span id="ltLbl" class="lbl gold-text">Dashboard</span></div>
-      <div id="appScrim" class="abs" style="left:0;right:0;bottom:0;height:300px;background:linear-gradient(180deg, rgba(0,4,30,0) 0%, rgba(0,4,30,0.88) 70%)"></div>
-      <div id="appBrand" class="abs sora" style="left:0;right:0;top:930px;text-align:center;font-weight:800;font-size:92px;letter-spacing:-0.02em;white-space:nowrap">
-        <span id="gW1" style="display:inline-block">Your brand.</span>&nbsp;<span id="gW2" class="gold-text" style="display:inline-block">Your colors.</span>
-      </div>
+      <div id="pKicker" class="abs kicker" style="left:0;right:0;top:960px;text-align:center;color:#f1c85a">How it started</div>
     </div>
 
-    <!-- WALL · 11.0–14.5  Zoom out to every page, then back into one place -->
-    <div id="sD" class="scene persp">
-      <div id="dPlane" class="abs p3d" style="left:960px;top:540px;width:0;height:0"></div>
-      <div id="dKicker" class="abs kicker" style="left:0;right:0;top:110px;text-align:center">Your entire operation</div>
-      <div id="dScrim" class="abs" style="left:0;right:0;top:700px;height:380px;background:radial-gradient(ellipse 55% 60% at 50% 62%, rgba(0,4,30,0.85) 0%, rgba(0,4,30,0) 100%)"></div>
-      <div id="dBig" class="abs sora gold-text" style="left:0;right:0;top:830px;text-align:center;font-weight:800;font-size:120px;letter-spacing:-0.01em">In one place.</div>
+    <!-- APP windows are built into these scenes by Win -->
+    <div id="sC1" class="scene"></div>
+    <div id="sS1" class="scene"></div>
+    <div id="sS2" class="scene"></div>
+    <div id="sC2" class="scene">
+      <div id="c2Beam" class="abs" style="left:900px;top:500px;width:120px;height:6px;margin-top:-3px;border-radius:3px;background:linear-gradient(90deg,#f1c85a,#fff6d8,#f1c85a);box-shadow:0 0 30px #f1c85a;opacity:0"></div>
+      <div id="c2L" class="chip" style="left:70px;top:78px"><span class="dot">M</span><span>You · Client portal</span></div>
+      <div id="c2R" class="chip team" style="left:980px;top:78px"><span class="dot">WF</span><span>Wolf Forge · Team</span></div>
+      <div id="c2Big" class="abs big" style="left:0;right:0;top:952px;text-align:center"><span class="gold-text">Every message, one place.</span></div>
     </div>
-
-    <!-- EXPLODE · 14.5–18.0  The real dashboard, in layers -->
-    <div id="sE" class="scene persp" style="perspective:2600px">
+    <div id="sC3" class="scene"></div>
+    <div id="sE" class="scene" style="perspective:2600px">
       <div id="eRig" class="abs p3d" style="left:160px;top:40px;width:1600px;height:1000px"></div>
-      <div id="eText1" class="abs sora" style="left:120px;top:110px;font-weight:800;font-size:92px;letter-spacing:-0.02em">Built in layers.</div>
-      <div id="eText2" class="abs sora gold-text" style="right:120px;top:52px;font-weight:800;font-size:92px;letter-spacing:-0.02em;text-align:right">Engineered to move.</div>
+      <div id="eText1" class="abs big" style="left:120px;top:70px">Every task, tracked.</div>
+      <div id="eText2" class="abs big gold-text" style="right:120px;top:70px;text-align:right">Watch the work move.</div>
     </div>
+    <div id="sI" class="scene"></div>
+    <div id="sR" class="scene"></div>
 
-    <!-- DEVICES · 18.0–20.0  Desktop, then real mobile renders -->
-    <div id="sF" class="scene persp">
-      <div id="fDesk" class="abs p3d" style="left:110px;top:180px;width:1180px;height:738px">
-        <div class="screen" style="inset:0"><img src="captures/dashboard.jpg" /></div>
-      </div>
-      <div id="fPhone1" class="phoneFrame" style="left:1150px;top:130px"><img src="captures/m-dashboard.jpg" /><div class="notch"></div></div>
-      <div id="fPhone2" class="phoneFrame" style="left:1450px;top:200px;transform-origin:50% 100%"><img src="captures/m-orders.jpg" /><div class="notch"></div></div>
-      <div id="fK1" class="abs kicker" style="left:116px;top:106px;font-size:22px">Desktop</div>
-      <div id="fK2" class="abs kicker" style="left:1156px;top:62px;font-size:22px;color:#f1c85a">Mobile</div>
-    </div>
-
-    <!-- LOCKUP · 23.5–28.0 -->
-    <div id="sH" class="scene">
-      <div id="hRing" class="abs" style="left:960px;top:540px;width:10px;height:10px;border-radius:50%;border:3px solid #f1c85a"></div>
-      <div id="hIconWrap" class="abs" style="left:770px;top:350px;width:380px;height:380px">
-        <div id="hGlow" class="abs" style="inset:-160px;border-radius:50%;background:radial-gradient(circle, rgba(241,200,90,0.55) 0%, rgba(217,169,47,0.18) 38%, rgba(217,169,47,0) 70%)"></div>
-        <div class="abs" style="inset:0;border-radius:86px;overflow:hidden;box-shadow:0 0 0 2px rgba(241,200,90,0.7), 0 50px 120px rgba(0,0,0,0.7)">
+    <!-- L · lockup + call to action -->
+    <div id="sL" class="scene">
+      <div id="hRing" class="abs" style="left:960px;top:480px;width:10px;height:10px;border-radius:50%;border:3px solid #f1c85a"></div>
+      <div id="hIconWrap" class="abs" style="left:790px;top:250px;width:340px;height:340px">
+        <div id="hGlow" class="abs" style="inset:-150px;border-radius:50%;background:radial-gradient(circle, rgba(241,200,90,0.55) 0%, rgba(217,169,47,0.18) 38%, rgba(217,169,47,0) 70%)"></div>
+        <div class="abs" style="inset:0;border-radius:78px;overflow:hidden;box-shadow:0 0 0 2px rgba(241,200,90,0.7), 0 50px 120px rgba(0,0,0,0.7)">
           <img src="/public/branding/app-512.png" style="width:100%;height:100%;display:block" />
           <div id="hSweep" class="abs" style="top:-40%;bottom:-40%;width:42%;background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,246,216,0.75) 50%, rgba(255,255,255,0) 100%);transform:rotate(20deg);mix-blend-mode:screen"></div>
         </div>
       </div>
-      <div id="hWordWrap" class="abs" style="left:900px;top:395px;width:960px;height:300px;overflow:hidden">
-        <div id="hWord" class="sora gold-text" style="font-weight:800;font-size:150px;line-height:1;letter-spacing:-0.02em;white-space:nowrap">Wolf Forge</div>
-        <div id="hPortal" class="sora" style="font-weight:300;font-size:58px;letter-spacing:0.95em;margin-top:20px;color:#f8f9ff;white-space:nowrap">PORTAL</div>
+      <div id="hWordWrap" class="abs" style="left:880px;top:285px;width:960px;height:280px;overflow:hidden">
+        <div id="hWord" class="sora gold-text" style="font-weight:800;font-size:140px;line-height:1;letter-spacing:-0.02em;white-space:nowrap">Wolf Forge</div>
+        <div id="hPortal" class="sora" style="font-weight:300;font-size:54px;letter-spacing:0.95em;margin-top:18px;color:#f8f9ff;white-space:nowrap">PORTAL</div>
       </div>
-      <div id="hTag" class="abs kicker" style="left:0;right:0;top:850px;text-align:center;font-size:28px;color:#f1c85a">Lead the pack.</div>
+      <div id="hCta" class="abs sora" style="left:0;right:0;top:700px;text-align:center;font-weight:700;font-size:64px;letter-spacing:-0.01em">Start your project today.</div>
+      <div id="hUrlWrap" class="abs" style="left:0;right:0;top:810px;text-align:center"><span id="hUrl" class="url"><span style="color:#f1c85a">→</span>portal.wolfforge.com</span></div>
     </div>
+
+    <!-- overlays that ride above every scene -->
+    <div id="pov" class="chip" style="left:64px;top:52px"><span id="povDot" class="dot">M</span><span id="povTxt">You · Client portal</span></div>
+    <div id="lt" class="lt"><span id="ltIdx" class="idx">01</span><span id="ltLbl" class="lbl gold-text">Your portal</span></div>
+    <div id="bigLine" class="abs big" style="left:0;right:0;top:952px;text-align:center"></div>
   </div>
 
   <div id="flash"></div>
@@ -181,84 +188,7 @@ const E = {
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let r = Math.imul(s ^ (s >>> 15), 1 | s); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
 const $ = (id) => document.getElementById(id);
 const st = (el, css) => { for (const k in css) el.style[k] = css[k]; };
-
-// ---------- timeline (seconds) — cuts land on the 120 BPM grid of the score ----------
-const DURATION = 28;
-const SCENES = { sA: [0, 3.5], sB: [3.5, 5.0], sApp: [[5.0, 11.0], [20.0, 23.5]], sD: [11.0, 14.5], sE: [14.5, 18.0], sF: [18.0, 20.0], sH: [23.5, DURATION + 0.01] };
-// Spoken-word cues from the placed voice-over (printed by audio/mix.py)
-const CUE = { projects: 7.2, tickets: 8.25, clients: 9.11, billing: 10.02, place: 13.13, layers: 14.6, engineered: 16.21, desktop: 18.15, mobile: 19.13, brand: 20.9, colors: 21.96, portal: 23.8, lead: 25.55 };
-// POV clicks (no VO) and every hit that flashes / shakes the frame: [time, strength]
-const CLICK = { home: 10.85, settings: 20.4 };
-const HITS = [[3.5, 1.0], [5.0, 0.3], [11.0, 0.3], [14.5, 0.3], [16.21, 0.55], [18.0, 0.3], [19.13, 0.25], [20.0, 0.25], [CUE.colors, 0.3], [23.5, 1.0]];
-
-// ---------- app camera ----------
-// Page coordinates are the 1440x900 CSS pixels the screens were captured at.
-// zoom 1 shows the whole app 1600px wide; rx/ry tilt the frame in 3D.
-const NAV = { dashboard: [112, 142], projects: [104, 209], tickets: [100, 249], clients: [100, 329], invoices: [104, 436], settings: [100, 810] };
-const VIEW = {
-  full: [720, 450, 1, 0, 0],
-  nav: [600, 430, 1.14, 0, 0],
-  far: [720, 450, 0.5, 24, -20],
-  kpi: [835, 300, 1.7, 0, 0],
-  revenue: [470, 290, 2.3, 0, 0],
-  projects: [790, 420, 1.5, 0, 0],
-  tickets: [860, 520, 1.55, 0, 0],
-  clients: [790, 540, 1.4, 0, 0],
-  invoices: [760, 520, 1.65, 0, 0],
-  navLow: [470, 640, 1.45, 0, 0],
-  settingsTabs: [440, 300, 2.0, 0, 0],
-  brand: [330, 250, 1.75, 0, 0],
-  wlFull: [720, 450, 1.02, 4, 3],
-  push: [720, 470, 3.2, 0, 0],
-};
-// [time, view, easing into this key]
-const CAM = [
-  [5.0, 'far'], [5.85, 'full', 'outExpo'], [6.25, 'full'], [6.75, 'revenue', 'inOutExpo'], [6.95, 'revenue'],
-  [7.15, 'nav', 'inOutCubic'],
-  [CUE.projects + 0.08, 'nav'], [CUE.projects + 0.5, 'projects', 'inOutExpo'], [CUE.tickets - 0.38, 'projects'],
-  [CUE.tickets - 0.05, 'nav', 'inOutCubic'], [CUE.tickets + 0.08, 'nav'], [CUE.tickets + 0.5, 'tickets', 'inOutExpo'], [CUE.clients - 0.36, 'tickets'],
-  [CUE.clients - 0.05, 'nav', 'inOutCubic'], [CUE.clients + 0.08, 'nav'], [CUE.clients + 0.5, 'clients', 'inOutExpo'], [CUE.billing - 0.36, 'clients'],
-  [CUE.billing - 0.05, 'nav', 'inOutCubic'], [CUE.billing + 0.08, 'nav'], [CUE.billing + 0.48, 'invoices', 'inOutExpo'], [CLICK.home - 0.4, 'invoices'],
-  [CLICK.home - 0.05, 'nav', 'inOutCubic'], [CLICK.home + 0.05, 'nav'], [11.0, 'full', 'inOutCubic'],
-  // second walkthrough: Settings → White Label
-  [20.0, 'full'], [20.3, 'navLow', 'outExpo'], [CLICK.settings + 0.05, 'navLow'], [CLICK.settings + 0.4, 'settingsTabs', 'inOutExpo'],
-  [CUE.brand - 0.02, 'settingsTabs'], [CUE.brand + 0.02, 'brand', 'linear'], [CUE.colors - 0.1, 'brand'], [CUE.colors + 0.55, 'wlFull', 'inOutCubic'],
-  [22.95, 'wlFull'], [23.5, 'push', 'inExpo'],
-];
-function camAt(t) {
-  let i = 0;
-  while (i < CAM.length - 1 && CAM[i + 1][0] <= t) i++;
-  const a = CAM[i], b = CAM[Math.min(i + 1, CAM.length - 1)];
-  const k = b === a ? 0 : (E[b[2] || 'inOutCubic'])(prog(t, a[0], b[0]));
-  return VIEW[a[1]].map((v, j) => lerp(v, VIEW[b[1]][j], k));
-}
-// Which screen is showing: [from time, page]
-const PAGES = [[0, 'dashboard'], [CUE.projects + 0.06, 'orders'], [CUE.tickets + 0.06, 'tickets'], [CUE.clients + 0.06, 'clients'], [CUE.billing + 0.06, 'invoices'],
-  [CLICK.home + 0.06, 'dashboard'], [20.0, 'dashboard'], [CLICK.settings + 0.06, 'settings'], [CUE.brand, 'wl']];
-// Cursor path in page coords: [time, x, y]; clicks ripple on arrival
-const CURSOR = [
-  [5.9, 1000, 760], [6.6, 540, 330], [6.95, 520, 320],
-  [CUE.projects - 0.02, ...NAV.projects], [CUE.projects + 0.45, 300, 420],
-  [CUE.tickets - 0.02, ...NAV.tickets], [CUE.tickets + 0.45, 300, 520],
-  [CUE.clients - 0.02, ...NAV.clients], [CUE.clients + 0.45, 300, 560],
-  [CUE.billing - 0.02, ...NAV.invoices], [CUE.billing + 0.45, 330, 560],
-  [CLICK.home - 0.02, ...NAV.dashboard], [11.0, 300, 300],
-  [20.0, 600, 560], [CLICK.settings - 0.02, ...NAV.settings], [CLICK.settings + 0.4, 360, 380], [CUE.brand, 360, 380], [CUE.brand + 0.4, 300, 175], [CUE.colors + 0.6, 520, 420],
-];
-const CLICKS = [CUE.projects, CUE.tickets, CUE.clients, CUE.billing, CLICK.home, CLICK.settings, CUE.colors - 0.08];
-// Gold focus rings on what the camera is looking at: [from, to, x0, y0, x1, y1]
-const RINGS = [
-  [6.6, 7.05, 271, 184, 544, 369],
-  [CUE.projects + 0.45, CUE.tickets - 0.35, 1098, 300, 1206, 332],
-  [CUE.tickets + 0.45, CUE.clients - 0.33, 848, 512, 916, 541],
-  [CUE.clients + 0.45, CUE.billing - 0.33, 1205, 607, 1282, 633],
-  [CUE.billing + 0.42, CLICK.home - 0.35, 694, 499, 746, 523],
-  [CLICK.settings + 0.35, CUE.brand - 0.05, 340, 168, 535, 196],
-];
-// Lower thirds: the user's path through the app
-const LT = [[5.85, CUE.projects, '01', 'Dashboard'], [CUE.projects, CUE.tickets, '02', 'Projects'], [CUE.tickets, CUE.clients, '03', 'Tickets'],
-  [CUE.clients, CUE.billing, '04', 'Clients'], [CUE.billing, CLICK.home, '05', 'Billing'], [CLICK.settings, CUE.brand, '06', 'Settings']];
-
+const el = (tag, cls, parent, css) => { const e = document.createElement(tag); if (cls) e.className = cls; if (css) st(e, css); parent.appendChild(e); return e; };
 function track(path, t) {
   if (t <= path[0][0]) return path[0].slice(1);
   for (let i = 0; i < path.length - 1; i++) {
@@ -268,16 +198,131 @@ function track(path, t) {
   return path[path.length - 1].slice(1);
 }
 
-// ---------- text helpers ----------
-function splitChars(el, text) {
-  el.innerHTML = '';
-  return [...text].map((ch) => { const s = document.createElement('span'); s.className = 'char'; s.textContent = ch === ' ' ? ' ' : ch; el.appendChild(s); return s; });
+// ---------- app windows ----------
+// A Win is one app screen on stage with its own camera. Page coordinates are the CSS
+// pixels the screens were captured at (1440 wide; long pages are taller). The camera
+// key [t, cx, cy, zoom, rx, ry, ease] puts page point (cx, cy) at the window centre;
+// zoom 1 fits the 1440px page into `fit` stage pixels. Pages switch with a fade, or a
+// whip for a change of point of view; pops reveal a message bubble by covering it until
+// its time, then scaling in a crop of the very same pixels.
+const S = 'captures/story/';
+class Win {
+  constructor(scene, spec) {
+    Object.assign(this, { box: [0, 0, 1920, 1080], fit: 1600, clip: false, cam: [], show: [], pops: [], rings: [], cursor: null, clicks: [], outer: null }, spec);
+    const [x, y, w, h] = this.box;
+    this.root = el('div', 'win' + (this.clip ? ' clip' : ''), $(scene), { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    this.card = el('div', 'card', this.root);
+    this.pg = {};
+    for (const [name, [src, ph]] of Object.entries(this.pages)) {
+      const p = el('div', 'pg', this.card, { height: ph + 'px' });
+      el('img', '', p).src = S + src;
+      this.pg[name] = p;
+    }
+    this.card.style.height = Math.max(...Object.values(this.pages).map((p) => p[1])) + 'px';
+    for (const pop of this.pops) {
+      const [x0, y0, x1, y1] = pop.box, host = this.pg[pop.page];
+      pop.cover = el('div', 'cover', host, { left: x0 + 'px', top: y0 + 'px', width: x1 - x0 + 'px', height: y1 - y0 + 'px', background: pop.bg || '#fff' });
+      pop.crop = el('div', 'crop', host, { left: x0 + 'px', top: y0 + 'px', width: x1 - x0 + 'px', height: y1 - y0 + 'px', transformOrigin: pop.origin || '50% 100%' });
+      const img = el('img', '', pop.crop, { left: -x0 + 'px', top: -y0 + 'px' }); img.src = S + this.pages[pop.page][0];
+    }
+    this.ring = el('div', 'ring', this.card);
+    this.ripple = el('div', 'ripple', this.card);
+    if (this.cursor) {
+      this.cur = el('div', '', this.card, { position: 'absolute', left: 0, top: 0 });
+      this.cur.innerHTML = '<svg class="cursor" viewBox="0 0 30 30"><path d="M3 2 L3 24 L9 18.5 L13 27 L17 25.2 L13 16.8 L21 16.8 Z" fill="#fff" stroke="#0b1033" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+    }
+  }
+  camAt(t) {
+    const K = this.cam; let i = 0;
+    while (i < K.length - 1 && K[i + 1][0] <= t) i++;
+    const a = K[i], b = K[Math.min(i + 1, K.length - 1)];
+    const k = b === a ? 0 : E[b[6] || 'inOutCubic'](prog(t, a[0], b[0]));
+    return [1, 2, 3, 4, 5].map((j) => lerp(a[j] ?? 0, b[j] ?? 0, k));
+  }
+  pose(t) {
+    const [x, y, w, h] = this.box;
+    const [cx, cy, z, rx, ry] = this.camAt(t);
+    const scale = z * (this.clip ? w : this.fit) / 1440;
+    const ox = this.clip ? w / 2 : 960 - x, oy = this.clip ? h / 2 : 540 - y;
+    st(this.card, { transform: `translate(${ox}px, ${oy}px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${scale}) translate(${-cx}px, ${-cy}px)` });
+    // pages
+    let cur = this.show[0], prev = null;
+    for (const s of this.show) if (t >= s[0]) { prev = cur === s ? prev : cur; cur = s; }
+    if (prev === cur) prev = null;
+    const k = prev ? E.outCubic(prog(t, cur[0], cur[0] + (cur[2] === 'whip' ? 0.3 : 0.16))) : 1;
+    for (const [name, p] of Object.entries(this.pg)) {
+      let css = { opacity: '0', transform: 'none', filter: 'none', zIndex: '1' };
+      if (name === cur[1]) css = cur[2] === 'whip' && prev
+        ? { opacity: String(k), transform: `translateX(${(1 - k) * 260}px)`, filter: `blur(${(1 - k) * 14}px)`, zIndex: '2' }
+        : { opacity: String(k), transform: 'none', filter: 'none', zIndex: '2' };
+      else if (prev && name === prev[1] && k < 1) css = cur[2] === 'whip'
+        ? { opacity: String(1 - k), transform: `translateX(${-k * 260}px)`, filter: `blur(${k * 14}px)`, zIndex: '1' }
+        : { opacity: '1', transform: 'none', filter: 'none', zIndex: '1' };
+      st(p, css);
+    }
+    // pops
+    for (const pop of this.pops) {
+      const r = prog(t, pop.t, pop.t + 0.4), kk = E.outBack(r);
+      pop.cover.style.opacity = t < pop.t ? '1' : '0';
+      st(pop.crop, { opacity: String(t < pop.t ? 0 : clamp(r * 3)), transform: `translateY(${(1 - kk) * 16}px) scale(${lerp(0.82, 1, kk)})`,
+        boxShadow: `0 0 0 ${2 * (1 - r)}px rgba(241,200,90,${0.9 * (1 - r)}), 0 0 ${30 * (1 - r)}px rgba(241,200,90,${0.7 * (1 - r)})` });
+    }
+    // focus ring
+    let ring = null;
+    for (const r of this.rings) if (t >= r[0] - 0.05 && t < r[1] + 0.15) ring = r;
+    if (ring) {
+      const kk = E.outBack(prog(t, ring[0], ring[0] + 0.25)) * (1 - prog(t, ring[1], ring[1] + 0.15)), pad = 7;
+      st(this.ring, { left: ring[2] - pad + 'px', top: ring[3] - pad + 'px', width: ring[4] - ring[2] + pad * 2 + 'px', height: ring[5] - ring[3] + pad * 2 + 'px',
+        opacity: String(clamp(kk)), transform: `scale(${lerp(1.15, 1, clamp(kk))})`, zIndex: '8', borderWidth: 2.5 / scale * 1.4 + 'px' });
+    } else this.ring.style.opacity = '0';
+    // cursor + click ripple (constant on-screen size)
+    if (this.cur) {
+      const [mx, my] = track(this.cursor.path, t);
+      let press = 0, rip = -1;
+      for (const c of this.clicks) { const d = t - c; if (d > -0.05 && d < 0.5) { press = Math.max(press, d < 0.12 ? Math.sin(prog(d, -0.05, 0.12) * Math.PI) : 0); if (d >= 0) rip = d; } }
+      const on = t >= this.cursor.on[0] && t < this.cursor.on[1];
+      st(this.cur, { transform: `translate(${mx}px, ${my}px) scale(${(1 - press * 0.18) / scale})`, opacity: on ? '1' : '0', zIndex: '9' });
+      if (rip >= 0) {
+        const kk = E.outCubic(prog(rip, 0, 0.5));
+        st(this.ripple, { left: mx + 'px', top: my + 'px', opacity: String((1 - kk) * 0.9), transform: `scale(${(1 + kk * 6) / scale})`, zIndex: '9' });
+      } else this.ripple.style.opacity = '0';
+    }
+    if (this.outer) st(this.root, this.outer(t));
+  }
 }
-const bTop = splitChars($('bTitleTop'), 'WOLF FORGE');
-bTop.forEach((s) => s.classList.add('gold-text'));
-const bBot = splitChars($('bTitleBot'), 'PORTAL');
 
-// ---------- mesh gradient ----------
+// ---------- shared overlays ----------
+const POV_CLIENT = ['M', 'You · Client portal', ''], POV_TEAM = ['WF', 'Wolf Forge · Team', 'team'], POV_PHONE = ['M', 'You · On your phone', ''];
+let TL, CUE, WINS = [], SCENES, POV, LT, BIG;
+
+function poseOverlays(t) {
+  // point-of-view chip, flips when the side changes
+  let p = null;
+  for (const v of POV) if (t >= v[0] && t < v[1]) p = v;
+  if (p) {
+    const k = E.outBack(prog(t, p[0], p[0] + 0.35)) * (1 - prog(t, p[1] - 0.2, p[1]));
+    $('povDot').textContent = p[2][0]; $('povTxt').textContent = p[2][1]; $('pov').className = 'chip ' + p[2][2];
+    st($('pov'), { opacity: String(clamp(k)), transform: `rotateX(${(1 - clamp(k)) * 90}deg)` });
+  } else $('pov').style.opacity = '0';
+  // chapter lower third
+  let l = null;
+  for (const v of LT) if (t >= v[0] && t < v[1]) l = v;
+  if (l) {
+    const k = E.outExpo(prog(t, l[0], l[0] + 0.35)) * (1 - prog(t, l[1] - 0.2, l[1]));
+    $('ltIdx').textContent = l[2]; $('ltLbl').textContent = l[3];
+    st($('lt'), { opacity: String(k), transform: `translateX(${lerp(-60, 0, k)}px)` });
+  } else $('lt').style.opacity = '0';
+  // spoken line, big type
+  let b = null;
+  for (const v of BIG) if (t >= v[0] && t < v[1]) b = v;
+  if (b) {
+    const k = E.outExpo(prog(t, b[0], b[0] + 0.45)), o = prog(t, b[1] - 0.25, b[1]);
+    $('bigLine').innerHTML = b[2];
+    st($('bigLine'), { opacity: String(k * (1 - o)), transform: `translateY(${lerp(50, 0, k)}px)`, filter: `blur(${(1 - k) * 10 + o * 8}px)` });
+  } else $('bigLine').style.opacity = '0';
+}
+
+// ---------- background: mesh gradient, embers, grain ----------
 const mesh = $('mesh').getContext('2d');
 function drawMesh(t, mood) {
   const W = 480, H = 270;
@@ -285,15 +330,13 @@ function drawMesh(t, mood) {
   mesh.fillStyle = '#01041f'; mesh.fillRect(0, 0, W, H);
   const blobs = [
     { c: [0, 13, 81], a: 0.95, r: 260, x: 0.3 + 0.12 * Math.sin(t * 0.31), y: 0.4 + 0.15 * Math.cos(t * 0.27) },
-    { c: [27, 60, 255], a: 0.42 * mood.blue, r: 210, x: 0.78 + 0.1 * Math.cos(t * 0.23 + 1), y: 0.3 + 0.14 * Math.sin(t * 0.37) },
+    { c: [27, 60, 255], a: 0.42, r: 210, x: 0.78 + 0.1 * Math.cos(t * 0.23 + 1), y: 0.3 + 0.14 * Math.sin(t * 0.37) },
     { c: [217, 169, 47], a: 0.30 * mood.gold, r: 170, x: 0.55 + 0.18 * Math.sin(t * 0.19 + 2), y: 0.78 + 0.08 * Math.cos(t * 0.41) },
     { c: [58, 31, 140], a: 0.35, r: 190, x: 0.12 + 0.08 * Math.cos(t * 0.29 + 3), y: 0.85 + 0.1 * Math.sin(t * 0.33) },
-    { c: [23, 92, 64], a: 0.55 * mood.green, r: 240, x: 0.5 + 0.2 * Math.sin(t * 0.5), y: 0.5 + 0.1 * Math.cos(t * 0.45) },
-    { c: [62, 108, 255], a: 0.22 * mood.blue, r: 150, x: 0.92 + 0.05 * Math.sin(t * 0.6), y: 0.88 + 0.06 * Math.cos(t * 0.52) },
+    { c: [62, 108, 255], a: 0.22, r: 150, x: 0.92 + 0.05 * Math.sin(t * 0.6), y: 0.88 + 0.06 * Math.cos(t * 0.52) },
   ];
   mesh.globalCompositeOperation = 'lighter';
   for (const b of blobs) {
-    if (b.a <= 0.001) continue;
     const g = mesh.createRadialGradient(b.x * W, b.y * H, 0, b.x * W, b.y * H, b.r);
     g.addColorStop(0, `rgba(${b.c},${b.a})`); g.addColorStop(0.55, `rgba(${b.c},${b.a * 0.35})`); g.addColorStop(1, `rgba(${b.c},0)`);
     mesh.fillStyle = g; mesh.fillRect(0, 0, W, H);
@@ -301,8 +344,6 @@ function drawMesh(t, mood) {
   mesh.globalCompositeOperation = 'source-over';
   mesh.fillStyle = `rgba(0,0,0,${1 - mood.bright})`; mesh.fillRect(0, 0, W, H);
 }
-
-// ---------- embers ----------
 const emb = $('embers').getContext('2d');
 const EMBERS = (() => { const r = rng(7); return Array.from({ length: 150 }, () => ({ x: r() * 1920, y: r() * 1300, sp: 30 + r() * 120, sz: 0.8 + r() * 2.6, ph: r() * 6.28, sw: 10 + r() * 40, f: 0.3 + r() * 1.2, tw: 1 + r() * 4 })); })();
 function drawEmbers(t, amount, boost) {
@@ -318,77 +359,170 @@ function drawEmbers(t, amount, boost) {
     emb.fillStyle = g; emb.fillRect(x - r, y - r, r * 2, r * 2);
   }
 }
-
-// ---------- film grain (pre-baked plates, a new one every frame) ----------
 const grain = $('grain').getContext('2d');
 const PLATES = (() => { const out = []; const r = rng(99); for (let i = 0; i < 10; i++) { const im = grain.createImageData(960, 540); const d = im.data; for (let j = 0; j < d.length; j += 4) { const v = 128 + (r() + r() + r() - 1.5) * 150; d[j] = d[j + 1] = d[j + 2] = v; d[j + 3] = 255; } out.push(im); } return out; })();
 
-// ---------- builders ----------
-// WALL: every captured page around the dashboard
-const D_IMGS = ['orders', 'tickets', 'clients', 'invoices', 'services', 'team', 'settings'];
-const D_TILE = 720, D_FULL = 1600 / D_TILE;
-const D_TILES = [];
-(() => {
-  const plane = $('dPlane'); let k = 0;
-  for (let r = -2; r <= 2; r++) for (let c = -3; c <= 3; c++) {
-    const center = r === 0 && c === 0;
-    const src = center ? 'dashboard' : D_IMGS[k++ % D_IMGS.length];
-    const d = document.createElement('div'); d.className = 'screen'; d.style.width = D_TILE + 'px'; d.style.height = D_TILE * 0.625 + 'px'; d.style.borderRadius = '10px';
-    d.innerHTML = `<img src="captures/${src}.jpg">`; plane.appendChild(d);
-    D_TILES.push({ el: d, r, c, center, seed: rng(r * 31 + c * 7 + 100)() });
+// ---------- the story ----------
+function build() {
+  const C = CUE;
+  const NAV = { investments: [95, 461] };
+  const enter = (t0, t1, from = 1400) => (t) => {
+    const k = E.outExpo(prog(t, t0, t0 + 0.45)), x = E.inExpo(prog(t, t1 - 0.3, t1));
+    return { transform: `translateX(${(1 - k) * from - x * 1600}px)`, filter: `blur(${(1 - k) * 12 + x * 12}px)`, opacity: String(clamp(k * 1.4)) };
+  };
+
+  // C1 · the client portal: Dashboard → Store → SEO Growth Plan → "Talk to your team"
+  WINS.push(new Win('sC1', {
+    pages: { home: ['c-home.jpg', 900], store: ['c-store.jpg', 900], item: ['c-store-item.jpg', 900] },
+    cam: [[10.5, 720, 450, 0.55, 22, -18], [11.25, 720, 450, 1, 0, 0, 'outExpo'], [11.7, 720, 450, 1], [12.25, 560, 440, 1.15], [12.75, 560, 440, 1.15],
+      [13.2, 860, 250, 1.45, 0, 0, 'inOutExpo'], [13.45, 860, 250, 1.45], [13.85, 1110, 470, 1.75, 0, 0, 'inOutExpo'], [15.2, 1110, 470, 1.8, 0, 0, 'linear'],
+      [15.9, 720, 450, 1.0], [16.5, 720, 450, 0.92]],
+    show: [[0, 'home'], [C.pick + 0.06, 'store'], [13.45, 'item']],
+    cursor: { on: [11.3, 15.8], path: [[11.3, 900, 650], [12.6, ...NAV.investments], [13.2, 600, 400], [13.5, 950, 640], [14.55, 1180, 584], [15.8, 1100, 650]] },
+    clicks: [C.pick, 14.6],
+    rings: [[13.9, 14.4, 1061, 345, 1303, 379], [14.45, 15.5, 1061, 563, 1303, 605]],
+  }));
+  // S1 · the team side: the project lands in Projects, already assigned
+  WINS.push(new Win('sS1', {
+    pages: { orders: ['s-orders.jpg', 900] },
+    cam: [[16.5, 720, 450, 1], [17.2, 720, 450, 1], [17.85, 700, 330, 1.7, 0, 0, 'inOutExpo'], [19.55, 720, 330, 1.75, 0, 0, 'linear'], [20.1, 900, 330, 2.1, 0, 0, 'inOutExpo'], [21.0, 900, 330, 2.15, 0, 0, 'linear'], [21.5, 720, 450, 1.0]],
+    show: [[0, 'orders']],
+    pops: [{ page: 'orders', box: [274, 288, 1402, 352], t: C.live, origin: '0% 50%' }],
+    rings: [[C.live + 0.15, C.team - 0.1, 274, 288, 1402, 352], [C.team, 21.0, 912, 300, 1011, 336]],
+    outer: enter(16.5, 21.5),
+  }));
+  // S2 · the team's own chat about the new project
+  WINS.push(new Win('sS2', {
+    pages: { team: ['s-inbox-team.jpg', 900] },
+    cam: [[21.5, 720, 450, 1], [22.1, 1130, 320, 1.6, 0, 0, 'inOutExpo'], [25.6, 1150, 330, 1.75, 0, 0, 'linear'], [26.5, 1000, 400, 1.2]],
+    show: [[0, 'team']],
+    pops: [
+      { page: 'team', box: [994, 164, 1414, 228], t: 22.3, origin: '100% 100%' },
+      { page: 'team', box: [846, 234, 1180, 314], t: C.planning, origin: '0% 100%' },
+      { page: 'team', box: [846, 321, 1246, 401], t: 23.9, origin: '0% 100%' },
+      { page: 'team', box: [1146, 437, 1414, 500], t: 25.0, origin: '100% 100%' },
+    ],
+    outer: enter(21.5, 26.5, -1400),
+  }));
+  // C2 · the project chat, client and team side by side
+  const L = new Win('sC2', {
+    box: [70, 150, 870, 700], clip: true,
+    pages: { p: ['c-project.jpg', 1443] },
+    cam: [[26.5, 720, 520, 1.0], [27.7, 840, 965, 1.28], [31.5, 860, 990, 1.32, 0, 0, 'linear'], [32.4, 840, 960, 1.2]],
+    show: [[0, 'p']],
+    pops: [
+      { page: 'p', box: [376, 808, 1015, 912], t: 27.8, origin: '0% 100%' },
+      { page: 'p', box: [695, 935, 1313, 982], t: C.ask, origin: '100% 100%' },
+      { page: 'p', box: [376, 990, 935, 1074], t: C.approve + 0.35, origin: '0% 100%' },
+      { page: 'p', box: [1092, 1100, 1313, 1146], t: C.share, origin: '100% 100%' },
+    ],
+  });
+  const R = new Win('sC2', {
+    box: [980, 150, 870, 700], clip: true,
+    pages: { p: ['s-project.jpg', 1598] },
+    cam: [[26.5, 720, 520, 1.0], [27.7, 640, 760, 1.28], [31.5, 630, 780, 1.32, 0, 0, 'linear'], [32.4, 640, 760, 1.2]],
+    show: [[0, 'p']],
+    pops: [
+      { page: 'p', box: [506, 559, 980, 649], t: 27.95, origin: '100% 100%' },
+      { page: 'p', box: [280, 672, 762, 786], t: C.ask + 0.35, origin: '0% 100%' },
+      { page: 'p', box: [280, 789, 762, 902], t: C.approve, origin: '0% 100%' },
+      { page: 'p', box: [280, 908, 512, 994], t: C.share + 0.35, origin: '0% 100%' },
+    ],
+  });
+  const split = (side) => (t) => {
+    const k = E.outExpo(prog(t, 26.5, 27.1)), m = E.inOutCubic(prog(t, C.every - 0.1, C.onePlace)), x = E.inExpo(prog(t, 33.7, 34.0));
+    return { transform: `translateY(${(1 - k) * 900}px) translateX(${side * m * 60}px) scale(${lerp(1, 0.94, m) + x * 0.2})`, opacity: String(1 - x), filter: `blur(${x * 10}px)` };
+  };
+  L.outer = split(1); R.outer = split(-1);
+  WINS.push(L, R);
+  // C3 · a support ticket: the client asks, a person on the team replies
+  WINS.push(new Win('sC3', {
+    pages: { client: ['c-ticket.jpg', 900], team: ['s-inbox-ticket.jpg', 900] },
+    cam: [[34.0, 720, 450, 0.9], [34.6, 715, 410, 1.55, 0, 0, 'inOutExpo'], [36.15, 720, 400, 1.6, 0, 0, 'linear'], [36.45, 1040, 390, 1.45, 0, 0, 'inOutExpo'],
+      [38.5, 1040, 420, 1.55, 0, 0, 'linear'], [38.8, 715, 410, 1.55, 0, 0, 'inOutExpo'], [39.5, 715, 420, 1.62, 0, 0, 'linear']],
+    show: [[0, 'client'], [36.2, 'team', 'whip'], [38.55, 'client', 'whip']],
+    pops: [
+      { page: 'client', box: [590, 306, 1047, 378], t: C.send, origin: '100% 100%' },
+      { page: 'client', box: [376, 383, 838, 494], t: 38.8, origin: '0% 100%' },
+      { page: 'team', box: [845, 405, 1236, 668], t: C.person, origin: '0% 100%' },
+    ],
+    rings: [[C.person + 0.3, 38.3, 845, 405, 1236, 668]],
+    outer: enter(34.0, 39.5),
+  }));
+  // I · billing: Unpaid → one tap → Paid
+  WINS.push(new Win('sI', {
+    pages: { unpaid: ['c-invoice-unpaid.jpg', 900], paid: ['c-invoice-paid.jpg', 900] },
+    cam: [[44.0, 720, 450, 0.6, 20, 16], [44.6, 720, 450, 1.0, 0, 0, 'outExpo'], [45.0, 720, 450, 1.0], [45.45, 1060, 210, 1.9, 0, 0, 'inOutExpo'], [45.75, 1060, 210, 1.95],
+      [46.1, 760, 620, 1.3, 0, 0, 'inOutExpo'], [46.4, 760, 620, 1.3], [46.85, 1120, 300, 1.75, 0, 0, 'inOutExpo'], [48.9, 1120, 320, 1.85, 0, 0, 'linear'], [49.5, 720, 450, 1.1]],
+    show: [[0, 'unpaid'], [C.tap + 0.1, 'paid']],
+    cursor: { on: [45.7, 48.5], path: [[45.7, 1000, 450], [46.18, 590, 815], [47.0, 760, 640]] },
+    clicks: [C.tap],
+    rings: [[45.3, 46.0, 1258, 144, 1330, 179], [C.paid, 47.9, 1274, 144, 1330, 179], [47.95, 48.9, 1040, 444, 1330, 518]],
+    outer: enter(44.0, 49.5, -1400),
+  }));
+  // R · the monthly report, stepped through
+  WINS.push(new Win('sR', {
+    pages: { r0: ['c-report-0.jpg', 900], r1: ['c-report-1.jpg', 900], r2: ['c-report-2.jpg', 900], r3: ['c-report-3.jpg', 900] },
+    cam: [[49.5, 720, 450, 0.7, 18, -14], [50.1, 720, 450, 1.0, 0, 0, 'outExpo'], [50.6, 720, 450, 1.25], [51.3, 760, 420, 1.7, 0, 0, 'inOutExpo'], [53.9, 760, 425, 1.8, 0, 0, 'linear'], [54.45, 720, 450, 1.25], [55.0, 720, 450, 3.0, 0, 0, 'inExpo']],
+    show: [[0, 'r0'], [50.98, 'r1'], [52.28, 'r2'], [53.06, 'r3']],
+    cursor: { on: [50.3, 53.6], path: [[50.3, 820, 700], [50.85, 1096, 616], [51.3, 900, 560], [52.15, 1096, 597], [52.5, 1000, 560], [52.93, 1096, 597], [53.6, 1000, 650]] },
+    clicks: [50.9, 52.2, 52.98],
+    rings: [[51.2, 52.15, 615, 362, 780, 396], [52.35, 52.95, 618, 364, 726, 390], [53.1, 54.2, 618, 364, 680, 390]],
+    outer: (t) => ({ filter: `blur(${E.inExpo(prog(t, 54.6, 55.0)) * 10}px)` }),
+  }));
+
+  // EXPLODE: the client's project page in layers (top 900px of the capture)
+  const E_LAYERS = [
+    { box: [0, 0, 1440, 900], z: 0, base: true },
+    { box: [0, 0, 252, 900], z: 70, d: 0.0 },
+    { box: [740, 8, 1330, 62], z: 160, d: 0.06 },
+    { box: [362, 140, 1330, 245], z: 120, d: 0.04 },
+    { box: [364, 318, 1328, 424], z: 300, d: 0.12, hero: true },
+    { box: [364, 450, 1328, 600], z: 190, d: 0.1 },
+    { box: [364, 622, 1328, 900], z: 240, d: 0.16 },
+    { box: [376, 808, 1015, 900], z: 330, d: 0.22 },
+  ];
+  const ES = 1600 / 1440;
+  for (const Lr of E_LAYERS) {
+    const [x0, y0, x1, y1] = Lr.box; const d = el('div', '', $('eRig'), { position: 'absolute', overflow: 'hidden', borderRadius: Lr.base ? '16px' : '10px',
+      left: x0 * ES + 'px', top: y0 * ES + 'px', width: (x1 - x0) * ES + 'px', height: (y1 - y0) * ES + 'px', background: '#fff' });
+    const img = el('img', '', d, { position: 'absolute', left: -x0 * ES + 'px', top: -y0 * ES + 'px', width: 1440 * ES + 'px' }); img.src = S + 'c-project.jpg';
+    Lr.el = d;
   }
-})();
+  window.E_LAYERS = E_LAYERS;
 
-// EXPLODE: layers cut from the real dashboard capture (coords in 1440x900 page space)
-const E_SRC = 'captures/dashboard.jpg';
-const E_LAYERS = [
-  { box: [0, 0, 1440, 900], z: 0, base: true },
-  { box: [0, 0, 230, 900], z: 70, d: 0.0 },
-  { box: [860, 26, 1402, 78], z: 160, d: 0.06 },
-  { box: [268, 86, 820, 170], z: 120, d: 0.04 },
-  { box: [1288, 133, 1402, 168], z: 210, d: 0.1 },
-  { box: [271, 184, 544, 369], z: 260, d: 0.14 },
-  { box: [557, 184, 830, 369], z: 285, d: 0.17 },
-  { box: [843, 184, 1116, 369], z: 310, d: 0.2 },
-  { box: [1129, 184, 1402, 369], z: 335, d: 0.23 },
-  { box: [271, 385, 1402, 795], z: 150, d: 0.08 },
-  { box: [290, 500, 1385, 765], z: 240, d: 0.18 },
-  { box: [271, 811, 1033, 900], z: 190, d: 0.12 },
-  { box: [1045, 811, 1402, 900], z: 220, d: 0.15 },
-];
-const E_SCALE = 1600 / 1440;
-(() => {
-  const rig = $('eRig');
-  for (const L of E_LAYERS) {
-    const [x0, y0, x1, y1] = L.box; const d = document.createElement('div'); d.className = 'layer';
-    st(d, { left: x0 * E_SCALE + 'px', top: y0 * E_SCALE + 'px', width: (x1 - x0) * E_SCALE + 'px', height: (y1 - y0) * E_SCALE + 'px', borderRadius: L.base ? '16px' : '10px' });
-    d.innerHTML = `<img src="${E_SRC}" style="left:${-x0 * E_SCALE}px;top:${-y0 * E_SCALE}px;width:${1440 * E_SCALE}px;height:${900 * E_SCALE}px">`;
-    rig.appendChild(d); L.el = d;
-  }
-})();
+  SCENES = { sA: [0, 4.0], sB: [4.0, 6.0], sP: [6.0, 10.5], sC1: [10.5, 16.5], sS1: [16.5, 21.5], sS2: [21.5, 26.5], sC2: [26.5, 34.0], sC3: [34.0, 39.5], sE: [39.5, 44.0], sI: [44.0, 49.5], sR: [49.5, 55.0], sL: [55.0, TL.duration + 0.01] };
+  POV = [[6.3, 10.0, POV_PHONE], [10.6, 16.5, POV_CLIENT], [16.6, 26.5, POV_TEAM], [34.1, 36.2, POV_CLIENT], [36.2, 38.55, POV_TEAM], [38.55, 39.5, POV_CLIENT], [39.6, 49.5, POV_CLIENT], [49.6, 54.6, POV_CLIENT]];
+  LT = [[C.portal, 16.4, '01', 'Your portal'], [C.moment, 21.4, '02', 'Project live'], [C.behind, 26.4, '03', 'Team on it'], [C.inside, C.every - 0.1, '04', 'Project chat'],
+    [C.need, 39.4, '05', 'Support'], [C.task, 43.6, '06', 'Progress'], [C.billing, 49.4, '07', 'Billing'], [C.month, 54.5, '08', 'Results']];
+  BIG = [];
+}
 
-const APP_PAGES = [...document.querySelectorAll('#app > img')];
+// ---------- per-scene posing (the non-window scenes) ----------
+const bTop = [], bBot = [];
+function splitChars(node, text, into, gold) {
+  for (const ch of text) { const s = el('span', 'char' + (gold ? ' gold-text' : ''), node); s.textContent = ch === ' ' ? ' ' : ch; into.push(s); }
+}
+splitChars($('bTitleTop'), 'WOLF FORGE', bTop, true);
+splitChars($('bTitleBot'), 'PORTAL', bBot, false);
 
-// ---------- per-scene posing ----------
 function poseA(t) {
-  const k = prog(t, 0.1, 3.3);
-  const reveal = E.inOutCubic(prog(t, 0.15, 2.4));
-  const push = E.inExpo(prog(t, 3.05, 3.5));
-  const scale = lerp(1.22, 1.0, E.outCubic(k)) + push * 2.4;
+  const reveal = E.inOutCubic(prog(t, 0.15, 2.7));
+  const push = E.inExpo(prog(t, 3.55, 4.0));
+  const scale = lerp(1.22, 1.0, E.outCubic(prog(t, 0.1, 3.8))) + push * 2.4;
   st($('aWolfWrap'), { transform: `translateY(${-70 * (1 - push)}px) scale(${scale * 0.74})`, opacity: String(clamp(prog(t, 0.05, 0.9)) * (1 - push)), filter: `blur(${push * 18}px)` });
   const edge = lerp(-20, 120, reveal);
   const mask = `linear-gradient(100deg, #000 ${edge - 12}%, rgba(0,0,0,0) ${edge + 6}%)`;
   st($('aWolf'), { webkitMaskImage: mask, maskImage: mask });
-  const sweep = lerp(-30, 130, E.inOutCubic(prog(t, 0.4, 2.9)));
+  const sweep = lerp(-30, 130, E.inOutCubic(prog(t, 0.4, 3.2)));
   const band = `linear-gradient(100deg, rgba(0,0,0,0) ${sweep - 9}%, #000 ${sweep}%, rgba(0,0,0,0) ${sweep + 9}%)`;
   st($('aWolfGlow'), { webkitMaskImage: band, maskImage: band, opacity: '0.95' });
-  const l1 = E.outCubic(prog(t, 0.45, 1.3)), l2 = E.outCubic(prog(t, 1.3, 2.1)), out = prog(t, 2.95, 3.3);
+  const l1 = E.outCubic(prog(t, 0.55, 1.4)), l2 = E.outCubic(prog(t, 1.9, 2.7)), out = prog(t, 3.45, 3.8);
   st($('aLine1'), { opacity: String(l1 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l1) + 'em', filter: `blur(${(1 - l1) * 8}px)` });
   st($('aLine2'), { opacity: String(l2 * (1 - out)), letterSpacing: lerp(1.1, 0.55, l2) + 'em', filter: `blur(${(1 - l2) * 8}px)` });
 }
-
 function poseB(t) {
-  const lt = t - 3.5;
+  const lt = t - 4.0;
   bTop.forEach((s, i) => {
     const k = E.outExpo(prog(lt, i * 0.03, i * 0.03 + 0.4));
     st(s, { transform: `translateZ(${lerp(900, 0, k)}px) translateY(${lerp(40, 0, k)}px)`, opacity: String(clamp(k * 1.6)), filter: `blur(${(1 - k) * 22}px)` });
@@ -397,181 +531,119 @@ function poseB(t) {
     const k = E.outCubic(prog(lt, 0.3 + i * 0.05, 0.75 + i * 0.05));
     st(s, { opacity: String(k), transform: `translateY(${lerp(30, 0, k)}px)`, filter: `blur(${(1 - k) * 10}px)` });
   });
-  // the camera dives through the title into the app
-  const dive = E.inExpo(prog(t, 4.6, 5.0));
-  st($('bTitle'), { transform: `scale(${lerp(1, 1.05, prog(lt, 0, 1.1)) + dive * 5})`, opacity: String(1 - dive), filter: `blur(${dive * 16}px)` });
-  st($('bWolf'), { transform: `scale(${lerp(1.5, 1.65, prog(lt, 0, 1.5)) + dive * 3})`, opacity: String(0.13 * (1 - dive)) });
+  const dive = E.inExpo(prog(t, 5.6, 6.0));
+  st($('bTitle'), { transform: `scale(${lerp(1, 1.06, prog(lt, 0, 1.6)) + dive * 5})`, opacity: String(1 - dive), filter: `blur(${dive * 16}px)` });
+  st($('bWolf'), { transform: `scale(${lerp(1.5, 1.65, prog(lt, 0, 2)) + dive * 3})`, opacity: String(0.13 * (1 - dive)) });
 }
-
-function poseApp(t) {
-  const [cx, cy, z, rx, ry] = camAt(t);
-  const S = z * (1600 / 1440);
-  st($('app'), { transform: `translate(960px, 540px) rotateX(${rx}deg) rotateY(${ry}deg) scale(${S}) translate(${-cx}px, ${-cy}px)` });
-  // pages: quick cross-fade on navigation, like a real route change
-  let cur = PAGES[0], prev = null;
-  for (const p of PAGES) if (t >= p[0]) { prev = cur; cur = p; }
-  const fade = prev ? E.outCubic(prog(t, cur[0], cur[0] + 0.14)) : 1;
-  const wipe = E.inOutCubic(prog(t, CUE.colors - 0.08, CUE.colors + 0.6));
-  for (const img of APP_PAGES) {
-    const name = img.dataset.page;
-    let o = 0;
-    if (name === cur[1]) o = fade; else if (prev && name === prev[1]) o = 1;
-    if (name === 'wlGreen') o = t >= CUE.colors - 0.1 && t < 23.6 ? 1 : 0;
-    st(img, { opacity: String(o), zIndex: name === cur[1] ? '2' : name === 'wlGreen' ? '3' : '1' });
-  }
-  // recolor radiates from the real Brand colors control
-  st(APP_PAGES.find((i) => i.dataset.page === 'wlGreen'), { clipPath: `circle(${wipe * 1800}px at 290px 168px)` });
-  // cursor (constant on-screen size) + click ripple
-  const [mx, my] = track(CURSOR, t);
-  let press = 0, ripple = -1;
-  for (const c of CLICKS) { const d = t - c; if (d > -0.05 && d < 0.5) { press = Math.max(press, d < 0.12 ? Math.sin(prog(d, -0.05, 0.12) * Math.PI) : 0); if (d >= 0) ripple = d; } }
-  const cursorOn = (t >= 5.9 && t < 11.0) || (t >= 20.05 && t < 22.9);
-  st($('cursor'), { left: mx + 'px', top: my + 'px', opacity: cursorOn ? '1' : '0', transform: `scale(${(1 - press * 0.18) / S})`, zIndex: '6' });
-  if (ripple >= 0) {
-    const k = E.outCubic(prog(ripple, 0, 0.5));
-    st($('ripple'), { left: mx + 'px', top: my + 'px', opacity: String((1 - k) * 0.9), transform: `scale(${1 + k * 6})`, zIndex: '5' });
-  } else $('ripple').style.opacity = '0';
-  // focus ring
-  let ring = null;
-  for (const r of RINGS) if (t >= r[0] - 0.05 && t < r[1] + 0.15) ring = r;
-  if (ring) {
-    const k = E.outBack(prog(t, ring[0], ring[0] + 0.25)) * (1 - prog(t, ring[1], ring[1] + 0.15));
-    const pad = 6;
-    st($('ring'), { left: ring[2] - pad + 'px', top: ring[3] - pad + 'px', width: ring[4] - ring[2] + pad * 2 + 'px', height: ring[5] - ring[3] + pad * 2 + 'px', opacity: String(clamp(k)), transform: `scale(${lerp(1.15, 1, clamp(k))})`, zIndex: '4' });
-  } else $('ring').style.opacity = '0';
-  // lower third
-  let lt = null;
-  for (const l of LT) if (t >= l[0] && t < l[1]) lt = l;
-  if (lt) {
-    const k = E.outExpo(prog(t, lt[0], lt[0] + 0.35));
-    $('ltIdx').textContent = lt[2]; $('ltLbl').textContent = lt[3];
-    st($('lt'), { opacity: String(k), transform: `translateX(${lerp(-60, 0, k)}px)` });
-  } else st($('lt'), { opacity: '0' });
-  // brand words over the White Label Studio
-  const w1 = E.outExpo(prog(t, CUE.brand - 0.05, CUE.brand + 0.4)), w2 = E.outExpo(prog(t, CUE.colors - 0.05, CUE.colors + 0.4));
-  const out = prog(t, 22.95, 23.3);
-  st($('appScrim'), { opacity: String(Math.max(w1, lt ? 0.6 : 0) * (1 - out)) });
-  st($('gW1'), { opacity: String(w1 * (1 - out)), transform: `translateY(${lerp(50, 0, w1)}px)`, filter: `blur(${(1 - w1) * 10}px)` });
-  st($('gW2'), { opacity: String(w2 * (1 - out)), transform: `translateY(${lerp(50, 0, w2)}px) scale(${lerp(1.3, 1, w2)})`, filter: `blur(${(1 - w2) * 10}px)` });
-  st($('app'), { filter: `blur(${E.inExpo(prog(t, 23.1, 23.5)) * 10}px)` });
+function poseP(t) {
+  const up = E.outBack(prog(t, 6.0, 6.55));
+  const shake = t > 6.5 && t < 7.2 ? Math.sin(t * 90) * 6 * (1 - prog(t, 6.5, 7.2)) : 0;
+  const push = E.inOutCubic(prog(t, 6.7, 7.8)) * (1 - E.inOutCubic(prog(t, 8.5, 9.3)));
+  const rewind = E.inExpo(prog(t, 9.8, 10.5));
+  st($('phone'), { transform: `translateY(${(1 - up) * 900}px) translateX(${shake}px) scale(${1 + push * 0.42 - rewind * 0.5}) rotate(${shake * 0.3 - rewind * 25}deg)`,
+    filter: `blur(${rewind * 14}px)`, opacity: String(1 - rewind) });
+  const p = E.outBack(prog(t, 6.5, 6.9));
+  st($('push'), { transform: `translateY(${(1 - p) * -160}px) scale(${lerp(0.9, 1, p)})`, opacity: String(clamp(p * 2) * (1 - prog(t, 8.5, 8.7))) });
+  const tap = t - 8.4;
+  if (tap > 0 && tap < 0.5) { const k = E.outCubic(prog(tap, 0, 0.5)); st($('phoneRipple'), { opacity: String((1 - k) * 0.9), transform: `scale(${1 + k * 7})` }); }
+  else $('phoneRipple').style.opacity = '0';
+  const app = E.outCubic(prog(t, 8.5, 8.85));
+  st($('phoneApp'), { opacity: String(app), transform: `translateY(${(1 - app) * 80}px)` });
+  const k = E.outCubic(prog(t, 9.55, 10.0)) * (1 - prog(t, 10.2, 10.5));
+  st($('pKicker'), { opacity: String(k), letterSpacing: lerp(1.2, 0.55, k) + 'em', filter: `blur(${(1 - k) * 8}px)` });
 }
-
-function poseD(t) {
-  const out = E.inOutQuint(prog(t, 11.05, 12.0));
-  const merge = E.inOutQuint(prog(t, CUE.place - 0.15, CUE.place + 0.95));
-  const spreadK = out * (1 - merge);
-  const rx = lerp(0, 50, spreadK), rz = lerp(0, -22, spreadK);
-  const scale = lerp(D_FULL, 0.52, spreadK);
-  const drift = lerp(0, 1, prog(t, 11.5, CUE.place)) * 160 * spreadK;
-  st($('dPlane'), { transform: `rotateX(${rx}deg) rotateZ(${rz}deg) scale(${scale}) translateY(${-drift}px)` });
-  for (const tile of D_TILES) {
-    const x = tile.c * 768 - 360, y = tile.r * 498 - 225;
-    const wave = Math.sin(t * 2 + tile.seed * 6) * 18 * spreadK;
-    st(tile.el, { transform: `translate3d(${x}px, ${y}px, ${(tile.center ? 2 : 0) + wave}px)`, opacity: String(tile.center ? 1 : clamp(spreadK * 1.6)) });
-  }
-  const k1 = E.outCubic(prog(t, 11.3, 11.9));
-  st($('dKicker'), { opacity: String(k1 * (1 - merge)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
-  const k2 = E.outExpo(prog(t, CUE.place - 0.08, CUE.place + 0.4)), o2 = prog(t, 14.05, 14.4);
-  st($('dScrim'), { opacity: String(k2 * (1 - o2)) });
-  st($('dBig'), { opacity: String(k2 * (1 - o2)), transform: `scale(${lerp(1.4, 1, k2)})`, filter: `blur(${(1 - k2) * 16 + o2 * 10}px)` });
+function poseC2(t) {
+  const k = E.outCubic(prog(t, CUE.every - 0.1, CUE.every + 0.4)) * (1 - prog(t, 33.6, 34.0));
+  st($('c2Beam'), { opacity: String(k), transform: `scaleX(${0.2 + k})` });
+  const b = E.outExpo(prog(t, CUE.every, CUE.every + 0.45)), o = prog(t, 33.6, 34.0);
+  const lab = E.outBack(prog(t, 26.7, 27.1)) * (1 - prog(t, 33.6, 34.0));
+  st($('c2L'), { opacity: String(clamp(lab)), transform: `translateY(${(1 - clamp(lab)) * -30}px)` });
+  st($('c2R'), { opacity: String(clamp(lab)), transform: `translateY(${(1 - clamp(lab)) * -30}px)` });
+  st($('c2Big'), { opacity: String(b * (1 - o)), transform: `translateY(${lerp(50, 0, b)}px)`, filter: `blur(${(1 - b) * 10}px)` });
 }
-
 function poseE(t) {
-  const tilt = E.inOutCubic(prog(t, 14.55, 15.3));
-  const collapse = E.inExpo(prog(t, CUE.engineered - 0.32, CUE.engineered));
-  const flat = E.outExpo(prog(t, CUE.engineered, CUE.engineered + 0.58));
+  const C = CUE;
+  const tilt = E.inOutCubic(prog(t, 39.55, 40.3));
+  const collapse = E.inExpo(prog(t, C.watch - 0.3, C.watch));
+  const flat = E.outExpo(prog(t, C.watch, C.watch + 0.55));
   const r = tilt * (1 - flat);
-  const orbit = lerp(-6, 22, prog(t, 15.0, CUE.engineered));
-  const exit = E.inExpo(prog(t, 17.65, 18.0));
-  const zoom = lerp(1, 1.06, prog(t, CUE.engineered, 17.65));
-  st($('eRig'), { transform: `translateX(${-exit * 2200}px) scale(${lerp(lerp(1, 0.8, flat), 0.8, r) * zoom}) translateY(${flat * 70}px) rotateX(${54 * r}deg) rotateZ(${(-34 - orbit) * r}deg)`, filter: `blur(${exit * 10}px)` });
-  for (const L of E_LAYERS) {
+  const orbit = lerp(-6, 22, prog(t, 39.9, C.watch));
+  const exit = E.inExpo(prog(t, 43.7, 44.0));
+  const zoomIn = E.inOutCubic(prog(t, C.watch + 0.4, 43.2));
+  st($('eRig'), { transform: `translateX(${-exit * 2200}px) scale(${lerp(lerp(1, 0.86, flat), 0.8, r) * lerp(1, 1.9, zoomIn)}) translate(${zoomIn * -95}px, ${zoomIn * 85}px) rotateX(${54 * r}deg) rotateZ(${(-34 - orbit) * r}deg)`, filter: `blur(${exit * 10}px)` });
+  for (const L of window.E_LAYERS) {
     if (L.base) { st(L.el, { filter: `brightness(${lerp(1, 0.45, r)})`, boxShadow: '0 40px 120px rgba(0,0,0,.6)' }); continue; }
-    const lift = E.outExpo(prog(t, 14.75 + L.d, 15.6 + L.d)) * (1 - collapse);
+    const lift = E.outExpo(prog(t, 39.75 + L.d, 40.6 + L.d)) * (1 - collapse);
     const hover = Math.sin(t * 3 + L.z) * 10 * lift;
-    st(L.el, { transform: `translateZ(${(L.z * 4.2) * lift + hover}px)`, boxShadow: `0 ${20 * lift}px ${60 * lift}px rgba(0,0,0,${0.55 * lift}), 0 0 0 ${1.5 * lift}px rgba(241,200,90,${0.8 * lift})` });
+    const glow = L.hero ? E.outCubic(prog(t, C.tracked, C.tracked + 0.4)) * (1 - prog(t, 43.2, 43.6)) : 0;
+    st(L.el, { transform: `translateZ(${(L.z * 4.2) * lift + hover}px)`,
+      boxShadow: `0 ${20 * lift}px ${60 * lift}px rgba(0,0,0,${0.55 * lift}), 0 0 0 ${Math.max(1.5 * lift, 3 * glow)}px rgba(241,200,90,${Math.max(0.8 * lift, glow)}), 0 0 ${60 * glow}px rgba(241,200,90,${0.8 * glow})` });
   }
-  const k1 = E.outExpo(prog(t, CUE.layers, CUE.layers + 0.5)), o1 = prog(t, CUE.engineered - 0.22, CUE.engineered);
+  const k1 = E.outExpo(prog(t, C.task, C.task + 0.5)), o1 = prog(t, C.watch - 0.22, C.watch);
   st($('eText1'), { opacity: String(k1 * (1 - o1)), transform: `translateY(${lerp(60, 0, k1)}px)`, filter: `blur(${(1 - k1) * 12}px)` });
-  const k2 = E.outExpo(prog(t, CUE.engineered, CUE.engineered + 0.45));
-  st($('eText2'), { opacity: String(k2 * (1 - exit)), transform: `translateX(${lerp(260, 0, k2) - exit * 1200}px) skewX(${lerp(-14, 0, k2)}deg)` });
+  const k2 = E.outExpo(prog(t, C.watch, C.watch + 0.45));
+  st($('eText2'), { opacity: String(k2 * (1 - exit) * (1 - prog(t, 43.0, 43.5))), transform: `translateX(${lerp(260, 0, k2)}px) skewX(${lerp(-14, 0, k2)}deg)` });
 }
-
-function poseF(t) {
-  const lt = t - 18.0;
-  const enter = E.outExpo(prog(lt, 0, 0.55));
-  const ph = E.outBack(prog(t, CUE.mobile - 0.05, CUE.mobile + 0.5));
-  const ph2 = E.outBack(prog(t, CUE.mobile + 0.08, CUE.mobile + 0.62));
-  const exit = E.inExpo(prog(t, 19.72, 20.0));
-  st($('fDesk'), { transform: `translateX(${lerp(1400, 0, enter)}px) rotateY(${lerp(-30, 14, enter) + lt * 2}deg) scale(${lerp(1, 0.94, ph) + exit * 0.3})`, opacity: String(1 - exit), filter: `brightness(${lerp(1, 0.7, ph)})` });
-  st($('fPhone1'), { transform: `translateY(${lerp(1100, 0, ph) - exit * 200}px) rotate(${lerp(14, -4, ph)}deg)`, opacity: String(1 - exit) });
-  st($('fPhone2'), { transform: `translateY(${lerp(1100, 0, ph2) - exit * 260}px) rotate(${lerp(18, 6, ph2)}deg)`, opacity: String(1 - exit) });
-  const k1 = E.outCubic(prog(t, CUE.desktop - 0.1, CUE.desktop + 0.35)), k2 = E.outCubic(prog(t, CUE.mobile, CUE.mobile + 0.35));
-  st($('fK1'), { opacity: String(k1 * (1 - exit)), letterSpacing: lerp(1, 0.55, k1) + 'em' });
-  st($('fK2'), { opacity: String(k2 * (1 - exit)), letterSpacing: lerp(1, 0.55, k2) + 'em' });
-}
-
-function poseH(t) {
-  const lt = t - 23.5;
+function poseL(t) {
+  const lt = t - 55.0;
   const pop = E.outBack(prog(lt, 0, 0.55));
-  const slide = E.inOutCubic(prog(t, CUE.portal - 0.05, CUE.portal + 0.75));
-  const fade = E.inCubic(prog(t, DURATION - 0.8, DURATION));
-  st($('hIconWrap'), { transform: `translateX(${-slide * 420}px) scale(${lerp(0.4, 1, pop) * lerp(1, 0.78, slide)})`, opacity: String(clamp(pop * 2) * (1 - fade)) });
+  const slide = E.inOutCubic(prog(t, CUE.brand - 0.05, CUE.brand + 0.75));
+  const fade = E.inCubic(prog(t, TL.duration - 0.8, TL.duration));
+  st($('hIconWrap'), { transform: `translateX(${-slide * 400}px) scale(${lerp(0.4, 1, pop) * lerp(1, 0.78, slide)})`, opacity: String(clamp(pop * 2) * (1 - fade)) });
   st($('hGlow'), { opacity: String((0.6 + 0.4 * Math.sin(lt * 3)) * clamp(pop)), transform: `scale(${1 + 0.06 * Math.sin(lt * 2)})` });
   st($('hSweep'), { left: lerp(-60, 160, E.inOutCubic(prog(lt, 0.25, 1.1))) + '%' });
   const ring = E.outExpo(prog(lt, 0, 1.4));
   st($('hRing'), { transform: `translate(-50%,-50%) scale(${ring * 160})`, opacity: String((1 - ring) * 0.9), borderWidth: lerp(3, 0.05, ring) + 'px' });
-  const w = E.outExpo(prog(t, CUE.portal + 0.15, CUE.portal + 0.95));
-  st($('hWordWrap'), { left: lerp(900, 740, slide) + 'px', opacity: String(1 - fade) });
-  st($('hWord'), { transform: `translateY(${lerp(320, 0, w)}px)`, filter: `blur(${(1 - w) * 8}px)` });
-  const p = E.outCubic(prog(t, CUE.portal + 0.45, CUE.portal + 1.2));
+  const w = E.outExpo(prog(t, CUE.brand + 0.15, CUE.brand + 0.95));
+  st($('hWordWrap'), { left: lerp(880, 720, slide) + 'px', opacity: String(1 - fade) });
+  st($('hWord'), { transform: `translateY(${lerp(300, 0, w)}px)`, filter: `blur(${(1 - w) * 8}px)` });
+  const p = E.outCubic(prog(t, CUE.brand + 0.45, CUE.brand + 1.2));
   st($('hPortal'), { opacity: String(p), letterSpacing: lerp(1.6, 0.95, p) + 'em' });
-  const tg = E.outCubic(prog(t, CUE.lead - 0.05, CUE.lead + 0.6));
-  st($('hTag'), { opacity: String(tg * (1 - fade)), letterSpacing: lerp(1.2, 0.55, tg) + 'em', filter: `blur(${(1 - tg) * 6}px)` });
+  const c = E.outExpo(prog(t, CUE.start - 0.05, CUE.start + 0.5));
+  st($('hCta'), { opacity: String(c * (1 - fade)), transform: `translateY(${lerp(40, 0, c)}px)`, filter: `blur(${(1 - c) * 10}px)` });
+  const u = E.outBack(prog(t, CUE.start + 0.4, CUE.start + 0.9));
+  st($('hUrl'), { opacity: String(clamp(u) * (1 - fade)), transform: `scale(${lerp(0.7, 1, u)})`, display: 'inline-flex' });
 }
 
-const POSE = { sA: poseA, sB: poseB, sApp: poseApp, sD: poseD, sE: poseE, sF: poseF, sH: poseH };
+const POSE = { sA: poseA, sB: poseB, sP: poseP, sC2: poseC2, sE: poseE, sL: poseL };
 
-function moodAt(t) {
-  const green = Math.sin(Math.PI * prog(t, CUE.colors - 0.2, 23.5)) * 1.0;
-  const intro = E.outCubic(prog(t, 0, 1.2));
-  const outro = 1 - E.inCubic(prog(t, DURATION - 0.7, DURATION));
-  return { blue: 1 - green * 0.6, gold: (t > 23.5 ? 1.6 : 1) * (1 - green * 0.5), green, bright: clamp(intro * outro * (t < 3.5 ? 0.7 : 1)) };
-}
-
-// ---------- frame ----------
 window.seek = function seek(t) {
   for (const id in SCENES) {
-    const spans = Array.isArray(SCENES[id][0]) ? SCENES[id] : [SCENES[id]];
-    const on = spans.some(([a, b]) => t >= a && t < b);
+    const [a, b] = SCENES[id]; const on = t >= a && t < b;
     $(id).style.display = on ? 'block' : 'none';
-    if (on) POSE[id](t);
+    if (on && POSE[id]) POSE[id](t);
   }
+  for (const w of WINS) if (t >= SCENES[w.root.parentNode.id][0] && t < SCENES[w.root.parentNode.id][1]) w.pose(t);
+  poseOverlays(t);
+  // hits: flash + camera shake on the big moments
+  const HITS = [[4.0, 1.0], [6.5, 0.25], [10.5, 0.35], [CUE.live, 0.25], [CUE.watch, 0.5], [CUE.tap, 0.3], [CUE.paid, 0.35], [55.0, 1.0]];
   let flash = 0, shake = 0;
   for (const [ht, s] of HITS) { const d = t - ht; if (d >= -0.02 && d < 0.6) { flash = Math.max(flash, s * Math.exp(-d * 9)); shake = Math.max(shake, s * Math.exp(-d * 7)); } }
   const r = rng(Math.floor(t * 30) + 1);
-  const breathe = 1 + 0.004 * Math.sin(t * 0.9);
-  $('world').style.transform = `translate(${(r() - 0.5) * 28 * shake}px, ${(r() - 0.5) * 28 * shake}px) scale(${breathe + shake * 0.025})`;
+  $('world').style.transform = `translate(${(r() - 0.5) * 28 * shake}px, ${(r() - 0.5) * 28 * shake}px) scale(${1 + 0.004 * Math.sin(t * 0.9) + shake * 0.025})`;
   $('flash').style.opacity = String(clamp(flash * 0.85));
-  const mood = moodAt(t);
+  const outro = 1 - E.inCubic(prog(t, TL.duration - 0.7, TL.duration));
+  const mood = { gold: t > 55 ? 1.6 : 1, bright: clamp(E.outCubic(prog(t, 0, 1.2)) * outro * (t < 4 ? 0.7 : 1)) };
   drawMesh(t, mood);
-  const emberAmt = (t < 3.5 ? E.outCubic(prog(t, 0.3, 2)) : t >= 23.5 ? 1 : 0.35) * mood.bright;
-  drawEmbers(t, emberAmt, t >= 23.5 ? Math.exp(-(t - 23.5) * 2) : 0);
+  drawEmbers(t, (t < 4 ? E.outCubic(prog(t, 0.3, 2)) : t >= 55 ? 1 : (t >= CUE.paid && t < CUE.paid + 1.5 ? 1 : 0.35)) * mood.bright, t >= 55 ? Math.exp(-(t - 55) * 2) : 0);
   grain.putImageData(PLATES[Math.floor(t * 30) % PLATES.length], 0, 0);
   $('grain').style.transform = `translate(${(r() - 0.5) * 6}px, ${(r() - 0.5) * 6}px) scale(1.01)`;
   $('vignette').style.opacity = String(0.92 + 0.08 * Math.sin(t * 1.3));
 };
-window.DURATION = DURATION;
 
 window.ready = (async () => {
+  TL = await (await fetch('timeline.json')).json();
+  CUE = TL.cue;
+  window.DURATION = TL.duration;
+  build();
   await document.fonts.ready;
-  await Promise.all([...document.images].map((im) => (im.complete ? im.decode().catch(() => {}) : new Promise((res) => { im.onload = im.onerror = res; }))));
+  await Promise.all([...document.images].map((im) => (im.complete && im.naturalWidth ? im.decode().catch(() => {}) : new Promise((res) => { im.onload = im.onerror = res; }))));
   return true;
 })();
 
 const q = new URLSearchParams(location.search);
 window.ready.then(() => {
-  if (q.has('play')) { const t0 = performance.now(); const loop = () => { const t = ((performance.now() - t0) / 1000) % DURATION; window.seek(t); requestAnimationFrame(loop); }; loop(); }
+  if (q.has('play')) { const t0 = performance.now(); const loop = () => { window.seek(((performance.now() - t0) / 1000) % TL.duration); requestAnimationFrame(loop); }; loop(); }
   else window.seek(parseFloat(q.get('t') || '0'));
 });
 </script>

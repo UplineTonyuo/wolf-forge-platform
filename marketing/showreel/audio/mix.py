@@ -1,13 +1,14 @@
-"""Builds the Wolf Forge Portal showreel soundtrack and muxes the final video.
+"""Builds the Wolf Forge Portal 60s soundtrack and muxes the final video.
 
   python3 marketing/showreel/audio/mix.py
 
 Inputs (audio/source/):
-  vo-take-b.mp3   ElevenLabs voice-over ("Don", eleven_v4), nine phrases
-  sfx_*.mp3       ElevenLabs sound effects (boom, whoosh, riser, glitch)
-The score is synthesised here (numpy only) at 120 BPM so every cut lands on a beat.
-The VO is split at its pauses and each phrase is placed on its scene; the score
-ducks under it. Output: out/soundtrack.wav and wolf-forge-portal-showreel.mp4.
+  vo-60s.mp3   ElevenLabs voice-over ("Don", eleven_v4, warm read), 14 phrases
+  sfx_*.mp3    ElevenLabs sound effects (boom, whoosh, riser, glitch)
+The score, clicks, message pops and the phone buzz are synthesised here (numpy only)
+at 120 BPM so cuts land on the beat. The VO is split at its pauses and each block is
+placed on its scene; the score ducks under it.
+Output: out/soundtrack.wav and wolf-forge-portal-showreel.mp4.
 """
 
 import json
@@ -22,7 +23,7 @@ ROOT = HERE.parent
 SRC = HERE / "source"
 OUT = ROOT / "out"
 SR = 48000
-DUR = 28.0
+DUR = 60.0
 N = int(DUR * SR)
 rng = np.random.default_rng(11)
 
@@ -128,41 +129,70 @@ def inner_onsets(db, a, b, gap=0.12):
     return out
 
 
-vo = load(SRC / "vo-take-b.mp3")
+vo = load(SRC / "vo-60s.mp3")
 segs, vo_db = split_vo(vo)
-if len(segs) != 9:
-    sys.exit(f"expected 9 VO phrases, found {len(segs)}: {segs}")
+if len(segs) != 14:
+    sys.exit(f"expected 14 VO phrases, found {len(segs)}: {segs}")
 
-# Phrase start times on the video timeline (the visuals' CUE table follows these).
-PLACE = [0.45, 3.55, 7.2, 11.3, 14.6, 18.15, 20.9, 23.8, 25.55]
+# Each block is a run of consecutive phrases (kept with their natural gaps) placed on its
+# scene. The visuals' CUE table in index.html follows the onsets printed below.
+BLOCKS = [  # (first phrase, last phrase, start time)
+    (0, 0, 0.5),     # Every great project starts with a conversation.
+    (1, 1, 6.7),     # With Wolf Forge, you're never left wondering.
+    (2, 3, 10.9),    # It starts in your portal. Pick your plan, and talk to us right there.
+    (4, 4, 16.9),    # The moment you're in, your project is live, and our team already has it.
+    (5, 5, 21.9),    # Behind the scenes, we're already planning your first win.
+    (6, 7, 27.0),    # Talk to us inside your project. Ask, approve, share. Every message, one place.
+    (8, 8, 34.4),    # Need something else? Send a message. A real person replies.
+    (9, 9, 39.8),    # Every task, tracked. You can watch the work move.
+    (10, 10, 44.5),  # Billing is just as simple. One tap, and it's paid.
+    (11, 11, 50.0),  # And every month, your results: clear, honest, yours.
+    (12, 12, 55.5),  # Wolf Forge Portal.
+    (13, 13, 57.2),  # Start your project today.
+]
 vo_bus = np.zeros((N, 2))
 report = []
-for (a, b), t in zip(segs, PLACE):
+for first, last, t in BLOCKS:
+    a, b = segs[first][0], segs[last][1]
     pad = 0.06
-    clip = vo[at(a - pad):at(b + 0.12)].copy()
+    clip = vo[max(0, at(a - pad)):at(b + 0.12)].copy()
     clip *= adsr(len(clip), a=0.02, r=0.08)[:, None]
     add(vo_bus, clip, t - pad)
-    report.append({"phrase_at": round(t, 2), "ends": round(t + b - a, 2),
-                   "word_onsets": [round(t + o - a, 2) for o in inner_onsets(vo_db, a, b)]})
-print(json.dumps(report, indent=1))
+    onsets = [o for i in range(first, last + 1) for o in inner_onsets(vo_db, *segs[i])]
+    report.append({"at": round(t, 2), "ends": round(t + b - a, 2), "onsets": [round(t + o - a, 2) for o in onsets]})
+print(json.dumps(report))
 
 # ---------------------------------------------------------------- score
 music = np.zeros((N, 2))
 send = np.zeros((N, 2))  # reverb send
-BEAT = 0.5
-BAR0 = 3.5
-LIFT = 11.0    # full drums from the zoom-out to the whole workspace
-BUILD = 21.0   # snare roll + riser under "Your brand. Your colors."
-DROP = 23.25   # everything cuts out
-LOGO = 23.5    # app icon lockup hit
+BAR0 = 4.0     # title hit; bars of 2 s from here
+LOGO = 55.0    # app icon lockup hit
+BUILD = 49.5   # snare roll + riser under the monthly report
+DROP = 54.75   # everything cuts out
+# Arrangement by section: (start, kick, hats, arp, snare, bass)
+SECTIONS = [
+    (4.0, 0.55, 0.5, 0.0, 0.0, 0.6),   # title, phone hook: heartbeat pulse
+    (10.5, 0.85, 1.0, 1.0, 0.0, 1.0),  # client portal: the groove starts
+    (21.5, 1.0, 1.0, 1.0, 0.55, 1.0),  # team + project chat: full
+    (34.0, 0.0, 0.6, 0.8, 0.0, 0.7),   # ticket: breakdown, "a real person replies"
+    (39.5, 1.0, 1.0, 1.0, 0.55, 1.0),  # explode, billing: back in full
+]
 NOTE = {"D": 73.42, "Bb": 58.27, "F": 87.31, "C": 65.41, "G": 49.0, "A": 55.0}
-CHORDS = [("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("F", [0, 4, 7]), ("C", [0, 4, 7]),
-          ("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("F", [0, 4, 7]), ("C", [0, 4, 7]), ("G", [0, 3, 7]), ("A", [0, 4, 7])]
+PROGRESSION = [("D", [0, 3, 7]), ("Bb", [0, 4, 7]), ("F", [0, 4, 7]), ("C", [0, 4, 7])]
+CHORDS = [PROGRESSION[i % 4] for i in range(int((LOGO - BAR0) / 2) - 2)] + [("G", [0, 3, 7]), ("A", [0, 4, 7])]
 
 
 def chord_at(t):
     i = int((t - BAR0) // 2)
     return CHORDS[min(max(i, 0), len(CHORDS) - 1)]
+
+
+def section_at(t):
+    cur = SECTIONS[0]
+    for s in SECTIONS:
+        if t >= s[0]:
+            cur = s
+    return cur
 
 
 def kick(gain=1.0):
@@ -206,23 +236,47 @@ def tick(freq=2400, gain=1.0):
     return np.sin(2 * np.pi * freq * tt) * np.exp(-tt * 70) * gain
 
 
-# Intro: sub drone + wind + heartbeat, sucking into the 3.5 s hit
-n_in = at(3.5)
+def pop(gain=1.0, pitch=1.0):
+    """Message bubble landing: a short downward pitch blip."""
+    n = int(0.12 * SR)
+    tt = np.arange(n) / SR
+    f = (900 + 700 * np.exp(-tt * 40)) * pitch
+    return np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-tt * 34) * gain
+
+
+def chime(gain=1.0):
+    """Notification arrival: two soft bell partials, a fifth apart."""
+    n = int(1.2 * SR)
+    tt = np.arange(n) / SR
+    out = np.zeros(n)
+    for start, f in ((0, 1318.5), (int(0.11 * SR), 1975.5)):
+        m = n - start
+        out[start:] += (np.sin(2 * np.pi * f * tt[:m]) + 0.3 * np.sin(2 * np.pi * f * 2.76 * tt[:m])) * np.exp(-tt[:m] * 4.5)
+    return out * gain
+
+
+def buzz(gain=1.0, length=0.38):
+    """Phone vibration: a 150 Hz motor hum with a rough amplitude edge."""
+    n = int(length * SR)
+    tt = np.arange(n) / SR
+    motor = np.sign(np.sin(2 * np.pi * 150 * tt)) * 0.6 + np.sin(2 * np.pi * 300 * tt) * 0.4
+    return fft_filter(motor, hi=1800) * adsr(n, 0.01, 0.04) * gain
+
+
+# Intro: sub drone + wind + heartbeat, sucking into the title hit
+n_in = at(BAR0)
 tt = np.arange(n_in) / SR
-swell = np.clip(tt / 3.2, 0, 1) ** 1.6
+swell = np.clip(tt / (BAR0 - 0.3), 0, 1) ** 1.6
 drone = (np.sin(2 * np.pi * 36.71 * tt) * 0.5 + np.sin(2 * np.pi * 73.42 * tt) * 0.25 + saw(146.83, n_in, 8) * 0.06) * swell
 wind = fft_filter(rng.standard_normal((n_in, 2)), lo=300, hi=2500) * 0.05 * swell[:, None]
 add(music, drone * 0.55, 0)
 add(music, wind, 0)
-for t in (0.5, 0.75, 1.5, 1.75, 2.5, 2.75):
-    add(music, kick(0.35 if t % 1 == 0.5 else 0.22), t)
+for t in (1.0, 1.25, 2.0, 2.25, 3.0, 3.25):
+    add(music, kick(0.35 if t % 1 == 0 else 0.22), t)
 
-# Pads (whole piece from the hit), three detuned voices per chord tone
-for bar in range(len(CHORDS)):
+# Pads, three detuned voices per chord tone
+for bar, (root, ivs) in enumerate(CHORDS):
     t0 = BAR0 + bar * 2
-    if t0 >= LOGO:
-        break
-    root, ivs = CHORDS[bar]
     length = min(2.0, LOGO - t0)
     n = int(length * SR) + int(0.3 * SR)
     pad = np.zeros(n)
@@ -230,45 +284,45 @@ for bar in range(len(CHORDS)):
         f = NOTE[root] * 4 * 2 ** (iv / 12)
         for d in (-0.004, 0, 0.005):
             pad += saw(f, n, 14, d)
-    pad = fft_filter(pad, hi=1400 if t0 < 19.5 else 2600) * adsr(n, a=0.25, r=0.4) * 0.05
+    bright = 2600 if t0 >= BUILD else (1000 if 34.0 <= t0 < 39.5 else 1500)
+    pad = fft_filter(pad, hi=bright) * adsr(n, a=0.25, r=0.4) * (0.065 if 34.0 <= t0 < 39.5 else 0.05)
     add(music, pad, t0, pan=-0.2)
     add(music, pad, t0 + 0.012, pan=0.2)
     add(send, pad, t0, 0.6)
 
-# Drums, bass, arp: 3.5 → DROP, then a dropout into the logo hit
-t = 3.5
+# Drums, bass, arp: title → DROP, arranged by section
+t = BAR0
 step = 0.125
 while t < DROP - 1e-9:
     b = round((t - BAR0) / step)  # 16th index
     root, ivs = chord_at(t)
+    _, k_g, h_g, a_g, s_g, b_g = section_at(t)
     on_beat = b % 4 == 0
     beat_in_bar = (b // 4) % 4
     building = t >= BUILD
-    if on_beat:
-        add(music, kick(1.0 if t >= LIFT else 0.85), t)
+    if on_beat and k_g:
+        add(music, kick(k_g), t)
     if b % 4 == 2:
-        add(music, hat(0.22, open_=b % 8 == 6), t, pan=0.3)
-    elif t >= 5.0:
-        add(music, hat(0.08), t, pan=-0.25)
-    if t >= LIFT and on_beat and beat_in_bar in (1, 3) and not building:
-        s = snare(0.55)
+        add(music, hat(0.22 * h_g, open_=b % 8 == 6), t, pan=0.3)
+    elif h_g and t >= 10.5:
+        add(music, hat(0.08 * h_g), t, pan=-0.25)
+    if s_g and on_beat and beat_in_bar in (1, 3) and not building:
+        s = snare(s_g)
         add(music, s, t)
         add(send, s, t, 0.35)
-    # bass: 8th notes, side-chained feel via short notes off the kick
-    if b % 2 == 1 or (b % 2 == 0 and not on_beat):
+    if b_g and (b % 2 == 1 or (b % 2 == 0 and not on_beat)):
         n = int(0.115 * SR)
         f = NOTE[root] * (2 if b % 4 == 3 else 1)
-        bs = fft_filter(saw(f, n, 24), hi=900 if t < LIFT else 1600) * adsr(n, 0.004, 0.03) * 0.42
+        bs = fft_filter(saw(f, n, 24), hi=900 if t < 21.5 else 1600) * adsr(n, 0.004, 0.03) * 0.42 * b_g
         add(music, bs, t)
-    # arp: 16ths across two octaves from the first product shot
-    if t >= 5.0:
+    if a_g:
         seq = [0, 1, 2, 1, 2, 3, 2, 1]
         k = seq[b % 8]
         iv = (ivs + [12 + ivs[0]])[k]
-        f = NOTE[root] * 8 * 2 ** (iv / 12) * (2 if (b // 8) % 2 and t >= LIFT else 1)
+        f = NOTE[root] * 8 * 2 ** (iv / 12) * (2 if (b // 8) % 2 and t >= 21.5 else 1)
         n = int(0.2 * SR)
         tt = np.arange(n) / SR
-        pl = saw(f, n, 10) * np.exp(-tt * 22) * 0.11 * (0.7 + 0.3 * (b % 4 == 0))
+        pl = saw(f, n, 10) * np.exp(-tt * 22) * 0.11 * (0.7 + 0.3 * (b % 4 == 0)) * a_g
         pan = 0.45 if b % 2 else -0.45
         add(music, pl, t, pan=pan)
         add(music, pl * 0.35, t + 0.375, pan=-pan)  # dotted-8th ping-pong
@@ -278,8 +332,8 @@ while t < DROP - 1e-9:
 # Build: snare roll BUILD → DROP accelerating, rising noise
 roll_t = BUILD
 while roll_t < DROP:
-    rate = 0.25 if roll_t < BUILD + 1.25 else (0.125 if roll_t < DROP - 0.4 else 0.0625)
-    g = 0.15 + 0.45 * (roll_t - BUILD) / (DROP - BUILD)
+    rate = 0.5 if roll_t < BUILD + 2.5 else (0.25 if roll_t < DROP - 1.25 else (0.125 if roll_t < DROP - 0.4 else 0.0625))
+    g = 0.12 + 0.48 * (roll_t - BUILD) / (DROP - BUILD)
     add(music, snare(g, 0.12), roll_t)
     add(send, snare(g * 0.5, 0.12), roll_t)
     roll_t = round(roll_t + rate, 6)
@@ -295,12 +349,12 @@ fin = np.zeros(n_f)
 for f in (146.83, 220.0, 293.66, 349.23, 440.0, 659.25):
     for d in (-0.003, 0.0, 0.004):
         fin += saw(f * (1 + d), n_f, 10)
-fin = fft_filter(fin, hi=2200) * np.exp(-tt * 0.55) * adsr(n_f, 0.01, 0.6) * 0.035
-sub = np.sin(2 * np.pi * 36.71 * tt) * np.exp(-tt * 0.9) * 0.6 * adsr(n_f, 0.005, 0.5)
+fin = fft_filter(fin, hi=2200) * np.exp(-tt * 0.45) * adsr(n_f, 0.01, 0.8) * 0.035
+sub = np.sin(2 * np.pi * 36.71 * tt) * np.exp(-tt * 0.8) * 0.6 * adsr(n_f, 0.005, 0.5)
 shimmer = np.zeros(n_f)
 for f in (1174.66, 1760.0, 2349.32, 2637.0):
     shimmer += np.sin(2 * np.pi * f * tt) * (0.5 + 0.5 * np.sin(2 * np.pi * 7 * tt + f))
-shimmer *= np.exp(-tt * 1.1) * 0.02
+shimmer *= np.exp(-tt * 0.9) * 0.02
 add(music, fin, LOGO)
 add(music, sub, LOGO)
 add(music, shimmer, LOGO, pan=0.15)
@@ -318,30 +372,29 @@ def peak_time(x):
     return int(np.argmax(e)) / SR
 
 
-wp = peak_time(whoosh)
-# camera moves: dive into the app, zoom-out wall, explode, devices, back into the app, White Label
-for cut, g in ((5.0, 0.55), (11.0, 0.5), (14.5, 0.45), (18.0, 0.45), (19.13, 0.3), (20.0, 0.4), (20.9, 0.35)):
-    add(sfx, whoosh * g, cut - wp)
-bp = peak_time(boom)
-add(sfx, boom * 0.95, 3.5 - bp)
-add(sfx, boom * 0.95, LOGO - bp)
-add(sfx, boom * 0.35, 16.21 - bp)
+SFX_TIMES = json.loads((ROOT / "timeline.json").read_text())
+wp, bp, gp = peak_time(whoosh), peak_time(boom), peak_time(glitch)
+for t_w, g in SFX_TIMES["whoosh"]:
+    add(sfx, whoosh * g, t_w - wp)
+for t_b, g in SFX_TIMES["boom"]:
+    add(sfx, boom * g, t_b - bp)
 suck = boom[::-1].copy()
 suck *= np.linspace(0, 1, len(suck))[:, None] ** 2
-add(sfx, suck * 0.45, 3.5 - len(suck) / SR)
+add(sfx, suck * 0.45, BAR0 - len(suck) / SR)
 add(sfx, riser * 0.6, LOGO - len(riser) / SR)
-gp = peak_time(glitch)
-for t_g, g in ((14.72, 0.5), (16.15, 0.6), (21.96, 0.45)):
+for t_g, g in SFX_TIMES["glitch"]:
     add(sfx, glitch * g, t_g - gp)
-# POV mouse clicks on the sidebar (Projects, Tickets, Clients, Invoices, Dashboard, Settings, Brand colors)
-for c in (7.2, 8.25, 9.11, 10.02, 10.85, 20.4, 21.88):
+for c in SFX_TIMES["click"]:
     add(sfx, mouse_click(0.55), c - 0.01)
-# soft focus pings as the camera lands on each detail
-for c in (6.75, 7.7, 8.75, 9.6, 10.5, 20.8):
+for i, c in enumerate(SFX_TIMES["pop"]):
+    add(sfx, pop(0.32, 1.0 + 0.08 * (i % 3)), c, pan=0.25 if i % 2 else -0.25)
+for c in SFX_TIMES["ping"]:
     add(sfx, tick(2600, 0.18), c, pan=-0.3)
     add(sfx, tick(3900, 0.09), c + 0.03, pan=0.3)
-for c in (19.13, 19.26):
-    add(sfx, tick(1800, 0.2), c)
+for c in SFX_TIMES["chime"]:
+    add(sfx, chime(0.35), c)
+for c in SFX_TIMES["buzz"]:
+    add(sfx, buzz(0.4), c)
 add(sfx, reverb(sfx, 1.4) * 0.18, 0)
 
 # ---------------------------------------------------------------- mix + master
@@ -381,7 +434,7 @@ frames = OUT / "frames.mp4"
 if frames.exists():
     final = ROOT / "wolf-forge-portal-showreel.mp4"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(frames), "-i", str(wav), "-map", "0:v", "-map", "1:a",
-                    "-c:v", "libx264", "-preset", "slow", "-crf", "20", "-maxrate", "9M", "-bufsize", "18M",
+                    "-c:v", "libx264", "-preset", "slow", "-crf", "22", "-maxrate", "6M", "-bufsize", "12M",
                     "-pix_fmt", "yuv420p", "-profile:v", "high", "-c:a", "aac", "-b:a", "256k", "-shortest", "-movflags", "+faststart", str(final)],
                    check=True)
     print(final)

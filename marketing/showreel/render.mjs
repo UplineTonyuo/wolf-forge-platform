@@ -16,7 +16,7 @@ const repoRoot = path.resolve(here, "../..");
 const outDir = path.join(here, "out");
 const FPS = 30;
 
-const MIME = { ".html": "text/html", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".js": "text/javascript" };
+const MIME = { ".json": "application/json", ".html": "text/html", ".png": "image/png", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".js": "text/javascript" };
 
 // The page references /public/... and /docs/qa/... so the server is rooted at the repo,
 // with the showreel folder mounted at / for index.html and fonts/.

@@ -1,0 +1,445 @@
+{
+ "c-home.jpg": {
+  "Dashboard": [
+   53,
+   151,
+   127,
+   172
+  ],
+  "Projects": [
+   53,
+   235,
+   108,
+   256
+  ],
+  "Inbox": [
+   53,
+   323,
+   90,
+   344
+  ],
+  "Reporting": [
+   53,
+   367,
+   118,
+   388
+  ],
+  "Investments": [
+   12,
+   421,
+   239,
+   433
+  ],
+  "Invoices": [
+   53,
+   535,
+   109,
+   556
+  ],
+  "Welcome back, Maya": [
+   398,
+   161,
+   687,
+   206
+  ],
+  "1 invoice is awaiting payment": [
+   393,
+   414,
+   1299,
+   439
+  ],
+  "SEO Growth Plan · Harbor Fitness": [
+   389,
+   618,
+   621,
+   639
+  ]
+ },
+ "c-store.jpg": {
+  "Dashboard": [
+   53,
+   151,
+   126,
+   172
+  ],
+  "Projects": [
+   53,
+   235,
+   108,
+   256
+  ],
+  "Inbox": [
+   53,
+   323,
+   90,
+   344
+  ],
+  "Reporting": [
+   53,
+   367,
+   118,
+   388
+  ],
+  "Investments": [
+   12,
+   421,
+   239,
+   433
+  ],
+  "Invoices": [
+   53,
+   535,
+   109,
+   556
+  ],
+  "Every investment Wolf Forge offers": [
+   400,
+   213,
+   809,
+   280
+  ],
+  "SEO Sprints": [
+   670,
+   506,
+   755,
+   525
+  ]
+ },
+ "c-store-item.jpg": {
+  "SEO Growth Plan": [
+   397,
+   201,
+   890,
+   237
+  ],
+  "$1,200": [
+   1061,
+   347,
+   1303,
+   377
+  ],
+  "Talk to your team": [
+   1061,
+   563,
+   1303,
+   605
+  ],
+  "Recurring investments are arranged": [
+   1078,
+   442,
+   1286,
+   499
+  ]
+ },
+ "c-project.jpg": {
+  "SEO Growth Plan · Harbor Fitness": [
+   366,
+   171,
+   791,
+   212
+  ],
+  "Delivery progress": [
+   366,
+   272,
+   491,
+   294
+  ],
+  "3 of 5 delivery steps complete.": [
+   391,
+   344,
+   1301,
+   365
+  ],
+  "Project created from a Store purchase": [
+   444,
+   746,
+   793,
+   767
+  ],
+  "Welcome aboard, Maya!": [
+   431,
+   857,
+   1000,
+   900
+  ],
+  "Could we prioritise the new Westside": [
+   713,
+   949,
+   1296,
+   970
+  ],
+  "Westside is first in the sprint": [
+   929,
+   241,
+   1214,
+   257
+  ],
+  "Love how easy this is": [
+   1109,
+   1113,
+   1296,
+   1135
+  ]
+ },
+ "c-ticket.jpg": {
+  "Can we reply to Google reviews from the portal?": [
+   366,
+   171,
+   968,
+   212
+  ],
+  "Hi team! We got 12 new Google reviews": [
+   607,
+   321,
+   1030,
+   363
+  ],
+  "Great news, Maya!": [
+   429,
+   436,
+   819,
+   479
+  ]
+ },
+ "c-invoice-unpaid.jpg": {
+  "Invoice #WF-5100": [
+   366,
+   170,
+   586,
+   211
+  ],
+  "Unpaid": [
+   1264,
+   148,
+   1326,
+   175
+  ],
+  "$1,200.00": [
+   1211,
+   200,
+   1326,
+   241
+  ],
+  "Balance due": [
+   1241,
+   180,
+   1326,
+   195
+  ]
+ },
+ "c-report-0.jpg": {
+  "October results": [
+   418,
+   224,
+   906,
+   336
+  ],
+  "Next": [
+   1054,
+   596,
+   1139,
+   636
+  ]
+ },
+ "c-report-1.jpg": {
+  "Highlights": [
+   366,
+   529,
+   576,
+   560
+  ],
+  "+38% vs September": [
+   919,
+   586,
+   1285,
+   610
+  ],
+  "Westside location page": [
+   673,
+   708,
+   879,
+   728
+  ],
+  "Next": [
+   1054,
+   578,
+   1139,
+   618
+  ]
+ },
+ "c-report-2.jpg": {
+  "Keyword rankings": [
+   366,
+   563,
+   576,
+   593
+  ],
+  "#3 (was #11)": [
+   919,
+   875,
+   1285,
+   899
+  ],
+  "Keywords in top 10": [
+   673,
+   997,
+   879,
+   1017
+  ],
+  "Next": [
+   1054,
+   578,
+   1139,
+   618
+  ]
+ },
+ "c-report-3.jpg": {
+  "Google Business Profile": [
+   366,
+   596,
+   576,
+   627
+  ],
+  "5,120": [
+   919,
+   1164,
+   1285,
+   1188
+  ],
+  "+64%": [
+   919,
+   1225,
+   1285,
+   1249
+  ]
+ },
+ "m-c-home.jpg": {},
+ "m-c-project.jpg": {},
+ "c-invoice-paid.jpg": {
+  "Invoice #WF-5100": [
+   366,
+   170,
+   586,
+   211
+  ],
+  "Paid": [
+   1279,
+   148,
+   1326,
+   175
+  ],
+  "Amount paid": [
+   1047,
+   452,
+   1122,
+   471
+  ],
+  "Balance due": [
+   1047,
+   493,
+   1121,
+   512
+  ]
+ },
+ "s-orders.jpg": {
+  "Projects": [
+   53,
+   202,
+   109,
+   216
+  ],
+  "SEO Growth Plan · Harbor Fitness": [
+   329,
+   311,
+   514,
+   326
+  ],
+  "Jordan Reyes": [
+   922,
+   309,
+   1001,
+   327
+  ]
+ },
+ "s-project.jpg": {
+  "Welcome aboard, Maya!": [
+   523,
+   573,
+   963,
+   637
+  ],
+  "Could we prioritise the new Westside": [
+   304,
+   728,
+   744,
+   771
+  ],
+  "Westside is first in the sprint": [
+   304,
+   845,
+   744,
+   888
+  ],
+  "Love how easy this is": [
+   304,
+   962,
+   491,
+   984
+  ]
+ },
+ "s-ticket.jpg": {},
+ "s-inbox-team.jpg": {
+  "New SEO Growth Plan just came in": [
+   1010,
+   178,
+   1390,
+   212
+  ],
+  "I will take kickoff": [
+   896,
+   265,
+   1154,
+   299
+  ],
+  "On the technical audit": [
+   896,
+   352,
+   1200,
+   386
+  ],
+  "Maya says thank you": [
+   592,
+   135,
+   814,
+   149
+  ]
+ },
+ "s-inbox-ticket.jpg": {
+  "Hi team! We got 12 new Google reviews": [
+   863,
+   279,
+   1219,
+   322
+  ],
+  "Great news, Maya!": [
+   863,
+   591,
+   1219,
+   656
+  ]
+ },
+ "s-invoices.jpg": {
+  "Invoices": [
+   53,
+   429,
+   110,
+   443
+  ],
+  "WF-5100": [
+   1149,
+   341,
+   1203,
+   356
+  ]
+ }
+}
