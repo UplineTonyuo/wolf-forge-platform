@@ -216,6 +216,15 @@ export function FormBuilder({ detail, capabilities, services, folders = [] }: { 
     });
   }
 
+  function addIntakeService(serviceId: string) {
+    if (!serviceId) return;
+    setDefinition((current) => current.service_links.some((link) => link.service_id === serviceId && link.role === "intake_assignment") ? current : {
+      ...current,
+      service_links: [...current.service_links, { service_id: serviceId, role: "intake_assignment", sort_order: current.service_links.length, configuration: {} }],
+    });
+    setMessage("Unsaved changes");
+  }
+
   const paletteContent = palette.map((group) => { const items = group.items.filter((item) => fieldAllowed(item.type, detail.form.form_type)); if (!items.length) return null; return <section key={group.label}><h3>{group.label}</h3><div>{items.map(({ type, icon: Icon }) => <button type="button" key={type} onClick={() => addField(type)}><Icon aria-hidden="true" /><span>{fieldTypeLabels[type]}</span></button>)}</div></section>; });
 
   const settingsContent = selected ? <div className={styles.settingsBody}>
@@ -233,17 +242,29 @@ export function FormBuilder({ detail, capabilities, services, folders = [] }: { 
     <LogicEditor definition={definition} selectedKey={selected.stable_field_key} setDefinition={setDefinition} />
   </div> : <p className={styles.settingsEmpty}>Select a field on the canvas to configure it.</p>;
 
-  const palettePanel = <aside className={styles.palette}><header><h2>Add fields</h2></header>{paletteContent}</aside>;
+  const palettePanel = <aside className={styles.palette}><header><h2>Add fields</h2></header><div className={styles.paletteBody}>{paletteContent}</div></aside>;
   const settingsPanel = <aside className={styles.settings}><header><div><span>Field</span><h2>{selected ? fieldTypeLabels[selected.field_type] : "Form settings"}</h2></div></header>{settingsContent}</aside>;
 
   return <div className={styles.builderRoot}>
     <header className={styles.builderTop}><div><Link href="/forms"><ArrowLeft aria-hidden="true" />Forms</Link><span className={styles.status} data-state={detail.form.status}>{detail.form.status}</span><h1>{definition.name}</h1></div><div className={styles.builderActions}><button className="button-secondary" type="button" onClick={() => setPreviewOpen(true)}><Eye aria-hidden="true" />Preview</button>{capabilities.manage ? <button className="button-secondary" type="button" onClick={() => save()} aria-busy={pending || undefined} disabled={pending}><Save aria-hidden="true" />Save draft</button> : null}{capabilities.publish ? <button className="button-primary" type="button" onClick={() => setPublishOpen(true)}><Send aria-hidden="true" />Publish</button> : null}</div></header>
     {error ? <p className={styles.builderError} role="alert">{error}</p> : null}
-    <section className={styles.formSettingsBar}>
+    <section className={styles.formSettingsBar} data-has-service={detail.form.form_type === "intake" || undefined}>
       <label><span>Form name</span><input value={definition.name} onChange={(event) => { const value = event.target.value; setDefinition((current) => ({ ...current, name: value })); setMessage("Unsaved changes"); }} /></label>
       <label><span>Title</span><input value={definition.title} onChange={(event) => { const value = event.target.value; setDefinition((current) => ({ ...current, title: value })); setMessage("Unsaved changes"); }} /></label>
       <div className={styles.customField}><span>Visibility</span><AnimatedSelect name="visibility" label="Visibility" menuLabel="Visibility" value={definition.visibility} disabled={["intake", "onboarding"].includes(detail.form.form_type)} onChange={(value) => { setDefinition((current) => ({ ...current, visibility: value as FormDefinition["visibility"] })); setMessage("Unsaved changes"); }} options={[{ value: "public", label: "Public" }, { value: "authenticated", label: "Authenticated" }, { value: "assigned", label: "Assigned" }]} /></div>
-      {detail.form.form_type === "intake" ? <div className={styles.customField}><span>Intake Services</span><ServicePicker label="Intake Service" folders={folders} services={services} value={definition.service_links[0]?.service_id ?? ""} onChange={(value) => { setDefinition((current) => ({ ...current, service_links: value ? [{ service_id: value, role: "intake_assignment", sort_order: 0, configuration: {} }] : [] })); setMessage("Unsaved changes"); }} /><p>Once published, this Form is automatically assigned to clients who purchase the linked Service. Existing purchases are unchanged.</p></div> : null}
+      {detail.form.form_type === "intake" ? <>
+        <div className={`${styles.customField} ${styles.intakeServiceField}`}><span>Intake Services<small>Folder → Service</small></span><ServicePicker name="" label="Add Intake Service" folders={folders} services={services.filter((service) => !definition.service_links.some((link) => link.service_id === service.id && link.role === "intake_assignment"))} value="" onChange={addIntakeService} /></div>
+        <details className={styles.intakeServiceLinks}>
+          <summary><span role="status" aria-live="polite" aria-atomic="true">{definition.service_links.length} linked {definition.service_links.length === 1 ? "service" : "services"}</span><span>Manage</span></summary>
+          <ul>{definition.service_links.map((link) => {
+            const service = services.find((item) => item.id === link.service_id);
+            const name = service?.name ?? `Unavailable service (${link.service_id})`;
+            const role = link.role === "intake_assignment" ? "Intake assignment" : link.role === "offered_item" ? "Offered service" : "Default service";
+            return <li key={`${link.service_id}:${link.role}`}><span><strong>{name}</strong><small>{role}{service && !service.is_active ? " · Inactive" : ""}</small></span><button className="button-secondary" type="button" aria-label={`Remove ${name} (${role})`} onClick={() => { setDefinition((current) => ({ ...current, service_links: current.service_links.filter((item) => item.service_id !== link.service_id || item.role !== link.role) })); setMessage("Unsaved changes"); }}><Trash2 aria-hidden="true" />Remove</button></li>;
+          })}</ul>
+        </details>
+        <p className={styles.intakeServiceHelp}>Once published, this Form is automatically assigned to clients who purchase the linked Service. Existing purchases are unchanged.</p>
+      </> : null}
     </section>
     {["intake", "onboarding"].includes(detail.form.form_type) ? <FormRequestOptions config={definition.type_config} services={services} folders={folders}
       onChange={(type_config) => { setDefinition((current) => ({ ...current, type_config })); setMessage("Unsaved changes"); }} /> : null}

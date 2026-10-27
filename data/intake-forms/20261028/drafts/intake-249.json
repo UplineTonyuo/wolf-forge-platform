@@ -18,7 +18,7 @@
         "label": "Before you submit",
         "internal_label": "source_249_field_1",
         "placeholder": null,
-        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
         "required": false,
         "settings": {
           "display_only": true

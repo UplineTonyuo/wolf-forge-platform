@@ -178,7 +178,7 @@ describe("visual builder", () => {
     expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.visibility).toBe("assigned");
   });
 
-  it("persists a folder-first intake Service selection from the builder", async () => {
+  it("adds a folder-first intake Service without replacing the existing link", async () => {
     const folderId = "5e000000-0000-4000-8000-000000000001";
     const secondService = { ...service, id: "20000000-0000-4000-8000-000000000002", name: "Local SEO", folder_id: folderId } as ServiceRow;
     render(
@@ -189,13 +189,74 @@ describe("visual builder", () => {
         folders={[{ id: folderId, name: "SEO" }]}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Intake Service: SEO Strategy" }));
-    fireEvent.click(screen.getByRole("option", { name: /SEO\s*2 services/u }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Intake Service: Choose a service" }));
+    fireEvent.click(screen.getByRole("option", { name: /SEO\s*1 service/u }));
     fireEvent.click(screen.getByRole("option", { name: /Local SEO/u }));
-    expect(document.querySelector('input[name="service_id"]')).toHaveValue(secondService.id);
+    expect(screen.getByText("2 linked services")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links[0]?.service_id).toBe(secondService.id);
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual([
+      ...detail("intake").draftDefinition.service_links,
+      { service_id: secondService.id, role: "intake_assignment", sort_order: 1, configuration: {} },
+    ]);
+  });
+
+  it("preserves all six shared intake links and their configuration when editing a field", async () => {
+    const intake = detail("intake");
+    intake.draftDefinition.service_links = Array.from({ length: 6 }, (_, index) => ({
+      service_id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      role: "intake_assignment",
+      sort_order: index,
+      configuration: { bundle_key: `entry-${index + 1}`, enabled: true },
+    }));
+    const originalLinks = structuredClone(intake.draftDefinition.service_links);
+    render(<FormBuilder detail={intake} capabilities={capabilities} services={[service]} />);
+    expect(screen.getByText("6 linked services").closest("details")).not.toHaveAttribute("open");
+    fireEvent.change(screen.getByLabelText("Label"), { target: { value: "Updated project name" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual(originalLinks);
+  });
+
+  it("does not offer a duplicate intake link while allowing an existing service with a different role", async () => {
+    const intake = detail("intake");
+    const secondService = { ...service, id: "20000000-0000-4000-8000-000000000002", name: "Local SEO" } as ServiceRow;
+    intake.draftDefinition.service_links.push({ service_id: secondService.id, role: "default_item", sort_order: 1, configuration: { keep: "default configuration" } });
+    const originalLinks = structuredClone(intake.draftDefinition.service_links);
+    render(<FormBuilder detail={intake} capabilities={capabilities} services={[service, secondService]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add Intake Service: Choose a service" }));
+    fireEvent.click(screen.getByRole("option", { name: /Unfiled/ }));
+    expect(screen.queryByRole("option", { name: /SEO Strategy/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: /Local SEO/ }));
+    expect(screen.getByText("3 linked services")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add Intake Service: Choose a service" }));
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close service picker" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual([
+      ...originalLinks,
+      { service_id: secondService.id, role: "intake_assignment", sort_order: 2, configuration: {} },
+    ]);
+  });
+
+  it("removes only the chosen service and role while preserving inactive and unavailable links", async () => {
+    const intake = detail("intake");
+    intake.draftDefinition.service_links.push(
+      { service_id: service.id, role: "default_item", sort_order: 1, configuration: { keep: "same service, other role" } },
+      { service_id: "20000000-0000-4000-8000-000000000099", role: "intake_assignment", sort_order: 2, configuration: { keep: "unavailable service" } },
+    );
+    const remainingLinks = intake.draftDefinition.service_links.slice(1).map((link, sort_order) => ({ ...link, sort_order }));
+    render(<FormBuilder detail={intake} capabilities={capabilities} services={[{ ...service, is_active: false }]} />);
+    fireEvent.click(screen.getByText("Manage"));
+    expect(screen.getByText(/Unavailable service \(20000000-0000-4000-8000-000000000099\)/)).toBeInTheDocument();
+    expect(screen.getByText("Default service · Inactive")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove SEO Strategy (Intake assignment)" }));
+    expect(screen.getByText("2 linked services")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove SEO Strategy (Default service)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual(remainingLinks);
   });
 
   it("previews the current draft through the shared renderer", () => {
@@ -320,7 +381,9 @@ describe("visual builder", () => {
     render(<FormBuilder detail={detail("intake")} capabilities={capabilities} services={[service]} />);
     expect(screen.queryByRole("button", { name: "Payment" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Email" })).not.toBeInTheDocument();
-    expect(document.querySelector('input[name="service_id"]')).toHaveValue(service.id);
+    expect(screen.getByText("1 linked service")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Manage"));
+    expect(screen.getByRole("button", { name: "Remove SEO Strategy (Intake assignment)" })).toBeInTheDocument();
   });
 });
 

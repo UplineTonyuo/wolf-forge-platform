@@ -18,7 +18,7 @@
         "label": "Before you submit",
         "internal_label": "source_147_field_1",
         "placeholder": null,
-        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
         "required": false,
         "settings": {
           "display_only": true
@@ -71,10 +71,10 @@
         "stable_field_key": "b568de81-cf9d-5acc-9d0a-38c9df3a511d",
         "sort_order": 4,
         "field_type": "text",
-        "label": "Google Drive Link of Article to Distribute, the article should be at least 500 - 1000 words and have an image in it already. Preferablly a Google Map image that we can then link to your GBP/GMB.",
+        "label": "Google Drive link to the finished press release article",
         "internal_label": "source_147_field_5",
         "placeholder": null,
-        "help_html": null,
+        "help_html": "<p>Provide the finished article with its image. Match the article length to your purchased service: 500 words for Basic (150 links) and Standard (350 links); 1,500 words for Premium (450 links); 1,000 words for the Yahoo package and Business Insider + Yahoo package.</p>",
         "required": true,
         "settings": {},
         "options": [],
