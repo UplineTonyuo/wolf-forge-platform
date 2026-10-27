@@ -1,0 +1,405 @@
+{
+  "request_id": "865b2239-8bf6-567e-a1a8-94008cbf9625",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-165",
+  "definition": {
+    "name": "Intake Form for Done in a Week Website Deal -20 Page Site + 20k Content + SEO",
+    "title": "Intake Form for Done in a Week Website Deal -20 Page Site + 20k Content + SEO",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "fa870ac8-fe01-5caf-88f0-06fd6a3c2318",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "*Read Me First*",
+        "internal_label": "source_165_field_1",
+        "placeholder": "Read.....",
+        "help_html": "You must provide Elementor License once we transfer the site to you, as your website will be built using it.\nYou Must Provide Your Own Woocommerce License as once we transfer the site.\nYou must Have your Own Domain Name\nYou must have your own hosting.\nYou must have WordPress Installed on your Hosting.\nIf you do not have hosting or domain names or licenses etc, just message us and we will send the links to purchase them.",
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "12037789-4fd2-5053-a7aa-d6510274c54c",
+        "sort_order": 1,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_165_field_2",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "74129fd8-e646-5fb4-8216-6ea040fa0d55",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_165_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "5e3f37ed-4731-503c-bb32-233b5a24d7f3",
+        "sort_order": 3,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_165_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "0ae96bcc-cce7-5c6c-bcfc-a01bcc4de1af",
+        "sort_order": 4,
+        "field_type": "richtext",
+        "label": "Service requirements",
+        "internal_label": "source_165_field_5",
+        "placeholder": null,
+        "help_html": "<p>Websites are ONLY built in Wordpress no other builder will be used.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4833b8d9-331f-5a46-b367-a6da50a9ac2e",
+        "sort_order": 5,
+        "field_type": "file",
+        "label": "Logo",
+        "internal_label": "source_165_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "f46578c9-4c32-5caf-b2ef-9ae8d449334d",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "Full Business Name:",
+        "internal_label": "source_165_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "020b6417-2bb9-580a-ae1b-9393fded3cc2",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "Full Business Address",
+        "internal_label": "source_165_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2a34e85d-834d-5361-ba1a-2896e839f2cd",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "City:",
+        "internal_label": "source_165_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9958253c-9802-5103-a5a1-995c4ee52c79",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "State",
+        "internal_label": "source_165_field_10",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "eb25b2b3-637a-5a92-a486-d795fb69ca7d",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "Country:",
+        "internal_label": "source_165_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "43e6b5a2-30cf-5d68-81a6-10bf8ae1df43",
+        "sort_order": 11,
+        "field_type": "text",
+        "label": "Phone Number:",
+        "internal_label": "source_165_field_12",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a92ebb3e-ed87-5334-95a4-0609ba88f0f6",
+        "sort_order": 12,
+        "field_type": "text",
+        "label": "GMB Link",
+        "internal_label": "source_165_field_13",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9c3b370c-2187-5ce6-9dae-d76940e66f01",
+        "sort_order": 13,
+        "field_type": "textarea",
+        "label": "Keywords",
+        "internal_label": "source_165_field_14",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ce6bcaa4-5096-52a8-a747-3b23172db5fa",
+        "sort_order": 14,
+        "field_type": "textarea",
+        "label": "List of ALL Pages You Want, such as: Home, About, Privacy Page, Services, Sub Pages etc you get 20 & 20 only",
+        "internal_label": "source_165_field_15",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2b04697f-7ef8-5199-bfef-809f616b0ce5",
+        "sort_order": 15,
+        "field_type": "text",
+        "label": "Primary City",
+        "internal_label": "source_165_field_16",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4018668e-fce2-552e-89ac-4b3fe7934485",
+        "sort_order": 16,
+        "field_type": "secret",
+        "label": "WP Login where you want us to place your website as we build it",
+        "internal_label": "source_165_field_17",
+        "placeholder": null,
+        "help_html": "<p>Password and login-credential collection is disabled. Arrange authorized website access through the team.</p>",
+        "required": false,
+        "settings": {
+          "collection_mode": "disabled"
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "af1b4d0c-197a-5985-92cb-9c8ac0e6eb73",
+        "sort_order": 17,
+        "field_type": "textarea",
+        "label": "Fonts you like",
+        "internal_label": "source_165_field_18",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6949cb77-601e-5d74-997f-ff447970d00e",
+        "sort_order": 18,
+        "field_type": "textarea",
+        "label": "Colors you like",
+        "internal_label": "source_165_field_19",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e61ecfa7-3734-5458-8acc-76c79a7ffb79",
+        "sort_order": 19,
+        "field_type": "textarea",
+        "label": "3 Websites & Why You Like them, if you want us to clone a website look entirely then tell us to clone a website and which one. Otherwise we take a combination of the 3 sites and why you like them to make your own look!",
+        "internal_label": "source_165_field_20",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e36c3571-7e8b-58b5-942a-a53e00559ab5",
+        "sort_order": 20,
+        "field_type": "text",
+        "label": "Wordpress Domain",
+        "internal_label": "source_165_field_21",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a028c4ce-cf0f-59e7-b6e5-8be8d6a1d643",
+        "sort_order": 21,
+        "field_type": "text",
+        "label": "Username",
+        "internal_label": "source_165_field_22",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "47a6b8dd-1cbd-56d0-aecd-35c3f5589d26",
+        "sort_order": 22,
+        "field_type": "secret",
+        "label": "Password",
+        "internal_label": "source_165_field_23",
+        "placeholder": null,
+        "help_html": "<p>Password and login-credential collection is disabled. Arrange authorized website access through the team.</p>",
+        "required": false,
+        "settings": {
+          "collection_mode": "disabled"
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "185f296a-4891-5dba-ae88-cfacf67bf43b",
+        "sort_order": 23,
+        "field_type": "textarea",
+        "label": "Your website will be built using Elementor on WordPress, as Such you need to purchase Elementor Pro here and Provide a license to useor purchase it here https://be.elementor.com/visit/?bta=228259&brand=elementor",
+        "internal_label": "source_165_field_24",
+        "placeholder": "If you dont have it then purchase it here: https://be.elementor.com/visit/?bta=228259&brand=elementor",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "38fd68dc-70f5-5885-a757-724b66458f34",
+        "sort_order": 24,
+        "field_type": "textarea",
+        "label": "If you do not have hosting or domain name or emails setup, you will need to purchase them here: hosting and Domain names and Email plans: https://my.hawkhost.com/aff.php?aff=15289",
+        "internal_label": "source_165_field_25",
+        "placeholder": "If you do not have hosting or domain name or emails setup, you will need to purchase them here: hosting and Domain names and Email plans: https://my.hawkhost.com/aff.php?aff=15289",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6f6d077a-b19d-5b99-9af9-aaac213d655f",
+        "sort_order": 25,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_165_field_26",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000260",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000570",
+        "role": "intake_assignment",
+        "sort_order": 1,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000443",
+        "role": "intake_assignment",
+        "sort_order": 2,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000525",
+        "role": "intake_assignment",
+        "sort_order": 3,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000282",
+        "role": "intake_assignment",
+        "sort_order": 4,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000144",
+        "role": "intake_assignment",
+        "sort_order": 5,
+        "configuration": {}
+      }
+    ]
+  }
+}

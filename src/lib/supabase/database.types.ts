@@ -5357,6 +5357,11 @@ export type Database = {
       app_get_intake_follow_up: { Args: { p_submission_id: string }; Returns: string }
       app_server_run_intake_job: { Args: { p_submission_id: string }; Returns: Json }
       app_server_intake_maintenance: { Args: never; Returns: Json }
+        app_get_my_order_start: { Args: { p_order_id: string }; Returns: Json }
+        app_request_my_order_start: { Args: { p_order_id: string }; Returns: Json }
+        app_reconcile_my_order_start: { Args: { p_assignment_id: string }; Returns: Json }
+        app_my_intake_version_available: { Args: { p_assignment_id: string; p_version_id: string }; Returns: boolean }
+        app_server_process_order_starts: { Args: never; Returns: number }
       app_server_finish_expired_intake_file: { Args: { p_id: string }; Returns: undefined }
       app_prepare_intake_file: {
         Args: { p_id: string; p_assignment_id: string; p_field_key: string; p_name: string; p_mime: string; p_size: number; p_checksum: string }
@@ -5524,6 +5529,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_get_form_submission_pdf: { Args: { p_submission_id: string }; Returns: Json }
       app_get_form_submission: {
         Args: { p_submission_id: string }
         Returns: Json

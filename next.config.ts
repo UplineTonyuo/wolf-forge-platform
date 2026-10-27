@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
   // No X-Powered-By: it names the framework and version to every caller.
   poweredByHeader: false,
   devIndicators: false,
+  outputFileTracingIncludes: {
+    "/api/form-submissions/*/pdf": ["./src/assets/pdf-fonts/*.woff"],
+  },
 
   /**
    * Next blocks cross-origin requests to dev-only assets/endpoints (JS

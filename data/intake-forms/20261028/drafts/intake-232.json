@@ -1,0 +1,392 @@
+{
+  "request_id": "1db2e6a6-3d1d-5072-b618-2816034905bb",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-232",
+  "definition": {
+    "name": "Intake Form for Local SEO Services",
+    "title": "Intake Form for Local SEO Services",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "1613924e-4a5f-5daa-b69a-d1983c9e8805",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_232_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "90c1dbbd-8056-5bcc-b011-409172e61bab",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_232_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "cfea0d32-73f2-5d30-86cd-8db90c8b6e4d",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_232_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "5ab7465f-8bcd-5595-9a70-302e9890c721",
+        "sort_order": 3,
+        "field_type": "text",
+        "label": "Full Business Name:",
+        "internal_label": "source_232_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fdd509a9-49c9-5d3e-bc46-4960c1427972",
+        "sort_order": 4,
+        "field_type": "text",
+        "label": "Full Business Address",
+        "internal_label": "source_232_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fb8ba3d6-85dc-5c30-8117-f4b372a4f355",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "Phone Number:",
+        "internal_label": "source_232_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "248e0b7f-2430-59e7-bc6b-fd752bc1b10a",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "City:",
+        "internal_label": "source_232_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6170fa36-f4b9-59e9-a91b-952558c2df07",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "State",
+        "internal_label": "source_232_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4ba7306e-66e4-506f-9cc8-aa313d14e837",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Country:",
+        "internal_label": "source_232_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "557d9e4c-73c1-5248-bdb3-6fc93d5e1c2d",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "GMB Link:",
+        "internal_label": "source_232_field_10",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9400b773-9cae-505a-98bc-1567817cce21",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "Please provide a Google Drive link with the images you would like us to use in blogs, GMB posts, press releases, etc.",
+        "internal_label": "source_232_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ade882cb-fff6-5e7f-97f7-d75ae393d8d6",
+        "sort_order": 11,
+        "field_type": "textarea",
+        "label": "Grant Google Search Console access to: rankfortress8@gmail.com",
+        "internal_label": "source_232_field_12",
+        "placeholder": "Have you done this?",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fdac46e9-4572-5fd9-b645-fcdb3a33c0e1",
+        "sort_order": 12,
+        "field_type": "textarea",
+        "label": "Grant Google My Business or Google Business Profile to: williamwhitejones091@gmail.com",
+        "internal_label": "source_232_field_13",
+        "placeholder": "Did you grant access? YEs or No",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6fea5a74-b737-5204-9139-4ae012e01841",
+        "sort_order": 13,
+        "field_type": "textarea",
+        "label": "Grant Youtube Channel to truonglethan198@gmail.com : Follow this SOP for granting the access https://docs.google.com/document/d/1rPNvd5HFr1etNWt7IFf-O0yuLlWfOel_fyg0Cxtk384/edit?tab=t.0",
+        "internal_label": "source_232_field_14",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "3b5b50e0-c7ca-59d5-a45f-2e49e587733d",
+        "sort_order": 14,
+        "field_type": "textarea",
+        "label": "Setup & Grant Podcast Channel access: Follow these steps: https://docs.google.com/document/d/1mrJ7r8fHvBWQ0VHN2piUcYzgw_vTeRVZ-01IXdyk8Io/edit?usp=sharing",
+        "internal_label": "source_232_field_15",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e3b947e2-5995-55ab-833c-e9af63864007",
+        "sort_order": 15,
+        "field_type": "break",
+        "label": "Keywords",
+        "internal_label": "source_232_field_16",
+        "placeholder": null,
+        "help_html": "Keywords",
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1d8c2ce6-f38b-5a9f-b6c8-5db614958a89",
+        "sort_order": 16,
+        "field_type": "text",
+        "label": "Primary Keyword:",
+        "internal_label": "source_232_field_17",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2c81e994-0ba5-584d-b2cd-dd7bd35d5172",
+        "sort_order": 17,
+        "field_type": "text",
+        "label": "Other Keywords:",
+        "internal_label": "source_232_field_18",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "afc24ad1-db6e-5abe-b9ec-83d9607ca776",
+        "sort_order": 18,
+        "field_type": "text",
+        "label": "Primary Location:",
+        "internal_label": "source_232_field_19",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "c87ac488-563d-5317-9ce3-22e848751503",
+        "sort_order": 19,
+        "field_type": "text",
+        "label": "Business Email",
+        "internal_label": "source_232_field_20",
+        "placeholder": "Email to use in Press Release",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7133e41a-44fd-58e0-8e7a-2661add7f80a",
+        "sort_order": 20,
+        "field_type": "break",
+        "label": "Website Credentials",
+        "internal_label": "source_232_field_21",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1143cdca-bafb-5578-a042-93774585df36",
+        "sort_order": 21,
+        "field_type": "text",
+        "label": "WordPress Website Login URL",
+        "internal_label": "source_232_field_22",
+        "placeholder": "requires admin rights access",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "dca1c1cc-5e58-5e0a-b7eb-c0dd484bd8fe",
+        "sort_order": 22,
+        "field_type": "textarea",
+        "label": "WordPress User Name",
+        "internal_label": "source_232_field_23",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "06fe8b99-0ab2-53e8-adbd-1b76ff8fecb8",
+        "sort_order": 23,
+        "field_type": "secret",
+        "label": "WordPress Password",
+        "internal_label": "source_232_field_24",
+        "placeholder": null,
+        "help_html": "<p>Password and login-credential collection is disabled. Arrange authorized website access through the team.</p>",
+        "required": false,
+        "settings": {
+          "collection_mode": "disabled"
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6c9d8a88-e6e6-5a58-8193-744f2cfadf27",
+        "sort_order": 24,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_232_field_25",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>SEO Services Agreement<br><br>This Agreement is made between the Agency (&quot;Agency&quot;) and the Client on the date of purchase.<br><br>Services Provided: The Agency will provide search engine optimization (SEO) services, which may include, but are not limited to, keyword research, on-page optimization, content creation and optimization, link building, and performance reporting.<br><br>Client Responsibilities: The Client agrees to provide timely access to website data, content, and other information necessary for the Agency to perform SEO services. The Client is responsible for implementing changes recommended by the Agency or granting the Agency the necessary access to do so.<br><br>Performance and Rankings: The Agency will endeavor to improve the search engine rankings of the Client’s website. However, due to the unpredictable nature of search engines, the Agency cannot guarantee specific rankings or consistent top positions for specific keywords.<br><br>Reporting and Communication: The Agency will provide the Client with monthly reports detailing performance metrics, activities undertaken, and recommendations. Regular communication will be maintained through emails and scheduled calls.<br><br>Payment Terms: The Client agrees to pay the Agency [specify fee structure, e.g., monthly retainer, per project fee, etc.] as compensation for the SEO services provided. Payment terms shall be net 30 days from the date of invoice.<br><br>Term and Termination: This Agreement shall commence on the Effective Date and continue indefinitely. Either party may terminate this Agreement with a [30-day] written notice.<br><br>Confidentiality: Both parties agree to keep confidential any proprietary information, trade secrets, and know-how disclosed during the term of this Agreement.<br><br>Liability: The Agency shall not be liable for any indirect, incidental, or consequential damages, including lost profits, arising out of its services under this Agreement.<br><br>Independent Contractor: The Agency is engaged as an independent contractor. Nothing in this Agreement shall be construed to create a partnership, joint venture, or employer-employee relationship.<br><br>Amendments: Any amendments to this Agreement must be in writing and signed by both parties.<br><br>Governing Law: This Agreement shall be governed by and construed in accordance with the laws of [Florida/USA].<br><br>Preamble: The following details the terms of our engagement:<br><br>A. Agency, Not Employee: The Client acknowledges that they are partnering with a specialized agency, not hiring an in-house employee. The Agency's expertise is best utilized without micro-management, and unsolicited guidance can hinder effectiveness and efficiency.<br><br>B. Focus on Implementation: The Agency's service is centered around implementing advanced SEO strategies, not providing training or detailed activity logs. Trust in the Agency's expertise is essential, and while open to discussions, the primary service paid for is the implementation of effective SEO practices.<br><br>C. Long-Term Strategy Over Quick Fixes: SEO is a strategic, long-term endeavor requiring patience and commitment. The Agency advises against engaging its services for immediate results or if the Client's business is in a phase of frequent strategic shifts.<br><br>D. Efficient Communication: The Agency believes in efficiency in communication. Regular, scheduled updates on key metrics such as status, content progress, and rankings will be provided, avoiding excessive meetings.<br><br>E. Consistency in Strategy: Once a campaign is underway, the Agency commits to the agreed-upon strategy. Frequent changes based on emotional or impulsive reactions are discouraged, as they can hinder the progress of the SEO campaign.<br><br>F. Website and Content Modifications: The nature of SEO requires making edits and creating new content on the Client's website. This is a non-negotiable part of the process.<br><br>G. Steady Despite Internal Changes (&quot;New Sheriff Syndrome&quot;): Personnel changes within the Client's organization will not automatically prompt a change in the Agency's agreed-upon strategy. Consistency is key in SEO.<br><br>No Refund Policy: All products and services are subject to the no refund policy as outlined on the Agency's website.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000555",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000563",
+        "role": "intake_assignment",
+        "sort_order": 1,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000564",
+        "role": "intake_assignment",
+        "sort_order": 2,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000123",
+        "role": "intake_assignment",
+        "sort_order": 3,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000554",
+        "role": "intake_assignment",
+        "sort_order": 4,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000124",
+        "role": "intake_assignment",
+        "sort_order": 5,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000546",
+        "role": "intake_assignment",
+        "sort_order": 6,
+        "configuration": {}
+      }
+    ]
+  }
+}

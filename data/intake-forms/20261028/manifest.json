@@ -1,0 +1,365 @@
+{
+  "prepared_at": "2026-10-27T19:56:15.323Z",
+  "status": "local_draft_plan_not_saved_or_published",
+  "templates": [
+    {
+      "file": "intake-252.json",
+      "canonical_key": "rankfortress-intake-252",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000444"
+      ],
+      "sha256": "d3810616dd6a9440f4dc2bd633cddf92c730fa12aa5427d80a36bd0823f1c986"
+    },
+    {
+      "file": "intake-135.json",
+      "canonical_key": "rankfortress-intake-135",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000028"
+      ],
+      "sha256": "92b930df163be17e74da39d3e6a5d62399bf733d8bc57050b8b1817e1641c42f"
+    },
+    {
+      "file": "intake-137.json",
+      "canonical_key": "rankfortress-intake-137",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000030"
+      ],
+      "sha256": "d0af8abe823f38a5bbde574d99efe7b8f12203b0d7e6c367b3f5bee3a2c8c783"
+    },
+    {
+      "file": "intake-165.json",
+      "canonical_key": "rankfortress-intake-165",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000260",
+        "5f000000-0000-4000-8000-000000000570",
+        "5f000000-0000-4000-8000-000000000443",
+        "5f000000-0000-4000-8000-000000000525",
+        "5f000000-0000-4000-8000-000000000282",
+        "5f000000-0000-4000-8000-000000000144"
+      ],
+      "sha256": "0204e140b2a7b53dd2cf850f97ff180c5bdffb18b4dbb4f5dc4b5ada60668463"
+    },
+    {
+      "file": "intake-108.json",
+      "canonical_key": "rankfortress-intake-108",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000331"
+      ],
+      "sha256": "6e0aba55b75c0d4c4dea52f7adcf088b42ca45fc6165a0a14d7761547fc47d23"
+    },
+    {
+      "file": "intake-244.json",
+      "canonical_key": "rankfortress-intake-244",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000565",
+        "5f000000-0000-4000-8000-000000000433"
+      ],
+      "sha256": "51c434e05d3a3579e2382242e9069e8032127e38acb722e3f10e77c9cd721080"
+    },
+    {
+      "file": "intake-147.json",
+      "canonical_key": "rankfortress-intake-147",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000257",
+        "5f000000-0000-4000-8000-000000000460",
+        "5f000000-0000-4000-8000-000000000431",
+        "5f000000-0000-4000-8000-000000000428",
+        "5f000000-0000-4000-8000-000000000429",
+        "5f000000-0000-4000-8000-000000000430"
+      ],
+      "sha256": "bdc7dfd3b662af2857ff674b56ab5ce3fa1c7caf2d6f29a9e42411a82c9fb4e3"
+    },
+    {
+      "file": "intake-133.json",
+      "canonical_key": "rankfortress-intake-133",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000025"
+      ],
+      "sha256": "eac4aee4ebb7441aa1e345f6c47526d5c2e649c781d4785b90dd5a4a8504da9d"
+    },
+    {
+      "file": "intake-232.json",
+      "canonical_key": "rankfortress-intake-232",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000555",
+        "5f000000-0000-4000-8000-000000000563",
+        "5f000000-0000-4000-8000-000000000564",
+        "5f000000-0000-4000-8000-000000000123",
+        "5f000000-0000-4000-8000-000000000554",
+        "5f000000-0000-4000-8000-000000000124",
+        "5f000000-0000-4000-8000-000000000546"
+      ],
+      "sha256": "d7c659577212114f819be88211cb8c70031f085f40524173aec4c7ccef567bef"
+    },
+    {
+      "file": "intake-139.json",
+      "canonical_key": "rankfortress-intake-139",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000190"
+      ],
+      "sha256": "b87dafcfd0e49285716d8d0b2832e8871df1be20734f2cb34da486452a4dff67"
+    },
+    {
+      "file": "intake-231.json",
+      "canonical_key": "rankfortress-intake-231",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000408"
+      ],
+      "sha256": "3b3bcf28b7c467fa2fb0f23e4f815ca7492f2e4efbab88c0ae51ff6a5938412a"
+    },
+    {
+      "file": "intake-215.json",
+      "canonical_key": "rankfortress-intake-215",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000152",
+        "5f000000-0000-4000-8000-000000000310",
+        "5f000000-0000-4000-8000-000000000318",
+        "5f000000-0000-4000-8000-000000000256"
+      ],
+      "sha256": "1df9056acda0dd3183978b1d86343c3077503921bb0d380561b90dd21fb75fe2"
+    },
+    {
+      "file": "intake-138.json",
+      "canonical_key": "rankfortress-intake-138",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000187"
+      ],
+      "sha256": "7b5c911241389c39386b640e6b4a2ddb9bb9c2ac09f226d303eb049f68f397dc"
+    },
+    {
+      "file": "intake-127.json",
+      "canonical_key": "rankfortress-intake-127",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000013"
+      ],
+      "sha256": "25c964711c7dbdf5b010acca85ffa2369ab29daa5d336b4fcc007c1994962c4a"
+    },
+    {
+      "file": "intake-134.json",
+      "canonical_key": "rankfortress-intake-134",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000027",
+        "5f000000-0000-4000-8000-000000000562"
+      ],
+      "sha256": "bee3b0fd1bc2d236a1f135e0a989592bef786792ba27e02ee487cd5b8cd5fd39"
+    },
+    {
+      "file": "intake-150.json",
+      "canonical_key": "rankfortress-intake-150",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000275"
+      ],
+      "sha256": "36af4a0bd774ac992a9ff5a139a9bf0fead90b63560c642e50437bfb5ec9ca83"
+    },
+    {
+      "file": "intake-106.json",
+      "canonical_key": "rankfortress-intake-106",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000338"
+      ],
+      "sha256": "d64656c55dff961ded078eccf16951474d85aa673b349da84de1fcdc771ab98b"
+    },
+    {
+      "file": "intake-151.json",
+      "canonical_key": "rankfortress-intake-151",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000276"
+      ],
+      "sha256": "257fbf3e19b4179b9e5313e2a35fb962b7126625609700eb5ad2c93ae962e7bf"
+    },
+    {
+      "file": "intake-223.json",
+      "canonical_key": "rankfortress-intake-223",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000417"
+      ],
+      "sha256": "d232b816067fb22dd1c2dc900526c6ce7a3c84caf17d2729f8f73c10f0f17102"
+    },
+    {
+      "file": "intake-152.json",
+      "canonical_key": "rankfortress-intake-152",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000277"
+      ],
+      "sha256": "3f6e76335474ac9c6e670c7d8b2ea481f42512c8574044f1fb96f93c2d473a92"
+    },
+    {
+      "file": "intake-158.json",
+      "canonical_key": "rankfortress-intake-158",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000375"
+      ],
+      "sha256": "0375e78d2b004cd35c879ccebf9a963ac59f4206530d6f2f2ef8e72d553cd91a"
+    },
+    {
+      "file": "intake-249.json",
+      "canonical_key": "rankfortress-intake-249",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000438"
+      ],
+      "sha256": "f9b1f45472d1ac5fb6ba7ef6567f81a24b1856231343eb8cb6c62eb951b237dc"
+    },
+    {
+      "file": "intake-245.json",
+      "canonical_key": "rankfortress-intake-245",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000434",
+        "5f000000-0000-4000-8000-000000000578"
+      ],
+      "sha256": "296b82e9de31fec2107008973d82e31051c07b827722033c71cacf6d3a8a2c86"
+    },
+    {
+      "file": "intake-246.json",
+      "canonical_key": "rankfortress-intake-246",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000435"
+      ],
+      "sha256": "23cbfc05b0748d283980fe76a062993c230a97a1d2178647acbe7a71a9b6f9bf"
+    },
+    {
+      "file": "intake-221.json",
+      "canonical_key": "rankfortress-intake-221",
+      "status": "preserved_prior_draft",
+      "services": [
+        "5f000000-0000-4000-8000-000000000415"
+      ],
+      "sha256": "80be2d4ba3aa19bd694d7d247d4aa686eb30c9992b030e58deda2811218e0b9b"
+    },
+    {
+      "file": "service-418.json",
+      "canonical_key": "woad-intake-service-418",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5f000000-0000-4000-8000-000000000418"
+      ],
+      "sha256": "e5fbb216f05861d39ecef8bf95165e535571502f1dbffcf710180f27b92cd87e"
+    },
+    {
+      "file": "service-450.json",
+      "canonical_key": "woad-intake-service-450",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5f000000-0000-4000-8000-000000000450"
+      ],
+      "sha256": "915354f3ade941612106dbf92640ee361271ac72a7be7f1f4af45657e9eb8097"
+    },
+    {
+      "file": "service-571.json",
+      "canonical_key": "woad-intake-service-571",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000101"
+      ],
+      "sha256": "54e519b15637b521b72a59a7e00ac86e13290360a657ae1e57d8af26fedf9c70"
+    },
+    {
+      "file": "service-572.json",
+      "canonical_key": "woad-intake-service-572",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000102"
+      ],
+      "sha256": "c7371387f15b0477014b95cd70e7a4951ba5f681f73c44b7610ec6b437a4c6c1"
+    },
+    {
+      "file": "service-573.json",
+      "canonical_key": "woad-intake-service-573",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000103"
+      ],
+      "sha256": "0396c9b601d8f3819100fe893b0bc7202ac77f57cdfdfdc86a5c33f504419f4a"
+    },
+    {
+      "file": "service-574.json",
+      "canonical_key": "woad-intake-service-574",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000104"
+      ],
+      "sha256": "1453e560871ebca99807826eea4c6d1a953c24f1926f45ffef459f5e75666cc2"
+    },
+    {
+      "file": "service-575.json",
+      "canonical_key": "woad-intake-service-575",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000105"
+      ],
+      "sha256": "875e87c955d5687e471092db111ff7890118d4843464c391e073dda4175c0a1e"
+    },
+    {
+      "file": "service-576.json",
+      "canonical_key": "woad-intake-service-576",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000106"
+      ],
+      "sha256": "b4aa2ab0f8700681ddc4fb9a25d1c9940daa6ba131de38e7320298bf0b51477f"
+    },
+    {
+      "file": "service-577.json",
+      "canonical_key": "woad-intake-service-577",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000107"
+      ],
+      "sha256": "1f5df92587aa703e800be4b51c1ff88c8a538b49f76dc0e90d312dc938335aa7"
+    },
+    {
+      "file": "service-579.json",
+      "canonical_key": "woad-intake-service-579",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000108"
+      ],
+      "sha256": "32efef7235c709648283d325db564af19d42f610990a2b3b638f00809ae08f06"
+    },
+    {
+      "file": "service-580.json",
+      "canonical_key": "woad-intake-service-580",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000109"
+      ],
+      "sha256": "aef58432e7774faec1e6218c2a1c4c0a841b11880905ec623dda11d3358c049a"
+    },
+    {
+      "file": "service-581.json",
+      "canonical_key": "woad-intake-service-581",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "services": [
+        "5e000000-0000-4000-8000-000000000110"
+      ],
+      "sha256": "1ceb63f957afa065f22be657b6244b8bd7194c953a41620a28d102fc6ade9232"
+    }
+  ],
+  "mapped_services": 59,
+  "existing_services_preserved": 47,
+  "new_draft_services": 12,
+  "hosted_writes": 0
+}

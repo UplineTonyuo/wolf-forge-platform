@@ -157,6 +157,9 @@ export const SECURITY_EVENTS = {
 
   /* ------------------------------------------------------- integration --- */
 
+  "integration.gmail.connect_started": { category: "integration", severity: "info" },
+  "integration.gmail.authorization_ready": { category: "integration", severity: "info" },
+
   /**
    * The OAuth `state` did not match the callback-scoped cookie, or the PKCE
    * verifier was missing. Either is a failed CSRF / authorization-code

@@ -1,0 +1,230 @@
+{
+  "request_id": "4aa59f2b-d43a-52d9-aa41-40a6f76e2bf1",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-147",
+  "definition": {
+    "name": "Intake Form for Press Releases",
+    "title": "Intake Form for Press Releases",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "13ede576-6f09-5593-8f48-e8f3058250ed",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_147_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "808e404f-b85f-5568-9a10-d2312248a659",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_147_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7ff32003-5124-586c-8349-cc4bf686a85d",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_147_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ad133de4-8343-502d-8e9c-21f253d56c60",
+        "sort_order": 3,
+        "field_type": "file",
+        "label": "File upload",
+        "internal_label": "source_147_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b568de81-cf9d-5acc-9d0a-38c9df3a511d",
+        "sort_order": 4,
+        "field_type": "text",
+        "label": "Google Drive Link of Article to Distribute, the article should be at least 500 - 1000 words and have an image in it already. Preferablly a Google Map image that we can then link to your GBP/GMB.",
+        "internal_label": "source_147_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7168ac2c-bb82-535f-ae03-05b5245c2c70",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "3 Main Target Keyword with not than 20 Characters (Requires 15-20 characters per keyword only)",
+        "internal_label": "source_147_field_6",
+        "placeholder": null,
+        "help_html": "Requires 15-20 characters per keyword only",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1514fe31-abf6-5fbf-8263-599125e6425e",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "Press Release Title (not more than 60 characters and No special characters ie \",?*# etc) (Requires 55-60 characters only)",
+        "internal_label": "source_147_field_7",
+        "placeholder": null,
+        "help_html": "Requires 55-60 characters only and strictly no special characters",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "c5789de5-d5a6-516b-af4f-68dffbe6dbcd",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "Website Name",
+        "internal_label": "source_147_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "603aee42-dcb3-59d5-80d2-78ba2b2ac690",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Domain Name URL",
+        "internal_label": "source_147_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "59300002-8a4d-575b-abf7-f23b5147e1dc",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "Gbp/gmb Name and Link",
+        "internal_label": "source_147_field_10",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9717c368-0b56-5cbb-9fe3-8a5043fbe610",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "Complete Address",
+        "internal_label": "source_147_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "78f84a29-5148-5140-b275-79b69fd25406",
+        "sort_order": 11,
+        "field_type": "text",
+        "label": "Business Email",
+        "internal_label": "source_147_field_12",
+        "placeholder": null,
+        "help_html": "email to use in press release",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "47e6247d-e13d-5e62-a817-c4db9a9108ce",
+        "sort_order": 12,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_147_field_13",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000257",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000460",
+        "role": "intake_assignment",
+        "sort_order": 1,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000431",
+        "role": "intake_assignment",
+        "sort_order": 2,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000428",
+        "role": "intake_assignment",
+        "sort_order": 3,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000429",
+        "role": "intake_assignment",
+        "sort_order": 4,
+        "configuration": {}
+      },
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000430",
+        "role": "intake_assignment",
+        "sort_order": 5,
+        "configuration": {}
+      }
+    ]
+  }
+}

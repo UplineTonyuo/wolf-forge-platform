@@ -21,6 +21,11 @@ export class OrderService {
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   list(filter?: ListOrdersFilter) { return this.dependencies.repository.list(filter); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }
+  getClientStartState(id: unknown) { return this.dependencies.repository.getClientStartState(parseInput(uuidSchema, id)); }
+  requestClientStart(id: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.requestClientStart(parseInput(uuidSchema, id));
+  }
 
   async getWithRelations(id: unknown): Promise<ProjectRelationRow> {
     return this.dependencies.repository.getWithRelations(parseInput(uuidSchema, id));

@@ -1,5 +1,7 @@
 ﻿import { randomUUID } from "node:crypto";
 import type { ClientProjectSourceRow } from "../domain/orders/client-projections";
+import { clientOrderStartSchema } from "../domain/orders/client-start";
+import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { ProjectRelationRow, ProjectTaskFact } from "../domain/orders/projections";
 import type { CreateOrderInput, UpdateOrderInput } from "../domain/orders/schema";
 import type { OrderRow } from "../lib/supabase/database-rows";
@@ -25,6 +27,18 @@ export const projectListRowLimit = 2000;
 
 export class OrderRepository {
   constructor(private readonly client: UserMutationClient) {}
+
+  async getClientStartState(id: string) {
+    const result = await this.client.rpc("app_get_my_order_start", { p_order_id: id });
+    if (result.error) throw mapDatabaseError(result.error, "Order start");
+    return clientOrderStartSchema.nullable().parse(result.data);
+  }
+
+  async requestClientStart(id: string) {
+    const result = await this.client.rpc("app_request_my_order_start", { p_order_id: id });
+    if (result.error) throw mapDatabaseError(result.error, "Order start");
+    return clientOrderStartSchema.parse(result.data);
+  }
 
   /**
    * Resolve assignee labels through the Tenant membership projection without

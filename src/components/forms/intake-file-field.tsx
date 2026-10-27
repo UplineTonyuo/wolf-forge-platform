@@ -38,14 +38,15 @@ export function IntakeFileField({ assignmentId, fieldKey, label, id, value, requ
       finally { onBusy(false); }
     });
   }
-  return <div className={styles.intakeFile}>
-    <input key={value ?? "empty"} id={id} type="file" name={fieldKey} accept={INTAKE_FILE_ACCEPT} disabled={disabled || pending || Boolean(value)}
-      required={required && !value} aria-label={label} onChange={(event) => { const picked = event.target.files?.[0]; if (picked) upload(picked); }} />
-    <small>Image or PDF · up to 4 MB</small>
+  const description = `${id}-file-help${error ? ` ${id}-file-error` : ""}`;
+  return <div className={styles.intakeFile} role={value ? "group" : undefined} aria-label={value ? label : undefined} aria-describedby={description}>
+    {!value ? <input id={id} type="file" name={fieldKey} accept={INTAKE_FILE_ACCEPT} disabled={disabled || pending}
+      required={required} aria-label={label} aria-describedby={description} onChange={(event) => { const picked = event.target.files?.[0]; if (picked) upload(picked); }} /> : null}
+    <small id={`${id}-file-help`}>Image or PDF · up to 4 MB</small>
     {pending ? <p role="status">Uploading…</p> : null}
-    {value ? <div><a href={`/api/intake-files/${value}`} download>{file?.name ?? "Attached file"}</a>
-      <button type="button" disabled={disabled || pending} onClick={() => { onChange([]); setFile(null); setError(null); }}>Remove</button></div> : null}
-    {error ? <p role="alert">{error}</p> : null}
+    {value ? <div className={styles.intakeFileAttached}><a id={id} href={`/api/intake-files/${value}`} download>{file?.name ?? "Attached file"}</a>
+      <button type="button" className="button-secondary" disabled={disabled || pending} onClick={() => { onChange([]); setFile(null); setError(null); }}>Remove</button></div> : null}
+    {error ? <p role="alert" id={`${id}-file-error`}>{error}</p> : null}
     {error && request ? <button type="button" disabled={disabled || pending} onClick={() => upload(request.file)}>Retry upload</button> : null}
   </div>;
 }

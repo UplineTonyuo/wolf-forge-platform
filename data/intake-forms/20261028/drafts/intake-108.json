@@ -1,0 +1,148 @@
+{
+  "request_id": "9c83b376-65ae-5a01-b537-fa9cb4f7a978",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-108",
+  "definition": {
+    "name": "Intake Form for Advanced Schema Markup (1 Page Only)",
+    "title": "Intake Form for Advanced Schema Markup (1 Page Only)",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "ff51a753-86a8-5413-a0c6-e73fe53b24f8",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_108_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b61ea45d-39b6-5897-8f91-1a645f867e94",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_108_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "41ae149e-9061-54ee-aaf8-587341360d40",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_108_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a2f2d11d-d010-501c-91ad-c49746e4f211",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Website URL to login",
+        "internal_label": "source_108_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "d13d113f-06f1-53a7-80f6-f11cf59a95ef",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "User name",
+        "internal_label": "source_108_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "09253dfb-43c3-5bcd-9d51-b7df118a4d0a",
+        "sort_order": 5,
+        "field_type": "secret",
+        "label": "Password",
+        "internal_label": "source_108_field_6",
+        "placeholder": null,
+        "help_html": "<p>Password and login-credential collection is disabled. Arrange authorized website access through the team.</p>",
+        "required": false,
+        "settings": {
+          "collection_mode": "disabled"
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "79d286d7-215a-5135-aad9-5b5365a6a71d",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "Business Name, Address and Phone",
+        "internal_label": "source_108_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fe5e9882-d1f5-5c53-ba8c-b92a21de1353",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "City, State and Zip Code",
+        "internal_label": "source_108_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b0506170-71f7-5467-8a31-c235491c44ef",
+        "sort_order": 8,
+        "field_type": "signature",
+        "label": "Client agreement",
+        "internal_label": "source_108_field_9",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>SEO Services Agreement<br><br>This Agreement is made between the Agency (&quot;Agency&quot;) and the Client on the date of purchase.<br><br>Services Provided: The Agency will provide search engine optimization (SEO) services, which may include, but are not limited to, keyword research, on-page optimization, content creation and optimization, link building, and performance reporting.<br><br>Client Responsibilities: The Client agrees to provide timely access to website data, content, and other information necessary for the Agency to perform SEO services. The Client is responsible for implementing changes recommended by the Agency or granting the Agency the necessary access to do so.<br><br>Performance and Rankings: The Agency will endeavor to improve the search engine rankings of the Client’s website. However, due to the unpredictable nature of search engines, the Agency cannot guarantee specific rankings or consistent top positions for specific keywords.<br><br>Reporting and Communication: The Agency will provide the Client with monthly reports detailing performance metrics, activities undertaken, and recommendations. Regular communication will be maintained through emails and scheduled calls.<br><br>Payment Terms: The Client agrees to pay the Agency [specify fee structure, e.g., monthly retainer, per project fee, etc.] as compensation for the SEO services provided. Payment terms shall be net 30 days from the date of invoice.<br><br>Term and Termination: This Agreement shall commence on the Effective Date and continue indefinitely. Either party may terminate this Agreement with a [30-day] written notice.<br><br>Confidentiality: Both parties agree to keep confidential any proprietary information, trade secrets, and know-how disclosed during the term of this Agreement.<br><br>Liability: The Agency shall not be liable for any indirect, incidental, or consequential damages, including lost profits, arising out of its services under this Agreement.<br><br>Independent Contractor: The Agency is engaged as an independent contractor. Nothing in this Agreement shall be construed to create a partnership, joint venture, or employer-employee relationship.<br><br>Amendments: Any amendments to this Agreement must be in writing and signed by both parties.<br><br>Governing Law: This Agreement shall be governed by and construed in accordance with the laws of [Florida/USA].<br><br>Preamble: The following details the terms of our engagement:<br><br>A. Agency, Not Employee: The Client acknowledges that they are partnering with a specialized agency, not hiring an in-house employee. The Agency's expertise is best utilized without micro-management, and unsolicited guidance can hinder effectiveness and efficiency.<br><br>B. Focus on Implementation: The Agency's service is centered around implementing advanced SEO strategies, not providing training or detailed activity logs. Trust in the Agency's expertise is essential, and while open to discussions, the primary service paid for is the implementation of effective SEO practices.<br><br>C. Long-Term Strategy Over Quick Fixes: SEO is a strategic, long-term endeavor requiring patience and commitment. The Agency advises against engaging its services for immediate results or if the Client's business is in a phase of frequent strategic shifts.<br><br>D. Efficient Communication: The Agency believes in efficiency in communication. Regular, scheduled updates on key metrics such as status, content progress, and rankings will be provided, avoiding excessive meetings.<br><br>E. Consistency in Strategy: Once a campaign is underway, the Agency commits to the agreed-upon strategy. Frequent changes based on emotional or impulsive reactions are discouraged, as they can hinder the progress of the SEO campaign.<br><br>F. Website and Content Modifications: The nature of SEO requires making edits and creating new content on the Client's website. This is a non-negotiable part of the process.<br><br>G. Steady Despite Internal Changes (&quot;New Sheriff Syndrome&quot;): Personnel changes within the Client's organization will not automatically prompt a change in the Agency's agreed-upon strategy. Consistency is key in SEO.<br><br>No Refund Policy: All products and services are subject to the no refund policy as outlined on the Agency's website.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000331",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

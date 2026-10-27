@@ -1,0 +1,42 @@
+{
+  "Package": "@fontsource/inter",
+  "Version": "5.3.0",
+  "License": "SIL Open Font License; see LICENSE",
+  "Files": [
+    {
+      "Asset": "inter-cyrillic-ext.woff",
+      "OriginalFilename": "inter-cyrillic-ext-400-normal.woff",
+      "Sha256": "5CB2F1CC0936F89A42CEAE34F5A5720248DC5B8114C12B1C33A7D2EF01A9B6B9"
+    },
+    {
+      "Asset": "inter-cyrillic.woff",
+      "OriginalFilename": "inter-cyrillic-400-normal.woff",
+      "Sha256": "6E441A6C94788318FA02B6D0A633AA29EEBE27B69C6567EB1E59B4EDC68ED70E"
+    },
+    {
+      "Asset": "inter-greek-ext.woff",
+      "OriginalFilename": "inter-greek-ext-400-normal.woff",
+      "Sha256": "4F2B6F92DDFECE8812E79774D446218AA6E0773FF8C2D31130FE2BDC23BD22D0"
+    },
+    {
+      "Asset": "inter-greek.woff",
+      "OriginalFilename": "inter-greek-400-normal.woff",
+      "Sha256": "BDAE9D28729E8C68587D5D54E216D771A40D7A6800E824586A6E2F570C2F10DF"
+    },
+    {
+      "Asset": "inter-latin-ext.woff",
+      "OriginalFilename": "inter-latin-ext-400-normal.woff",
+      "Sha256": "22AE8360FBAD24D2AF7C6C9898A346C881774DC87F7CF94BD262C48AD58D7116"
+    },
+    {
+      "Asset": "inter-latin.woff",
+      "OriginalFilename": "inter-latin-400-normal.woff",
+      "Sha256": "E20FA0B4FD2DD26E4D14B3AC3CC922509C3A63FA5E910E90C614544AA042DD45"
+    },
+    {
+      "Asset": "inter-vietnamese.woff",
+      "OriginalFilename": "inter-vietnamese-400-normal.woff",
+      "Sha256": "54AA42D325BCDFD623ECB9EAC4A5E3C6420C63D7B86E9D8545FB479F653BEB57"
+    }
+  ]
+}
