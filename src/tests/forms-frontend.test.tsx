@@ -421,10 +421,10 @@ describe("visual builder", () => {
     mockViewport(width);
     render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
-    const addField = screen.getByRole("button", { name: "Add field", exact: true });
+    const addField = screen.getByRole("button", { name: "Add field" });
     addField.focus(); fireEvent.click(addField);
     const palette = screen.getByRole("dialog", { name: "Add fields" });
-    fireEvent.click(within(palette).getByRole("button", { name: "Text", exact: true }));
+    fireEvent.click(within(palette).getByRole("button", { name: "Text" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     const settings = screen.getByRole("button", { name: "Field settings" });
     settings.focus(); fireEvent.click(settings);
