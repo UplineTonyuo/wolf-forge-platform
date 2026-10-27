@@ -334,48 +334,95 @@ async function main() {
   need((await ownerPage.title()).includes("Form Builder"), "Real owner builder did not render");
   step = "owner builder responsive layout";
   const builder = ownerPage.locator('[class*="builderRoot"]').first();
+  const builderUrl = ownerPage.url();
+  report.ownerLayout = { status: "incomplete", compactMaxWidth: 1100, widths: [], failures: [] };
   for (const width of [320, 360, 390, 430, 768, 1280, 1440]) {
-    await ownerPage.setViewportSize({ width, height: 1000 });
-    await builder.getByRole("heading", { level: 1 }).scrollIntoViewIfNeeded();
-    need(await ownerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Builder overflows its viewport");
-    for (const label of ["Form name", "Title"]) {
-      const bounds = await builder.getByLabel(label, { exact: true }).boundingBox();
-      need(bounds && bounds.height >= 36 && bounds.height <= 52, "Builder metadata controls are stretched or too small");
-    }
-    await ownerPage.screenshot({ path: join(output, `builder-${width}.png`), fullPage: true });
-    if (width <= 760) {
-      for (const label of ["Add field", "Field settings"]) {
-        const trigger = builder.getByRole("button", { name: label, exact: true });
-        await trigger.click();
-        const dialog = ownerPage.getByRole("dialog");
-        await dialog.waitFor();
-        await ownerPage.waitForFunction(() => {
-          const element = document.querySelector('[role="dialog"]');
-          if (!element) return false;
-          const box = element.getBoundingClientRect();
-          return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
-        });
-        need(await dialog.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1; }), "Builder sheet leaves the viewport");
-        if (width === 390) await ownerPage.screenshot({ path: join(output, `builder-${label === "Add field" ? "palette" : "settings"}-390.png`), fullPage: true });
-        await ownerPage.keyboard.press("Escape");
-        await dialog.waitFor({ state: "detached" });
-        need(await trigger.evaluate((element) => document.activeElement === element), "Builder sheet did not return keyboard focus");
+    step = `owner builder responsive layout: ${width}`;
+    try {
+      await ownerPage.setViewportSize({ width, height: 1000 });
+      await ownerPage.goto(builderUrl, { waitUntil: "networkidle" });
+      const heading = builder.getByRole("heading", { level: 1 });
+      await heading.evaluate((element) => element.scrollIntoView({ behavior: "instant", block: "start", inline: "nearest" }));
+      need(await ownerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Builder overflows its viewport");
+      for (const label of ["Form name", "Title"]) {
+        const bounds = await builder.getByLabel(label, { exact: true }).boundingBox();
+        need(bounds && bounds.height >= 36 && bounds.height <= 52, "Builder metadata controls are stretched or too small");
       }
-    } else {
-      const publish = await builder.getByRole("button", { name: "Publish", exact: true }).boundingBox();
-      const header = await builder.locator(":scope > header").boundingBox();
-      need(publish && header && header.x + header.width - publish.x - publish.width <= 40, "Desktop builder actions are not aligned to the right");
-      await builder.locator("article").nth(8).scrollIntoViewIfNeeded();
-      const panels = builder.locator("aside");
-      await panels.first().waitFor({ state: "visible" });
-      need(await panels.count() === 2, "Desktop palette or settings panel disappeared");
-      for (const panel of await panels.all()) need(await panel.evaluate((element) => { const box = element.getBoundingClientRect(); return box.top >= -1 && box.top < innerHeight - 44 && box.height <= innerHeight; }), "Desktop side panel does not remain visible after scrolling");
-      await ownerPage.screenshot({ path: join(output, `builder-scrolled-${width}.png`), fullPage: false });
+      await ownerPage.screenshot({ path: join(output, `builder-${width}.png`), fullPage: true });
+      await heading.evaluate((element) => element.scrollIntoView({ behavior: "instant", block: "start", inline: "nearest" }));
+      await ownerPage.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+      if (width <= 1100) {
+        const fieldActionSizes = await builder.locator("article button[aria-label]").evaluateAll((buttons) => buttons.map((button) => {
+          const box = button.getBoundingClientRect();
+          return { label: button.getAttribute("aria-label"), width: box.width, height: box.height };
+        }));
+        need(fieldActionSizes.length >= 4 && fieldActionSizes.every((target) => target.width >= 44 && target.height >= 44), "Compact canvas field action targets must be at least 44 by 44 pixels");
+        for (const label of ["Add field", "Field settings"]) {
+          const trigger = builder.getByRole("button", { name: label, exact: true });
+          await trigger.click();
+          const dialog = ownerPage.getByRole("dialog");
+          await dialog.waitFor();
+          await ownerPage.waitForFunction(() => {
+            const element = document.querySelector('[role="dialog"]');
+            if (!element) return false;
+            const box = element.getBoundingClientRect();
+            return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
+          });
+          need(await dialog.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1; }), "Builder sheet leaves the viewport");
+          const closeLabel = label === "Add field" ? "Close field palette" : "Close settings";
+          const closeBox = await dialog.getByRole("button", { name: closeLabel, exact: true }).boundingBox();
+          need(closeBox && closeBox.width >= 44 && closeBox.height >= 44, "Compact builder sheet close target must be at least 44 by 44 pixels");
+          if (width === 390) await ownerPage.screenshot({ path: join(output, `builder-${label === "Add field" ? "palette" : "settings"}-390.png`), fullPage: true });
+          await ownerPage.keyboard.press("Escape");
+          await dialog.waitFor({ state: "detached" });
+          need(await trigger.evaluate((element) => document.activeElement === element), "Builder sheet did not return keyboard focus");
+        }
+      } else {
+        const publish = await builder.getByRole("button", { name: "Publish", exact: true }).boundingBox();
+        const header = await builder.locator(":scope > header").boundingBox();
+        need(publish && header && header.x + header.width - publish.x - publish.width <= 40, "Desktop builder actions are not aligned to the right");
+        await builder.locator("article").nth(8).evaluate((element) => element.scrollIntoView({ behavior: "instant", block: "start", inline: "nearest" }));
+        const panels = builder.locator("aside");
+        await panels.first().waitFor({ state: "visible" });
+        need(await panels.count() === 2, "Desktop palette or settings panel disappeared");
+        await ownerPage.waitForFunction(() => {
+          const elements = document.querySelectorAll('[class*="builderRoot"] aside');
+          return elements.length === 2 && [...elements].every((element) => {
+            const box = element.getBoundingClientRect();
+            return box.top >= -1 && box.top < innerHeight - 44 && box.height <= innerHeight;
+          });
+        }, null, { timeout: 5000 });
+        await ownerPage.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+        for (const panel of await panels.all()) need(await panel.evaluate((element) => { const box = element.getBoundingClientRect(); return box.top >= -1 && box.top < innerHeight - 44 && box.height <= innerHeight; }), "Desktop side panel does not remain visible after scrolling");
+        await ownerPage.screenshot({ path: join(output, `builder-scrolled-${width}.png`), fullPage: false });
+      }
+      report.ownerLayout.widths.push({ width, status: "passed", mode: width <= 1100 ? "sheets" : "desktop panels" });
+    } catch (error) {
+      const geometry = await ownerPage.evaluate(() => ({ viewport: { width: innerWidth, height: innerHeight }, scrollY, scrollX,
+        document: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
+        panels: [...document.querySelectorAll('[class*="builderRoot"] aside')].map((element, index) => {
+          const box = element.getBoundingClientRect(), style = getComputedStyle(element), ancestors = [];
+          for (let parent = element.parentElement; parent && ancestors.length < 16; parent = parent.parentElement) {
+            const css = getComputedStyle(parent);
+            ancestors.push({ tag: parent.tagName, className: String(parent.className).slice(0, 200), box: parent.getBoundingClientRect().toJSON(),
+              position: css.position, overflowX: css.overflowX, overflowY: css.overflowY, transform: css.transform,
+              scrollTop: parent.scrollTop, scrollHeight: parent.scrollHeight, clientHeight: parent.clientHeight });
+          }
+          return { index, label: element.querySelector("h2")?.textContent?.slice(0, 80), box: box.toJSON(), position: style.position, top: style.top,
+            overflowX: style.overflowX, overflowY: style.overflowY, transform: style.transform,
+            failedConditions: [box.top < -1 ? "panel top is above viewport" : null, box.top >= innerHeight - 44 ? "panel top is below visible region" : null, box.height > innerHeight ? "panel height exceeds viewport" : null].filter(Boolean), ancestors };
+        }) })).catch(() => ({ unavailable: true }));
+      const screenshot = `builder-failure-${width}.png`;
+      await ownerPage.screenshot({ path: join(output, screenshot), fullPage: false }).catch(() => {});
+      report.ownerLayout.failures.push({ width, step, reason: scrub(error instanceof Error ? error.message : "Unexpected owner layout failure"), screenshot, geometry });
+      report.ownerLayout.widths.push({ width, status: "failed" });
     }
   }
-  await ownerPage.close();
+  report.ownerLayout.status = report.ownerLayout.failures.length ? "failed" : "passed";
+  await ownerPage.close().catch(() => {});
   page = null;
-  check("Owner builder passes all seven widths, mobile sheet/Escape/focus checks, desktop sticky-panel/action geometry, and all 147/165 service links");
+  if (report.ownerLayout.status === "passed") check("Owner builder passes all seven widths, compact sheet/Escape/focus checks, desktop sticky-panel/action geometry, and all 147/165 service links");
+  await writeFile(join(output, "summary.json"), JSON.stringify(report, null, 2));
   let signatures = 0, uploads = 0;
   const previewed = new Set();
   const ordinary = templates.find(({ meta, payload }) => meta.file.startsWith("intake-") && !["intake-231.json", "intake-165.json"].includes(meta.file)
@@ -584,10 +631,12 @@ async function main() {
   need(report.pdfPreviews.length === 6, "The six representative downloaded-PDF page previews were not produced");
   need(signatures === report.expectedDrawnSignatures, "Not every drawn signature was exercised");
   need(report.consoleErrors.length === 0, "Browser runtime errors were captured");
-  report.status = "passed";
   report.readback = counts;
   report.drawnSignatures = signatures;
   report.uploads = uploads;
+  report.clientWorkflow = { status: "passed", serviceCases: cases.length, templates: templates.length };
+  need(report.ownerLayout.status === "passed", "Owner builder responsive QA failed; see ownerLayout failures after the completed client workflow");
+  report.status = "passed";
   report.limitations = ["Chromium on a CI runner; no physical phone or pen test", "PDF text is independently extracted with Poppler; PDF ink is verified in the saved numeric signature and document validity, without independent raster stroke comparison", "Two original templates contain no signature field", "Foreign browser/API cases use different companies in the same tenant; cross-tenant receipt denial is separately covered by database suite 168", "Normal password grants and manually installed SSR sessions tested; interactive login/BotID UI and Next Set-Cookie policy are separate checks", "Technical acceptance does not approve agreement wording or production publication"];
   check("Fresh database readback proves exactly one debit/invoice/order per purchase and one start event per completed gated order");
 }

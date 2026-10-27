@@ -54,6 +54,10 @@ const { request_id: reviewedRequestId, ...reviewed147Payload } = createFormSchem
 const reviewed147 = { file: "intake-147.json", ...reviewed147Payload };
 const reviewed147Options = [{ file: reviewed147.file, label: reviewed147.definition.name, fieldCount: reviewed147.definition.fields.length, serviceCount: reviewed147.definition.service_links.length }];
 
+function mockViewport(width: number) {
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: width <= Number(query.match(/max-width:\s*(\d+)px/u)?.[1] ?? 0), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+}
+
 function row(overrides: Partial<FormRow> = {}): FormRow {
   return { id: "50000000-0000-4000-8000-000000000001", form_type: "order", canonical_key: "project-brief", name: "Project Brief", status: "published", visibility: "public", current_draft_version_id: "60000000-0000-4000-8000-000000000002", published_version_id: "60000000-0000-4000-8000-000000000001", created_by_profile_id: "70000000-0000-4000-8000-000000000001", updated_by_profile_id: "70000000-0000-4000-8000-000000000001", created_at: "2026-08-14T00:00:00Z", updated_at: "2026-08-14T01:00:00Z", archived_at: null, ...overrides };
 }
@@ -377,7 +381,7 @@ describe("visual builder", () => {
   });
 
   it("retains selected field edits after dismissing and reopening the mobile settings sheet", async () => {
-    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("760px"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    mockViewport(390);
     render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
     const opener = screen.getByRole("button", { name: "Field settings" }); opener.focus();
     fireEvent.click(opener);
@@ -392,7 +396,7 @@ describe("visual builder", () => {
   });
 
   it("dismisses a nested comparator before its settings sheet and retains the unsaved field", async () => {
-    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("760px"), addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    mockViewport(390);
     render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
     fireEvent.click(screen.getByRole("button", { name: "Field settings" }));
     const dialog = screen.getByRole("dialog", { name: "Text settings" });
@@ -411,6 +415,34 @@ describe("visual builder", () => {
     expect(within(screen.getByRole("dialog", { name: "Text settings" })).getByLabelText("Label")).toHaveValue("Nested Escape unsaved field");
     expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
     expect(actions.publishFormAction).not.toHaveBeenCalled();
+  });
+
+  it.each([768, 1100])("uses the compact editor sheets at %ipx without mounting desktop side panels", async (width) => {
+    mockViewport(width);
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    const addField = screen.getByRole("button", { name: "Add field", exact: true });
+    addField.focus(); fireEvent.click(addField);
+    const palette = screen.getByRole("dialog", { name: "Add fields" });
+    fireEvent.click(within(palette).getByRole("button", { name: "Text", exact: true }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    const settings = screen.getByRole("button", { name: "Field settings" });
+    settings.focus(); fireEvent.click(settings);
+    const dialog = screen.getByRole("dialog", { name: "Text settings" });
+    fireEvent.change(within(dialog).getByLabelText("Label"), { target: { value: "Tablet field" } });
+    fireEvent.keyDown(within(dialog).getByLabelText("Label"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(settings).toHaveFocus();
+    fireEvent.click(settings);
+    expect(within(screen.getByRole("dialog", { name: "Text settings" })).getByLabelText("Label")).toHaveValue("Tablet field");
+    expect(actions.saveFormDraftAction).not.toHaveBeenCalled();
+  });
+
+  it("retains both desktop side panels above the compact-editor cutoff", () => {
+    mockViewport(1101);
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    expect(screen.getAllByRole("complementary")).toHaveLength(2);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("publishes only after saving and explains immutability", async () => {
