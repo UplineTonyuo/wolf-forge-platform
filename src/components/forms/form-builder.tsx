@@ -260,7 +260,7 @@ export function FormBuilder({ detail, capabilities, services, folders = [] }: { 
             const service = services.find((item) => item.id === link.service_id);
             const name = service?.name ?? `Unavailable service (${link.service_id})`;
             const role = link.role === "intake_assignment" ? "Intake assignment" : link.role === "offered_item" ? "Offered service" : "Default service";
-            return <li key={`${link.service_id}:${link.role}`}><span><strong>{name}</strong><small>{role}{service && !service.is_active ? " · Inactive" : ""}</small></span><button className="button-secondary" type="button" aria-label={`Remove ${name} (${role})`} onClick={() => { setDefinition((current) => ({ ...current, service_links: current.service_links.filter((item) => item.service_id !== link.service_id || item.role !== link.role) })); setMessage("Unsaved changes"); }}><Trash2 aria-hidden="true" />Remove</button></li>;
+            return <li key={`${link.service_id}:${link.role}`} data-service-id={link.service_id}><span><strong>{name}</strong><small>{role}{service && !service.is_active ? " · Inactive" : ""}</small></span><button className="button-secondary" type="button" aria-label={`Remove ${name} (${role})`} onClick={() => { setDefinition((current) => ({ ...current, service_links: current.service_links.filter((item) => item.service_id !== link.service_id || item.role !== link.role) })); setMessage("Unsaved changes"); }}><Trash2 aria-hidden="true" />Remove</button></li>;
           })}</ul>
         </details>
         <p className={styles.intakeServiceHelp}>Once published, this Form is automatically assigned to clients who purchase the linked Service. Existing purchases are unchanged.</p>

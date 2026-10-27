@@ -81,6 +81,7 @@
   .optionsEditor > div > button { width: 44px; height: 44px; }
   .optionsEditor > div > button:first-of-type { grid-column: 2; }
   .formSettingsBar button[aria-haspopup], .builderActions button { min-height: 44px; }
+  .createFields button[aria-haspopup=listbox], .createFields button[role=option] { min-height: 44px; }
   .formSettingsBar button[aria-haspopup=listbox] { font-size: 16px; }
   .formSettingsBar input, .settings input:not([type=checkbox]), .settings textarea, .createFields input, .assignFields input:not([type=checkbox]), .renderField input:not([type=checkbox]):not([type=radio]), .renderField textarea { min-height: 44px; font-size: 16px; }
   .renderField .signatureControl > input { font-size: 22px; }

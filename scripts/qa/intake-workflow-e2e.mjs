@@ -5,7 +5,7 @@ import { createServer as createHttpsServer } from "node:https";
 import { request as httpRequest } from "node:http";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -101,6 +101,17 @@ async function main() {
   need(process.env.GITHUB_ACTIONS === "true" && process.env.CI === "true" && process.platform === "linux", "This destructive disposable fixture runs only on a GitHub Linux runner");
   need((process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME) === "codex/intake-publication-20261028", "Unapproved workflow branch");
   need(!process.env.SUPABASE_ACCESS_TOKEN && !process.env.VERCEL && !process.env.LOCAL_UI_QA_BYPASS, "Hosted credentials or an auth bypass are forbidden");
+  step = "reviewed-template deployment trace";
+  const build = process.env.WOLF_FORGE_STUDIO_QA_BUILD === "1" ? ".next-studio-qa" : ".next";
+  const tracePath = resolve(build, "server/app/(internal)/forms/new/page.js.nft.json");
+  const trace = JSON.parse(await readFile(tracePath, "utf8"));
+  const tracedFiles = new Set(trace.files.map((file) => resolve(dirname(tracePath), file)));
+  for (const file of [join(bundle, "manifest.json"), ...templates.map((entry) => join(bundle, "drafts", entry.meta.file))]) {
+    need(tracedFiles.has(file), `Reviewed-template page trace omitted ${basename(file)}`);
+    need((await readFile(file)).length > 0, "A traced reviewed-template file is unavailable");
+  }
+  check("The /forms/new deployment trace packages the manifest and all 37 allowlisted reviewed template files");
+  step = "local Supabase status";
   const status = JSON.parse(execFileSync(resolve("node_modules/.bin/supabase"), ["status", "--output", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }));
   need(status.API_URL === "http://127.0.0.1:54321", "Only the fresh loopback Supabase API is allowed");
   const publicKey = status.PUBLISHABLE_KEY || status.ANON_KEY;
@@ -239,21 +250,87 @@ async function main() {
   await deniedPage.close();
   check("Client roles cannot publish forms or enter the internal form builder");
   const ownerPage = await owner.context.newPage();
+  page = ownerPage;
   ownerPage.on("pageerror", (error) => report.consoleErrors.push(scrub(error.message)));
+  step = "owner reviewed-template draft";
+  const reviewed = templates.find((entry) => entry.meta.file === "intake-147.json");
+  const definition = reviewed.payload.definition;
+  need(definition.rules.length === 0 && definition.fields.every((field) => field.options.length === 0 && field.service_links.length === 0), "Extend reviewed-template smoke coverage before adding nested choices or rules");
+  const beforeDraft = await owner.client.from("forms").select("id", { count: "exact", head: true });
+  need(!beforeDraft.error && beforeDraft.count === templates.length, "Reviewed-template smoke requires the 37 published fixture forms");
+  await ownerPage.goto(`${origin}/forms/new?${new URLSearchParams({ template: "../manifest.json" })}`, { waitUntil: "networkidle" });
+  await ownerPage.getByRole("heading", { name: "404", exact: true }).waitFor();
+  need(await ownerPage.getByRole("button", { name: "Create draft", exact: true }).count() === 0, "An invalid template path exposed draft creation");
+  const afterInvalid = await owner.client.from("forms").select("id", { count: "exact", head: true });
+  need(!afterInvalid.error && afterInvalid.count === beforeDraft.count, "An invalid template path created a form");
+  const createResponse = await ownerPage.goto(`${origin}/forms/new?template=${reviewed.meta.file}`, { waitUntil: "networkidle" });
+  need(createResponse?.ok(), "The authorized reviewed-template creation page did not render");
+  const createHtml = await createResponse.text();
+  const selectedKeys = new Set(definition.fields.map((field) => field.stable_field_key));
+  need([...selectedKeys].every((key) => createHtml.includes(key)), "The selected template definition was not delivered to its creation page");
+  need(templates.flatMap((entry) => entry.payload.definition.fields).every((field) => selectedKeys.has(field.stable_field_key) || !createHtml.includes(field.stable_field_key)), "The creation page sent an unselected template definition to the browser");
+  await ownerPage.locator("dl dd").filter({ hasText: "13 fields · 6 linked services" }).waitFor();
+  await ownerPage.getByLabel("Form name", { exact: true }).fill("Synthetic reviewed-template copy");
+  await ownerPage.getByLabel("Public slug", { exact: true }).fill("synthetic-reviewed-template-copy");
+  await ownerPage.getByRole("button", { name: "Create draft", exact: true }).click();
+  await ownerPage.waitForURL((url) => /^\/forms\/[0-9a-f-]{36}$/i.test(url.pathname) && url.searchParams.get("created") === "1");
+  const copiedId = new URL(ownerPage.url()).pathname.split("/").at(-1);
+  const copied = await owner.client.from("forms").select("id,name,canonical_key,form_type,status,visibility,created_by_profile_id,published_version_id,current_draft_version_id").eq("id", copiedId).single();
+  need(!copied.error && uuid.test(copied.data?.current_draft_version_id || ""), "The owner-created draft could not be read through owner permissions");
+  assert.deepEqual(copied.data, { id: copiedId, name: "Synthetic reviewed-template copy", canonical_key: "synthetic-reviewed-template-copy", form_type: "intake", status: "draft", visibility: "assigned", created_by_profile_id: owner.id, published_version_id: null, current_draft_version_id: copied.data.current_draft_version_id });
+  const draftId = copied.data.current_draft_version_id;
+  const copiedParts = await Promise.all([
+    owner.client.from("form_versions").select("form_id,lifecycle_state,title,information_html,visibility,type_config,created_by_profile_id,published_by_profile_id,published_at,schema_hash").eq("id", draftId).single(),
+    owner.client.from("form_version_fields").select().eq("form_version_id", draftId).order("sort_order"),
+    owner.client.from("form_service_links").select("service_id,role,sort_order,configuration,form_version_field_id").eq("form_version_id", draftId).order("sort_order"),
+    owner.client.from("form_rules").select("id", { count: "exact", head: true }).eq("form_version_id", draftId),
+  ]);
+  for (const result of copiedParts) need(!result.error, "The owner could not read a saved reviewed-template draft component");
+  const [copiedVersion, copiedFields, copiedLinks, copiedRules] = copiedParts;
+  assert.deepEqual(copiedVersion.data, { form_id: copiedId, lifecycle_state: "draft", title: definition.title, information_html: definition.information_html, visibility: definition.visibility, type_config: definition.type_config, created_by_profile_id: owner.id, published_by_profile_id: null, published_at: null, schema_hash: null });
+  need(copiedFields.data.length === definition.fields.length, "The reviewed-template draft lost fields");
+  for (const [index, expected] of definition.fields.entries()) {
+    const keys = Object.keys(expected).filter((key) => !["options", "service_links"].includes(key));
+    assert.deepEqual(Object.fromEntries(keys.map((key) => [key, copiedFields.data[index][key]])), Object.fromEntries(keys.map((key) => [key, expected[key]])), "The reviewed-template draft changed frozen field content, keys or settings");
+  }
+  need(copiedLinks.data.every((link) => link.form_version_field_id === null), "The reviewed-template draft added a field-specific service mapping");
+  assert.deepEqual(copiedLinks.data.map((link) => Object.fromEntries(["service_id", "role", "sort_order", "configuration"].map((key) => [key, link[key]]))), definition.service_links, "The reviewed-template draft changed one of its six service mappings");
+  const copiedOptions = await owner.client.from("form_field_options").select("id", { count: "exact", head: true }).in("form_version_field_id", copiedFields.data.map((field) => field.id));
+  need(!copiedOptions.error && copiedOptions.count === 0 && copiedRules.count === 0, "The reviewed-template draft added unreviewed choices or rules");
+  const afterDraft = await owner.client.from("forms").select("id", { count: "exact", head: true });
+  need(!afterDraft.error && afterDraft.count === templates.length + 1, "The creation UI did not save exactly one additional unpublished draft");
+  report.reviewedTemplateDraft = { template: reviewed.meta.file, formId: copiedId, fields: copiedFields.data.length, serviceMappings: copiedLinks.data.length, status: "draft", invalidPathRejected: true, unselectedDefinitionsExcludedFromInitialPayload: true };
+  check("Normal owner creation preserves the selected 147 template in one unpublished draft; invalid paths fail closed and other definitions stay out of its initial payload");
   for (const file of ["intake-147.json", "intake-165.json"]) {
+    step = `owner builder service links: ${file}`;
     const entry = templates.find((template) => template.meta.file === file);
     await ownerPage.goto(`${origin}/forms/${entry.formId}`, { waitUntil: "networkidle" });
     const manage = ownerPage.locator("summary").filter({ hasText: "Manage" });
     await manage.click();
     const links = manage.locator("..");
+    await links.locator("li").first().waitFor({ state: "visible" });
     need(await links.locator("li").count() === entry.meta.services.length, "Manage hides linked services");
     for (const id of entry.meta.services) {
       const name = `Synthetic CI ${catalog.find((service) => service.id === id).name}`;
-      need(await links.getByRole("button", { name: `Remove ${name} (Intake assignment)`, exact: true }).count() === 1, "Manage lost an existing service mapping");
+      const label = `Remove ${name} (Intake assignment)`;
+      const linkedRow = links.locator(`li[data-service-id="${id}"]`);
+      const remove = linkedRow.getByRole("button", { name: label, exact: true });
+      try {
+        await linkedRow.waitFor({ state: "visible", timeout: 10000 });
+        need(await linkedRow.count() === 1 && await linkedRow.locator("strong").textContent() === name, "Service mapping row identity or name differs");
+        await remove.waitFor({ state: "visible", timeout: 10000 });
+        need(await remove.count() === 1, "Expected one service removal control");
+      } catch {
+        const labels = await links.locator('button[aria-label^="Remove "]').evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label")));
+        report.builderServiceMappingFailure = { template: file, expectedServiceId: id, expectedAriaLabel: label,
+          actualRemoveAriaLabels: labels.map((value) => value?.startsWith("Remove Synthetic CI ") || /^Remove Unavailable service \([0-9a-f-]{36}\)/i.test(value || "") ? scrub(value) : "[non-synthetic label withheld]") };
+        throw new Error("Manage lost an existing service mapping; see synthetic label diagnostics");
+      }
     }
     await manage.click();
   }
   need((await ownerPage.title()).includes("Form Builder"), "Real owner builder did not render");
+  step = "owner builder responsive layout";
   const builder = ownerPage.locator('[class*="builderRoot"]').first();
   for (const width of [320, 360, 390, 430, 768, 1280, 1440]) {
     await ownerPage.setViewportSize({ width, height: 1000 });
@@ -295,6 +372,7 @@ async function main() {
     }
   }
   await ownerPage.close();
+  page = null;
   check("Owner builder passes all seven widths, mobile sheet/Escape/focus checks, desktop sticky-panel/action geometry, and all 147/165 service links");
   let signatures = 0, uploads = 0;
   const previewed = new Set();

@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   outputFileTracingIncludes: {
     "/api/form-submissions/*/pdf": ["./src/assets/pdf-fonts/*.woff"],
+    "/forms/new": ["./data/intake-forms/20261028/manifest.json", "./data/intake-forms/20261028/drafts/*.json"],
   },
 
   /**

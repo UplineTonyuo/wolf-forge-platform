@@ -3,7 +3,8 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { FormCapabilities, FormDetail, FormPublishedSchema } from "../domain/forms/schema";
+import { createFormSchema, type FormCapabilities, type FormDetail, type FormPublishedSchema } from "../domain/forms/schema";
+import reviewed147Json from "../../data/intake-forms/20261028/drafts/intake-147.json";
 import type { FormRow, ServiceRow } from "../lib/supabase/database-rows";
 import { FormsList } from "../components/forms/forms-list";
 import { CreateForm } from "../components/forms/create-form";
@@ -49,6 +50,9 @@ const service = { id: "20000000-0000-4000-8000-000000000001", name: "SEO Strateg
 const fieldA = "30000000-0000-4000-8000-000000000001";
 const fieldB = "30000000-0000-4000-8000-000000000002";
 const optionA = "40000000-0000-4000-8000-000000000001";
+const { request_id: reviewedRequestId, ...reviewed147Payload } = createFormSchema.parse(reviewed147Json);
+const reviewed147 = { file: "intake-147.json", ...reviewed147Payload };
+const reviewed147Options = [{ file: reviewed147.file, label: reviewed147.definition.name, fieldCount: reviewed147.definition.fields.length, serviceCount: reviewed147.definition.service_links.length }];
 
 function row(overrides: Partial<FormRow> = {}): FormRow {
   return { id: "50000000-0000-4000-8000-000000000001", form_type: "order", canonical_key: "project-brief", name: "Project Brief", status: "published", visibility: "public", current_draft_version_id: "60000000-0000-4000-8000-000000000002", published_version_id: "60000000-0000-4000-8000-000000000001", created_by_profile_id: "70000000-0000-4000-8000-000000000001", updated_by_profile_id: "70000000-0000-4000-8000-000000000001", created_at: "2026-08-14T00:00:00Z", updated_at: "2026-08-14T01:00:00Z", archived_at: null, ...overrides };
@@ -114,6 +118,63 @@ describe("Forms admin list and creation", () => {
     fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
     await waitFor(() => expect(actions.createFormAction).toHaveBeenCalled());
     expect(vi.mocked(actions.createFormAction).mock.calls[0]![0].definition.service_links[0]?.service_id).toBe(service.id);
+  });
+
+  it("creates a reviewed intake with every field and mapped Service only after explicit submission", async () => {
+    render(<CreateForm services={[]} reviewedTemplates={reviewed147Options} reviewedTemplate={reviewed147} />);
+    expect(screen.getByLabelText("Form name")).toHaveValue(reviewed147.definition.name);
+    expect(screen.getByLabelText("Public slug")).toHaveValue(reviewed147.canonical_key);
+    expect(screen.getByText("13 fields · 6 linked services")).toBeInTheDocument();
+    expect(actions.createFormAction).not.toHaveBeenCalled();
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Reviewed template copy" } });
+    fireEvent.change(screen.getByLabelText("Public slug"), { target: { value: "reviewed-template-copy" } });
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    await waitFor(() => expect(actions.createFormAction).toHaveBeenCalledTimes(1));
+    const input = vi.mocked(actions.createFormAction).mock.calls[0]![0];
+    expect(input).toEqual({ ...reviewed147Payload, request_id: expect.any(String), canonical_key: "reviewed-template-copy", definition: { ...reviewed147.definition, name: "Reviewed template copy" } });
+    expect(input.request_id).not.toBe(reviewedRequestId);
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
+  });
+
+  it("navigates to a reviewed template without creating or publishing a Form", () => {
+    render(<CreateForm services={[]} reviewedTemplates={reviewed147Options} />);
+    fireEvent.click(screen.getByRole("button", { name: "Reviewed intake template: Start with a blank Form" }));
+    fireEvent.click(screen.getByRole("option", { name: new RegExp(reviewed147.definition.name) }));
+    expect(push).toHaveBeenCalledWith("/forms/new?template=intake-147.json");
+    expect(actions.createFormAction).not.toHaveBeenCalled();
+    expect(actions.publishFormAction).not.toHaveBeenCalled();
+  });
+
+  it("disables the template chooser while a draft creation is pending", async () => {
+    let complete!: (result: Awaited<ReturnType<typeof actions.createFormAction>>) => void;
+    vi.mocked(actions.createFormAction).mockReturnValueOnce(new Promise((resolve) => { complete = resolve; }));
+    render(<CreateForm services={[]} reviewedTemplates={reviewed147Options} reviewedTemplate={reviewed147} />);
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    expect(screen.getByRole("button", { name: `Reviewed intake template: ${reviewed147.definition.name}` })).toBeDisabled();
+    expect(screen.getByLabelText("Form name")).toBeDisabled();
+    complete({ ok: false, error: "Draft creation did not finish" });
+    await screen.findByText("Draft creation did not finish");
+  });
+
+  it("retries the same blank draft payload and request ID, and gives changed content a new request ID", async () => {
+    vi.mocked(actions.createFormAction).mockResolvedValueOnce({ ok: false, error: "Retry the same draft" }).mockResolvedValueOnce({ ok: false, error: "Retry unchanged" });
+    render(<CreateForm services={[]} />);
+    fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Blank workflow" } });
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    await screen.findByText("Retry the same draft");
+    await waitFor(() => expect(screen.getByRole("button", { name: /Create draft/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    await screen.findByText("Retry unchanged");
+    await waitFor(() => expect(screen.getByRole("button", { name: /Create draft/ })).toBeEnabled());
+    const [first, retry] = vi.mocked(actions.createFormAction).mock.calls.map(([input]) => input);
+    expect(retry).toEqual(first);
+    expect(first?.definition.fields).toHaveLength(1);
+    expect(first?.definition.fields[0]?.field_type).toBe("fullname");
+    fireEvent.change(screen.getByLabelText("Form name"), { target: { value: "Changed blank workflow" } });
+    fireEvent.click(screen.getByRole("button", { name: /Create draft/ }));
+    await waitFor(() => expect(actions.createFormAction).toHaveBeenCalledTimes(3));
+    expect(vi.mocked(actions.createFormAction).mock.calls[2]![0].request_id).not.toBe(first?.request_id);
   });
 });
 
@@ -257,6 +318,20 @@ describe("visual builder", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
     expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual(remainingLinks);
+  });
+
+  it("removes only the selected Service when two linked Services share the same name", async () => {
+    const intake = detail("intake");
+    const secondService = { ...service, id: "20000000-0000-4000-8000-000000000002" } as ServiceRow;
+    intake.draftDefinition.service_links.push({ service_id: secondService.id, role: "intake_assignment", sort_order: 1, configuration: { duplicate_name: true } });
+    render(<FormBuilder detail={intake} capabilities={capabilities} services={[service, secondService]} />);
+    fireEvent.click(screen.getByText("Manage"));
+    const secondRow = screen.getAllByRole("listitem").find((item) => item.dataset.serviceId === secondService.id);
+    fireEvent.click(within(secondRow!).getByRole("button", { name: "Remove SEO Strategy (Intake assignment)" }));
+    expect(screen.getByText("1 linked service")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+    await waitFor(() => expect(actions.saveFormDraftAction).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(actions.saveFormDraftAction).mock.calls[0]![1].definition.service_links).toEqual(detail("intake").draftDefinition.service_links);
   });
 
   it("previews the current draft through the shared renderer", () => {
