@@ -39,10 +39,20 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Invalid request origin.", { status: 403 });
   }
 
+  await recordGmailRouteEvent({
+    event: "integration.gmail.connect_started",
+    action: "connect",
+    reason: "authorization_preparation_started",
+    actorId: context.actor.id,
+    outcome: "succeeded",
+  });
   const state = createOAuthState();
   const pkce = createPkcePair();
   const authorizationUrl = createGmailIntegrationService(context.actor).authorizationUrl(state, pkce.challenge);
-  const response = NextResponse.redirect(authorizationUrl, 303);
+  const response = request.headers.get("accept") === "application/json"
+    ? NextResponse.json({ authorizationUrl })
+    : NextResponse.redirect(authorizationUrl, 303);
+  response.headers.set("Cache-Control", "private, no-store");
   const cookieOptions = {
     httpOnly: true,
     sameSite: "lax" as const,
@@ -52,5 +62,12 @@ export async function POST(request: NextRequest) {
   };
   response.cookies.set(GMAIL_OAUTH_STATE_COOKIE, state, cookieOptions);
   response.cookies.set(GMAIL_OAUTH_VERIFIER_COOKIE, pkce.verifier, cookieOptions);
+  await recordGmailRouteEvent({
+    event: "integration.gmail.authorization_ready",
+    action: "connect",
+    reason: "authorization_url_prepared",
+    actorId: context.actor.id,
+    outcome: "succeeded",
+  });
   return response;
 }

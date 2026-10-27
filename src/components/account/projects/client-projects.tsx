@@ -7,10 +7,11 @@ import type { TicketDetail } from "../../../domain/tickets/schema";
 import { ProjectConversation } from "../../tickets/project-conversation";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
+import type { ReactNode } from "react";
 
 /**
- * Read-only. The portal has no project mutation surface, and the database
- * refuses client create/update/assign/archive regardless. The view model
+ * General project edits remain internal. New purchased orders have a separate,
+ * narrowly scoped client start control. The view model
  * carries no internal notes, no assignee, no priority and no task titles — see
  * domain/orders/client-projections.ts, where the column list is chosen
  * explicitly rather than selected with `*`.
@@ -122,12 +123,14 @@ export function ClientProjectDetail({
   project,
   conversation,
   viewerId,
+  startControl,
 }: {
   project: ClientProjectView;
   conversation: TicketDetail | null;
   /** The signed-in client's profile id, so message ownership comes from the
    *  authenticated user rather than from the client role. */
   viewerId: string;
+  startControl?: ReactNode;
 }) {
   const attention = projectAttention(project.status);
   const conversationTicket = conversation?.ticket ?? null;
@@ -164,6 +167,8 @@ export function ClientProjectDetail({
         </div>
         <AttentionPill tone={attention.tone} label={attention.label} />
       </header>
+
+      {startControl}
 
       {attention.tone === "waiting_on_you" ? (
         <div className="portal-callout" data-tone="waiting_on_you">

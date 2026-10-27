@@ -1,0 +1,79 @@
+{
+  "request_id": "d4919eaf-d9ba-51c8-a4ce-eea7b952680e",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-221",
+  "definition": {
+    "name": "Intake Form for YouTube Stack",
+    "title": "Intake Form for YouTube Stack",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "e0bc9f35-c4f6-5a63-8f84-c5e127c4d6e3",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_221_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "d4e68df6-6d20-5334-838e-1d376cf02d1a",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_221_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "c90b5ae2-6908-527d-ad59-ea03a6704c82",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_221_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "21ffb33a-d18e-526b-be35-504d74079f73",
+        "sort_order": 3,
+        "field_type": "text",
+        "label": "Follow this SOP to give us youtube channel access: https://docs.google.com/document/d/1rPNvd5HFr1etNWt7IFf-O0yuLlWfOel_fyg0Cxtk384/edit#heading=h.xuw8nv2e4rg1",
+        "internal_label": "source_221_field_4",
+        "placeholder": "https://docs.google.com/document/d/1rPNvd5HFr1etNWt7IFf-O0yuLlWfOel_fyg0Cxtk384/edit#heading=h.xuw8nv2e4rg1",
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000415",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

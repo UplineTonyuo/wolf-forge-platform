@@ -16,6 +16,7 @@ import * as actions from "../app/actions/forms";
 
 const push = vi.fn();
 const refresh = vi.fn();
+vi.mock("../components/forms/download-form-pdf", () => ({ DownloadFormPdf: () => null }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 vi.mock("../app/actions/forms", () => ({
   createFormAction: vi.fn(), saveFormDraftAction: vi.fn(), publishFormAction: vi.fn(),
@@ -117,6 +118,14 @@ describe("Forms admin list and creation", () => {
 });
 
 describe("visual builder", () => {
+  it("defaults new signatures to drawing and lets the author preserve typed signing explicitly", async () => {
+    render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Signature$/ }));
+    const toggle = screen.getByRole("checkbox", { name: /Draw signature on screen/ });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+  });
   it("adds supported fields and edits the selected field", () => {
     render(<FormBuilder detail={detail()} capabilities={capabilities} services={[service]} />);
     fireEvent.click(screen.getByRole("button", { name: "Email" }));

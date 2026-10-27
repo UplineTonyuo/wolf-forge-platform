@@ -11,10 +11,15 @@ import { sanitizeFormHtml } from "../../lib/forms/presentation";
 import styles from "./forms.module.css";
 import { loadIntakeDraft, saveIntakeDraft } from "../../app/actions/intake-drafts";
 import { IntakeFileField } from "./intake-file-field";
+import { DrawnSignature } from "./drawn-signature";
+import { readSignatureStrokes } from "../../lib/forms/signature";
+import Link from "next/link";
+import { DownloadFormPdf } from "./download-form-pdf";
 
 type AnswerMap = Record<string, Json | undefined>;
 
 const structuralTypes = new Set(["payment", "hidden", "break", "pagebreak", "html", "secret", "captcha"]);
+const displayOnly = (field: FormPublishedSchema["fields"][number]) => field.field_type === "richtext" && field.settings.display_only === true;
 
 export function isFormFieldVisible(
   fieldKey: string,
@@ -54,8 +59,10 @@ function FieldControl({
     required: field.required,
     disabled,
     placeholder: field.placeholder ?? undefined,
+    "aria-describedby": field.help_html ? `${id}-help` : undefined,
   };
   if (field.field_type === "signature") {
+    if (field.settings.signature_mode === "drawn") return <DrawnSignature id={id} label={field.label} value={value} required={field.required} disabled={disabled} onChange={onChange} />;
     const signature = value && typeof value === "object" && !Array.isArray(value) ? value : {};
     const name = typeof signature.name === "string" ? signature.name : "";
     return <div className={styles.signatureControl}>
@@ -102,7 +109,7 @@ export function FormRenderer({
 }) {
   const [answers, setAnswers] = useState<AnswerMap>(() => Object.fromEntries(schema.fields.map((field) => [field.stable_field_key, field.default_value ?? (field.field_type === "checkbox" ? false : "")])));
   const [requestId] = useState(() => crypto.randomUUID());
-  const [result, setResult] = useState<{ id: string; followUp?: string } | null>(null);
+  const [result, setResult] = useState<{ id: string; followUp?: string; orderStart?: { id: string; status: string; started: boolean; requested: boolean } } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [available, setAvailable] = useState(true);
@@ -133,7 +140,9 @@ export function FormRenderer({
       if (checking || document.visibilityState === "hidden") return;
       checking = true;
       try {
-        const enabled = await loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id);
+        const enabled = await (mode === "assigned" && assignmentId
+          ? loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id, assignmentId)
+          : loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id));
         if (!disposed) setAvailable(enabled);
       } finally { checking = false; }
     }
@@ -141,12 +150,12 @@ export function FormRenderer({
     const timer = window.setInterval(() => { void check(); }, 15000);
     window.addEventListener("focus", check);
     return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("focus", check); };
-  }, [mode, schema.canonical_key, schema.form_version_id]);
+  }, [mode, assignmentId, schema.canonical_key, schema.form_version_id]);
   const readonly = mode === "preview" || mode === "readonly" || completed || result != null || !available || draftLoading || Boolean(draftError) || uploading;
   const fields = useMemo(() => [...schema.fields].sort((a, b) => a.sort_order - b.sort_order), [schema.fields]);
 
   function draftValues() {
-    return fields.filter((field) => !structuralTypes.has(field.field_type))
+    return fields.filter((field) => !structuralTypes.has(field.field_type) && !displayOnly(field))
       .map((field) => ({ field_key: field.stable_field_key, value: answers[field.stable_field_key] ?? null }));
   }
 
@@ -161,6 +170,20 @@ export function FormRenderer({
 
   function submit() {
     if (readonly || pending) return;
+    const invalidSignature = fields.find((field) => {
+      if (field.field_type !== "signature" || field.settings.signature_mode !== "drawn"
+        || !isFormFieldVisible(field.stable_field_key, schema.rules, answers)) return false;
+      const answer = answers[field.stable_field_key];
+      if (!field.required && (!answer || (typeof answer === "object" && !Array.isArray(answer)
+        && !answer.name && (!Array.isArray(answer.drawing) || !answer.drawing.length)))) return false;
+      return !answer || typeof answer !== "object" || Array.isArray(answer) || typeof answer.name !== "string"
+        || !answer.name.trim() || answer.consent !== true || !readSignatureStrokes(answer.drawing);
+    });
+    if (invalidSignature) {
+      setError(`Draw your signature and confirm consent for ${invalidSignature.label}.`);
+      document.getElementById(`form-field-${fields.indexOf(invalidSignature)}`)?.focus();
+      return;
+    }
     const missingChoice = fields.find((field) => field.required
       && ["date", "dropdown", "data-dropdown", "data-option-group", "optgroup", "file"].includes(field.field_type)
       && isFormFieldVisible(field.stable_field_key, schema.rules, answers)
@@ -173,7 +196,7 @@ export function FormRenderer({
     }
     setError(null);
     const values: SubmitFormInput["values"] = fields
-      .filter((field) => !structuralTypes.has(field.field_type) && isFormFieldVisible(field.stable_field_key, schema.rules, answers))
+      .filter((field) => !structuralTypes.has(field.field_type) && !displayOnly(field) && isFormFieldVisible(field.stable_field_key, schema.rules, answers))
       .filter((field) => {
         const answer = answers[field.stable_field_key];
         return field.required || (answer !== undefined && answer !== null && answer !== ""
@@ -194,39 +217,47 @@ export function FormRenderer({
         : await submitPublicFormAction(input);
       if (!response.ok) {
         setError(response.error);
-        setAvailable(await loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id));
+        setAvailable(await (mode === "assigned" && assignmentId
+          ? loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id, assignmentId)
+          : loadFormCollectionAvailability(schema.canonical_key, schema.form_version_id)));
       }
       else setResult(response.data);
     });
   }
 
   if (result || completed) {
-    return <section className={styles.formComplete}><CheckCircle2 aria-hidden="true" /><h2>{completed ? "Completed" : "Submitted"}</h2><p>Your responses are safely recorded against Form Version {schema.version_number}.</p>
+    return <section className={styles.formComplete} role="status" data-state="complete"><header className={styles.formCompleteHead}><CheckCircle2 aria-hidden="true" /><h2>{completed ? "Completed" : "Submitted"}</h2></header><p>Your responses are safely recorded against Form Version {schema.version_number}.</p>
+      {result && mode === "assigned" ? <DownloadFormPdf submissionId={result.id} automatic /> : null}
+      {result?.orderStart ? <div><p>{result.orderStart.started ? (result.orderStart.status === "working" ? "Your order is now in progress." : "Your service forms and start request were completed.") : result.orderStart.requested ? "Your start request is saved. Complete any remaining required forms; your order will then start automatically." : "Your service form is complete. Open your order when you are ready to start."}</p><Link href={`/account/projects/${result.orderStart.id}`}>View your order →</Link></div> : null}
       {result?.followUp === "queued" || result?.followUp === "blocked" ? <p>Your form is saved. The team’s follow-up actions are awaiting processing.</p> : null}
     </section>;
   }
 
-  if (!available) return <section className={styles.formComplete} role="status"><FileLock2 aria-hidden="true" /><h2>Form collection is unavailable</h2><p>Outstanding requests and previously submitted responses are retained.</p></section>;
+  if (!available) return <section className={styles.formComplete} role="status"><header className={styles.formCompleteHead}><FileLock2 aria-hidden="true" /><h2>Form collection is unavailable</h2></header><p>Outstanding requests and previously submitted responses are retained.</p></section>;
 
   return (
     <form className={styles.renderer} onSubmit={(event) => { event.preventDefault(); submit(); }}>
       {mode === "preview" ? <div className={styles.previewFlag}>Draft Preview</div> : null}
       <header className={styles.rendererHeader}>
-        <span>{schema.form_type} form · Version {schema.version_number}</span>
         <h1>{schema.title}</h1>
+        <span>{schema.form_type} form · Version {schema.version_number}</span>
         {schema.information_html ? <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(schema.information_html) }} /> : null}
       </header>
       <div className={styles.rendererFields}>
         {fields.map((field, fieldIndex) => {
           const fieldDomId = `form-field-${fieldIndex}`;
           if (!isFormFieldVisible(field.stable_field_key, schema.rules, answers)) return null;
+          if (displayOnly(field)) return <section className={styles.readableContent} key={field.stable_field_key}><h2>{field.label}</h2>
+            {field.help_html ? <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}</section>;
           if (field.field_type === "break") return <section className={styles.sectionBreak} key={field.stable_field_key}><h2>{field.label}</h2></section>;
           if (field.field_type === "pagebreak") return <div className={styles.pageBreak} key={field.stable_field_key}><span>{field.label}</span></div>;
           if (field.field_type === "html") return <div className={styles.safeHtml} key={field.stable_field_key} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(typeof field.settings.html === "string" ? field.settings.html : "") }} />;
           if (field.field_type === "hidden") return null;
           if (field.field_type === "secret") return <div className={styles.integrationNotice} key={field.stable_field_key}><FileLock2 aria-hidden="true" /><div><strong>{field.label}</strong><span>Secure secret collection is unavailable until encrypted storage is connected.</span></div></div>;
           if (field.field_type === "file") return <div className={styles.renderField} key={field.stable_field_key}>
-            <label htmlFor={fieldDomId}>{field.label}{field.required ? " *" : ""}</label>
+            {Array.isArray(answers[field.stable_field_key]) && (answers[field.stable_field_key] as Json[]).length
+              ? <span className={styles.fieldLabel}>{field.label}{field.required ? " *" : ""}</span>
+              : <label htmlFor={fieldDomId}>{field.label}{field.required ? " *" : ""}</label>}
             {mode === "assigned" && assignmentId ? <IntakeFileField assignmentId={assignmentId} fieldKey={field.stable_field_key}
               label={field.label} id={fieldDomId} value={Array.isArray(answers[field.stable_field_key]) ? String((answers[field.stable_field_key] as Json[])[0] ?? "") || null : null}
               required={field.required} disabled={readonly || pending} onBusy={setUploading}
@@ -234,9 +265,9 @@ export function FormRenderer({
               : <p>Images and PDFs up to 4 MB can be attached to assigned intake forms.</p>}
           </div>;
           if (["payment", "captcha", "calendly"].includes(field.field_type)) return <div className={styles.integrationNotice} key={field.stable_field_key}><ShieldAlert aria-hidden="true" /><div><strong>{field.label}</strong><span>{field.field_type === "payment" ? "Payment is configured separately and is not collected by this Form." : field.field_type === "captcha" ? "Captcha verification is not enabled." : "Scheduling is not connected; this field is presentation-only."}</span></div></div>;
-          return <div className={styles.renderField} key={field.stable_field_key}>
+          return <div className={styles.renderField} data-field-type={field.field_type} key={field.stable_field_key}>
             <label htmlFor={fieldDomId}>{field.label}{field.required ? <span aria-hidden="true"> *</span> : null}</label>
-            {field.help_html ? <div className={styles.fieldHelp} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}
+            {field.help_html ? <div className={styles.fieldHelp} id={`${fieldDomId}-help`} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}
             <FieldControl field={field} id={fieldDomId} value={answers[field.stable_field_key]} disabled={readonly || pending} onChange={(value) => { setAnswers((current) => ({ ...current, [field.stable_field_key]: value })); setDraftMessage("Unsaved changes. Save your progress before leaving."); }} />
           </div>;
         })}

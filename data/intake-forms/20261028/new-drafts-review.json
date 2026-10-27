@@ -1,0 +1,207 @@
+{
+  "prepared_at": "2026-10-27T19:56:15.323Z",
+  "scope": "12 previously unconfigured services; local draft plan only",
+  "source_assignments_changed": 0,
+  "hosted_writes": 0,
+  "policy_approval": "User approved existing Company No Refund Policy and drawn signature for ten new Sprint/System drafts on 2026-10-28.",
+  "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+  "source_evidence": [
+    "source-service-mappings.json (prior capture: all12 empty)",
+    "live255-form catalog review 2026-10-28 (no exact dedicated titles)",
+    "catalog source descriptions in existing migrations"
+  ],
+  "drafts": [
+    {
+      "source_service_id": 418,
+      "woad_service_id": "5f000000-0000-4000-8000-000000000418",
+      "name": "Press Release Stack",
+      "file": "service-418.json",
+      "canonical_key": "woad-intake-service-418",
+      "reference_form_id": 147,
+      "strategy": "adapted_questions_with_preserved_policy",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 14,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Confirm whether finished articles or client briefs are expected for the four releases. This draft accepts either without promising writing."
+      ],
+      "sha256": "e5fbb216f05861d39ecef8bf95165e535571502f1dbffcf710180f27b92cd87e"
+    },
+    {
+      "source_service_id": 450,
+      "woad_service_id": "5f000000-0000-4000-8000-000000000450",
+      "name": "Tiered Guest Post Link Building (250 Guest Posts)",
+      "file": "service-450.json",
+      "canonical_key": "woad-intake-service-450",
+      "reference_form_id": 134,
+      "strategy": "adapted_questions_with_preserved_policy",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Confirm which target URLs are permitted for this Tier 2 service. This draft asks for explicit URLs and does not assume the business homepage is the target."
+      ],
+      "sha256": "915354f3ade941612106dbf92640ee361271ac72a7be7f1f4af45657e9eb8097"
+    },
+    {
+      "source_service_id": 571,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000101",
+      "name": "MAPS SPRINT",
+      "file": "service-571.json",
+      "canonical_key": "woad-intake-service-571",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 12,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "54e519b15637b521b72a59a7e00ac86e13290360a657ae1e57d8af26fedf9c70"
+    },
+    {
+      "source_service_id": 572,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000102",
+      "name": "SEO SPRINT",
+      "file": "service-572.json",
+      "canonical_key": "woad-intake-service-572",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "c7371387f15b0477014b95cd70e7a4951ba5f681f73c44b7610ec6b437a4c6c1"
+    },
+    {
+      "source_service_id": 573,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000103",
+      "name": "AI VISIBILITY SPRINT",
+      "file": "service-573.json",
+      "canonical_key": "woad-intake-service-573",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "0396c9b601d8f3819100fe893b0bc7202ac77f57cdfdfdc86a5c33f504419f4a"
+    },
+    {
+      "source_service_id": 574,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000104",
+      "name": "WEBSITE SPRINT",
+      "file": "service-574.json",
+      "canonical_key": "woad-intake-service-574",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "1453e560871ebca99807826eea4c6d1a953c24f1926f45ffef459f5e75666cc2"
+    },
+    {
+      "source_service_id": 575,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000105",
+      "name": "LEAD GEN SPRINT",
+      "file": "service-575.json",
+      "canonical_key": "woad-intake-service-575",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "875e87c955d5687e471092db111ff7890118d4843464c391e073dda4175c0a1e"
+    },
+    {
+      "source_service_id": 576,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000106",
+      "name": "CONVERSION SPRINT",
+      "file": "service-576.json",
+      "canonical_key": "woad-intake-service-576",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 12,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "b4aa2ab0f8700681ddc4fb9a25d1c9940daa6ba131de38e7320298bf0b51477f"
+    },
+    {
+      "source_service_id": 577,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000107",
+      "name": "COMPETITOR SPRINT",
+      "file": "service-577.json",
+      "canonical_key": "woad-intake-service-577",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 10,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "1f5df92587aa703e800be4b51c1ff88c8a538b49f76dc0e90d312dc938335aa7"
+    },
+    {
+      "source_service_id": 579,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000108",
+      "name": "LEAD GENERATION SYSTEM",
+      "file": "service-579.json",
+      "canonical_key": "woad-intake-service-579",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 12,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "32efef7235c709648283d325db564af19d42f610990a2b3b638f00809ae08f06"
+    },
+    {
+      "source_service_id": 580,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000109",
+      "name": "Conversion Optimization System",
+      "file": "service-580.json",
+      "canonical_key": "woad-intake-service-580",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 13,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "aef58432e7774faec1e6218c2a1c4c0a841b11880905ec623dda11d3358c049a"
+    },
+    {
+      "source_service_id": 581,
+      "woad_service_id": "5e000000-0000-4000-8000-000000000110",
+      "name": "Competitive Domination Blueprint",
+      "file": "service-581.json",
+      "canonical_key": "woad-intake-service-581",
+      "reference_form_id": null,
+      "strategy": "new_scope_based_draft",
+      "status": "local_draft_needs_review_not_saved_or_published",
+      "fields": 11,
+      "policy_sha256": "388805225d81e3900a4d7f005466b5b3e4b7ebb2c2f9251dae71f76daabffe15",
+      "needs_input": [
+        "Review these new service-specific questions; the original source has no configured intake."
+      ],
+      "sha256": "1ceb63f957afa065f22be657b6244b8bd7194c953a41620a28d102fc6ade9232"
+    }
+  ]
+}

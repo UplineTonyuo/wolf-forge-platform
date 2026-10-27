@@ -1,0 +1,159 @@
+{
+  "request_id": "d68b50d3-cd43-424b-82b0-5162636347ba",
+  "form_type": "intake",
+  "canonical_key": "woad-intake-service-577",
+  "definition": {
+    "name": "COMPETITOR SPRINT — intake",
+    "title": "COMPETITOR SPRINT — project details",
+    "information_html": "<p>Identify the competitors and market questions for your Competitor Sprint.</p><p>Do not include passwords, access tokens or customer contact lists. The team will coordinate any account-access invitations separately.</p>",
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "cd9bb256-06e2-45fb-8d88-4977ae3a0202",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "Business name",
+        "internal_label": "business_name",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "698a5194-ccdf-4b9b-8259-5246c6c2ea94",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fb4dbf12-2932-40a4-857f-d16025168e47",
+        "sort_order": 2,
+        "field_type": "textarea",
+        "label": "Primary market and intended audience",
+        "internal_label": "market",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7653f889-cbc2-462d-8ab0-1a35feb82c91",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Main objective for this order",
+        "internal_label": "objective",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fd78ebf8-b629-4348-8bd4-c30e8c2fa73a",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Competitor business names and website or profile links",
+        "internal_label": "competitors",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "bdbb3a35-eb57-4339-8efa-2958f4faa784",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "Priority services, products and keywords",
+        "internal_label": "priorities",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "cdff2975-8d05-4e76-8c86-1211c8648afa",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "What should the competitor comparison help you decide?",
+        "internal_label": "questions",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "d77de55f-cdc8-4bc3-8fa0-816ba007307f",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "Known strengths, gaps or existing research",
+        "internal_label": "strengths",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1a9c628a-622f-488e-81c3-aefc36f649c2",
+        "sort_order": 8,
+        "field_type": "file",
+        "label": "Supporting file",
+        "internal_label": "supporting_files",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "13c96879-b1d5-4c3d-828a-67ef5dfb142e",
+        "sort_order": 9,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "client_agreement",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5e000000-0000-4000-8000-000000000107",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "request_id": "16a24a79-be06-47aa-86d0-52526f7174dd",
+  "form_type": "intake",
+  "canonical_key": "woad-intake-service-573",
+  "definition": {
+    "name": "AI VISIBILITY SPRINT — intake",
+    "title": "AI VISIBILITY SPRINT — project details",
+    "information_html": "<p>Tell us which brands, products and searches matter for your AI visibility review.</p><p>Do not include passwords, access tokens or customer contact lists. The team will coordinate any account-access invitations separately.</p>",
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "78836d59-9f0b-435c-8ec2-73213b9c42dc",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "Business name",
+        "internal_label": "business_name",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1f501fba-6deb-4894-8cbc-10e2bca84f17",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "12f0a0fa-4482-4ae7-840a-818049347dfb",
+        "sort_order": 2,
+        "field_type": "textarea",
+        "label": "Primary market and intended audience",
+        "internal_label": "market",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "c1dae739-1392-4d64-8472-470d29d2b142",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Main objective for this order",
+        "internal_label": "objective",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b065a965-d087-4b42-804e-29361d4e8b65",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Brand, product and business names to review",
+        "internal_label": "brands",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b9a17197-46ea-4e96-8975-70401b8dc07a",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "Questions or searches where you want the brand to appear",
+        "internal_label": "queries",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "d2ce81f9-25f4-43c4-835d-f1095d9bc982",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "AI search platforms to prioritize",
+        "internal_label": "platforms",
+        "placeholder": null,
+        "help_html": "<p>For example, Google AI results, ChatGPT or another platform.</p>",
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6e19f9ee-cbb3-4864-8cbf-b86228e8c0bf",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "Competing brands or websites",
+        "internal_label": "competitors",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1e1dc025-5ec8-4d6c-8731-0e53afe6ad9c",
+        "sort_order": 8,
+        "field_type": "textarea",
+        "label": "Important content, profiles or reference links",
+        "internal_label": "references",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "1e317636-0968-4f30-8061-9b07e5504e1e",
+        "sort_order": 9,
+        "field_type": "file",
+        "label": "Supporting file",
+        "internal_label": "supporting_files",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "46343922-fe4a-4966-88bd-6d9cd2ad6451",
+        "sort_order": 10,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "client_agreement",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5e000000-0000-4000-8000-000000000103",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

@@ -1,0 +1,226 @@
+{
+  "request_id": "f49e6272-4095-5510-8a62-b344dd111a42",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-152",
+  "definition": {
+    "name": "Intake Form for SEO Fortress",
+    "title": "Intake Form for SEO Fortress",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "918cbc76-f279-57da-b2d9-0fc488e959c4",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_152_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b7871ce8-2312-5a75-9002-4d5638bfbf24",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_152_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4dc94a61-846e-5948-85c2-00708ec8a367",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_152_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "93245200-bcde-5e77-b477-648b6ef0fbed",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "I need a list of any and all PDFs, Videos, Press Releases, Citations, Articles, the more the better to juice your stack up!",
+        "internal_label": "source_152_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "465ca82b-18cd-59e4-9aa7-867406ce2fc0",
+        "sort_order": 4,
+        "field_type": "file",
+        "label": "File upload",
+        "internal_label": "source_152_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "289b064c-d95a-5d41-8773-63d4d1603a5c",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "Google Drive Link of Article to Distribute, the article should be at least 1500 words and have an image in it already. Preferablly a Google Map image that we can then link to your GBP/GMB.",
+        "internal_label": "source_152_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "44e2aa89-abb7-593c-a966-35c92995f79b",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "Main Target Keyword and 10 Supporting Keywords",
+        "internal_label": "source_152_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4c4d53ad-c549-5b2e-ad6a-110ce41e8c50",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "gbp/gmb Name, address, phone, website",
+        "internal_label": "source_152_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "15774134-b456-579b-b445-a06e2c27c1d9",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Facebook",
+        "internal_label": "source_152_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "997c4482-3480-551e-9728-217faf2e221b",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "Instagram",
+        "internal_label": "source_152_field_10",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "baafd0aa-04ca-5366-bcd4-ba32d8717b96",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "Twitter",
+        "internal_label": "source_152_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "5d380f4d-54b9-5b60-8fd1-f011b4469096",
+        "sort_order": 11,
+        "field_type": "text",
+        "label": "Youtube",
+        "internal_label": "source_152_field_12",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "42dbef78-694e-55c6-9296-23e517e51991",
+        "sort_order": 12,
+        "field_type": "text",
+        "label": "LinkedIn",
+        "internal_label": "source_152_field_13",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2a247464-57bc-51e4-a6c7-bc4bca2e2d62",
+        "sort_order": 13,
+        "field_type": "text",
+        "label": "Domain Name URL",
+        "internal_label": "source_152_field_14",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "068e95df-38fb-51cd-88b0-24515f5679d2",
+        "sort_order": 14,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_152_field_15",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000277",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

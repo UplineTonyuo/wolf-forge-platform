@@ -1,0 +1,200 @@
+{
+  "request_id": "0bf78ae5-0f84-55b2-a821-ef91190ff6a7",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-252",
+  "definition": {
+    "name": "Intake Form for 200+ Local Citations (MANUALLY BUILT)",
+    "title": "Intake Form for 200+ Local Citations (MANUALLY BUILT)",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "f89d4b2b-049f-5f7d-8d09-5d8f81213eb9",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_252_field_1",
+        "placeholder": null,
+        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "f9f271f8-9b56-524b-b46b-57194f73bd71",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_252_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "488bd9ac-1ffb-5696-956d-7675f1378840",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_252_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "26c501d9-cb39-5bc6-9f25-59a288e39b22",
+        "sort_order": 3,
+        "field_type": "file",
+        "label": "File upload",
+        "internal_label": "source_252_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b85f1e62-088c-5a4f-9590-1cb85d725703",
+        "sort_order": 4,
+        "field_type": "text",
+        "label": "Main Target Keyword and 10 Supporting Keywords",
+        "internal_label": "source_252_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2e89af75-9793-5b58-b5a1-6b38c54265ec",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "gbp/gmb Name, address, phone, website",
+        "internal_label": "source_252_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "f63f0c50-4238-5f9a-bb84-c9753cd44277",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "Facebook",
+        "internal_label": "source_252_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "652e8f6c-80ce-5fb5-82f6-4d87fe663fc0",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "Instagram",
+        "internal_label": "source_252_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a8810eb7-1614-5614-911f-5f2ace690e1c",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Twitter",
+        "internal_label": "source_252_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "35b87997-fa6b-5317-b1f6-63fcc5448a2f",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "Youtube",
+        "internal_label": "source_252_field_10",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a00cf478-56a9-57d7-9718-d6fd91b4fbff",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "LinkedIn",
+        "internal_label": "source_252_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7269d66e-98d8-53da-b460-3840a29ac1c9",
+        "sort_order": 11,
+        "field_type": "text",
+        "label": "Domain Name URL",
+        "internal_label": "source_252_field_12",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "fd059439-d121-5f13-9eaa-ed647fbdc1ec",
+        "sort_order": 12,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_252_field_13",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000444",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

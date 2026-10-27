@@ -42,13 +42,14 @@ const HSTS_MAX_AGE_SECONDS = 60 * 60 * 24 * 180;
 
 /**
  * The enforced policy. Every directive here is independent of Next's script and
- * style emission, so enforcing it can never break a page.
+ * style emission. The exact Google origin permits the native OAuth POST/303
+ * fallback, including after Next client navigation from another document.
  */
 export const ENFORCED_CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://accounts.google.com",
 ].join("; ");
 
 /**
@@ -95,7 +96,7 @@ export function buildReportOnlyContentSecurityPolicy(
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    "form-action 'self' https://accounts.google.com",
     "upgrade-insecure-requests",
   ].join("; ");
 }

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { ClientOrderStart } from "../../../../components/account/projects/client-order-start";
+import type { ClientOrderStartState } from "../../../../domain/orders/client-start";
 import { notFound, redirect } from "next/navigation";
 import { ClientProjectDetail } from "../../../../components/account/projects/client-projects";
 import type { ClientProjectView } from "../../../../domain/orders/client-projections";
@@ -20,12 +22,15 @@ export default async function ClientProjectDetailPage({
   let conversation: TicketDetail | null = null;
   let denied = false;
   let missing = false;
+  let startState: ClientOrderStartState | null = null;
+  let startError = false;
 
   try {
     await services.permissions.requireModuleAccess("portal_projects");
     [project, conversation] = await Promise.all([
       services.projects.getClientProject(projectId),
       services.tickets.getForOrder(projectId),
+      services.projects.getClientStartState(projectId).then((state) => { startState = state; }).catch(() => { startError = true; }),
     ]);
   } catch (error) {
     const safe = toClientSafeError(error);
@@ -39,5 +44,6 @@ export default async function ClientProjectDetailPage({
   if (denied) redirect("/account");
   if (missing || !project) notFound();
 
-  return <ClientProjectDetail project={project} conversation={conversation} viewerId={user.id} />;
+  return <ClientProjectDetail project={project} conversation={conversation} viewerId={user.id}
+    startControl={startError ? <p role="alert">Order start status could not be loaded. Reload before starting this order.</p> : <ClientOrderStart initial={startState} />} />;
 }

@@ -248,7 +248,7 @@ export function PurchaseWithBalance({
                 </p>
 
                 <p className={styles.outroNote}>
-                  {done.replayed ? "You have not been charged again." : "The Wolf Forge team has been notified and will begin fulfillment."}
+                  {done.replayed ? "You have not been charged again." : "Your purchase is saved. Open your project to review its next steps."}
                 </p>
 
                 <span className={styles.outroSweep} aria-hidden={true} />

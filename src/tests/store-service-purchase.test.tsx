@@ -337,7 +337,7 @@ describe("PurchaseWithBalance", () => {
 
       await vi.waitFor(() => expect(screen.getByText("Purchase confirmed")).toBeInTheDocument());
       expect(screen.getByText(/has been added to your Wolf Forge services/)).toBeInTheDocument();
-      expect(screen.getByText(/team has been notified/)).toBeInTheDocument();
+      expect(screen.getByText(/Open your project to review its next steps/)).toBeInTheDocument();
       expect(push).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(2000);

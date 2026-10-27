@@ -70,3 +70,77 @@
   .formSettingsBar input, .settings input:not([type=checkbox]), .settings textarea, .createFields input, .assignFields input:not([type=checkbox]), .renderField input:not([type=checkbox]):not([type=radio]), .renderField textarea { min-height: 44px; font-size: 16px; }
   .renderField .signatureControl > input { font-size: 22px; }
 }
+
+.readableContent { color: var(--wf-text); font-size: 14px; line-height: 1.7; min-width: 0; overflow-wrap: anywhere; }
+.readableContent h2 { margin: 0 0 16px; font-size: 20px; color: var(--wf-navy); }
+.readableContent > div { white-space: pre-wrap; }
+.readableContent p { margin: 0 0 16px; }
+.renderer {
+  --form-gutter: 28px;
+  --form-control-border: #8590a3;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.rendererHeader { padding: 28px var(--form-gutter) 24px; }
+.rendererHeader h1 { margin: 0; font-size: 24px; line-height: 1.3; text-wrap: balance; }
+.rendererHeader > span { display: block; margin-top: 8px; color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.rendererHeader > div { margin-top: 16px; font-size: 14px; line-height: 1.65; }
+.rendererHeader > div p { margin: 0 0 12px; }
+.rendererHeader > div p:last-child { margin-bottom: 0; }
+.rendererFields { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 24px var(--form-gutter) 28px; }
+.renderField { min-width: 0; gap: 8px; }
+.renderField > label, .fieldLabel { color: #303746; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.renderField input:not([type=checkbox]):not([type=radio]), .renderField textarea, .renderField select {
+  min-height: 48px; border-color: var(--form-control-border); font-size: 16px; line-height: 1.5;
+}
+.renderField textarea { padding: 12px; }
+.renderField input::placeholder, .renderField textarea::placeholder { color: var(--wf-text-muted); opacity: 1; }
+.renderer input:focus-visible, .renderer textarea:focus-visible, .renderer button:focus-visible, .renderer a:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.fieldHelp { max-width: 75ch; font-size: 13px; line-height: 1.65; }
+.fieldHelp p + p { margin-top: 12px; }
+.fieldHelp a, .renderer a { text-underline-offset: 3px; }
+.renderField[data-field-type=signature] { gap: 16px; }
+.renderField[data-field-type=signature] .fieldHelp { color: var(--wf-text); font-size: 14px; line-height: 1.7; }
+.renderer .sectionBreak { padding-top: 16px; }
+.renderer .sectionBreak h2 { margin-bottom: 8px; font-size: 18px; line-height: 1.4; }
+.renderer .pageBreak { color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; text-transform: none; }
+.renderer .integrationNotice { align-items: flex-start; gap: 12px; }
+.renderer .integrationNotice strong { font-size: 14px; line-height: 1.5; }
+.renderer .integrationNotice span { font-size: 13px; line-height: 1.6; }
+.renderer .integrationNotice svg { margin-top: 2px; }
+.renderer .draftBar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 16px; padding: 20px var(--form-gutter); }
+.renderer .draftBar p { margin: 0; font-size: 13px; line-height: 1.6; }
+.rendererFooter { gap: 12px 20px; padding: 20px var(--form-gutter); }
+.rendererFooter > button, .formComplete button { min-height: 44px; }
+.rendererFooter span { font-size: 12px; line-height: 1.5; }
+.renderer > .actionError { margin: 0; padding: 16px var(--form-gutter); font-size: 14px; line-height: 1.6; }
+.intakeFile { gap: 8px; }
+.intakeFile small { color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+.intakeFile input[type=file] { padding: 0 12px 0 0; line-height: 46px; }
+.intakeFile input::file-selector-button { min-height: 46px; margin-right: 12px; padding: 0 12px; border: 0; border-right: 1px solid var(--form-control-border); background: #f2f4f8; color: var(--wf-navy); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.intakeFile > .intakeFileAttached { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--form-control-border); border-radius: 6px; }
+.intakeFileAttached a { min-width: 0; color: var(--wf-navy); font-size: 14px; line-height: 1.5; }
+.intakeFileAttached button { min-height: 44px; }
+.intakeFile [role=alert] { margin: 0; font-size: 14px; line-height: 1.6; }
+.formComplete { min-height: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 16px; padding: 32px; text-align: left; overflow-wrap: anywhere; }
+.formCompleteHead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.formCompleteHead > svg { flex: 0 0 auto; width: 28px; height: 28px; color: var(--wf-navy); }
+.formComplete[data-state=complete] .formCompleteHead > svg { color: #267044; }
+.formComplete h2 { margin: 0; font-size: 24px; line-height: 1.3; }
+.formComplete p { max-width: 65ch; margin: 0; font-size: 14px; line-height: 1.65; }
+.pdfDownload { display: grid; gap: 12px; min-width: 0; }
+.pdfDownload > button { justify-self: start; gap: 8px; min-height: 44px; }
+.pdfDownload > button svg { width: 18px; height: 18px; color: currentColor; }
+.pdfDownload > p { margin: 0; color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+.pdfDownload > p[role=alert] { color: #a4372e; }
+@media (max-width: 760px) {
+  .renderer { --form-gutter: 16px; }
+  .rendererHeader { padding-top: 24px; padding-bottom: 20px; }
+  .rendererHeader h1 { font-size: 20px; }
+  .renderer .draftBar { grid-template-columns: minmax(0, 1fr); }
+  .renderer .draftBar > button, .rendererFooter > button { width: 100%; }
+  .rendererFooter { align-items: stretch; }
+  .formComplete { gap: 16px; padding: 24px 16px; }
+  .formComplete h2 { font-size: 22px; }
+}

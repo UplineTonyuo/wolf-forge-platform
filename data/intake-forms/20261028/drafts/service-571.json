@@ -1,0 +1,185 @@
+{
+  "request_id": "0d33e292-9ae6-49cc-8b18-2f56808d35a0",
+  "form_type": "intake",
+  "canonical_key": "woad-intake-service-571",
+  "definition": {
+    "name": "MAPS SPRINT — intake",
+    "title": "MAPS SPRINT — project details",
+    "information_html": "<p>Share the business profiles and locations you want reviewed in your Maps Sprint.</p><p>Do not include passwords, access tokens or customer contact lists. The team will coordinate any account-access invitations separately.</p>",
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "b6073230-3e14-45ea-808a-2930e5e19570",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "Business name",
+        "internal_label": "business_name",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "747bd7e2-986c-44fe-89a4-56b9399e84c3",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9c2fca63-6b41-40c7-808c-16a41bbde022",
+        "sort_order": 2,
+        "field_type": "textarea",
+        "label": "Primary market and intended audience",
+        "internal_label": "market",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "024137ab-351f-405d-82f7-490b210df58f",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Main objective for this order",
+        "internal_label": "objective",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b7bcb41c-9115-492c-8f50-32f5adae1a83",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Google Business Profile links",
+        "internal_label": "profiles",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "edf9eccd-4bec-4010-8cc3-40415b32332b",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "Locations and service areas to review",
+        "internal_label": "locations",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "72f5ccdc-7954-4d51-8c01-be868511166a",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "Priority business services",
+        "internal_label": "services",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2e8f1e31-7125-4e05-8a5b-16e9866564f9",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "Local keywords or searches",
+        "internal_label": "keywords",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "8e765877-651b-46f1-8bfb-bfb41c55b14a",
+        "sort_order": 8,
+        "field_type": "textarea",
+        "label": "Competing business profile links",
+        "internal_label": "competitors",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ead73b6b-d370-4719-8449-d308504d194f",
+        "sort_order": 9,
+        "field_type": "textarea",
+        "label": "Known profile or ranking concerns",
+        "internal_label": "issues",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "30a08b3f-0f64-4f5e-8e3f-2cdcb944022f",
+        "sort_order": 10,
+        "field_type": "file",
+        "label": "Supporting file",
+        "internal_label": "supporting_files",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e5619a15-a8e3-4687-805a-c52392a1a4c6",
+        "sort_order": 11,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "client_agreement",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5e000000-0000-4000-8000-000000000101",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}
