@@ -19,7 +19,7 @@ const bundle = resolve("data/intake-forms/20261028");
 const output = resolve("artifacts/intake-workflow");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg4A38DwABzQFelLyDQQAAAABJRU5ErkJggg==", "base64");
-const report = { status: "incomplete", scope: "Technical workflow only; agreement wording and publication approval are separate gates.", checks: [], cases: [], consoleErrors: [], blockedExternalRequests: 0 };
+const report = { status: "incomplete", scope: "Intake workflow using synthetic one-time balance offers for all 59 service IDs; recurring billing is not exercised. Agreement wording and production publication remain separate gates.", checks: [], cases: [], consoleErrors: [], blockedExternalRequests: 0 };
 const secrets = [];
 let step = "fixture checks", browser, page, proxy, server, temporary;
 const need = (condition, message) => assert.ok(condition, message);
@@ -138,10 +138,19 @@ async function main() {
       where p.id=(a->>'id')::uuid and r.name=case when (a->>'owner')::boolean then 'owner' else 'client' end;
     insert into public.services(id,tenant_id,name,price,currency,is_active,is_public,recurring)
       select (s->>'id')::uuid,'${tenant}','Synthetic CI '||(s->>'name'),1,'USD',true,true,false from jsonb_array_elements(:'catalog'::jsonb) s
-      on conflict(id) do update set name=excluded.name,price=1,currency='USD',is_active=true,is_public=true,recurring=false,archived_at=null,description=null,image_url=null;
+      on conflict(id) do update set name=excluded.name,price=1,currency='USD',is_active=true,is_public=true,recurring=false,
+        recurring_price=null,recurring_interval_length=null,recurring_interval_unit=null,recurring_action=null,
+        archived_at=null,description=null,image_url=null;
     update public.services set description=null,image_url=null where tenant_id='${tenant}';
     commit;`, { actors: accounts.map(({ id, company, owner }) => ({ id, company, owner })), catalog });
   need(Number(sql("select count(*) from public.tenant_memberships where archived_at is null;")) === accounts.length, "Real synthetic tenant memberships were not established");
+  need(Number(sql(`select count(*) from public.services service
+    join jsonb_array_elements(:'catalog'::jsonb) fixture on service.id=(fixture->>'id')::uuid
+    where service.tenant_id='${tenant}' and service.price=1 and service.currency='USD'
+      and service.is_active and service.is_public and service.archived_at is null and not service.recurring
+      and service.recurring_price is null and service.recurring_interval_length is null
+      and service.recurring_interval_unit is null and service.recurring_action is null;`, { catalog })) === catalog.length,
+    "Synthetic one-time service fixture was not fully established");
   for (const account of accounts) {
     account.cookies = [];
     account.client = createServerClient(status.API_URL, publicKey, {
