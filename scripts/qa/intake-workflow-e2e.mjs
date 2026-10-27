@@ -366,7 +366,9 @@ async function main() {
             const element = document.querySelector('[role="dialog"]');
             if (!element) return false;
             const box = element.getBoundingClientRect();
-            return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
+            const style = getComputedStyle(element);
+            return style.transform === "none" && Number(style.opacity) === 1
+              && box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
           });
           need(await dialog.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1; }), "Builder sheet leaves the viewport");
           const closeLabel = label === "Add field" ? "Close field palette" : "Close settings";
