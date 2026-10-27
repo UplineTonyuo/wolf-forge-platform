@@ -255,6 +255,8 @@ async function main() {
   step = "owner reviewed-template draft";
   const reviewed = templates.find((entry) => entry.meta.file === "intake-147.json");
   const definition = reviewed.payload.definition;
+  assert.deepEqual(definition.type_config, { reminder_days: 0 }, "Reviewed-template smoke requires provider-free configuration without automation actions");
+  const normalizedTypeConfig = { automation: {}, ...definition.type_config, reminder_days: 0 };
   need(definition.rules.length === 0 && definition.fields.every((field) => field.options.length === 0 && field.service_links.length === 0), "Extend reviewed-template smoke coverage before adding nested choices or rules");
   const beforeDraft = await owner.client.from("forms").select("id", { count: "exact", head: true });
   need(!beforeDraft.error && beforeDraft.count === templates.length, "Reviewed-template smoke requires the 37 published fixture forms");
@@ -287,7 +289,7 @@ async function main() {
   ]);
   for (const result of copiedParts) need(!result.error, "The owner could not read a saved reviewed-template draft component");
   const [copiedVersion, copiedFields, copiedLinks, copiedRules] = copiedParts;
-  assert.deepEqual(copiedVersion.data, { form_id: copiedId, lifecycle_state: "draft", title: definition.title, information_html: definition.information_html, visibility: definition.visibility, type_config: definition.type_config, created_by_profile_id: owner.id, published_by_profile_id: null, published_at: null, schema_hash: null });
+  assert.deepEqual(copiedVersion.data, { form_id: copiedId, lifecycle_state: "draft", title: definition.title, information_html: definition.information_html, visibility: definition.visibility, type_config: normalizedTypeConfig, created_by_profile_id: owner.id, published_by_profile_id: null, published_at: null, schema_hash: null });
   need(copiedFields.data.length === definition.fields.length, "The reviewed-template draft lost fields");
   for (const [index, expected] of definition.fields.entries()) {
     const keys = Object.keys(expected).filter((key) => !["options", "service_links"].includes(key));
