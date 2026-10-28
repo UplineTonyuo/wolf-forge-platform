@@ -1,0 +1,226 @@
+{
+  "request_id": "8bf0c6b2-43f6-51ca-8703-04ff0c6999fc",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-127",
+  "definition": {
+    "name": "Intake Form for Google Maps Booster",
+    "title": "Intake Form for Google Maps Booster",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "fd615b4f-ed55-515a-a770-309ae149aaaa",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_127_field_1",
+        "placeholder": null,
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "f939488d-d256-5668-8091-70522efbbd46",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_127_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "473915f0-bb57-5564-b275-fdb7fbd92ac0",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_127_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "0c361e80-326b-501d-9cc8-a4acdc2fd0cb",
+        "sort_order": 3,
+        "field_type": "file",
+        "label": "Upload any Logo or Image you want to use",
+        "internal_label": "source_127_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9a8ca2cb-8074-5977-97af-f2371f885097",
+        "sort_order": 4,
+        "field_type": "text",
+        "label": "Google Drive Link of Article to Distribute, the article should be at least 1500 words and have an image in it already. Preferablly a Google Map image that we can then link to your GBP/GMB.",
+        "internal_label": "source_127_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6e61f09e-953b-5a41-85b7-d1fb2444ddf6",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "Main Target Keyword and 10 Supporting Keywords",
+        "internal_label": "source_127_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "29d71a0a-a826-5a3b-9e97-3dcbe24b9331",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "GBP/GMB name and link",
+        "internal_label": "source_127_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "8592d4a7-a19e-59da-b574-5e72f9ca7381",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "Complete Address",
+        "internal_label": "source_127_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "541d6928-e04d-58c7-811a-9c66507c4b88",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Business number",
+        "internal_label": "source_127_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ac26d7ed-6bd0-5da0-850c-c3a4364e1b21",
+        "sort_order": 9,
+        "field_type": "text",
+        "label": "Social media",
+        "internal_label": "source_127_field_10",
+        "placeholder": "Twitter, Yiutube, Facebook, Instagram",
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9990fa7e-875d-5d4c-ad7d-c88002c7624b",
+        "sort_order": 10,
+        "field_type": "text",
+        "label": "Business Email",
+        "internal_label": "source_127_field_11",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "3a6a8d2b-fa5a-558a-add5-3144e301117c",
+        "sort_order": 11,
+        "field_type": "text",
+        "label": "Website name and URL",
+        "internal_label": "source_127_field_12",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e0e45b21-ea7e-5674-9204-aa77c614262c",
+        "sort_order": 12,
+        "field_type": "textarea",
+        "label": "Shared photo folder or photo links",
+        "internal_label": "source_127_review_photos",
+        "placeholder": null,
+        "help_html": "<p>Provide shared links to the photos for the 10 stacked photos included in your Maps Booster. The team must be able to open the links. Do not include passwords or access tokens.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "77425e92-f464-5e97-9249-c037bb3e3d05",
+        "sort_order": 13,
+        "field_type": "text",
+        "label": "Shared video link for your Maps Booster",
+        "internal_label": "source_127_review_video",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Provide a link to the video you want used for the geotagged video in your Maps Booster. The team must be able to open the link. Do not include passwords or access tokens.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9662eefc-df19-5b81-ad76-abd07e11426f",
+        "sort_order": 14,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_127_field_13",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000013",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

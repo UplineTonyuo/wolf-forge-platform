@@ -123,6 +123,24 @@ a.tab:hover {
   top: 28px;
 }
 
+@media (min-width: 901px) {
+  /* Clip the rounded shell without creating a non-scrolling sticky ancestor. */
+  :global(.workspace):has(.orderFrame) {
+    overflow: clip;
+  }
+
+  .orderFrame .rail {
+    max-height: calc(100dvh - 56px);
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+}
+
+.orderFrame .rail:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: 3px;
+}
+
 .railCard {
   border: 1px solid #d5dbe7;
   border-radius: 10px;

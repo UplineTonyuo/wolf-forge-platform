@@ -1,0 +1,17 @@
+begin;
+select plan(13);
+select ok(private.valid_form_signature_drawing('[[[10,20],[50,60]]]'::jsonb), 'numeric ink is accepted');
+select ok(not private.valid_form_signature_drawing(null), 'missing drawing is rejected');
+select ok(not private.valid_form_signature_drawing('[]'::jsonb), 'empty drawing is rejected');
+select ok(not private.valid_form_signature_drawing('[[[10,20]]]'::jsonb), 'a tap is not a signature');
+select ok(not private.valid_form_signature_drawing('[[[10,20],[10,20]]]'::jsonb), 'duplicate points are not ink');
+select ok(not private.valid_form_signature_drawing('[[[0,0],[1001,10]]]'::jsonb), 'out of range coordinates are rejected');
+select ok(not private.valid_form_signature_drawing('[[[0,0],[10,-1]]]'::jsonb), 'negative coordinates are rejected');
+select ok(not private.valid_form_signature_drawing('[[[0,0],[10.5,10]]]'::jsonb), 'fractional coordinates are rejected');
+select ok(not private.valid_form_signature_drawing('[[[0,0],["<svg onload=alert(1)>",10]]]'::jsonb), 'executable input is rejected');
+select ok(not private.valid_form_signature_drawing((select jsonb_agg('[[0,0],[1,1]]'::jsonb) from generate_series(1,33))), 'stroke count is bounded');
+select ok(not private.valid_form_signature_drawing(jsonb_build_array((select jsonb_agg(jsonb_build_array(n % 1000,n % 400)) from generate_series(1,769) n))), 'total point count is bounded');
+select ok(not has_function_privilege('authenticated','private.valid_form_signature_drawing(jsonb)','EXECUTE'), 'clients cannot call the private helper');
+select ok(not has_function_privilege('anon','private.valid_form_signature_drawing(jsonb)','EXECUTE'), 'anonymous callers cannot call the private helper');
+select * from finish();
+rollback;

@@ -1,7 +1,9 @@
 {
   "git": {
     "deploymentEnabled": {
-      "codex/client-navigation-skeletons-20261023": false
+      "codex/client-navigation-skeletons-20261023": false,
+      "codex/forms-gmail-release-20261028": false,
+      "codex/intake-publication-20261028": false
     }
   },
   "crons": [

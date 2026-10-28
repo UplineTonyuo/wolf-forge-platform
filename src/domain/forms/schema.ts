@@ -64,6 +64,14 @@ export const formFieldSchema = z.object({
   options: z.array(formFieldOptionSchema).default([]),
   service_links: z.array(formServiceLinkSchema).default([]),
 }).strict().superRefine((field, context) => {
+  if (field.field_type === "richtext" && ((field.settings.display_only !== undefined && typeof field.settings.display_only !== "boolean")
+    || (field.settings.display_only === true && field.required))) {
+    context.addIssue({ code: "custom", path: ["settings", "display_only"], message: "Display-only content cannot require a response." });
+  }
+  if (field.field_type === "signature" && field.settings.signature_mode !== undefined
+    && field.settings.signature_mode !== "drawn" && field.settings.signature_mode !== "typed") {
+    context.addIssue({ code: "custom", path: ["settings", "signature_mode"], message: "Choose a drawn or typed signature." });
+  }
   if (field.field_type === "secret"
     && (field.required || field.settings.collection_mode !== "disabled")) {
     context.addIssue({

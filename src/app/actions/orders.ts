@@ -10,7 +10,7 @@ import {
   type ProjectBulkResult,
 } from "../../domain/orders/bulk";
 import { orderPriorities, orderStatuses, type OrderStatus } from "../../domain/orders/schema";
-import { toClientSafeError } from "../../lib/errors/application-error";
+import { PermissionDeniedError, ValidationError, toClientSafeError } from "../../lib/errors/application-error";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
 /*
@@ -160,6 +160,22 @@ export async function updateProjectAction(
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
   redirect(`/orders/${orderId}?saved=1`);
+}
+
+export async function updateOrderNoteAction(orderId: string, notes: string): Promise<
+  { ok: true; notes: string | null } | { ok: false; error: string }
+> {
+  try {
+    const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("projects");
+    if (!context.user.projects.edit) throw new PermissionDeniedError();
+    if (typeof notes !== "string") throw new ValidationError("Enter a valid team note.");
+    const updated = await context.services.orders.update(orderId, { notes: notes.trim() || null }, context.actor);
+    revalidatePath(`/orders/${orderId}`);
+    return { ok: true, notes: updated.notes };
+  } catch (error) {
+    return { ok: false, error: toClientSafeError(error).message };
+  }
 }
 
 /** Server-resolved labels so an outcome never echoes browser-supplied text. */

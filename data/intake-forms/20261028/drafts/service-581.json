@@ -1,0 +1,172 @@
+{
+  "request_id": "5fcf93f6-4827-4bfc-8ac0-3d34d8eff932",
+  "form_type": "intake",
+  "canonical_key": "woad-intake-service-581",
+  "definition": {
+    "name": "Competitive Domination Blueprint — intake",
+    "title": "Competitive Domination Blueprint — project details",
+    "information_html": "<p>Share your competitors, priorities and constraints for the 90-day strategy blueprint.</p><p>Do not include passwords, access tokens or customer contact lists. The team will coordinate any account-access invitations separately.</p>",
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "ff6f24d0-e261-425a-8da0-f36781e7c1ba",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "Business name",
+        "internal_label": "business_name",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "0efb5f06-741e-4be1-8550-a087b112ac84",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "95df0d68-9eec-42b8-8081-7dcd378c6e0f",
+        "sort_order": 2,
+        "field_type": "textarea",
+        "label": "Primary market and intended audience",
+        "internal_label": "market",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "672a4dcd-14df-4b5f-8d59-f058bb8fa653",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Main objective for this order",
+        "internal_label": "objective",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2243d505-6792-4481-8d84-2c70d3e71d53",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Priority competitors and links",
+        "internal_label": "competitors",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6029ae20-d355-48c3-811a-616f97d20bb7",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "Priority services, markets and keywords",
+        "internal_label": "priorities",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6cee3aad-6dbe-43b1-8113-fccc267edc00",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "Available resources and constraints for the next 90 days",
+        "internal_label": "resources",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "19228aff-903d-4698-8b9c-d9a68312caa2",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "What should the strategy help your business achieve?",
+        "internal_label": "success",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "567eaf14-9f21-41f0-8192-8b23d0681327",
+        "sort_order": 8,
+        "field_type": "textarea",
+        "label": "Existing marketing assets or research links",
+        "internal_label": "assets",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "7ccc1bb3-076b-4a08-82ad-c92b29974081",
+        "sort_order": 9,
+        "field_type": "file",
+        "label": "Supporting file",
+        "internal_label": "supporting_files",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2cfbd4b1-d736-4a5d-8202-6b9b47cb7f91",
+        "sort_order": 10,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "client_agreement",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5e000000-0000-4000-8000-000000000110",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

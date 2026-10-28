@@ -1,0 +1,161 @@
+{
+  "request_id": "490f432c-02a6-5db7-bd4f-f9914b3bd30e",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-249",
+  "definition": {
+    "name": "Intake Form for Starter Backlink SEO Package",
+    "title": "Intake Form for Starter Backlink SEO Package",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "86330090-f697-5565-a1e9-2cefd645cd4c",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_249_field_1",
+        "placeholder": null,
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "2e178eae-e450-5c49-a1e1-a2a79257fd52",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_249_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6b935fbc-927b-5e34-a0a5-702bf9f0b04b",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_249_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "0c65cc8d-acc2-5faa-8e75-9bd28e9c6295",
+        "sort_order": 3,
+        "field_type": "file",
+        "label": "File upload",
+        "internal_label": "source_249_field_4",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "db0a5a85-6083-5370-86cc-df5a445a09fd",
+        "sort_order": 4,
+        "field_type": "text",
+        "label": "Google Drive Link of Article to Distribute, the article should be at least 1500 words and have an image in it already. Preferablly a Google Map image that we can then link to your GBP/GMB.",
+        "internal_label": "source_249_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "93aba550-6877-5d5a-9f1e-19c2021c0731",
+        "sort_order": 5,
+        "field_type": "text",
+        "label": "Main Target Keyword and 10 Supporting Keywords",
+        "internal_label": "source_249_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "80fe7006-5e1e-5d74-8e03-620cea45df75",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "gbp/gmb Name, address, phone, website",
+        "internal_label": "source_249_field_7",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "3eb9d05e-19ba-5d7b-936c-20c556c3504a",
+        "sort_order": 7,
+        "field_type": "text",
+        "label": "Domain Name URL",
+        "internal_label": "source_249_field_8",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "f8de1e97-90b1-54fb-ae7e-7a960140b517",
+        "sort_order": 8,
+        "field_type": "text",
+        "label": "Email to use in Press Release",
+        "internal_label": "source_249_field_9",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a9af9aa4-8518-51e0-850a-8ff26d93ecf4",
+        "sort_order": 9,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "source_249_field_10",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000438",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

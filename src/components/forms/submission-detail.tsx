@@ -9,8 +9,11 @@ import type { Json } from "../../lib/supabase/database.types";
 import { formatDate } from "../../lib/format";
 import { titleCaseState } from "../../lib/forms/presentation";
 import styles from "./forms.module.css";
-import { SubmittedFile } from "./submitted-file";
 import { loadIntakeFollowUp } from "../../app/actions/intake-drafts";
+import { DownloadFormPdf } from "./download-form-pdf";
+import { SubmittedAnswer } from "./submitted-answer";
+import { visibleSubmittedFields } from "../../lib/forms/submitted-fields";
+import answerStyles from "./submitted-answer.module.css";
 
 function displayValue(value: Json) {
   if (typeof value === "boolean") return value ? "Yes" : "No";
@@ -21,7 +24,7 @@ function displayValue(value: Json) {
   return JSON.stringify(value, null, 2);
 }
 
-export function SubmissionDetail({ detail, canCorrect }: { detail: FormSubmissionDetail; canCorrect: boolean }) {
+export function SubmissionDetail({ detail, canCorrect, automaticPdf = false }: { detail: FormSubmissionDetail; canCorrect: boolean; automaticPdf?: boolean }) {
   const router = useRouter();
   const [correcting, setCorrecting] = useState(false);
   const [values, setValues] = useState<Record<string, Json>>(() => Object.fromEntries(detail.values.map((value) => [value.stable_field_key, value.value])));
@@ -44,11 +47,23 @@ export function SubmissionDetail({ detail, canCorrect }: { detail: FormSubmissio
   }
 
   return <div className={styles.submissionDetail}>
+    <DownloadFormPdf submissionId={detail.submission.id} automatic={automaticPdf} />
     {followUp && followUp !== "not_required" ? <p className={followUp === "blocked" ? styles.actionError : undefined} role="status">
       {followUp === "completed" ? "Automatic follow-up completed." : followUp === "blocked"
         ? "Automatic follow-up needs staff review. Check the form publisher’s current permissions and configured Service." : "Automatic follow-up is awaiting processing."}
     </p> : null}
     <section className={styles.submissionMeta}><dl><div><dt>Submitted</dt><dd>{formatDate(detail.submission.submitted_at)}</dd></div><div><dt>Revision</dt><dd>{detail.submission.revision_number === 1 ? "Original submission" : `Correction · Revision ${detail.submission.revision_number}`}</dd></div><div><dt>Status</dt><dd>{titleCaseState(detail.submission.status)}</dd></div><div><dt>Version identity</dt><dd>Exact historical Form version retained</dd></div></dl></section>
-    <section className={styles.answerSheet}><header><div><span>{correcting ? "New append-only revision" : "Historical answers"}</span><h2>{correcting ? "Create a correction" : "Submitted responses"}</h2></div>{canCorrect && !correcting ? <button className="button-secondary" type="button" onClick={() => setCorrecting(true)}><RotateCcw aria-hidden="true" />Correct submission</button> : null}</header><div>{detail.values.map((item) => <label key={item.stable_field_key}><span>{item.label}</span>{correcting && !["file", "signature"].includes(item.field_type) ? ["checkbox", "optin"].includes(item.field_type) ? <input type="checkbox" checked={values[item.stable_field_key] === true} onChange={(event) => setValues((current) => ({ ...current, [item.stable_field_key]: event.target.checked }))} /> : <textarea value={displayValue(values[item.stable_field_key] ?? "")} onChange={(event) => setValues((current) => ({ ...current, [item.stable_field_key]: event.target.value }))} /> : item.field_type === "file" && Array.isArray(item.value) ? <div>{item.value.filter((id): id is string => typeof id === "string").map((id) => <SubmittedFile key={id} id={id} />)}</div> : <pre>{displayValue(item.value)}</pre>}<small>{titleCaseState(item.field_type)}</small></label>)}</div>{error ? <p className={styles.actionError} role="alert">{error}</p> : null}{correcting ? <footer><button className="button-secondary" type="button" onClick={() => setCorrecting(false)}>Cancel</button><button className="button-primary" type="button" aria-busy={pending || undefined} disabled={pending} onClick={correct}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />Save correction</button></footer> : null}</section>
+    <section className={styles.answerSheet}>
+      <header><div><span>{correcting ? "New append-only revision" : "Historical answers"}</span><h2>{correcting ? "Create a correction" : "Submitted responses"}</h2></div>{canCorrect && !correcting ? <button className="button-secondary" type="button" onClick={() => setCorrecting(true)}><RotateCcw aria-hidden="true" />Correct submission</button> : null}</header>
+      <div>{visibleSubmittedFields(detail.values).map((item) => <div key={item.stable_field_key} className={answerStyles.field}>
+        {correcting && !["file", "signature"].includes(item.field_type) ? <label><span>{item.label}</span>{["checkbox", "optin"].includes(item.field_type)
+          ? <input type="checkbox" checked={values[item.stable_field_key] === true} onChange={(event) => setValues((current) => ({ ...current, [item.stable_field_key]: event.target.checked }))} />
+          : <textarea value={displayValue(values[item.stable_field_key] ?? "")} onChange={(event) => setValues((current) => ({ ...current, [item.stable_field_key]: event.target.value }))} />}</label>
+          : <div><span>{item.label}</span><SubmittedAnswer field={item} /></div>}
+        <small>{titleCaseState(item.field_type)}</small>
+      </div>)}</div>
+      {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
+      {correcting ? <footer><button className="button-secondary" type="button" onClick={() => setCorrecting(false)}>Cancel</button><button className="button-primary" type="button" aria-busy={pending || undefined} disabled={pending} onClick={correct}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />Save correction</button></footer> : null}
+    </section>
   </div>;
 }

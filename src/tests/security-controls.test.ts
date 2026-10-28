@@ -121,6 +121,13 @@ describe("security response headers (C1)", () => {
     expect(reportOnly).toContain("frame-ancestors 'none'");
   });
 
+  it("permits the exact Google OAuth form destination in both policies without a wildcard", () => {
+    for (const policy of [ENFORCED_CONTENT_SECURITY_POLICY, buildReportOnlyContentSecurityPolicy(productionEnvironment)]) {
+      expect(policy.split("; ").find((directive) => directive.startsWith("form-action ")))
+        .toBe("form-action 'self' https://accounts.google.com");
+    }
+  });
+
   it("puts the Supabase ORIGIN in connect-src and never a key", () => {
     const policy = buildReportOnlyContentSecurityPolicy({
       isProduction: true,

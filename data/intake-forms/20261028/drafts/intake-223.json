@@ -1,0 +1,133 @@
+{
+  "request_id": "47f717e4-1602-5fa6-9821-2a97d21ff949",
+  "form_type": "intake",
+  "canonical_key": "rankfortress-intake-223",
+  "definition": {
+    "name": "Intake Form for Podcast Stack",
+    "title": "Intake Form for Podcast Stack",
+    "information_html": null,
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "b6c55809-54b8-5e51-8bf9-28d618ae1414",
+        "sort_order": 0,
+        "field_type": "richtext",
+        "label": "Before you submit",
+        "internal_label": "source_223_field_1",
+        "placeholder": null,
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
+        "required": false,
+        "settings": {
+          "display_only": true
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9abce0cd-8224-5195-808b-7a4a6376f88c",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Personal Facebook Profile Link",
+        "internal_label": "source_223_field_2",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "63f11394-f46e-5492-93f5-d1a33dadfc08",
+        "sort_order": 2,
+        "field_type": "text",
+        "label": "Personal Phone Number",
+        "internal_label": "source_223_field_3",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "274d60c2-53b6-5688-ab52-386cdaa14912",
+        "sort_order": 3,
+        "field_type": "secret",
+        "label": "WordPress Login Info",
+        "internal_label": "source_223_field_4",
+        "placeholder": null,
+        "help_html": "<p>Password and login-credential collection is disabled. Arrange authorized website access through the team.</p>",
+        "required": false,
+        "settings": {
+          "collection_mode": "disabled"
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "bb538488-0bf3-5f24-8cea-9a98c8b8b4be",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Keywords",
+        "internal_label": "source_223_field_5",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "b3b82a3d-05f6-595c-9b70-37e63bab582b",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "City/State/Country",
+        "internal_label": "source_223_field_6",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "9aabd3ab-2170-5255-9e92-3815ee9d18be",
+        "sort_order": 6,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "source_223_review_website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://. This is the website associated with the blogs and where the finished assets will be embedded.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "e09bbcd7-b388-5b67-bb8c-d97f90e822d2",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "Blog URLs or shared source articles",
+        "internal_label": "source_223_review_blogs",
+        "placeholder": null,
+        "help_html": "<p>Provide the blog URLs or shared source articles to use for your podcasts. The team must be able to open the links. Do not include passwords or access tokens.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000417",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

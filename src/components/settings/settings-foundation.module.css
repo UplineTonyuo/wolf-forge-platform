@@ -410,6 +410,7 @@
 .secureNote strong { display: block; color: #000d51; font-size: 12px; }
 .secureNote p { margin: 3px 0 0; color: #697184; font-size: 11.5px; line-height: 1.55; }
 .manageCopy { margin-top: 12px; }
+.gmailReload { min-height: 44px; margin-bottom: 12px; }
 
 .disconnectForm {
   display: flex;

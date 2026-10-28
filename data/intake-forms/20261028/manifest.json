@@ -1,0 +1,366 @@
+{
+  "prepared_at": "2026-10-27T19:56:15.323Z",
+  "status": "content_review_passed_pending_workflow_and_publication",
+  "templates": [
+    {
+      "file": "intake-252.json",
+      "canonical_key": "rankfortress-intake-252",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000444"
+      ],
+      "sha256": "845693a8788b3524cd012b9df439e217a3c1d723a151223e79f1be79a4b1b4e9"
+    },
+    {
+      "file": "intake-135.json",
+      "canonical_key": "rankfortress-intake-135",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000028"
+      ],
+      "sha256": "3e969ab1a5b5be5e69d421df4933fe57c8ad93c5c4817fea50d9f8b2cf944e59"
+    },
+    {
+      "file": "intake-137.json",
+      "canonical_key": "rankfortress-intake-137",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000030"
+      ],
+      "sha256": "3b2b9785cc455461a85a92954e7875f90bf8df3a99ed661b3e31d4f17a5d2725"
+    },
+    {
+      "file": "intake-165.json",
+      "canonical_key": "rankfortress-intake-165",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000260",
+        "5f000000-0000-4000-8000-000000000570",
+        "5f000000-0000-4000-8000-000000000443",
+        "5f000000-0000-4000-8000-000000000525",
+        "5f000000-0000-4000-8000-000000000282",
+        "5f000000-0000-4000-8000-000000000144"
+      ],
+      "sha256": "cfef26d19b2d7e5eda02d72f32698e7c36ed26dc7e541d76fda6c1c2fc2d28ed"
+    },
+    {
+      "file": "intake-108.json",
+      "canonical_key": "rankfortress-intake-108",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000331"
+      ],
+      "sha256": "3f5f2612ed32eb409bb50a23323ef0b502fed85e6d557f0a46d21471b1e0a694"
+    },
+    {
+      "file": "intake-244.json",
+      "canonical_key": "rankfortress-intake-244",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000565",
+        "5f000000-0000-4000-8000-000000000433"
+      ],
+      "sha256": "6a0bc54a898b6fbfb31b6cff6f3c0500a980da6288e6c482872b5cf2d98807fc"
+    },
+    {
+      "file": "intake-147.json",
+      "canonical_key": "rankfortress-intake-147",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000257",
+        "5f000000-0000-4000-8000-000000000460",
+        "5f000000-0000-4000-8000-000000000431",
+        "5f000000-0000-4000-8000-000000000428",
+        "5f000000-0000-4000-8000-000000000429",
+        "5f000000-0000-4000-8000-000000000430"
+      ],
+      "sha256": "5b97d92f070730b084c75a38fd83688be4e151c2a7608b2033d71224d0e5c6de"
+    },
+    {
+      "file": "intake-133.json",
+      "canonical_key": "rankfortress-intake-133",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000025"
+      ],
+      "sha256": "543b75d9d3192e7172081b9a1cd356e9a589a4c70031c230c01c5cd012bb8077"
+    },
+    {
+      "file": "intake-232.json",
+      "canonical_key": "rankfortress-intake-232",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000555",
+        "5f000000-0000-4000-8000-000000000563",
+        "5f000000-0000-4000-8000-000000000564",
+        "5f000000-0000-4000-8000-000000000123",
+        "5f000000-0000-4000-8000-000000000554",
+        "5f000000-0000-4000-8000-000000000124",
+        "5f000000-0000-4000-8000-000000000546"
+      ],
+      "sha256": "f89107782d303f8dd0318aba714512d86fb0a9ebc5baed1e6285f16829a28769"
+    },
+    {
+      "file": "intake-139.json",
+      "canonical_key": "rankfortress-intake-139",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000190"
+      ],
+      "sha256": "20a1c0993c270ffccc0475584f0aa49d9ba6b5d58785c07ba990dcb1921deddc"
+    },
+    {
+      "file": "intake-231.json",
+      "canonical_key": "rankfortress-intake-231",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000408"
+      ],
+      "sha256": "f562eaddb7ea58435b97021e3988070ee0b9629f3089a216cdbc964709aef8c2"
+    },
+    {
+      "file": "intake-215.json",
+      "canonical_key": "rankfortress-intake-215",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000152",
+        "5f000000-0000-4000-8000-000000000310",
+        "5f000000-0000-4000-8000-000000000318",
+        "5f000000-0000-4000-8000-000000000256"
+      ],
+      "sha256": "ecbd47c25c9bf64eda88adf0f400f031797a6be90a5ede0ec440b74dd0a88721"
+    },
+    {
+      "file": "intake-138.json",
+      "canonical_key": "rankfortress-intake-138",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000187"
+      ],
+      "sha256": "474abde028ce5e96c1df1579a127495a89136f5aa7a4a153bb4f4c688c1eb5e6"
+    },
+    {
+      "file": "intake-127.json",
+      "canonical_key": "rankfortress-intake-127",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000013"
+      ],
+      "sha256": "77e03a27c3fa162f124f08795104e12000952c3938a98a1500e3c6d30e2086a9"
+    },
+    {
+      "file": "intake-134.json",
+      "canonical_key": "rankfortress-intake-134",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000027",
+        "5f000000-0000-4000-8000-000000000562"
+      ],
+      "sha256": "7f6b26e8e85ca5730b9fd948cb2d0c7bab71b3d21dca9751bcbdb2147a704664"
+    },
+    {
+      "file": "intake-150.json",
+      "canonical_key": "rankfortress-intake-150",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000275"
+      ],
+      "sha256": "3f710f67534cef5bce6ebcfb4873ba5c2eb1aaa30a26d37cad677d5635bef5a4"
+    },
+    {
+      "file": "intake-106.json",
+      "canonical_key": "rankfortress-intake-106",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000338"
+      ],
+      "sha256": "3d5039517314110a30d21985b11e7fdc392c24b0babebde670ac6a305f843250"
+    },
+    {
+      "file": "intake-151.json",
+      "canonical_key": "rankfortress-intake-151",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000276"
+      ],
+      "sha256": "e3b82bcd167a08f3cb390ec70efbe484c3e02266c494ab46e986cc9e7c0fe963"
+    },
+    {
+      "file": "intake-223.json",
+      "canonical_key": "rankfortress-intake-223",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000417"
+      ],
+      "sha256": "f7737e035eb891d74da114054dfd025bab528cb950e1a003222b68de9cab0047"
+    },
+    {
+      "file": "intake-152.json",
+      "canonical_key": "rankfortress-intake-152",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000277"
+      ],
+      "sha256": "e5b740af601c120eb0b082511c1eda3e40bdd3edc30dd0594eaf21a45b3a50b6"
+    },
+    {
+      "file": "intake-158.json",
+      "canonical_key": "rankfortress-intake-158",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000375"
+      ],
+      "sha256": "688e72a08ae1ae90daeaa171eb0c8bcd610fca798a832ffbec963dcb5458d047"
+    },
+    {
+      "file": "intake-249.json",
+      "canonical_key": "rankfortress-intake-249",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000438"
+      ],
+      "sha256": "e367d01f46a5b88d7e88fb09e46022b229af0ce8e6b4b253707c1d44dd503dfb"
+    },
+    {
+      "file": "intake-245.json",
+      "canonical_key": "rankfortress-intake-245",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000434",
+        "5f000000-0000-4000-8000-000000000578"
+      ],
+      "sha256": "ebcf12dc00c12c421a868dd7f55f73e758f33aad214aa37c58b26993ac7cba34"
+    },
+    {
+      "file": "intake-246.json",
+      "canonical_key": "rankfortress-intake-246",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000435"
+      ],
+      "sha256": "6f4c8ebbcfeab2d9422a6a800353c422b913f0dea69ea42102f9256bfd90d8f1"
+    },
+    {
+      "file": "intake-221.json",
+      "canonical_key": "rankfortress-intake-221",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000415"
+      ],
+      "sha256": "4c8b67b062d3c95da4ffe69a88617cbd3b4353d322217779e6bfe64cdd10083f"
+    },
+    {
+      "file": "service-418.json",
+      "canonical_key": "woad-intake-service-418",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000418"
+      ],
+      "sha256": "e2cda616f74b1a992f61f4ac016210174631c277c0c1a1d7b2f3dd00073d3306"
+    },
+    {
+      "file": "service-450.json",
+      "canonical_key": "woad-intake-service-450",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5f000000-0000-4000-8000-000000000450"
+      ],
+      "sha256": "117f5295023a9e82a680fa751062a1909a14612ad11cedebcac14177d9e76ea7"
+    },
+    {
+      "file": "service-571.json",
+      "canonical_key": "woad-intake-service-571",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000101"
+      ],
+      "sha256": "54e519b15637b521b72a59a7e00ac86e13290360a657ae1e57d8af26fedf9c70"
+    },
+    {
+      "file": "service-572.json",
+      "canonical_key": "woad-intake-service-572",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000102"
+      ],
+      "sha256": "c7371387f15b0477014b95cd70e7a4951ba5f681f73c44b7610ec6b437a4c6c1"
+    },
+    {
+      "file": "service-573.json",
+      "canonical_key": "woad-intake-service-573",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000103"
+      ],
+      "sha256": "0396c9b601d8f3819100fe893b0bc7202ac77f57cdfdfdc86a5c33f504419f4a"
+    },
+    {
+      "file": "service-574.json",
+      "canonical_key": "woad-intake-service-574",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000104"
+      ],
+      "sha256": "1453e560871ebca99807826eea4c6d1a953c24f1926f45ffef459f5e75666cc2"
+    },
+    {
+      "file": "service-575.json",
+      "canonical_key": "woad-intake-service-575",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000105"
+      ],
+      "sha256": "875e87c955d5687e471092db111ff7890118d4843464c391e073dda4175c0a1e"
+    },
+    {
+      "file": "service-576.json",
+      "canonical_key": "woad-intake-service-576",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000106"
+      ],
+      "sha256": "b4aa2ab0f8700681ddc4fb9a25d1c9940daa6ba131de38e7320298bf0b51477f"
+    },
+    {
+      "file": "service-577.json",
+      "canonical_key": "woad-intake-service-577",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000107"
+      ],
+      "sha256": "1f5df92587aa703e800be4b51c1ff88c8a538b49f76dc0e90d312dc938335aa7"
+    },
+    {
+      "file": "service-579.json",
+      "canonical_key": "woad-intake-service-579",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000108"
+      ],
+      "sha256": "32efef7235c709648283d325db564af19d42f610990a2b3b638f00809ae08f06"
+    },
+    {
+      "file": "service-580.json",
+      "canonical_key": "woad-intake-service-580",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000109"
+      ],
+      "sha256": "aef58432e7774faec1e6218c2a1c4c0a841b11880905ec623dda11d3358c049a"
+    },
+    {
+      "file": "service-581.json",
+      "canonical_key": "woad-intake-service-581",
+      "status": "content_review_passed_pending_workflow_and_publication",
+      "services": [
+        "5e000000-0000-4000-8000-000000000110"
+      ],
+      "sha256": "1ceb63f957afa065f22be657b6244b8bd7194c953a41620a28d102fc6ade9232"
+    }
+  ],
+  "mapped_services": 59,
+  "existing_services_preserved": 47,
+  "new_draft_services": 12,
+  "hosted_writes": 0,
+  "content_reviewed_on": "2026-10-28"
+}

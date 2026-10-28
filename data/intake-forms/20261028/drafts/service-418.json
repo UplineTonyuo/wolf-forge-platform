@@ -1,0 +1,211 @@
+{
+  "request_id": "3c95a3c1-61c5-485f-86bf-440643a5ade0",
+  "form_type": "intake",
+  "canonical_key": "woad-intake-service-418",
+  "definition": {
+    "name": "Press Release Stack — intake",
+    "title": "Press Release Stack — project details",
+    "information_html": "<p>Provide your business details and links to four finished press release articles for your Press Release Stack. Each release requires its own finished article link.</p><p>Do not include passwords, access tokens or customer contact lists. The team will coordinate any account-access invitations separately.</p>",
+    "visibility": "assigned",
+    "type_config": {
+      "reminder_days": 0
+    },
+    "fields": [
+      {
+        "stable_field_key": "ee61c609-00df-44d4-86e2-9661ddb61d01",
+        "sort_order": 0,
+        "field_type": "text",
+        "label": "Business name",
+        "internal_label": "business_name",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "44193622-65a8-4746-85ea-4cd67c6c4cbd",
+        "sort_order": 1,
+        "field_type": "text",
+        "label": "Business website URL",
+        "internal_label": "website",
+        "placeholder": "https://example.com",
+        "help_html": "<p>Include https://.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6e3f5ffd-d4dd-42c2-84d0-463757c43ac7",
+        "sort_order": 2,
+        "field_type": "textarea",
+        "label": "Primary market and intended audience",
+        "internal_label": "market",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "6705b50f-ddef-4e46-8063-555916909c25",
+        "sort_order": 3,
+        "field_type": "textarea",
+        "label": "Main objective for this order",
+        "internal_label": "objective",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "4a4e592d-fc8b-4e64-8974-91d0a7162225",
+        "sort_order": 4,
+        "field_type": "textarea",
+        "label": "Approved public business address and press contact",
+        "internal_label": "press_contact",
+        "placeholder": null,
+        "help_html": "<p>Include only business contact details approved for publication.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "06f606a6-d0db-470c-8bce-f6ae1f5bcf8a",
+        "sort_order": 5,
+        "field_type": "textarea",
+        "label": "Target keywords and destination pages",
+        "internal_label": "keywords",
+        "placeholder": null,
+        "help_html": null,
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "a2db9d75-2e4e-4cdf-80aa-70135d403b58",
+        "sort_order": 6,
+        "field_type": "textarea",
+        "label": "Release 1 — finished article link",
+        "internal_label": "release_1",
+        "placeholder": null,
+        "help_html": "<p>Provide the link to the finished press release article for release 1. The team must be able to open the link.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "56014f0e-08c9-4087-8924-0abd0688de71",
+        "sort_order": 7,
+        "field_type": "textarea",
+        "label": "Release 2 — finished article link",
+        "internal_label": "release_2",
+        "placeholder": null,
+        "help_html": "<p>Provide the link to the finished press release article for release 2. The team must be able to open the link.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "929ae28d-b37a-4cff-8dbf-cbb06e4dcefb",
+        "sort_order": 8,
+        "field_type": "textarea",
+        "label": "Release 3 — finished article link",
+        "internal_label": "release_3",
+        "placeholder": null,
+        "help_html": "<p>Provide the link to the finished press release article for release 3. The team must be able to open the link.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "ed711d4d-2dd9-4832-8216-ecb00a14ef5b",
+        "sort_order": 9,
+        "field_type": "textarea",
+        "label": "Release 4 — finished article link",
+        "internal_label": "release_4",
+        "placeholder": null,
+        "help_html": "<p>Provide the link to the finished press release article for release 4. The team must be able to open the link.</p>",
+        "required": true,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "aa7c632d-6f66-4cab-82d2-43385ba3279c",
+        "sort_order": 10,
+        "field_type": "textarea",
+        "label": "Approved image or media links",
+        "internal_label": "media",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "89fa8eed-43f7-49f3-83bb-408dc106df27",
+        "sort_order": 11,
+        "field_type": "textarea",
+        "label": "Publication restrictions or notes",
+        "internal_label": "restrictions",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {},
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "729586dc-d957-4446-8ffe-4f5253680395",
+        "sort_order": 12,
+        "field_type": "file",
+        "label": "Supporting file",
+        "internal_label": "supporting_files",
+        "placeholder": null,
+        "help_html": null,
+        "required": false,
+        "settings": {
+          "multiple": false
+        },
+        "options": [],
+        "service_links": []
+      },
+      {
+        "stable_field_key": "0562125c-91dd-4f9d-88b5-f03d589b2d38",
+        "sort_order": 13,
+        "field_type": "signature",
+        "label": "Client Agreement",
+        "internal_label": "client_agreement",
+        "placeholder": "Please e-sign this agreement",
+        "help_html": "<p>No Refund Policy<br><br>Effective Date: [January 1 2021]<br><br>This “No Refund Policy” (“Policy”) applies to all digital products and services offered by the Company. By purchasing any digital product or service from the Company, you (“Customer”) agree to be bound by the terms and conditions of this Policy.<br><br>Digital Products and Services Covered<br>This Policy applies to all digital products and services provided by the Company, including but not limited to:<br><br>– Website Design services<br>– SEO (Search Engine Optimization) services<br>– Content services<br>– Backlink services<br><br>No Refunds<br>The Company maintains a strict no refund policy for all digital products and services. Once a digital product or service has been purchased, no refunds will be issued under any circumstances.<br><br>Commitment to Customer Satisfaction<br>While refunds are not offered, the Company is dedicated to providing high-quality digital products and services that meet or exceed customer expectations. If you are unsatisfied with the quality or performance of a product or service, please create a support ticket to discuss any concerns or issues.<br><br>Cancellation Policy<br>For subscription-based services, the Customer may cancel their subscription at any time. However, no refunds will be provided for the remaining unused portion of the subscription period. The cancellation will be effective immediately upon request.<br><br>Changes to Policy<br>The Company reserves the right to modify or amend this Policy at any time without prior notice. It is the Customer’s responsibility to review this Policy periodically for any changes. Continued use of our digital products and services after any changes to this Policy constitutes acceptance of those changes.<br><br>Contact Us<br>If you have any questions or concerns about this No Refund Policy or our digital products and services, please contact us through our support portal.<br><br>By purchasing our digital products and services, you acknowledge that you have read, understood, and agreed to this No Refund Policy.</p>",
+        "required": true,
+        "settings": {
+          "signature_mode": "drawn"
+        },
+        "options": [],
+        "service_links": []
+      }
+    ],
+    "rules": [],
+    "service_links": [
+      {
+        "service_id": "5f000000-0000-4000-8000-000000000418",
+        "role": "intake_assignment",
+        "sort_order": 0,
+        "configuration": {}
+      }
+    ]
+  }
+}

@@ -75,7 +75,7 @@ describe("private client reply drafts", () => {
     expect(storage.write.mock.lastCall?.[0]).toEqual({ owner, epoch: "device-session" });
     expect(storage.write.mock.lastCall?.[1]).toBe(`ticket:${ticketId}`);
     first.unmount(); workspace(); await ready();
-    expect(screen.getByRole("textbox", { name: "Write a reply" })).toHaveTextContent("Keep my draft after closing");
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Write a reply" })).toHaveTextContent("Keep my draft after closing"));
     expect(screen.getByRole("button", { name: "Remove synthetic.pdf" })).toBeInTheDocument();
     expect(send).not.toHaveBeenCalled();
   });

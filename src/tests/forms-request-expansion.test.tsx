@@ -8,6 +8,7 @@ import { GET as maintenance } from "../app/api/internal/intake-maintenance/route
 
 const mocks = vi.hoisted(() => ({ load: vi.fn(), save: vi.fn(), upload: vi.fn(), submit: vi.fn(), info: vi.fn() }));
 vi.mock("server-only", () => ({}));
+vi.mock("../components/forms/download-form-pdf", () => ({ DownloadFormPdf: () => null }));
 vi.mock("../app/actions/intake-drafts", () => ({ loadIntakeDraft: mocks.load, saveIntakeDraft: mocks.save }));
 vi.mock("../app/actions/intake-files", () => ({ uploadIntakeFile: mocks.upload, loadIntakeFileInfo: mocks.info }));
 vi.mock("../app/actions/forms", () => ({ submitAssignedFormAction: mocks.submit, submitPublicFormAction: mocks.submit, loadFormCollectionAvailability: vi.fn().mockResolvedValue(true) }));
@@ -31,6 +32,32 @@ afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 function mount(value = schema) { return render(<FormRenderer schema={value} mode="assigned" assignmentId="50000000-0000-4000-8000-000000000001" />); }
 
 describe("saved intake forms", () => {
+  it("associates field guidance with its input without changing the answer", async () => {
+    mount({ ...schema, fields: [{ ...schema.fields[0]!, help_html: "Use the registered business name." }] });
+    const input = screen.getByRole("textbox", { name: "Business" });
+    const description = document.getElementById(input.getAttribute("aria-describedby")!);
+    expect(description?.textContent).toBe("Use the registered business name.");
+    await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+    fireEvent.change(input, { target: { value: "Synthetic company" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await screen.findByRole("heading", { name: "Submitted" });
+    expect(screen.getByRole("status").getAttribute("data-state")).toBe("complete");
+    expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: "Synthetic company" }] }), true);
+  });
+  it("displays agreement content without collecting an answer or saving a dummy draft value", async () => {
+    mount({ ...schema, fields: [...schema.fields, { ...schema.fields[0]!, stable_field_key: fileId, field_type: "richtext", label: "SEO Agreement", required: false,
+      help_html: "First paragraph.\n\nSecond paragraph.", settings: { display_only: true } }] });
+    await waitFor(() => expect((screen.getByLabelText(/Business/) as HTMLInputElement).disabled).toBe(false));
+    expect(screen.getByRole("heading", { name: "SEO Agreement" })).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "SEO Agreement" })).toBeNull();
+    fireEvent.change(screen.getByLabelText(/Business/), { target: { value: "Synthetic company" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.any(String), [{ field_key: key, value: "Synthetic company" }]));
+  });
+  it("preserves answer collection for previously published richtext fields", () => {
+    render(<FormRenderer schema={{ ...schema, fields: [{ ...schema.fields[0]!, field_type: "richtext", label: "Legacy response", settings: {} }] }} />);
+    expect(screen.getByRole("textbox", { name: "Legacy response" })).toBeTruthy();
+  });
   it("restores answers from the server before accepting edits", async () => {
     mocks.load.mockResolvedValue({ ok: true, draft: { values: [{ field_key: key, value: "Saved business" }] } });
     mount();
@@ -55,6 +82,10 @@ describe("saved intake forms", () => {
     const link = await screen.findByRole("link", { name: "synthetic.pdf" });
     expect(link.getAttribute("href")).toBe(`/api/intake-files/${fileId}`);
     expect(mocks.upload).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Brief", { selector: "input" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    expect((screen.getByLabelText("Brief", { selector: "input" }) as HTMLInputElement).type).toBe("file");
+    expect(screen.queryByRole("link", { name: "synthetic.pdf" })).toBeNull();
   });
   it("rejects an oversized file before sending a hosted request", async () => {
     mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "file", label: "Brief" }] });
@@ -62,6 +93,8 @@ describe("saved intake forms", () => {
     fireEvent.change(screen.getByLabelText("Brief"), { target: { files: [new File([new Uint8Array(4 * 1024 * 1024 + 1)], "too-large.pdf", { type: "application/pdf" })] } });
     await screen.findByText("Choose a file up to 4 MB.");
     expect(mocks.upload).not.toHaveBeenCalled();
+    const descriptions = screen.getByLabelText("Brief").getAttribute("aria-describedby")!.split(" ");
+    expect(descriptions.map((id) => document.getElementById(id)?.textContent)).toEqual(["Image or PDF · up to 4 MB", "Choose a file up to 4 MB."]);
   });
   it("submits a typed signature with explicit consent", async () => {
     mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "signature", label: "Signature" }] });
@@ -69,7 +102,43 @@ describe("saved intake forms", () => {
     fireEvent.change(screen.getByLabelText(/Signature/), { target: { value: "Synthetic signer" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /I agree to use my typed name/ }));
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
-    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: { name: "Synthetic signer", consent: true } }] })));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: { name: "Synthetic signer", consent: true } }] }), true));
+  });
+  it("restores and submits a drawn signature through the existing assigned form flow", async () => {
+    const signature = { name: "Synthetic signer", consent: true, drawing: [[[10, 20], [100, 80]]] };
+    mocks.load.mockResolvedValue({ ok: true, draft: { values: [{ field_key: key, value: signature }] } });
+    mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "signature", label: "Signature", settings: { signature_mode: "drawn" } }] });
+    await screen.findByText("Your saved draft has been restored.");
+    expect(screen.getByRole("img", { name: "Signature drawing area" }).querySelector("polyline")?.getAttribute("points")).toBe("10,20 100,80");
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: signature }] }), true));
+  });
+  it("reports confirmed order progress after submission using the server-scoped order link", async () => {
+    mocks.submit.mockResolvedValue({ ok: true, data: { id: "response", orderStart: { id: fileId, status: "working", requested: true, started: true } } });
+    mount();
+    await waitFor(() => expect((screen.getByLabelText(/Business/) as HTMLInputElement).disabled).toBe(false));
+    fireEvent.change(screen.getByLabelText(/Business/), { target: { value: "Synthetic company" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await screen.findByText("Your order is now in progress.");
+    expect(screen.getByRole("link", { name: /View your order/ }).getAttribute("href")).toBe(`/account/projects/${fileId}`);
+  });
+  it("blocks a typed-name-only bypass of a required drawn signature", async () => {
+    mocks.load.mockResolvedValue({ ok: true, draft: { values: [{ field_key: key, value: { name: "Synthetic signer", consent: true } }] } });
+    mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "signature", label: "Signature", settings: { signature_mode: "drawn" } }] });
+    await screen.findByText("Your saved draft has been restored.");
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await screen.findByText("Draw your signature and confirm consent for Signature.");
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /Full name/ }));
+  });
+  it("saves incomplete ink as a draft without recording consent or submitting an agreement", async () => {
+    const signature = { name: "Synthetic signer", consent: false, drawing: [[[10, 20], [100, 80]]] };
+    mocks.load.mockResolvedValue({ ok: true, draft: { values: [{ field_key: key, value: signature }] } });
+    mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "signature", label: "Signature", settings: { signature_mode: "drawn" } }] });
+    await screen.findByText("Your saved draft has been restored.");
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.any(String), [{ field_key: key, value: signature }]));
+    expect(mocks.submit).not.toHaveBeenCalled();
   });
 });
 

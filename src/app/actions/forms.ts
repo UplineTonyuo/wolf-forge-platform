@@ -16,6 +16,7 @@ import { observeActionFailure } from "../../lib/security/observed-failure";
 import { createNextServerSupabaseClient, getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 import { FormRepository } from "../../repositories/form-repository";
 import { runIntakeSubmissionJob } from "../../lib/forms/intake-jobs";
+import { clientOrderStartSchema } from "../../domain/orders/client-start";
 
 export type FormMutationResult<T = undefined> =
   | { ok: true; data: T }
@@ -94,23 +95,47 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
   }
 }
 
-export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string; followUp?: string }>> {
+type AssignedSubmissionResult = { id: string; followUp?: string; orderStart?: { id: string; status: string; started: boolean; requested: boolean } };
+
+export async function submitAssignedFormAction(input: SubmitFormInput, downloadReceipt = false): Promise<FormMutationResult<AssignedSubmissionResult>> {
   const context = await getClientContext();
+  let result: AssignedSubmissionResult;
+  let receiptPath: string | null = null;
   try {
-    const submission = await context.services.forms.submit(input, context.actor);
+    const parsed = parseInput(submitFormSchema, input);
+    const submission = await context.services.forms.submit(parsed, context.actor);
     const queued = await context.client.rpc("app_get_intake_follow_up", { p_submission_id: submission.id });
     const followUp = !queued.error && queued.data === "not_required" ? "not_required"
       : await runIntakeSubmissionJob(submission.id).catch(() => "queued");
+    let orderStart: { id: string; status: string; started: boolean; requested: boolean } | undefined;
+    if (parsed.context.assignment_id) {
+      try {
+        const check = await context.client.rpc("app_reconcile_my_order_start", { p_assignment_id: parsed.context.assignment_id });
+        const state = !check.error ? clientOrderStartSchema.nullable().parse(check.data) : null;
+        if (state) orderStart = { id: state.order_id, status: state.status, started: state.started, requested: state.requested };
+      } catch { /* The form is already saved; maintenance retries a pending start. */ }
+    }
     revalidatePath("/account/onboarding");
+    revalidatePath("/account/projects"); revalidatePath("/orders"); revalidatePath("/dashboard");
+    if (orderStart) revalidatePath(`/account/projects/${orderStart.id}`);
     revalidatePath("/account");
-    return { ok: true, data: { id: submission.id, followUp } };
+    result = { id: submission.id, followUp, ...(orderStart ? { orderStart } : {}) };
+    if (downloadReceipt === true && parsed.context.assignment_id) receiptPath = `/account/onboarding/${parsed.context.assignment_id}?submitted=${submission.id}`;
   } catch (error) {
     return failure(error);
   }
+  // Revalidation can replace the form before its client-side download starts.
+  if (receiptPath) redirect(receiptPath);
+  return { ok: true, data: result };
 }
 
-export async function loadFormCollectionAvailability(canonicalKey?: string, expectedVersionId?: string): Promise<boolean> {
+export async function loadFormCollectionAvailability(canonicalKey?: string, expectedVersionId?: string, assignmentId?: string): Promise<boolean> {
   try {
+    if (assignmentId && expectedVersionId) {
+      const context = await getClientContext();
+      const check = await context.client.rpc("app_my_intake_version_available", { p_assignment_id: assignmentId, p_version_id: expectedVersionId });
+      return !check.error && check.data === true;
+    }
     if (canonicalKey) {
       const repository = new FormRepository(await createNextServerSupabaseClient());
       const schema = await repository.getPublishedSchema(canonicalKey);
