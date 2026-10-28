@@ -1,0 +1,10 @@
+.answer { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.answer p { margin: 0 0 6px; }
+.answer a { color: var(--wf-navy); text-decoration: underline; text-underline-offset: 3px; }
+.answer a:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.answer > div > a { display: inline-flex; align-items: center; min-height: 44px; }
+.list { margin: 0; padding-left: 20px; }
+.field { min-width: 0; padding: 16px; border-bottom: 1px solid var(--wf-border); color: var(--wf-text); font-size: 14px; }
+.field.field > label { padding: 0; border: 0; }
+.field > div > span { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 600; }
+.field > small { display: block; margin-top: 7px; color: #626b7d; font-size: 11px; }

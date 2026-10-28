@@ -1,0 +1,25 @@
+.group { min-width: 0; }
+.group + .group { margin-top: 24px; }
+.group > h3 { margin: 0 0 12px; color: var(--wf-navy); font-size: 16px; overflow-wrap: anywhere; }
+.response { min-width: 0; }
+.header { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.header > div { min-width: 0; }
+.header h3 { margin: 0; color: var(--wf-navy); font-size: 14px; }
+.header p { margin: 5px 0 0; color: #626b7d; font-size: 12px; overflow-wrap: anywhere; }
+.response > button { min-height: 44px; }
+/* Same intrinsic-height disclosure as the Store catalogue deck. */
+.disclosure { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows 260ms var(--wf-ease), opacity 220ms var(--wf-ease), visibility 260ms; }
+.disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; visibility: visible; }
+.disclosureInner { min-height: 0; overflow: hidden; }
+.fields { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 16px 20px; margin: 18px 0 0; }
+.fields dt { color: #535e73; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.fields dd { min-width: 0; margin: 0; color: #26304c; font-size: 14px; line-height: 1.6; }
+.history { margin-top: 16px; }
+.history > summary { min-height: 44px; align-content: center; color: var(--wf-navy); cursor: pointer; font-size: 13px; font-weight: 600; }
+.history > summary:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.history .response { margin-top: 18px; }
+@media (max-width: 640px) {
+  .fields { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
+  .fields dd { margin-bottom: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .disclosure { transition: none; } }

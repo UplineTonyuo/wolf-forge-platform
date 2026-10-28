@@ -1,4 +1,5 @@
-import { Fragment } from "react";
+import { OrderSubmittedForms } from "../../../../components/projects/order-submitted-forms";
+import { OrderTeamNote } from "../../../../components/projects/order-team-note";
 import { InternalNotesModal } from "../../../../components/tickets/internal-notes-modal";
 import { OrderConversation } from "../../../../components/tickets/order-conversation";
 import { DataError } from "../../../../components/ui/list-states";
@@ -27,13 +28,6 @@ export default async function OrderDetailsPage({
     ]);
 
     const canViewForms = context.user.forms.submissionsView;
-    const formSubmissions = canViewForms
-      ? await context.services.forms.listSubmissions(undefined, orderId)
-      : [];
-    const latestSubmission = formSubmissions[0] ?? null;
-    const submissionDetail = latestSubmission
-      ? await context.services.forms.getSubmission(latestSubmission.id)
-      : null;
 
     const nameById = new Map(people.map((person) => [person.id, person.displayName]));
     const { views: taskViews, counts: taskCounts } = composeProjectTaskViews(tasks);
@@ -47,43 +41,18 @@ export default async function OrderDetailsPage({
 
     return (
       <>
-        {order.notes ? (
-          <div className={styles.noteCallout}>
-            <h2>Team note</h2>
-            <p>{order.notes}</p>
-          </div>
-        ) : null}
+        <OrderTeamNote key={order.id} orderId={order.id} note={order.notes} canEdit={context.user.projects.edit && !order.archived_at} />
 
         <section className={styles.fieldsCard} aria-labelledby="order-fields-heading">
           <h2 id="order-fields-heading" className={styles.sectionHeading}>
-            Form response
+            Form responses
           </h2>
 
-          {submissionDetail ? (
-            <dl className={styles.fieldGrid}>
-              {submissionDetail.values.map((field) => (
-                <Fragment key={field.stable_field_key}>
-                  <dt>{field.label}</dt>
-                  <dd>
-                    {typeof field.value === "string" || typeof field.value === "number"
-                      ? String(field.value)
-                      : field.value == null
-                        ? <span className={styles.muted}>Not answered</span>
-                        : Array.isArray(field.value) &&
-                            field.value.every((item) => typeof item === "string" || typeof item === "number")
-                          ? field.value.length > 0
-                            ? field.value.join(` ${String.fromCharCode(183)} `)
-                            : <span className={styles.muted}>Not answered</span>
-                          : JSON.stringify(field.value)}
-                  </dd>
-                </Fragment>
-              ))}
-            </dl>
+          {canViewForms ? (
+            <OrderSubmittedForms forms={context.services.forms} orderId={order.id} companyId={order.company_id} />
           ) : (
             <p className={styles.panelEmpty}>
-              {canViewForms
-                ? "No form has been submitted for this Order yet."
-                : "You do not have permission to view Form submissions."}
+              You do not have permission to view Form submissions.
             </p>
           )}
         </section>

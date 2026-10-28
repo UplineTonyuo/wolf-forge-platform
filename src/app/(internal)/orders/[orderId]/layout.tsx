@@ -62,6 +62,7 @@ export default async function OrderDetailLayout({
 
     return (
       <PageFrame
+        className={styles.orderFrame}
         title={project.title}
         description={`Project #${project.order_number} ${String.fromCharCode(183)} ${project.companies?.name ?? "Unavailable client"}`}
       >
@@ -90,7 +91,7 @@ export default async function OrderDetailLayout({
         <div className={styles.layout}>
           <div className={styles.main}>{children}</div>
 
-          <aside className={styles.rail} aria-label="Order details">
+          <aside className={styles.rail} aria-label="Order details" tabIndex={0}>
             <div className={styles.railCard}>
               <RailDetailsToggle>
               <dl className={styles.railList}>
