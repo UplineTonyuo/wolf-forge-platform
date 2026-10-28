@@ -1,0 +1,11 @@
+.disclosure { min-width: 0; border: 1px solid var(--wf-border, #dfe2e8); border-radius: 8px; background: #fff; }
+.disclosure > button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 12px 16px; border: 0; border-radius: 8px; background: #f8f9fc; color: var(--wf-navy); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.disclosure > button svg { width: 18px; height: 18px; flex: 0 0 auto; transition: transform 180ms ease; }
+.disclosure[data-open=true] > button svg { transform: rotate(180deg); }
+.collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 180ms ease; }
+.disclosure[data-open=true] > .collapse { grid-template-rows: 1fr; }
+.collapse > div { min-height: 0; overflow: hidden; }
+.content { padding: 16px; overflow-wrap: anywhere; color: var(--wf-text); font-size: 14px; line-height: 1.7; }
+.content p { margin: 0 0 12px; }
+.content > :last-child { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .collapse, .disclosure > button svg { transition: none; } }

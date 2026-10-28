@@ -293,7 +293,8 @@ export class FormRepository {
     const result = await this.client.rpc("app_list_assigned_forms");
     if (result.error) throw mapDatabaseError(result.error, "Form assignments");
     const workEnabled = await this.workEnabled();
-    return ((result.data ?? []) as unknown as FormAssignmentSummary[]).map((assignment) => ({ ...assignment, work_enabled: workEnabled }));
+    const assignments = await this.withServiceLabels((result.data ?? []) as unknown as FormAssignmentSummary[]);
+    return assignments.map((assignment) => ({ ...assignment, work_enabled: workEnabled }));
   }
 
   async workEnabled(): Promise<boolean> {
@@ -305,7 +306,8 @@ export class FormRepository {
   async getAssignmentHistory(id: string): Promise<FormAssignmentSummary> {
     const result = await this.client.rpc("app_get_form_assignment_history", { p_assignment_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Form assignment history");
-    return result.data as unknown as FormAssignmentSummary;
+    const [assignment] = await this.withServiceLabels([result.data as unknown as FormAssignmentSummary]);
+    return assignment!;
   }
 
   async listOnboardingCandidates(companyId?: string) {
@@ -320,7 +322,24 @@ export class FormRepository {
   async getAssignedForm(id: string): Promise<AssignedFormDetail> {
     const result = await this.client.rpc("app_get_assigned_form_schema", { p_assignment_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Assigned Form");
-    return result.data as unknown as AssignedFormDetail;
+    const detail = result.data as unknown as AssignedFormDetail;
+    const [assignment] = await this.withServiceLabels([detail.assignment]);
+    return { ...detail, assignment: assignment! };
+  }
+
+  private async withServiceLabels(assignments: FormAssignmentSummary[]): Promise<FormAssignmentSummary[]> {
+    const ids = [...new Set(assignments.filter((assignment) => assignment.form_type === "intake")
+      .map((assignment) => assignment.assignment_id))];
+    const labels = new Map<string, string>();
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = ids.slice(offset, offset + 100);
+      const result = await this.client.rpc("app_get_assigned_form_service_labels", { p_assignment_ids: batch });
+      if (result.error) throw mapDatabaseError(result.error, "Form service labels");
+      for (const row of result.data ?? []) {
+        if (batch.includes(row.assignment_id) && row.service_name.trim()) labels.set(row.assignment_id, row.service_name);
+      }
+    }
+    return assignments.map((assignment) => ({ ...assignment, service_name: labels.get(assignment.assignment_id) ?? null }));
   }
 
   async listSubmissions(formId?: string, orderId?: string): Promise<FormSubmissionSummary[]> {

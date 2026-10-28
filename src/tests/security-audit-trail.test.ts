@@ -91,6 +91,9 @@ describe("the auditable selection is a deliberate subset of the C2-4 taxonomy", 
       [
         "auth.password.changed",
         "auth.login.unassigned",
+        "authorization.client_support.started",
+        "authorization.client_support.action",
+        "authorization.client_support.ended",
         "authorization.context.denied",
         "authorization.team_supervision.read",
         "authorization.white_label.draft_saved",
@@ -485,6 +488,7 @@ describe("the migration seed and the TypeScript selection agree", () => {
       "supabase/migrations/20260928202728_team_supervision_audit_foundation.sql",
       "supabase/migrations/20261010090000_white_label_drafts.sql",
       "supabase/migrations/20261013120050_draft_bound_white_label_publication.sql",
+      "supabase/migrations/20261028201119_client_support_sessions.sql",
     ].map(read);
     const seeded = migrations.flatMap((migration) =>
       [...migration.matchAll(/(?:values|,)\s*\('([a-z][a-z0-9._]*)',\s*'(?:authentication|authorization|integration)'/g)]

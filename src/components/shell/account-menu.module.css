@@ -1,0 +1,46 @@
+.actions {
+  display: grid;
+  padding: 4px 0;
+}
+
+.actions > button,
+.actions form > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  background: var(--wf-white);
+  color: var(--wf-text);
+  text-align: left;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.actions > button > svg,
+.actions form > button > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.actions > button:hover,
+.actions form > button:hover {
+  background: var(--wf-navy-wash);
+}
+
+.actions > button:focus-visible,
+.actions form > button:focus-visible {
+  outline: 2px solid var(--wf-navy);
+  outline-offset: -3px;
+}
+
+.actions > button:disabled,
+.actions form > button:disabled {
+  cursor: wait;
+  opacity: .7;
+}

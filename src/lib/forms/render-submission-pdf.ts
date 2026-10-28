@@ -110,8 +110,10 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
     if (!answer) { text("No signature was recorded for this field."); continue; }
     const value = answer.value && typeof answer.value === "object" && !Array.isArray(answer.value) ? answer.value : {};
     const strokes = readSignatureStrokes(value.drawing);
-    const signer = `Signer: ${typeof value.name === "string" ? value.name : "Not recorded"}`;
-    const signing = `Signed: ${typeof value.signed_at === "string" ? value.signed_at : "Not recorded"}\nConsent: ${value.consent === true ? "Recorded" : "Not recorded"}`;
+    const signer = typeof value.name === "string" && value.name.trim() ? `Signer: ${value.name}` : strokes ? "Drawn electronic signature" : "Signer: Not recorded";
+    const support = typeof value.support_administrator_id === "string" && typeof value.support_session_id === "string"
+      ? "\nRecorded by authorized support on behalf of this client." : "";
+    const signing = `Signed: ${typeof value.signed_at === "string" ? value.signed_at : "Not recorded"}\nConsent: ${value.consent === true ? "Recorded" : "Not recorded"}${support}`;
     const statement = typeof value.statement === "string" ? value.statement : null;
     const signingHeight = (wrappedLines(signer, 10.5).length + wrappedLines(signing, 10.5).length) * 10.5 * 1.45 + 14
       + (statement === null ? 0 : wrappedLines(statement, 9).length * 9 * 1.45 + 7) + (strokes ? 147 : 0);

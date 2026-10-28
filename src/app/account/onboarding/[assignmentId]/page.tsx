@@ -7,6 +7,7 @@ import { SubmissionDetail } from "../../../../components/forms/submission-detail
 import { formatDate } from "../../../../lib/format";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 import styles from "../../../../components/forms/forms.module.css";
+import { assignedFormTitle } from "../../../../domain/forms/assignment-title";
 
 export const metadata: Metadata = { title: "Onboarding item" };
 
@@ -35,7 +36,7 @@ export default async function AssignedFormPage({
         : null;
       return <div className={styles.clientFormPage}>
         <Link href="/account/onboarding" className={styles.backLink}><ArrowLeft aria-hidden="true" />All onboarding</Link>
-        <h1>{history.title}</h1>
+        <h1>{assignedFormTitle(history)}</h1>
         {!workEnabled ? <p>Form collection is paused. Your request and submitted responses are retained.</p> : null}
         {receipt ? <SubmissionDetail detail={receipt} canCorrect={false} automaticPdf={history.status === "completed" && typeof query.submitted === "string" && query.submitted === history.latest_submission_id && query.submitted === receipt.submission.id} /> : <p>No response has been submitted. This request remains outstanding.</p>}
         {history.order_id ? <Link href={`/account/projects/${history.order_id}`}>View your order →</Link> : null}
@@ -57,7 +58,7 @@ export default async function AssignedFormPage({
         <section className={styles.clientAssignmentContext}>
           <div>
             <span>{assignment.form_type === "intake" ? "Project information" : "Account setup"}</span>
-            <strong>{assignment.title}</strong>
+            <strong>{assignedFormTitle(assignment)}</strong>
           </div>
           <dl>
             {assignment.order_title ? (
@@ -88,6 +89,7 @@ export default async function AssignedFormPage({
           mode="assigned"
           assignmentId={assignmentId}
           completed={completed}
+          displayTitle={assignedFormTitle(assignment)}
         />
       </div>
     );

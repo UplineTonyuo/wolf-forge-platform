@@ -9,6 +9,7 @@ import type { SecurityEventCode } from "../../domain/security/event-codes";
 import { currentCorrelationId } from "../../lib/security/request-correlation";
 import { recordSecurityAuditEvent } from "../../lib/security/security-audit-log";
 import { recordSecurityEvent } from "../../lib/security/security-log";
+import { clientSupportRequested } from "../../lib/supabase/client-support";
 import {
   createNextServerSupabaseClient,
   getSelfServiceContext,
@@ -77,6 +78,7 @@ export async function changeMyPasswordAction(
   formData: FormData,
 ): Promise<PasswordActionState> {
   void _state;
+  if (await clientSupportRequested()) return fail("Exit client support before changing account settings.");
 
   const parsed = changePasswordSchema.safeParse({
     current_password: String(formData.get("current_password") ?? ""),

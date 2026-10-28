@@ -450,6 +450,28 @@ describe("client dashboard rendering", () => {
 });
 
 describe("client onboarding", () => {
+  it("names shared intake assignments for the purchased service without changing their targets", () => {
+    const source = [
+      assignment({ assignment_id: "review-order", form_type: "intake", title: "Intake Form for GMB Services", service_name: "Google Business Review" }),
+      assignment({ assignment_id: "optimization-order", form_type: "intake", title: "Intake Form for GMB Services", service_name: "GMB Optimization", status: "completed" }),
+    ];
+    render(<ClientOnboardingView onboarding={composeClientOnboarding(source)} />);
+    expect(screen.getByRole("link", { name: /Google Business Review/ })).toHaveAttribute("href", "/account/onboarding/review-order");
+    expect(screen.getByRole("link", { name: /GMB Optimization/ })).toHaveAttribute("href", "/account/onboarding/optimization-order");
+    expect(screen.queryByText("Intake Form for GMB Services")).not.toBeInTheDocument();
+    expect(source[0]!.title).toBe("Intake Form for GMB Services");
+    expect(source[0]!.form_version_id).toBe("version-1");
+  });
+
+  it("keeps account form titles and falls back when an intake has no service label", () => {
+    const model = composeClientOnboarding([
+      assignment({ title: "Account setup", service_name: "Should not replace account setup" }),
+      assignment({ assignment_id: "legacy", form_type: "intake", title: "Legacy intake", service_name: null }),
+    ]);
+    expect(model.groups[0]!.items[0]!.title).toBe("Account setup");
+    expect(model.groups[1]!.items[0]!.title).toBe("Legacy intake");
+  });
+
   it("counts completion from the status the database actually writes", () => {
     /*
      * app_submit_form writes 'completed'. The read model previously compared

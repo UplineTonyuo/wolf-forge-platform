@@ -15,11 +15,13 @@ import { DrawnSignature } from "./drawn-signature";
 import { readSignatureStrokes } from "../../lib/forms/signature";
 import Link from "next/link";
 import { DownloadFormPdf } from "./download-form-pdf";
+import { AgreementDisclosure } from "./agreement-disclosure";
 
 type AnswerMap = Record<string, Json | undefined>;
 
 const structuralTypes = new Set(["payment", "hidden", "break", "pagebreak", "html", "secret", "captcha"]);
 const displayOnly = (field: FormPublishedSchema["fields"][number]) => field.field_type === "richtext" && field.settings.display_only === true;
+const agreementContent = (field: FormPublishedSchema["fields"][number]) => field.field_type === "signature" || /\bagreement\b|\bpolicy\b|\bterms\b/iu.test(field.label);
 
 export function isFormFieldVisible(
   fieldKey: string,
@@ -101,11 +103,13 @@ export function FormRenderer({
   mode = "preview",
   assignmentId,
   completed = false,
+  displayTitle,
 }: {
   schema: FormPublishedSchema;
   mode?: "preview" | "assigned" | "public" | "readonly";
   assignmentId?: string;
   completed?: boolean;
+  displayTitle?: string;
 }) {
   const [answers, setAnswers] = useState<AnswerMap>(() => Object.fromEntries(schema.fields.map((field) => [field.stable_field_key, field.default_value ?? (field.field_type === "checkbox" ? false : "")])));
   const [requestId] = useState(() => crypto.randomUUID());
@@ -118,6 +122,7 @@ export function FormRenderer({
   const [draftMessage, setDraftMessage] = useState("");
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draftLoadAttempt, setDraftLoadAttempt] = useState(0);
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved">("idle");
   const [uploading, setUploading] = useState(false);
   useEffect(() => {
     if (!supportsDraft || !assignmentId) return;
@@ -151,7 +156,7 @@ export function FormRenderer({
     window.addEventListener("focus", check);
     return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("focus", check); };
   }, [mode, assignmentId, schema.canonical_key, schema.form_version_id]);
-  const readonly = mode === "preview" || mode === "readonly" || completed || result != null || !available || draftLoading || Boolean(draftError) || uploading;
+  const readonly = mode === "preview" || mode === "readonly" || completed || result != null || !available || draftLoading || Boolean(draftError) || uploading || draftState === "saving";
   const fields = useMemo(() => [...schema.fields].sort((a, b) => a.sort_order - b.sort_order), [schema.fields]);
 
   function draftValues() {
@@ -159,13 +164,18 @@ export function FormRenderer({
       .map((field) => ({ field_key: field.stable_field_key, value: answers[field.stable_field_key] ?? null }));
   }
 
-  function saveDraft() {
+  async function saveDraft() {
     if (!assignmentId || readonly || pending) return;
-    startTransition(async () => {
+    setDraftState("saving");
+    setError(null);
+    try {
       const response = await saveIntakeDraft(assignmentId, draftValues());
-      if (!response.ok) setError(response.error);
-      else { setError(null); setDraftMessage("Draft saved. You can close this form and continue later. Saved drafts expire after 30 days."); }
-    });
+      if (!response.ok) { setDraftState("idle"); setError(response.error); }
+      else { setDraftState("saved"); setDraftMessage("Draft saved. You can close this form and continue later. Saved drafts expire after 30 days."); }
+    } catch {
+      setDraftState("idle");
+      setError("Your draft could not be saved. Check your connection and try again.");
+    }
   }
 
   function submit() {
@@ -176,8 +186,8 @@ export function FormRenderer({
       const answer = answers[field.stable_field_key];
       if (!field.required && (!answer || (typeof answer === "object" && !Array.isArray(answer)
         && !answer.name && (!Array.isArray(answer.drawing) || !answer.drawing.length)))) return false;
-      return !answer || typeof answer !== "object" || Array.isArray(answer) || typeof answer.name !== "string"
-        || !answer.name.trim() || answer.consent !== true || !readSignatureStrokes(answer.drawing);
+      return !answer || typeof answer !== "object" || Array.isArray(answer)
+        || answer.consent !== true || !readSignatureStrokes(answer.drawing);
     });
     if (invalidSignature) {
       setError(`Draw your signature and confirm consent for ${invalidSignature.label}.`);
@@ -201,7 +211,8 @@ export function FormRenderer({
         const answer = answers[field.stable_field_key];
         return field.required || (answer !== undefined && answer !== null && answer !== ""
           && (!Array.isArray(answer) || answer.length > 0)
-          && (field.field_type !== "signature" || (typeof answer === "object" && !Array.isArray(answer) && typeof answer.name === "string" && Boolean(answer.name.trim()))));
+          && (field.field_type !== "signature" || (typeof answer === "object" && !Array.isArray(answer)
+            && (field.settings.signature_mode === "drawn" ? Boolean(readSignatureStrokes(answer.drawing)) : typeof answer.name === "string" && Boolean(answer.name.trim())))));
       })
       .map((field) => ({ field_key: field.stable_field_key, value: (answers[field.stable_field_key] ?? null) as SubmitFormInput["values"][number]["value"] }));
     const input: SubmitFormInput = {
@@ -226,7 +237,7 @@ export function FormRenderer({
   }
 
   if (result || completed) {
-    return <section className={styles.formComplete} role="status" data-state="complete"><header className={styles.formCompleteHead}><CheckCircle2 aria-hidden="true" /><h2>{completed ? "Completed" : "Submitted"}</h2></header><p>Your responses are safely recorded against Form Version {schema.version_number}.</p>
+    return <section className={styles.formComplete} role="status" data-state="complete"><header className={styles.formCompleteHead}><CheckCircle2 aria-hidden="true" /><h2>{completed ? "Completed" : "Submitted"}</h2></header><p>Your responses have been saved.</p>
       {result && mode === "assigned" ? <DownloadFormPdf submissionId={result.id} automatic /> : null}
       {result?.orderStart ? <div><p>{result.orderStart.started ? (result.orderStart.status === "working" ? "Your order is now in progress." : "Your service forms and start request were completed.") : result.orderStart.requested ? "Your start request is saved. Complete any remaining required forms; your order will then start automatically." : "Your service form is complete. Open your order when you are ready to start."}</p><Link href={`/account/projects/${result.orderStart.id}`}>View your order →</Link></div> : null}
       {result?.followUp === "queued" || result?.followUp === "blocked" ? <p>Your form is saved. The team’s follow-up actions are awaiting processing.</p> : null}
@@ -239,8 +250,8 @@ export function FormRenderer({
     <form className={styles.renderer} onSubmit={(event) => { event.preventDefault(); submit(); }}>
       {mode === "preview" ? <div className={styles.previewFlag}>Draft Preview</div> : null}
       <header className={styles.rendererHeader}>
-        <h1>{schema.title}</h1>
-        <span>{schema.form_type} form · Version {schema.version_number}</span>
+        <h1>{displayTitle ?? schema.title}</h1>
+        <span>{schema.form_type} form{mode === "preview" ? ` · Version ${schema.version_number}` : ""}</span>
         {schema.information_html ? <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(schema.information_html) }} /> : null}
       </header>
       <div className={styles.rendererFields}>
@@ -248,7 +259,9 @@ export function FormRenderer({
           const fieldDomId = `form-field-${fieldIndex}`;
           if (!isFormFieldVisible(field.stable_field_key, schema.rules, answers)) return null;
           if (displayOnly(field)) return <section className={styles.readableContent} key={field.stable_field_key}><h2>{field.label}</h2>
-            {field.help_html ? <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}</section>;
+            {field.help_html ? agreementContent(field)
+              ? <AgreementDisclosure id={`${fieldDomId}-agreement`}><div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /></AgreementDisclosure>
+              : <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}</section>;
           if (field.field_type === "break") return <section className={styles.sectionBreak} key={field.stable_field_key}><h2>{field.label}</h2></section>;
           if (field.field_type === "pagebreak") return <div className={styles.pageBreak} key={field.stable_field_key}><span>{field.label}</span></div>;
           if (field.field_type === "html") return <div className={styles.safeHtml} key={field.stable_field_key} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(typeof field.settings.html === "string" ? field.settings.html : "") }} />;
@@ -261,22 +274,25 @@ export function FormRenderer({
             {mode === "assigned" && assignmentId ? <IntakeFileField assignmentId={assignmentId} fieldKey={field.stable_field_key}
               label={field.label} id={fieldDomId} value={Array.isArray(answers[field.stable_field_key]) ? String((answers[field.stable_field_key] as Json[])[0] ?? "") || null : null}
               required={field.required} disabled={readonly || pending} onBusy={setUploading}
-              onChange={(ids) => { setAnswers((current) => ({ ...current, [field.stable_field_key]: ids })); setDraftMessage("Unsaved changes. Save your progress before leaving."); }} />
+              onChange={(ids) => { setAnswers((current) => ({ ...current, [field.stable_field_key]: ids })); setDraftState("idle"); setDraftMessage("Unsaved changes. Save your progress before leaving."); }} />
               : <p>Images and PDFs up to 4 MB can be attached to assigned intake forms.</p>}
           </div>;
           if (["payment", "captcha", "calendly"].includes(field.field_type)) return <div className={styles.integrationNotice} key={field.stable_field_key}><ShieldAlert aria-hidden="true" /><div><strong>{field.label}</strong><span>{field.field_type === "payment" ? "Payment is configured separately and is not collected by this Form." : field.field_type === "captcha" ? "Captcha verification is not enabled." : "Scheduling is not connected; this field is presentation-only."}</span></div></div>;
           return <div className={styles.renderField} data-field-type={field.field_type} key={field.stable_field_key}>
             <label htmlFor={fieldDomId}>{field.label}{field.required ? <span aria-hidden="true"> *</span> : null}</label>
-            {field.help_html ? <div className={styles.fieldHelp} id={`${fieldDomId}-help`} dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /> : null}
-            <FieldControl field={field} id={fieldDomId} value={answers[field.stable_field_key]} disabled={readonly || pending} onChange={(value) => { setAnswers((current) => ({ ...current, [field.stable_field_key]: value })); setDraftMessage("Unsaved changes. Save your progress before leaving."); }} />
+            {field.help_html ? <div className={styles.fieldHelp} id={`${fieldDomId}-help`}>{agreementContent(field)
+              ? <AgreementDisclosure id={`${fieldDomId}-agreement`}><div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} /></AgreementDisclosure>
+              : <div dangerouslySetInnerHTML={{ __html: sanitizeFormHtml(field.help_html) }} />}</div> : null}
+            <FieldControl field={field} id={fieldDomId} value={answers[field.stable_field_key]} disabled={readonly || pending} onChange={(value) => { setAnswers((current) => ({ ...current, [field.stable_field_key]: value })); setDraftState("idle"); setDraftMessage("Unsaved changes. Save your progress before leaving."); }} />
           </div>;
         })}
       </div>
       {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
       {draftError ? <div role="alert" className={styles.actionError}><p>{draftError}</p><button type="button" onClick={() => { setDraftLoading(true); setDraftError(null); setDraftLoadAttempt((attempt) => attempt + 1); }}>Retry saved draft</button></div> : null}
-      {supportsDraft ? <div className={styles.draftBar}><button className="button-secondary" type="button" onClick={saveDraft} disabled={pending || readonly}>
-        {draftLoading ? "Restoring draft…" : "Save and continue later"}</button><p role="status">{draftMessage || "Save your progress before leaving this form."}</p></div> : null}
-      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter}><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending || readonly}><LoaderCircle className="spinner" aria-hidden="true" style={{ visibility: pending ? "visible" : "hidden", animationPlayState: pending ? "running" : "paused" }} />Submit Form</button><span>Submission is saved to Version {schema.version_number}.</span></footer> : null}
+      {supportsDraft ? <div className={styles.draftBar} data-state={draftState}><button className="button-secondary" type="button" onClick={saveDraft} aria-busy={draftState === "saving" || undefined} disabled={pending || readonly}>
+        {draftState === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : draftState === "saved" ? <CheckCircle2 className={styles.savedCheck} aria-hidden="true" /> : null}
+        {draftLoading ? "Restoring draft…" : draftState === "saving" ? "Saving draft…" : "Save and continue later"}</button><p role="status">{draftState === "saving" ? "Saving your progress…" : draftMessage || "Save your progress before leaving this form."}</p></div> : null}
+      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter}><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending || readonly}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Submit Form</button></footer> : null}
     </form>
   );
 }

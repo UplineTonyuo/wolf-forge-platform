@@ -92,6 +92,10 @@ select throws_ok($$select pg_temp.pdf_submit('{"name":"Synthetic signer","consen
   '23514',null,'drawn signature requires explicit consent');
 select throws_ok($$select pg_temp.pdf_submit('{"name":"Synthetic signer","consent":true,"drawing":[[[10,20],[90,60]]],"signed_at":"2000-01-01T00:00:00Z"}')$$,
   '23514',null,'client cannot supply signature attestation time');
+select throws_ok($$select pg_temp.pdf_submit('{"name":"","consent":true,"drawing":[[[10,20],[90,60]]]}')$$,
+  '23514',null,'an optional supplied signature name cannot be blank');
+select throws_ok($$select pg_temp.pdf_submit('{"name":4,"consent":true,"drawing":[[[10,20],[90,60]]]}')$$,
+  '23514',null,'an optional supplied signature name must be text');
 reset role;
 select is((select count(*)::integer from public.form_submissions where form_assignment_id=(select id from pdf_ids where label='assignment')),0,
   'refused signatures leave no submitted receipts');
@@ -105,7 +109,7 @@ insert into pdf_ids select 'republished-version',(public.app_publish_form(gen_ra
 select isnt((select id from pdf_ids where label='version'),(select id from pdf_ids where label='republished-version'),
   'republication produced a distinct version');
 select pg_temp.pdf_act(2);
-insert into pdf_ids select 'submission',pg_temp.pdf_submit('{"name":"Synthetic signer","consent":true,"drawing":[[[10,20],[90,60]]]}');
+insert into pdf_ids select 'submission',pg_temp.pdf_submit('{"consent":true,"drawing":[[[10,20],[90,60]]]}');
 insert into pdf_data select 'original-pdf',public.app_get_form_submission_pdf(id) from pdf_ids where label='submission';
 select is((select value->'form'->>'version_id' from pdf_data where label='original-pdf'),
   (select id::text from pdf_ids where label='version'),'PDF pins the purchased version after republication');
@@ -127,6 +131,8 @@ select is((select answer->'value'->>'profile_id' from pdf_data d cross join late
   where d.label='original-pdf' and answer->>'field_type'='signature'),'b6280000-0000-4000-8000-000000000002','PDF identifies the actual signer');
 select is((select answer->'value'->>'method' from pdf_data d cross join lateral jsonb_array_elements(d.value->'original'->'values') answer
   where d.label='original-pdf' and answer->>'field_type'='signature'),'drawn','PDF includes the attested drawn signing method');
+select ok((select not (answer->'value' ? 'name') from pdf_data d cross join lateral jsonb_array_elements(d.value->'original'->'values') answer
+  where d.label='original-pdf' and answer->>'field_type'='signature'),'unnamed drawing is accepted without inventing a signer name');
 select is((select answer->'value'->'drawing' from pdf_data d cross join lateral jsonb_array_elements(d.value->'original'->'values') answer
   where d.label='original-pdf' and answer->>'field_type'='signature'),'[[[10,20],[90,60]]]'::jsonb,'PDF retains numeric ink');
 
