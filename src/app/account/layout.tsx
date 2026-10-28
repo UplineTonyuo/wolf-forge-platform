@@ -10,6 +10,7 @@ import { WhiteLabelPublicationRepository } from "../../repositories/white-label-
 import { WhiteLabelPublicationService } from "../../services/white-label-publication-service";
 import { ClientDraftProvider } from "../../components/tickets/client-draft-provider";
 import { studioDraftSavingAvailable } from "../../domain/tickets/draft-saving";
+import { ClientSupportBanner } from "../../components/account/client-support-banner";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,7 @@ export default async function ClientAccountLayout({ children }: { children: Reac
       notificationSoundEnabled={profile?.notificationSoundEnabled ?? true}
       avatarUrl={profile?.avatarUrl ?? null}
     >
+      {context.actor.support ? <ClientSupportBanner support={context.actor.support} /> : null}
       {children}
     </ClientAccountShell>
     </ClientDraftProvider>

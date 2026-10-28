@@ -54,6 +54,9 @@ export interface SecurityEventDefinition {
  * prefix map in `securityEventPrefix` is what the test asserts against.
  */
 export const SECURITY_EVENTS = {
+  "authorization.client_support.started": { category: "authorization", severity: "info" },
+  "authorization.client_support.action": { category: "authorization", severity: "info" },
+  "authorization.client_support.ended": { category: "authorization", severity: "info" },
   /* ---------------------------------------------------------------- auth -- */
 
   "auth.login.succeeded": { category: "authentication", severity: "info" },

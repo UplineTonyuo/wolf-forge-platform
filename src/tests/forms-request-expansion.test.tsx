@@ -49,6 +49,13 @@ describe("saved intake forms", () => {
       help_html: "First paragraph.\n\nSecond paragraph.", settings: { display_only: true } }] });
     await waitFor(() => expect((screen.getByLabelText(/Business/) as HTMLInputElement).disabled).toBe(false));
     expect(screen.getByRole("heading", { name: "SEO Agreement" })).toBeTruthy();
+    const agreement = screen.getByRole("button", { name: "View agreement" });
+    expect(agreement.getAttribute("aria-expanded")).toBe("false");
+    const policy = document.getElementById(agreement.getAttribute("aria-controls")!);
+    expect(policy?.textContent).toBe("First paragraph.\n\nSecond paragraph.");
+    expect(policy?.parentElement?.parentElement?.getAttribute("inert")).not.toBeNull();
+    fireEvent.click(agreement);
+    expect(screen.getByRole("button", { name: "Hide agreement" }).getAttribute("aria-expanded")).toBe("true");
     expect(screen.queryByRole("textbox", { name: "SEO Agreement" })).toBeNull();
     fireEvent.change(screen.getByLabelText(/Business/), { target: { value: "Synthetic company" } });
     fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
@@ -113,6 +120,53 @@ describe("saved intake forms", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: signature }] }), true));
   });
+  it("submits valid unnamed ink and explicit consent without adding a name", async () => {
+    const signature = { consent: true, drawing: [[[10, 20], [100, 80]]] };
+    mocks.load.mockResolvedValue({ ok: true, draft: { values: [{ field_key: key, value: signature }] } });
+    mount({ ...schema, fields: [{ ...schema.fields[0]!, field_type: "signature", label: "Client Agreement", help_html: "<p>Original unchanged agreement.</p>", settings: { signature_mode: "drawn" } }] });
+    await screen.findByText("Your saved draft has been restored.");
+    expect(screen.queryByRole("textbox", { name: "Full name" })).toBeNull();
+    expect(screen.getByRole("button", { name: "View agreement" }).getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: signature }] }), true));
+    expect(screen.getByText("Your responses have been saved.")).toBeTruthy();
+    expect(screen.queryByText(/Version [12]/)).toBeNull();
+  });
+  it("uses the optional service title without exposing client-facing version labels", async () => {
+    render(<FormRenderer schema={schema} mode="assigned" assignmentId={fileId} displayTitle="Google Business Review" />);
+    expect(screen.getByRole("heading", { name: "Google Business Review" })).toBeTruthy();
+    expect(screen.queryByText(/Version [12]/)).toBeNull();
+    await waitFor(() => expect((screen.getByLabelText(/Business/) as HTMLInputElement).disabled).toBe(false));
+  });
+  it("shows saving progress until the draft response resolves, then shows success", async () => {
+    let resolve!: (value: { ok: true }) => void;
+    mocks.save.mockImplementation(() => new Promise((done) => { resolve = done; }));
+    mount();
+    const input = screen.getByRole("textbox", { name: "Business" });
+    await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+    fireEvent.change(input, { target: { value: "Pending business" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
+    const saving = await screen.findByRole("button", { name: "Saving draft…" });
+    expect(saving.getAttribute("aria-busy")).toBe("true");
+    expect((saving as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText(/Draft saved\./)).toBeNull();
+    expect(screen.getByRole("button", { name: "Submit Form" }).getAttribute("aria-busy")).toBeNull();
+    resolve({ ok: true });
+    await screen.findByText(/Draft saved\./);
+    expect(screen.getByRole("button", { name: "Save and continue later" }).getAttribute("aria-busy")).toBeNull();
+  });
+  it("keeps a failed draft editable and never reports a successful save", async () => {
+    mocks.save.mockRejectedValue(new Error("connection lost"));
+    mount();
+    const input = screen.getByRole("textbox", { name: "Business" });
+    await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+    fireEvent.change(input, { target: { value: "Keep this response" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
+    await screen.findByText("Your draft could not be saved. Check your connection and try again.");
+    expect((input as HTMLInputElement).value).toBe("Keep this response");
+    expect((input as HTMLInputElement).disabled).toBe(false);
+    expect(screen.queryByText(/Draft saved\./)).toBeNull();
+  });
   it("reports confirmed order progress after submission using the server-scoped order link", async () => {
     mocks.submit.mockResolvedValue({ ok: true, data: { id: "response", orderStart: { id: fileId, status: "working", requested: true, started: true } } });
     mount();
@@ -129,7 +183,7 @@ describe("saved intake forms", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
     await screen.findByText("Draw your signature and confirm consent for Signature.");
     expect(mocks.submit).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: /Full name/ }));
+    expect(document.activeElement).toBe(screen.getByRole("img", { name: "Signature drawing area" }));
   });
   it("saves incomplete ink as a draft without recording consent or submitting an agreement", async () => {
     const signature = { name: "Synthetic signer", consent: false, drawing: [[[10, 20], [100, 80]]] };

@@ -305,6 +305,7 @@ export type FormPublishedSchema = {
 
 export type FormAssignmentSummary = {
   work_enabled?: boolean;
+  service_name?: string | null;
   assignment_id: string;
   form_id: string;
   form_type: "intake" | "onboarding";

@@ -23,10 +23,44 @@ describe("saved form PDF", () => {
     expect(formPdfFilename(receiptFixture().original.id)).toMatch(/^form-submission-[a-f0-9-]+\.pdf$/);
     expect(() => formPdfFilename('../x\r\nSet-Cookie:bad')).toThrow();
   });
+  it("renders unnamed drawn signatures without inventing a signer name", async () => {
+    const value = receiptFixture();
+    const signature = value.original.values.find((answer) => answer.field_type === "signature")!;
+    const signedValue = signature.value as Record<string, unknown>;
+    delete signedValue.name;
+    expect(formPdfReceiptSchema.safeParse(value).success).toBe(true);
+    const text: string[] = [];
+    const original = PDFPage.prototype.drawText;
+    const spy = vi.spyOn(PDFPage.prototype, "drawText").mockImplementation(function (this: PDFPage, line, options) {
+      text.push(line); return original.call(this, line, options);
+    });
+    try {
+      await renderSubmissionPdf(value);
+      expect(text.join("\n")).toContain("Drawn electronic signature");
+      expect(text.join("\n")).not.toContain("Signer: Synthetic Signer");
+    } finally { spy.mockRestore(); }
+  });
   it("refuses an oversized receipt before font/layout work", async () => {
     const value = receiptFixture(); value.form.information_html = "x".repeat(350_001);
     expect(formPdfReceiptSchema.safeParse(value).success).toBe(false);
     await expect(renderSubmissionPdf(value)).rejects.toThrow(/too large/);
+  });
+  it("preserves administrator attribution for a support-recorded signature", async () => {
+    const value = receiptFixture();
+    const signature = value.original.values.find((answer) => answer.field_type === "signature")!;
+    if (!signature.value || typeof signature.value !== "object" || Array.isArray(signature.value)) throw new Error("Missing signature fixture");
+    signature.value = { ...signature.value,
+      support_administrator_id: "90000000-0000-4000-8000-000000000001",
+      support_session_id: "90000000-0000-4000-8000-000000000002" };
+    const lines: string[] = [];
+    const draw = PDFPage.prototype.drawText;
+    const spy = vi.spyOn(PDFPage.prototype, "drawText").mockImplementation(function (this: PDFPage, line, options) {
+      lines.push(line); return draw.call(this, line, options);
+    });
+    try {
+      await renderSubmissionPdf(value);
+      expect(lines.join(" ")).toContain("Recorded by authorized support on behalf of this client.");
+    } finally { spy.mockRestore(); }
   });
   it("accepts the established maximum labels and option values", () => {
     const value = receiptFixture();value.form.fields[0]!.label = "x".repeat(500);

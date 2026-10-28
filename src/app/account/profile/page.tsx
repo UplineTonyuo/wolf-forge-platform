@@ -43,7 +43,7 @@ export default async function ClientProfilePage() {
    */
   const [profile, identities, pushContext] = await Promise.all([
     context.services.profile.getMine().catch(() => null),
-    loadSignInIdentities().catch(() => []),
+    context.actor.support ? Promise.resolve([]) : loadSignInIdentities().catch(() => []),
     clientPushContext().catch(() => null),
   ]);
 

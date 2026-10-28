@@ -15,7 +15,7 @@ export function DrawnSignature({ id, label, value, required, disabled, onChange 
   id: string; label: string; value: Json | undefined; required: boolean; disabled: boolean; onChange: (value: Json) => void;
 }) {
   const signature = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const name = typeof signature.name === "string" ? signature.name : "";
+  const recordedName = typeof signature.name === "string" && signature.name.trim() ? { name: signature.name } : {};
   const strokes = readSignatureStrokes(signature.drawing) ?? [];
   const active = useRef<{ pointer: number; stroke: [number, number][] } | null>(null);
   const [liveStroke, setLiveStroke] = useState<[number, number][]>([]);
@@ -33,16 +33,14 @@ export function DrawnSignature({ id, label, value, required, disabled, onChange 
     active.current = null;
     setLiveStroke([]);
     if (!disabled && !cancelled && current.stroke.length >= 2) {
-      onChange({ name, consent: false, drawing: [...strokes, current.stroke] });
+      onChange({ ...recordedName, consent: false, drawing: [...strokes, current.stroke] });
     }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   }
 
   return <div className={styles.control}>
-    <label htmlFor={id}>Full name<input id={id} value={name} maxLength={200} autoComplete="name" required={required || strokes.length > 0} disabled={disabled}
-      onChange={(event) => onChange({ name: event.target.value, consent: false, drawing: strokes })} /></label>
     <p id={`${id}-instructions`}>Draw your signature below with your finger, mouse or pen. If you cannot draw, contact the team for help signing.</p>
-    <svg className={styles.pad} viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" aria-label={`${label} drawing area`} aria-describedby={`${id}-instructions`} data-disabled={disabled}
+    <svg id={id} className={styles.pad} viewBox="0 0 1000 400" preserveAspectRatio="none" role="img" tabIndex={-1} aria-label={`${label} drawing area`} aria-describedby={`${id}-instructions`} data-disabled={disabled}
       onPointerDown={(event) => {
         if (disabled || active.current || event.button !== 0) return;
         if (strokes.length >= MAX_SIGNATURE_STROKES || strokes.flat().length >= MAX_SIGNATURE_POINTS) {
@@ -53,7 +51,7 @@ export function DrawnSignature({ id, label, value, required, disabled, onChange 
         event.currentTarget.setPointerCapture(event.pointerId);
         active.current = { pointer: event.pointerId, stroke: [first] };
         setLiveStroke([first]);
-        if (signature.consent === true) onChange({ name, consent: false, drawing: strokes });
+        if (signature.consent === true) onChange({ ...recordedName, consent: false, drawing: strokes });
       }}
       onPointerMove={(event) => {
         const current = active.current;
@@ -71,10 +69,10 @@ export function DrawnSignature({ id, label, value, required, disabled, onChange 
       {!strokes.length && !liveStroke.length ? <text x="500" y="220" textAnchor="middle" aria-hidden="true">Sign here</text> : null}
     </svg>
     <div className={styles.actions}><button type="button" className="button-secondary" disabled={disabled || (!strokes.length && !liveStroke.length)} onClick={() => {
-      active.current = null; setLiveStroke([]); setLimitMessage(""); onChange({ name, consent: false, drawing: [] });
-    }}>Clear signature</button><span role="status">{limitMessage || (strokes.length ? "Signature captured. Confirm your consent below." : "No signature drawn yet.")}</span></div>
-    <label className={styles.consent}><input type="checkbox" checked={signature.consent === true} required={required || strokes.length > 0 || Boolean(name.trim())}
-      disabled={disabled || !name.trim() || !strokes.length} onChange={(event) => onChange({ name, drawing: strokes, consent: event.target.checked })} />
+      active.current = null; setLiveStroke([]); setLimitMessage(""); onChange({ ...recordedName, consent: false, drawing: [] });
+    }}>Clear signature</button><span role="status">{limitMessage || (strokes.length ? signature.consent === true ? "Signature and consent recorded." : "Signature captured. Confirm your consent below." : "No signature drawn yet.")}</span></div>
+    <label className={styles.consent}><input type="checkbox" checked={signature.consent === true} required={required || strokes.length > 0}
+      disabled={disabled || !strokes.length} onChange={(event) => onChange({ ...recordedName, drawing: strokes, consent: event.target.checked })} />
       <span>I agree to use this drawn signature as my electronic signature for this form.</span></label>
   </div>;
 }

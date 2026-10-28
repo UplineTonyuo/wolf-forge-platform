@@ -5,6 +5,7 @@ import type { ProfileActionState } from "../../domain/profile/schema";
 import { AVATAR_MAX_BYTES } from "../../lib/images/avatar-file";
 import { observeActionFailure } from "../../lib/security/observed-failure";
 import { getSelfServiceContext } from "../../lib/supabase/next-server";
+import { clientSupportRequested } from "../../lib/supabase/client-support";
 
 /*
  * Only async functions may be exported from a "use server" module. The action
@@ -37,6 +38,7 @@ export async function updateMyNotificationSoundAction(
   formData: FormData,
 ): Promise<ProfileActionState> {
   void _state;
+  if (await clientSupportRequested()) return { error: "Exit client support before changing account settings.", fieldErrors: {}, savedAt: null };
   const context = await getSelfServiceContext();
 
   try {
@@ -88,6 +90,7 @@ export async function updateMyProfileAction(
   formData: FormData,
 ): Promise<ProfileActionState> {
   void _state;
+  if (await clientSupportRequested()) return { error: "Exit client support before changing account settings.", fieldErrors: {}, savedAt: null };
 
   const displayName = String(formData.get("display_name") ?? "").trim();
   const notificationSound = formData.get("notification_sound_enabled") === "on";
@@ -144,6 +147,7 @@ export async function updateMyProfileAction(
  * actor id, so it can only ever land in the caller's own folder.
  */
 export async function uploadMyAvatarAction(formData: FormData): Promise<AvatarActionResult> {
+  if (await clientSupportRequested()) return { ok: false, error: "Exit client support before changing account settings." };
   const file = formData.get("avatar");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -192,6 +196,7 @@ export async function uploadMyAvatarAction(formData: FormData): Promise<AvatarAc
 }
 
 export async function removeMyAvatarAction(): Promise<AvatarActionResult> {
+  if (await clientSupportRequested()) return { ok: false, error: "Exit client support before changing account settings." };
   const context = await getSelfServiceContext();
 
   try {
