@@ -1,0 +1,15 @@
+{
+    "GlobalOsPath":  "C:\\Users\\TrojanNiAnton\\Downloads\\Anthony OS-20261009T175758Z-1-001\\Anthony OS\\10 Templates\\Coding Agent OS\\CODING AGENT OPERATING SYSTEM.md",
+    "VaultPath":  "C:\\Users\\TrojanNiAnton\\Downloads\\Anthony OS-20261009T175758Z-1-001\\Anthony OS",
+    "MemoryPath":  "C:\\Users\\TrojanNiAnton\\Downloads\\Anthony OS-20261009T175758Z-1-001\\Anthony OS\\02 Projects\\Wolf Forge Platform\\AI Memory",
+    "ConfiguredRecoveryRepository":  "C:\\Users\\TrojanNiAnton\\Documents\\Wolf-Forge-White-Label",
+    "TaskWorktree":  "C:\\Users\\TrojanNiAnton\\Documents\\Codex\\2026-10-20\\continue-the-wolf-forge-spp-project\\work\\woad-voice-release-20261026",
+    "Branch":  "codex/woad-live-calls-20261026",
+    "OriginalHead":  "4d4b8909ab6e3640c9d9957b910f2d199130daf7",
+    "OriginalStatus":  "clean",
+    "MergedMain":  "205214bae3a965384e1974bcd64915911ea1eefe",
+    "OriginalPr":  "draft, historical two-party media acceptance incomplete",
+    "DecisionWrite":  "D-307 exact owner statement appended; whole previous content prefix verified intact",
+    "MemoryDiscrepancy":  "Configured recovery repository differs from explicit Studio release worktree; historical WL checkpoints do not define this lane. Old PR description predates the saved successful compiled build.",
+    "NextAction":  "Finish local merge validation, commit without push, deliver owner design only"
+}
