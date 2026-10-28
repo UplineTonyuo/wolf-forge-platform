@@ -2,8 +2,8 @@ import { existsSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// Order Details owns its persistent frame and will add its boundary after merging.
-const deferred = new Set(["(internal)/orders/[orderId]", "(internal)/accounts/client", "(internal)/accounts/member"]);
+// These folders each contain only a single static child route.
+const deferred = new Set(["(internal)/accounts/client", "(internal)/accounts/member"]);
 
 function pageFolders(root: string): string[] {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
