@@ -1,0 +1,13 @@
+.note { min-width: 0; border: 1px solid #eadcae; border-radius: 8px; background: #fffcf3; padding: 16px; color: #5e512d; }
+.note header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.note h2 { margin: 0; color: #70520a; font-size: 14px; }
+.note p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.6; }
+.note form { display: grid; gap: 10px; }
+.note label { font-size: 13px; font-weight: 600; }
+.note textarea { width: 100%; min-height: 140px; resize: vertical; padding: 12px; border: 1px solid #8d7b49; border-radius: 6px; background: #fff; color: #26304c; font: inherit; line-height: 1.6; }
+.note footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.note button { min-height: 44px; }
+.note [hidden] { display: none; }
+.note :is(button, textarea):focus-visible { outline: 2px solid var(--wf-navy); outline-offset: 3px; }
+.note [role="alert"] { color: #a32920; }
+.note [role="status"] { display: block; font-size: 13px; margin-top: 6px; }
