@@ -4,9 +4,19 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Discard incidental `next dev`-generated edits to `next-env.d.ts` and `AGENTS.md` before committing; preserve intentional repository-rule changes.
 
 <!-- END:nextjs-agent-rules -->
+
+## Worktree lifecycle
+
+1. One lane = one worktree = one branch. Ship from the same worktree the work was done in. If a separate release worktree is used, close the source lanes in the same session.
+2. Commit before any handoff. Never leave lane work only in the working tree.
+3. Push lane branches for backup. Change `main` only through a reviewed PR.
+4. A lane is done only after merge, a clean status, `git worktree remove`, and `git branch -d`.
+5. Never bulk-commit uncommitted files. Audit their content against current `origin/main` first and classify it as identical, superseded, or unique. Commit only unique, wanted work, on its own branch.
+6. Keep `.codex/config.toml` gitignored. Discard incidental `next dev`-generated `next-env.d.ts` / `AGENTS.md` edits; preserve intentional repository-rule changes.
+7. At the start of each session, inspect all worktrees against current `origin/main` and report stale worktrees (merged branch + dirty tree). A merged branch does not prove its uncommitted content is safe to discard.
 
 <!-- BEGIN:WOLF-FORGE-SHARED-AI-MEMORY -->
 
