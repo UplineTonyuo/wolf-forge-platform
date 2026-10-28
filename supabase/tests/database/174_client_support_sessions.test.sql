@@ -103,7 +103,7 @@ insert into support174_ids select 'form',(public.app_create_form(gen_random_uuid
   'rules','[]'::jsonb,'service_links','[]'::jsonb)))).id;
 insert into support174_ids select 'version',(public.app_publish_form(gen_random_uuid(),id)).id from support174_ids where label='form';
 insert into support174_ids select 'assignment',(public.app_assign_form(gen_random_uuid(),id,jsonb_build_object(
-  'company_id','b1740000-0000-4000-8000-000000000020','client_profile_id','b1740000-0000-4000-8000-000000000002'))).id from support174_ids where label='form';
+  'client_profile_id','b1740000-0000-4000-8000-000000000002'))).id from support174_ids where label='form';
 reset role;
 update private.client_support_sessions set ended_at=null where id=(select id from support174_ids where label='session');
 set local role authenticated;

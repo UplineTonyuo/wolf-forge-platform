@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Children } from "react";
 import { GET } from "../app/api/white-label/runtime/route";
 import InternalLayout from "../app/(internal)/layout";
 import ClientAccountLayout from "../app/account/layout";
@@ -124,7 +125,7 @@ describe("layout published snapshot binding", () => {
   it.each(layouts)("seeds the actual $name shell from the authorized runtime read", async ({ render }) => {
     const shell = await render();
     expect(shell.props.runtimeConfiguration).toEqual(published);
-    expect(shell.props.children).toBe("business workspace");
+    expect(Children.toArray(shell.props.children)).toEqual(["business workspace"]);
     expect(rpc.mock.calls).toEqual([["app_get_runtime_white_label_configuration"]]);
   });
 

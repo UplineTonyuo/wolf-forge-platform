@@ -1,20 +1,34 @@
 import { afterEach,beforeEach,expect,it,vi } from "vitest";
 import { signOutAction } from "../app/actions/auth";
 import { createNextServerSupabaseClient } from "../lib/supabase/next-server";
+import { clientSupportRequested, clientSupportExitPending } from "../lib/supabase/client-support";
+import { endClientSupportAction } from "../app/actions/client-support";
 
 vi.mock("../lib/supabase/next-server",()=>({createNextServerSupabaseClient:vi.fn()}));
 vi.mock("next/navigation",()=>({redirect:(path:string)=>{throw new Error(`REDIRECT:${path}`);}}));
 vi.mock("../lib/security/request-correlation",()=>({currentCorrelationId:async()=>"synthetic"}));
 vi.mock("../lib/security/security-log",()=>({recordSecurityEvent:vi.fn()}));
+vi.mock("../lib/supabase/client-support",()=>({clientSupportRequested:vi.fn(),clientSupportExitPending:vi.fn()}));
+vi.mock("../app/actions/client-support",()=>({endClientSupportAction:vi.fn()}));
 
 const signOut=vi.fn().mockResolvedValue({error:null});
 const rpc=vi.fn();
 beforeEach(()=>{
   vi.clearAllMocks();
+  vi.mocked(clientSupportRequested).mockResolvedValue(false);
+  vi.mocked(clientSupportExitPending).mockResolvedValue(false);
+  vi.mocked(endClientSupportAction).mockRejectedValue(new Error("REDIRECT:/clients"));
   vi.stubEnv("VERCEL_ENV","preview");vi.stubEnv("SUPABASE_URL","https://rsnmlcyopnxucwgfttyf.supabase.co");
   vi.mocked(createNextServerSupabaseClient).mockResolvedValue({rpc,auth:{signOut,getClaims:async()=>({data:{claims:{sub:"synthetic-client"}}})}} as unknown as Awaited<ReturnType<typeof createNextServerSupabaseClient>>);
 });
 afterEach(()=>vi.unstubAllEnvs());
+it.each(["active","pending"])("exits %s support without signing out the administrator or changing push devices",async(kind)=>{
+  vi.mocked(kind==="active"?clientSupportRequested:clientSupportExitPending).mockResolvedValue(true);
+  await expect(signOutAction()).rejects.toThrow("REDIRECT:/clients");
+  expect(endClientSupportAction).toHaveBeenCalledOnce();
+  expect(createNextServerSupabaseClient).not.toHaveBeenCalled();
+  expect(signOut).not.toHaveBeenCalled();expect(rpc).not.toHaveBeenCalled();
+});
 it("signs out even when push cleanup throws synchronously",async()=>{
   rpc.mockImplementation(()=>{throw new Error("backend unavailable");});
   await expect(signOutAction()).rejects.toThrow("REDIRECT:/login");
