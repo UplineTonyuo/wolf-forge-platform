@@ -1,56 +1,48 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const f = vi.hoisted(() => ({ provider: vi.fn(), user: vi.fn(), trusted: vi.fn(), verify: vi.fn() }));
-vi.mock("../lib/daily/calls", () => ({
-  readDailyCallConfig: () => ({ key: "test-only", origin: "https://wolfforge.daily.co" }),
-  callRoomProperties: (exp: number) => ({ exp }), dailyRequest: f.provider, verifiedCallRoom: f.verify,
-}));
-vi.mock("../lib/env/server-env", () => ({ readServerEnvironment: () => ({}) }));
-vi.mock("../lib/supabase/trusted-server-client", () => ({ createTrustedServerSupabaseClient: () => ({ rpc: f.trusted }) }));
-const { joinTicketCall, endTicketCall } = await import("../services/ticket-call-service");
-const id = "70000000-0000-4000-8000-000000000001";
-const ticket = "70000000-0000-4000-8000-000000000002";
-const actor = "70000000-0000-4000-8000-000000000003";
-const call = (created = true) => ({ id, mode: "audio", state: "reserved", created, endClaim: true, participantIds: [actor],
-  roomName: `wf-call-${id}`, expiresAt: new Date(Date.now() + 850000).toISOString() });
-const client = { rpc: f.user } as unknown as Parameters<typeof joinTicketCall>[0];
-beforeEach(() => {
-  vi.resetAllMocks(); f.user.mockResolvedValue({ data: call(), error: null });
-  f.trusted.mockResolvedValue({ data: null, error: null }); f.verify.mockReturnValue(true);
-  f.provider.mockImplementation((_key, endpoint) => endpoint === "meeting-tokens" ? { token: "aaa.bbb.ccc" } : {});
-});
-describe("call provider mutation boundary", () => {
-  it("reserves before creating, verifies before finalizing, and claims a token before issuance", async () => {
-    const result = await joinTicketCall(client, actor, ticket, { requestId: id, mode: "audio" });
-    expect(result.mode).toBe("audio");
-    expect(f.user.mock.invocationCallOrder[0]).toBeLessThan(f.provider.mock.invocationCallOrder[0]!);
-    expect(f.trusted).toHaveBeenCalledWith("app_complete_ticket_call_setup", { p_call_id: id });
-    expect(f.provider).toHaveBeenLastCalledWith("test-only", "meeting-tokens", "POST", expect.objectContaining({ properties: expect.objectContaining({
-      room_name: `wf-call-${id}`, user_id: actor, is_owner: false, eject_at_token_exp: true,
-      permissions: { hasPresence: true, canSend: ["audio"], canAdmin: false },
-    }) }));
-    expect(f.user.mock.invocationCallOrder[1]).toBeLessThan(f.provider.mock.invocationCallOrder.at(-1)!);
+import { callMutation, incomingCallPush } from "../domain/tickets/calls";
+import { endTicketCall, joinTicketCall, mutateTicketCall, readTicketCalls } from "../services/ticket-call-service";
+const id = "71000000-0000-4000-8000-000000000001";
+const rpc = vi.fn();
+const client = { rpc } as unknown as Parameters<typeof mutateTicketCall>[0];
+beforeEach(() => { vi.clearAllMocks(); rpc.mockResolvedValue({ data: { ended: true }, error: null }); });
+describe("invitation service", () => {
+  it("keeps the old media entry point disabled", async () => {
+    await expect(joinTicketCall()).rejects.toThrow("disabled in Phase 1");
+    expect(rpc).not.toHaveBeenCalled();
   });
-  it("does no provider work when authorization refuses", async () => {
-    f.user.mockResolvedValue({ data: null, error: { code: "42501", message: "denied" } });
-    await expect(joinTicketCall(client, actor, ticket, { requestId: id, mode: "audio" })).rejects.toThrow();
-    expect(f.provider).not.toHaveBeenCalled();
+  it("ends without reading provider flags or Ticket permissions", async () => {
+    expect(await endTicketCall(client, id, id)).toEqual({ ended: true });
+    expect(rpc).toHaveBeenCalledWith("app_ticket_call_command", { p_action: "end", p_call_id: id, p_device_id: undefined });
   });
-  it("reconciles an uncertain creation but never repeats it on retry", async () => {
-    f.provider.mockRejectedValueOnce(new Error("uncertain"));
-    await joinTicketCall(client, actor, ticket, { requestId: id, mode: "audio" });
-    f.provider.mockClear(); f.user.mockResolvedValue({ data: call(false), error: null });
-    await joinTicketCall(client, actor, ticket, { requestId: id, mode: "audio" });
-    expect(f.provider.mock.calls.some(c => c[1] === "rooms" && c[2] === "POST")).toBe(false);
+  it("maps database authority refusal", async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "private detail" } });
+    await expect(endTicketCall(client, id, id)).rejects.toThrow();
   });
-  it("refuses an unexpected room before minting a token", async () => {
-    f.verify.mockReturnValue(false);
-    await expect(joinTicketCall(client, actor, ticket, { requestId: id, mode: "audio" })).rejects.toThrow();
-    expect(f.trusted).not.toHaveBeenCalled();
-    expect(f.provider.mock.calls.some(c => c[1] === "meeting-tokens")).toBe(false);
+  it("does not let a request choose callee, room or account", () => {
+    const input = { action: "request", request_id: id, ticket_id: id, device_id: id, mode: "audio" };
+    expect(callMutation.safeParse(input).success).toBe(true);
+    for (const key of ["callee_id", "room_url", "provider_account", "tenant_id"]) {
+      expect(callMutation.safeParse({ ...input, [key]: id }).success).toBe(false);
+    }
   });
-  it("does not reissue an uncertain end mutation", async () => {
-    f.user.mockResolvedValue({ data: { ...call(false), state: "ended", endClaim: false }, error: null });
-    expect(await endTicketCall(client, ticket, id)).toEqual({ ended: true, roomDeleted: false });
-    expect(f.provider).not.toHaveBeenCalled();
+  it("requires a device for acceptance and forbids browser setup/token commands", () => {
+    expect(callMutation.safeParse({ action: "accept", call_id: id }).success).toBe(false);
+    for (const action of ["setup", "join", "reserve"]) {
+      expect(callMutation.safeParse({ action, call_id: id, device_id: id }).success).toBe(false);
+    }
+  });
+  it("returns only the validated four owner numbers", async () => {
+    rpc.mockResolvedValue({ data: { made: 4, answered: 2, missed: 1, connectedSeconds: 123 }, error: null });
+    expect(await readTicketCalls(client, { action: "summary", month: "2026-10-01" })).toEqual({ made: 4, answered: 2, missed: 1, connectedSeconds: 123 });
+    expect(rpc).toHaveBeenCalledWith("app_ticket_call_owner_summary", { p_month: "2026-10-01" });
+  });
+  it("requires a complete keyset cursor", async () => {
+    await expect(readTicketCalls(client, { action: "history", ticket_id: id, before: "2026-10-01T00:00:00Z" })).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("keeps push generic and rejects Ticket/media details", () => {
+    const payload = { title: "Incoming call from Wolf Forge", body: "Open Wolf Forge to answer.", callId: id, version: 1 };
+    expect(incomingCallPush.safeParse(payload).success).toBe(true);
+    for (const key of ["ticketId", "clientName", "token", "roomUrl"]) expect(incomingCallPush.safeParse({ ...payload, [key]: id }).success).toBe(false);
   });
 });

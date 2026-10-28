@@ -1,7 +1,7 @@
 begin;
 select no_plan();
 select is((select enabled from private.ticket_call_environment),false,'environment defaults OFF');
-\ir ../fixtures/ticket_calls.sql
+\ir ../../../scripts/qa/fixtures/ticket-calls.sql
 create function pg_temp.actor(n text default '1701') returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claim.sub','',true); perform set_config('request.jwt.claim.role','',true);
@@ -42,7 +42,7 @@ select throws_ok($q$select public.app_ticket_call_command('accept',pg_temp.call_
   '42501','Call already taken or ended','second device cannot take over');
 reset role;
 select ok((select answered_at is null from private.ticket_calls where id=pg_temp.call_id()),'acceptance does not mark answered');
-update public.tickets set status='closed' where id='e1700000-0000-4000-8000-000000001701';
+update public.tickets set status='closed',closed_at=clock_timestamp() where id='e1700000-0000-4000-8000-000000001701';
 update private.ticket_call_settings set enabled=false;
 set local role authenticated;
 select is(public.app_ticket_call_command('end',pg_temp.call_id())->>'ended','true','closure and OFF flag do not prevent participant end');

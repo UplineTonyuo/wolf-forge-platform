@@ -101,14 +101,14 @@ create table private.ticket_call_cleanup (
   result text not null default 'pending' check (result in ('pending','claimed','unknown','verified'))
 );
 create table private.ticket_call_evidence (
-  call_id uuid primary key references private.ticket_calls(id) on delete cascade,
+  call_id uuid not null references private.ticket_calls(id) on delete cascade,
   event_id text not null unique check (length(event_id) between 1 and 128),
   meeting_id text not null unique check (length(meeting_id) between 1 and 128),
   digest text not null,
   received_at timestamptz not null default clock_timestamp()
 );
 create table private.ticket_call_intervals (
-  call_id uuid not null references private.ticket_call_evidence(call_id) on delete cascade,
+  call_id uuid not null references private.ticket_calls(id) on delete cascade,
   participant_session text not null check (length(participant_session) between 1 and 128),
   profile_id uuid not null references public.profiles(id),
   joined_at timestamptz not null,
