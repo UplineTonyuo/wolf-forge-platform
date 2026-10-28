@@ -377,15 +377,17 @@ async function main() {
           await trigger.click();
           const dialog = ownerPage.getByRole("dialog");
           await dialog.waitFor();
-          await ownerPage.waitForFunction(() => {
-            const element = document.querySelector('[role="dialog"]');
-            if (!element) return false;
+          const panelHandle = await dialog.elementHandle();
+          need(panelHandle, "The visible builder sheet has no DOM element");
+          await ownerPage.waitForFunction((element) => {
+            if (!element?.isConnected) return false;
             const box = element.getBoundingClientRect();
             const style = getComputedStyle(element);
             const identity = style.transform === "none" || new DOMMatrixReadOnly(style.transform).isIdentity;
             return identity && Number(style.opacity) === 1
               && box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
-          });
+          }, panelHandle, { timeout: 5000 });
+          await panelHandle.dispose();
           need(await dialog.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1; }), "Builder sheet leaves the viewport");
           const closeLabel = label === "Add field" ? "Close field palette" : "Close settings";
           const closeBox = await dialog.getByRole("button", { name: closeLabel, exact: true }).boundingBox();
@@ -441,6 +443,7 @@ async function main() {
   page = null;
   if (report.ownerLayout.status === "passed") check("Owner builder passes all seven widths, compact sheet/Escape/focus checks, desktop sticky-panel/action geometry, and all 147/165 service links");
   await writeFile(join(output, "summary.json"), JSON.stringify(report, null, 2));
+  need(report.ownerLayout.status === "passed", "Owner builder responsive QA failed before repeating the already exercised client workflow; see ownerLayout failures");
   let signatures = 0, uploads = 0;
   const previewed = new Set();
   const ordinary = templates.find(({ meta, payload }) => meta.file.startsWith("intake-") && !["intake-231.json", "intake-165.json"].includes(meta.file)
