@@ -1,7 +1,7 @@
 begin;
 select no_plan();
 select is((select enabled from private.ticket_call_environment),false,'environment defaults OFF');
-\ir ../../../scripts/qa/fixtures/ticket-calls.sql
+\ir ../fixtures/ticket_calls.inc
 create function pg_temp.actor(n text default '1701') returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claim.sub','',true); perform set_config('request.jwt.claim.role','',true);

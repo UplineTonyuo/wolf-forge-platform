@@ -175,6 +175,15 @@ select exists(select 1 from private.ticket_call_environment env
     and env.verified_free_minutes>=6000);
 $$;
 
+create function private.ticket_call_month_slices(p_start timestamptz,p_end timestamptz)
+returns table(month date,seconds numeric) language sql immutable set search_path='' as $$
+select m::date,2*extract(epoch from least(p_end,(m+interval '1 month') at time zone 'UTC')
+  -greatest(p_start,m at time zone 'UTC'))
+from generate_series(date_trunc('month',p_start at time zone 'UTC'),
+  date_trunc('month',(p_end-interval '1 microsecond') at time zone 'UTC'),interval '1 month') m
+where p_end>p_start;
+$$;
+
 create function private.ticket_call_projection(c private.ticket_calls) returns jsonb
 language sql stable set search_path='' as $$
 select jsonb_build_object('id',c.id,'ticketId',c.ticket_id,'callerId',c.initiated_by,
@@ -263,8 +272,8 @@ end $$;
 create function public.app_request_ticket_call(p_ticket_id uuid,p_request_id uuid,p_device_id uuid,p_mode text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare t public.tickets; c private.ticket_calls; settings private.ticket_call_settings; env private.ticket_call_environment;
-  sid uuid; callee uuid; direction_value text; stamp timestamptz; refusal text; month_start timestamptz;
-  segment_end timestamptz; seconds numeric; used numeric; tenant_used numeric; new_id uuid:=extensions.gen_random_uuid();
+  sid uuid; callee uuid; direction_value text; stamp timestamptz; refusal text; slice record;
+  used numeric; tenant_used numeric; new_id uuid:=extensions.gen_random_uuid();
 begin
   sid:=private.ticket_call_session(); perform private.ticket_call_lock();
   perform private.process_ticket_call_deadlines(); stamp:=clock_timestamp();
@@ -303,16 +312,12 @@ begin
     or (select count(*) from private.ticket_calls where expires_at>(date_trunc('month',stamp at time zone 'UTC') at time zone 'UTC')
       and (legacy or outcome is null or outcome not in ('busy','refused')))>=200) then refusal:='refused'; end if;
   if refusal is null then
-    month_start:=date_trunc('month',stamp at time zone 'UTC') at time zone 'UTC';
-    while month_start<stamp+interval '15 minutes' loop
-      segment_end:=least(month_start+interval '1 month',stamp+interval '15 minutes');
-      seconds:=2*extract(epoch from segment_end-greatest(stamp,month_start));
+    for slice in select * from private.ticket_call_month_slices(stamp,stamp+interval '15 minutes') loop
       select coalesce(sum(coalesce(r.settled_seconds,r.reserved_seconds)),0),
         coalesce(sum(coalesce(r.settled_seconds,r.reserved_seconds)) filter(where call.tenant_id=t.tenant_id),0)
         into used,tenant_used from private.ticket_call_reservations r join private.ticket_calls call on call.id=r.call_id
-        where r.month=(month_start at time zone 'UTC')::date;
-      if used+seconds>env.allocation_minutes*60 or tenant_used+seconds>settings.monthly_minutes*60 then refusal:='refused'; exit; end if;
-      month_start:=month_start+interval '1 month';
+        where r.month=slice.month;
+      if used+slice.seconds>env.allocation_minutes*60 or tenant_used+slice.seconds>settings.monthly_minutes*60 then refusal:='refused'; exit; end if;
     end loop;
   end if;
   insert into private.ticket_calls(id,request_id,ticket_id,tenant_id,initiated_by,callee_profile_id,direction,mode,
@@ -324,12 +329,8 @@ begin
     case when refusal is not null then stamp end,case when refusal is not null then stamp end) returning * into c;
   if refusal is null then
     insert into private.ticket_call_claims(profile_id,call_id) values(auth.uid(),c.id),(callee,c.id);
-    month_start:=date_trunc('month',stamp at time zone 'UTC') at time zone 'UTC';
-    while month_start<c.expires_at loop
-      seconds:=2*extract(epoch from least(month_start+interval '1 month',c.expires_at)-greatest(stamp,month_start));
-      insert into private.ticket_call_reservations values(c.id,(month_start at time zone 'UTC')::date,seconds,null);
-      month_start:=month_start+interval '1 month';
-    end loop;
+    insert into private.ticket_call_reservations(call_id,month,reserved_seconds)
+      select c.id,month,seconds from private.ticket_call_month_slices(stamp,c.expires_at);
   end if;
   insert into private.ticket_call_events(call_id,event,actor_id) values(c.id,coalesce(refusal,'requested'),auth.uid());
   return private.ticket_call_projection(c);
@@ -393,7 +394,7 @@ begin
     if c.provider_state<>'ready' or c.token_attempts>=8 then raise exception 'Call unavailable' using errcode='42501'; end if;
     perform private.consume_rate_limit('ticket-call-token',auth.uid()::text,interval '1 minute',6);
     update private.ticket_calls set token_attempts=token_attempts+1 where id=c.id;
-    return jsonb_build_object('id',c.id,'roomName','wf-call-'||c.id::text,'mode',c.mode,'expiresAt',c.expires_at);
+    return jsonb_build_object('id',c.id,'participantId',auth.uid(),'roomName','wf-call-'||c.id::text,'mode',c.mode,'expiresAt',c.expires_at);
   end if;
   select * into c from private.ticket_calls where id=p_call_id;
   return private.ticket_call_projection(c);

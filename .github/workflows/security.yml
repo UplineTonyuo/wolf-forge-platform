@@ -99,6 +99,8 @@ jobs:
       # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite
         run: npm run test:db
+      - name: overlapping calling transactions
+        run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
     name: production dependency vulnerabilities

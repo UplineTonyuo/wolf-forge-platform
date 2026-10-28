@@ -1,6 +1,6 @@
 begin;
 select no_plan();
-\ir ../../../scripts/qa/fixtures/ticket-calls.sql
+\ir ../fixtures/ticket_calls.inc
 create function pg_temp.actor(n text) returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',jsonb_build_object('sub','20000000-0000-4000-8000-00000000'||n,
