@@ -1,5 +1,7 @@
 # Ticket calling — owner approval design
 
+**Phase 1 policy update, 29 October 2026:** the [amended foundation brief](phase-1-brief.md) supersedes this earlier proposal for single-callee routing/owner fallback, the combined account budget, 12-month history and the foundation-only phase boundary. This document remains historical full-feature context; its ring-all routing, separate-account prerequisite, business-hours machinery and 90-day/13-month retention must not be carried into Phase 1. Neither document claims implementation approval or completed behavior.
+
 Date: 29 October 2026. Status: PROPOSED; no feature implementation or rollout approved by this document. Foundation: [draft PR #76](https://github.com/UplineTonyuo/wolf-forge-platform/pull/76), branch `codex/woad-live-calls-20261026`, original head `4d4b890`. Merge preparation and environment evidence are in [report.md](report.md).
 
 ## Scope and approval gates
