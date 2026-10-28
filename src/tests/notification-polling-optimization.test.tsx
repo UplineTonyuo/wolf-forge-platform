@@ -18,7 +18,7 @@ const read = (path: string) =>
 /*
  * These drive the real scheduler on fake timers. The jitter is +/-8%, so the
  * windows below are chosen to sit clear of both bounds rather than to land
- * exactly on an interval: TEAM_LIVE_CLOSED_MS lands between 13.8s and 16.2s,
+ * exactly on an interval: TEAM_LIVE_CLOSED_MS lands between 55.2s and 64.8s,
  * and the OPEN tiers are 0.7s / 1.2s / 2s, an order of magnitude apart.
  */
 function harness(open: boolean, syncKey: string) {
@@ -63,7 +63,7 @@ describe("Team sync scheduler: the CLOSED/OPEN axis", () => {
     await flush(4_000);
     expect(live).toHaveBeenCalledTimes(1);
 
-    await flush(TEAM_LIVE_CLOSED_MS);
+    await flush(TEAM_LIVE_CLOSED_MS * 1.08 + 1);
     expect(live).toHaveBeenCalledTimes(2);
   });
 
@@ -111,7 +111,7 @@ describe("Team sync scheduler: the CLOSED/OPEN axis", () => {
     // wakes did not each leave a live timer behind.
     const settled = live.mock.calls.length;
     // One closed interval plus jitter's own ceiling, still short of a second.
-    await flush(TEAM_LIVE_CLOSED_MS + 3_000);
+    await flush(TEAM_LIVE_CLOSED_MS * 1.08 + 1);
     expect(live.mock.calls.length).toBe(settled + 1);
   });
 });

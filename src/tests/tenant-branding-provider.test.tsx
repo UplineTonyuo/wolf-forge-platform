@@ -48,26 +48,30 @@ afterEach(() => {
 });
 
 describe("publication observation", () => {
-  it("observes a publication within 30 seconds while visible", async () => {
+  it("checks on mount and uses a ten-minute fallback while visible", async () => {
     const read = vi.fn().mockResolvedValue(updated);
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true, read));
     expect(result.current.branding?.name).toBe("Tenant A");
-    expect(read).not.toHaveBeenCalled();
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    expect(read).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(read).toHaveBeenCalledTimes(1);
     expect(result.current.branding?.name).toBe("Updated A");
+    await act(() => vi.advanceTimersByTimeAsync(599_999));
+    expect(read).toHaveBeenCalledTimes(1);
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    expect(read).toHaveBeenCalledTimes(2);
   });
 
   it("keeps one request in flight and coalesces repeated focus/resume into one follow-up", async () => {
     const pending = deferred();
     const read = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(updated);
     renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
       window.dispatchEvent(new Event("focus"));
       document.dispatchEvent(new Event("visibilitychange"));
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(0);
     });
     expect(read).toHaveBeenCalledTimes(1);
     await act(async () => { pending.resolve(updated); });
@@ -76,12 +80,12 @@ describe("publication observation", () => {
 
   it("makes no hidden-tab reads and refreshes on return", async () => {
     const read = vi.fn().mockResolvedValue(updated);
-    renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true, read));
     hidden = true;
+    renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true, read));
     await act(async () => {
       window.dispatchEvent(new Event("focus"));
       document.dispatchEvent(new Event("visibilitychange"));
-      await vi.advanceTimersByTimeAsync(90_000);
+      await vi.advanceTimersByTimeAsync(1_800_000);
     });
     expect(read).not.toHaveBeenCalled();
     hidden = false;
@@ -93,7 +97,7 @@ describe("publication observation", () => {
     const pending = deferred();
     const read = vi.fn().mockReturnValue(pending.promise);
     renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     await act(async () => { window.dispatchEvent(new Event("focus")); });
     hidden = true;
     await act(async () => { document.dispatchEvent(new Event("visibilitychange")); pending.resolve(updated); });
@@ -102,11 +106,11 @@ describe("publication observation", () => {
 
   it("discards an old Tenant's late result after new scope props arrive", async () => {
     const pending = deferred();
-    const read = vi.fn().mockReturnValue(pending.promise);
+    const read = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(tenantB);
     const { result, rerender } = renderHook(({ configuration, actor }) => useRuntimeBranding(configuration, actor, true, read), {
       initialProps: { configuration: tenantA, actor: "actor-a" },
     });
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     rerender({ configuration: tenantB, actor: "actor-b" });
     expect(result.current.branding?.name).toBe("Tenant B");
     await act(async () => { pending.resolve(updated); });
@@ -116,11 +120,11 @@ describe("publication observation", () => {
 
   it("discards an old actor's late failure even when the Tenant stays the same", async () => {
     const pending = deferred();
-    const read = vi.fn().mockReturnValue(pending.promise);
+    const read = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValue(tenantA);
     const { result, rerender } = renderHook(({ actor }) => useRuntimeBranding(tenantA, actor, true, read), {
       initialProps: { actor: "actor-a" },
     });
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     rerender({ actor: "actor-b" });
     await act(async () => { pending.reject(new Error("permission denied")); });
     expect(result.current.branding?.name).toBe("Tenant A");
@@ -130,21 +134,21 @@ describe("publication observation", () => {
   it("does not accept a response for another selected Tenant", async () => {
     const read = vi.fn().mockResolvedValue(tenantB);
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current).toEqual({ branding: null, unavailable: true });
   });
 
   it.each([new Error("transport failure"), new Error("permission denied")])("clears branded projections into explicit unavailable state after %s", async (error) => {
     const read = vi.fn().mockRejectedValue(error);
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current).toEqual({ branding: null, unavailable: true });
   });
 
   it("rejects unknown runtime kinds rather than interpreting them as no publication", async () => {
     const read = vi.fn().mockResolvedValue({ kind: "draft" });
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current.unavailable).toBe(true);
     expect(result.current.branding).toBeNull();
   });
@@ -152,8 +156,8 @@ describe("publication observation", () => {
   it("never downgrades to an older revision", async () => {
     const read = vi.fn().mockResolvedValueOnce(updated).mockResolvedValueOnce(tenantA);
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(() => vi.advanceTimersByTimeAsync(600_000));
     expect(result.current.branding?.name).toBe("Updated A");
   });
 
@@ -162,10 +166,10 @@ describe("publication observation", () => {
     const { result, rerender } = renderHook(({ initial }) => useRuntimeBranding(initial, "actor-a", true, read), {
       initialProps: { initial: tenantA },
     });
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     rerender({ initial: structuredClone(tenantA) });
     expect(result.current.branding?.name).toBe("Updated A");
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current.branding?.name).toBe("Updated A");
   });
 
@@ -174,7 +178,7 @@ describe("publication observation", () => {
     const read = vi.fn().mockResolvedValue(tenantA);
     const { result } = renderHook(() => useRuntimeBranding(initial, "actor-a", true, read));
     expect(result.current.branding).toBeNull();
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current.branding?.name).toBe("Tenant A");
   });
 
@@ -182,7 +186,7 @@ describe("publication observation", () => {
     const read = vi.fn().mockResolvedValue(tenantA);
     const { result } = renderHook(() => useRuntimeBranding(null, "actor-a", true, read));
     expect(result.current).toEqual({ branding: null, unavailable: true });
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current.branding?.name).toBe("Tenant A");
     expect(result.current.unavailable).toBe(false);
   });
@@ -190,7 +194,7 @@ describe("publication observation", () => {
   it("clears the old brand when a newer legacy publication supersedes it", async () => {
     const read = vi.fn().mockResolvedValue({ kind: "legacy_modules", tenantId: tenantA.configuration.tenantId, publicationRevision: 2, moduleKeys: ["services"] });
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a", true, read));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current).toEqual({ branding: null, unavailable: false });
   });
 
@@ -224,7 +228,7 @@ describe("same-origin branding reader", () => {
   it("makes the product hook use GET without an injected reader", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(updated), { headers: { "x-wf-branding-actor": "actor-a" } })));
     const { result } = renderHook(() => useRuntimeBranding(tenantA, "actor-a:tenant-a", true));
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
     expect(result.current.branding?.name).toBe("Updated A");
   });
 });

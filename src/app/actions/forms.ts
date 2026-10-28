@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { checkBotId } from "botid/server";
 import type {
   AssignFormInput,
   CorrectFormSubmissionInput,
@@ -11,7 +12,7 @@ import type {
 } from "../../domain/forms/schema";
 import { submitFormSchema } from "../../domain/forms/schema";
 import { parseInput } from "../../domain/shared";
-import { toClientSafeError } from "../../lib/errors/application-error";
+import { PermissionDeniedError, toClientSafeError } from "../../lib/errors/application-error";
 import { observeActionFailure } from "../../lib/security/observed-failure";
 import { createNextServerSupabaseClient, getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 import { FormRepository } from "../../repositories/form-repository";
@@ -164,6 +165,8 @@ export async function loadFormCollectionAvailability(canonicalKey?: string, expe
 export async function submitPublicFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
   try {
     const parsed = parseInput(submitFormSchema, input);
+    const verification = await checkBotId().catch(() => null);
+    if (verification?.isBot !== false) throw new PermissionDeniedError();
     const repository = new FormRepository(await createNextServerSupabaseClient());
     const submission = await repository.submit(parsed);
     return { ok: true, data: { id: submission.id } };

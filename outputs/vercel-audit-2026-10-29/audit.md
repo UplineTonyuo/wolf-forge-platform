@@ -1,5 +1,7 @@
 # Vercel cost and risk audit — 2026-10-29
 
+Owner follow-up: the attribution gate was explicitly overridden and branch pushes/automatic Preview deployments authorized. See [investigation and implementation follow-up](follow-up.md) for subsequent evidence. The capture below remains historical.
+
 Audit only. **Part B is stopped at the consumer-attribution gate.** No application code, Vercel settings, deployments, environment variables, domains or Supabase resources were changed.
 
 Captured on 2026-10-29 Singapore time (2026-10-28 approximately 20:23–20:40 UTC). Values are point-in-time observations and dashboard rounding is preserved. This report does not claim a seven-day route audit passed.

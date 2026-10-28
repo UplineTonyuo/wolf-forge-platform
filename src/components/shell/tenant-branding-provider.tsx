@@ -7,6 +7,7 @@ import {
 import type { RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { decodeRuntimeWhiteLabelConfiguration, WHITE_LABEL_PUBLICATION_CONTRACT_VERSION } from "../../domain/white-label/publication";
 import { tenantBranding } from "./tenant-branding";
+import { BRANDING_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
 
 export type RuntimeBrandingReader = () => Promise<RuntimeWhiteLabelConfiguration>;
 export type TenantBrandingState = { branding: ReturnType<typeof tenantBranding>; unavailable: boolean };
@@ -122,7 +123,8 @@ export function useRuntimeBranding(
     }
 
     const onReturn = () => { if (!document.hidden) void refresh(true); else resumePending = false; };
-    const interval = window.setInterval(() => { void refresh(); }, 30_000);
+    void refresh();
+    const interval = window.setInterval(() => { void refresh(); }, BRANDING_REFRESH_INTERVAL_MS);
     window.addEventListener("focus", onReturn);
     document.addEventListener("visibilitychange", onReturn);
     return () => {

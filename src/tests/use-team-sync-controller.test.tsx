@@ -2,7 +2,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TEAM_LIVE_CLOSED_MS, TEAM_LIVE_FAST_MS } from "../domain/team/live-scheduler";
+import { TEAM_LIVE_FAST_MS } from "../domain/team/live-scheduler";
 import { useTeamSyncController } from "../components/team/use-team-sync-controller";
 
 /**
@@ -31,6 +31,21 @@ function setOnline(value: boolean) {
 }
 
 describe("useTeamSyncController", () => {
+  it("reconciles closed Team immediately on focus and visibility return", async () => {
+    const syncLive = vi.fn().mockResolvedValue(ok());
+    const syncBackground = vi.fn().mockResolvedValue(okBackground());
+    const hook = renderHook(() => useTeamSyncController({ active: true, open: false, syncKey: "closed", syncLive, syncBackground }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => { window.dispatchEvent(new Event("focus")); await vi.advanceTimersByTimeAsync(0); });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    expect(syncBackground).toHaveBeenCalledTimes(2);
+    await act(async () => { setVisibility("hidden"); await vi.advanceTimersByTimeAsync(600_000); });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    await act(async () => { setVisibility("visible"); await vi.advanceTimersByTimeAsync(0); });
+    expect(syncLive).toHaveBeenCalledTimes(3);
+    expect(syncBackground).toHaveBeenCalledTimes(3);
+    hook.unmount();
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0.5);
@@ -281,12 +296,13 @@ describe("useTeamSyncController", () => {
     expect(syncLive).toHaveBeenCalledTimes(1); // still reconciles immediately on mount
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(TEAM_LIVE_FAST_MS);
+      await vi.advanceTimersByTimeAsync(59_999);
     });
-    expect(syncLive).toHaveBeenCalledTimes(1); // nowhere near the closed cadence yet
+    expect(syncLive).toHaveBeenCalledTimes(1);
+    expect(syncBackground).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(TEAM_LIVE_CLOSED_MS);
+      await vi.advanceTimersByTimeAsync(1);
     });
     expect(syncLive).toHaveBeenCalledTimes(2); // and still ticks, just on the closed cadence
     expect(syncBackground).toHaveBeenCalled(); // background lane keeps reconciling too

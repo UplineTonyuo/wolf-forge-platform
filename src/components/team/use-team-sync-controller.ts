@@ -67,7 +67,7 @@ type TeamSyncControllerOptions = {
  *
  * - three open-conversation tiers (FAST/WARM/QUIET) that decay from local or
  *   remote activity rather than staying pinned to one interval forever;
- * - a genuinely idle CLOSED cadence (15s, down from 1.2s);
+ * - a CLOSED cadence of 60s, with immediate reconciliation on return;
  * - explicit HIDDEN/OFFLINE pausing (no timer runs at all while
  *   `document.visibilityState !== "visible"` or `!navigator.onLine`), with
  *   immediate reconciliation on return;
