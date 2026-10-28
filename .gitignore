@@ -22,3 +22,4 @@ coverage/
 
 # Local Sentry source-map upload credential. Never commit.
 .env.sentry-build-plugin
+/.codex/config.toml
