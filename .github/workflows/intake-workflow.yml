@@ -1,0 +1,84 @@
+name: isolated intake workflow
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "data/intake-forms/**"
+      - "scripts/qa/intake-workflow-e2e.mjs"
+      - ".github/workflows/intake-workflow.yml"
+      - "src/**"
+      - "supabase/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intake-workflow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intake:
+    name: real Auth, purchase, intake, signature, start and PDF
+    if: >-
+      github.head_ref == 'codex/intake-publication-20261028' ||
+      (github.event_name == 'workflow_dispatch' && github.ref_name == 'codex/intake-publication-20261028')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      NEXT_TELEMETRY_DISABLED: "1"
+      WOLF_FORGE_STUDIO_QA_BUILD: "1"
+      SENTRY_URL: http://127.0.0.1:1
+      SENTRY_DISABLE_UPDATE_CHECK: "true"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: validate the exact template package
+        run: node scripts/qa/intake-workflow-e2e.mjs --check-fixtures
+      # Containers run only on this disposable GitHub runner, never the user's PC.
+      # No linked project, hosted secret, provider credential or production data is used.
+      - name: migrate fresh local Supabase with real Auth and private Storage
+        run: |
+          if ! npx supabase start --yes >"$RUNNER_TEMP/intake-supabase-start.log" 2>&1; then
+            echo "Local Supabase startup failed; raw output is retained only on this disposable runner."
+            exit 1
+          fi
+      - name: install Chromium on the runner
+        run: npx playwright install --with-deps chromium
+      - name: ensure independent PDF text extraction on the runner
+        run: |
+          if ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y poppler-utils
+          fi
+      - name: build the production app with inert build settings
+        env:
+          SUPABASE_URL: http://127.0.0.1:1
+          SUPABASE_PUBLISHABLE_KEY: build-only-nonsecret-placeholder
+        run: npm run build
+      - name: verify packaged PDF fonts
+        run: node scripts/qa/assert-pdf-font-trace.mjs
+      - name: run the actual authenticated Next workflow for all 59 services and 37 templates
+        run: node scripts/qa/intake-workflow-e2e.mjs
+      - name: upload synthetic screenshots, PDFs and redacted summary only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: isolated-intake-workflow
+          path: |
+            artifacts/intake-workflow/*.png
+            artifacts/intake-workflow/*.pdf
+            artifacts/intake-workflow/summary.json
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: stop runner-owned local services
+        if: always()
+        run: npx supabase stop --no-backup

@@ -655,3 +655,20 @@ a027382270eff517fe2f868abd5c04799881052e:supabase/tests/database/111_tenant_form
 8bd7cd1e69c065a9110f8e873bdd7084fdd8bca8:data/intake-forms/20261028/drafts/service-581.json:generic-api-key:119
 8bd7cd1e69c065a9110f8e873bdd7084fdd8bca8:data/intake-forms/20261028/drafts/service-581.json:generic-api-key:132
 8bd7cd1e69c065a9110f8e873bdd7084fdd8bca8:data/intake-forms/20261028/drafts/service-581.json:generic-api-key:147
+
+# Human-approved 2026-10-28: exact form-field identifier false positives from PR80.
+# Each value is a schema stable_field_key UUID, not a credential. No rule or path exclusions.
+# Shared photo folder or photo links — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-127.json:generic-api-key:175
+# Shared video link for your Maps Booster — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-127.json:generic-api-key:188
+# Client Agreement — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-127.json:generic-api-key:201
+# Business website URL — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-221.json:generic-api-key:69
+# Blog URLs or shared source articles — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-221.json:generic-api-key:82
+# Business website URL — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-223.json:generic-api-key:97
+# Blog URLs or shared source articles — stable field UUID; explicitly approved by the human.
+a515d5cf1c07bf73253ef6f53b01e1aff35629ef:data/intake-forms/20261028/drafts/intake-223.json:generic-api-key:110

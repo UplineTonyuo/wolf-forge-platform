@@ -29,7 +29,7 @@ function SubmittedSignature({ value }: { value: Json }) {
   return <div>{drawing ? <SignatureDrawing strokes={drawing} label="Submitted client signature" /> : null}<pre>{displayValue(value)}</pre></div>;
 }
 
-export function SubmissionDetail({ detail, canCorrect }: { detail: FormSubmissionDetail; canCorrect: boolean }) {
+export function SubmissionDetail({ detail, canCorrect, automaticPdf = false }: { detail: FormSubmissionDetail; canCorrect: boolean; automaticPdf?: boolean }) {
   const router = useRouter();
   const [correcting, setCorrecting] = useState(false);
   const [values, setValues] = useState<Record<string, Json>>(() => Object.fromEntries(detail.values.map((value) => [value.stable_field_key, value.value])));
@@ -52,7 +52,7 @@ export function SubmissionDetail({ detail, canCorrect }: { detail: FormSubmissio
   }
 
   return <div className={styles.submissionDetail}>
-    <DownloadFormPdf submissionId={detail.submission.id} />
+    <DownloadFormPdf submissionId={detail.submission.id} automatic={automaticPdf} />
     {followUp && followUp !== "not_required" ? <p className={followUp === "blocked" ? styles.actionError : undefined} role="status">
       {followUp === "completed" ? "Automatic follow-up completed." : followUp === "blocked"
         ? "Automatic follow-up needs staff review. Check the form publisher’s current permissions and configured Service." : "Automatic follow-up is awaiting processing."}

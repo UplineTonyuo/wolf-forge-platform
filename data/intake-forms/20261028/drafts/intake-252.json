@@ -3,8 +3,8 @@
   "form_type": "intake",
   "canonical_key": "rankfortress-intake-252",
   "definition": {
-    "name": "Intake Form for 200+ Local Citations (MANUALLY BUILT)",
-    "title": "Intake Form for 200+ Local Citations (MANUALLY BUILT)",
+    "name": "Intake Form for 100+ Local Citations (Manually Built)",
+    "title": "Intake Form for 100+ Local Citations (Manually Built)",
     "information_html": null,
     "visibility": "assigned",
     "type_config": {
@@ -18,7 +18,7 @@
         "label": "Before you submit",
         "internal_label": "source_252_field_1",
         "placeholder": null,
-        "help_html": "<p>DO NOT SUBMIT THIS FORM UNLESS YOU HAVE EVERYTHING AT ONE TIME. OTHERWISE WE WILL DELETE THE INPUT AND YOU WILL NEED TO REFILL IT OUT ONCE YOU HAVE EVERYTHING.</p>",
+        "help_html": "<p>Save your progress and return when you have all required information.</p>",
         "required": false,
         "settings": {
           "display_only": true
@@ -97,10 +97,10 @@
         "stable_field_key": "f63f0c50-4238-5f9a-bb84-c9753cd44277",
         "sort_order": 6,
         "field_type": "text",
-        "label": "Facebook",
+        "label": "Primary business social profile",
         "internal_label": "source_252_field_7",
         "placeholder": null,
-        "help_html": null,
+        "help_html": "<p>Provide at least one business social profile link from any platform you use. If you do not have any, enter &quot;I don’t have any&quot;.</p>",
         "required": true,
         "settings": {},
         "options": [],
@@ -114,7 +114,7 @@
         "internal_label": "source_252_field_8",
         "placeholder": null,
         "help_html": null,
-        "required": true,
+        "required": false,
         "settings": {},
         "options": [],
         "service_links": []
@@ -127,7 +127,7 @@
         "internal_label": "source_252_field_9",
         "placeholder": null,
         "help_html": null,
-        "required": true,
+        "required": false,
         "settings": {},
         "options": [],
         "service_links": []
@@ -140,7 +140,7 @@
         "internal_label": "source_252_field_10",
         "placeholder": null,
         "help_html": null,
-        "required": true,
+        "required": false,
         "settings": {},
         "options": [],
         "service_links": []
@@ -153,7 +153,7 @@
         "internal_label": "source_252_field_11",
         "placeholder": null,
         "help_html": null,
-        "required": true,
+        "required": false,
         "settings": {},
         "options": [],
         "service_links": []

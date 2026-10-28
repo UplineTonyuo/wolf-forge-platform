@@ -95,17 +95,22 @@ export async function assignFormAction(formId: string, input: AssignFormInput): 
   }
 }
 
-export async function submitAssignedFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string; followUp?: string; orderStart?: { id: string; status: string; started: boolean; requested: boolean } }>> {
+type AssignedSubmissionResult = { id: string; followUp?: string; orderStart?: { id: string; status: string; started: boolean; requested: boolean } };
+
+export async function submitAssignedFormAction(input: SubmitFormInput, downloadReceipt = false): Promise<FormMutationResult<AssignedSubmissionResult>> {
   const context = await getClientContext();
+  let result: AssignedSubmissionResult;
+  let receiptPath: string | null = null;
   try {
-    const submission = await context.services.forms.submit(input, context.actor);
+    const parsed = parseInput(submitFormSchema, input);
+    const submission = await context.services.forms.submit(parsed, context.actor);
     const queued = await context.client.rpc("app_get_intake_follow_up", { p_submission_id: submission.id });
     const followUp = !queued.error && queued.data === "not_required" ? "not_required"
       : await runIntakeSubmissionJob(submission.id).catch(() => "queued");
     let orderStart: { id: string; status: string; started: boolean; requested: boolean } | undefined;
-    if (input.context.assignment_id) {
+    if (parsed.context.assignment_id) {
       try {
-        const check = await context.client.rpc("app_reconcile_my_order_start", { p_assignment_id: input.context.assignment_id });
+        const check = await context.client.rpc("app_reconcile_my_order_start", { p_assignment_id: parsed.context.assignment_id });
         const state = !check.error ? clientOrderStartSchema.nullable().parse(check.data) : null;
         if (state) orderStart = { id: state.order_id, status: state.status, started: state.started, requested: state.requested };
       } catch { /* The form is already saved; maintenance retries a pending start. */ }
@@ -114,10 +119,14 @@ export async function submitAssignedFormAction(input: SubmitFormInput): Promise<
     revalidatePath("/account/projects"); revalidatePath("/orders"); revalidatePath("/dashboard");
     if (orderStart) revalidatePath(`/account/projects/${orderStart.id}`);
     revalidatePath("/account");
-    return { ok: true, data: { id: submission.id, followUp, ...(orderStart ? { orderStart } : {}) } };
+    result = { id: submission.id, followUp, ...(orderStart ? { orderStart } : {}) };
+    if (downloadReceipt === true && parsed.context.assignment_id) receiptPath = `/account/onboarding/${parsed.context.assignment_id}?submitted=${submission.id}`;
   } catch (error) {
     return failure(error);
   }
+  // Revalidation can replace the form before its client-side download starts.
+  if (receiptPath) redirect(receiptPath);
+  return { ok: true, data: result };
 }
 
 export async function loadFormCollectionAvailability(canonicalKey?: string, expectedVersionId?: string, assignmentId?: string): Promise<boolean> {
