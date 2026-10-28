@@ -32,14 +32,15 @@ const user: ClientUser = {
 const loaded = Object.assign(Promise.resolve(), { status: "fulfilled" as const, value: undefined });
 let payloads: Map<string, () => void>;
 let pushes: string[];
+let inPageHref: string | null;
 
 function Page({ pathname, ready }: { pathname: string; ready: Promise<void> }) {
   use(ready);
-  return <><h1>Page {pathname}</h1><input aria-label="Unsent draft" defaultValue="" /></>;
+  return <><h1>Page {pathname}</h1><input aria-label="Unsent draft" defaultValue="" />{inPageHref ? <a href={inPageHref} onClick={(event) => { event.preventDefault(); nav.push(inPageHref!); }}>Open project</a> : null}</>;
 }
 
-function Router() {
-  const [state, setState] = useState({ pathname: "/account", ready: loaded as Promise<void> });
+function Router({ initial = "/account" }: { initial?: string }) {
+  const [state, setState] = useState({ pathname: initial, ready: loaded as Promise<void> });
   useEffect(() => {
     nav.push = (route) => {
       pushes.push(route);
@@ -60,7 +61,7 @@ function click(route: string, options = {}) {
 function commit(route: string) { return act(async () => { payloads.get(route)!(); }); }
 function active() { return document.querySelector(".portal-nav a[aria-current='page']")?.getAttribute("href"); }
 
-beforeEach(() => { payloads = new Map(); pushes = []; nav.redirect = null; });
+beforeEach(() => { payloads = new Map(); pushes = []; nav.redirect = null; inPageHref = null; });
 afterEach(cleanup);
 
 describe("client navigation loading", () => {
@@ -131,4 +132,18 @@ describe("client navigation loading", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
+});
+
+
+it("shows a destination skeleton for a project link inside the portal, then clears on commit", async () => {
+  inPageHref = "/account/projects/example";
+  render(<Router initial="/account/projects" />);
+  const editor = screen.getByRole("textbox", { name: "Unsent draft" });
+  await act(async () => { fireEvent.click(screen.getByRole("link", { name: "Open project" })); });
+  expect(screen.getAllByRole("status")).toHaveLength(1);
+  expect(editor).not.toBeVisible();
+  expect(screen.getByText("Workspace controls")).toBeVisible();
+  await commit(inPageHref);
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.getByRole("heading", { name: "Page /account/projects/example" })).toBeVisible();
 });

@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouteTransitionPush } from "../../shell/route-transition";
+
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { AccountAvatar } from "../../ui/account-avatar";
 import { ClientCartPanel } from "../cart/client-cart-panel";
@@ -138,7 +140,7 @@ export function ClientCommandBar(props: {
   projectsAvailable?: boolean;
   notificationSoundEnabled: boolean;
 }) {
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const pathname = usePathname();
 
   /*
@@ -151,7 +153,7 @@ export function ClientCommandBar(props: {
       requestNewMessage();
       return;
     }
-    router.push("/account/messages?compose=1");
+    push("/account/messages?compose=1");
   };
 
   return (

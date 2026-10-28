@@ -13,6 +13,7 @@ import { ServiceChooserProvider } from "./services/service-chooser-context";
 import { portalNavigationFor } from "./portal-nav-registry";
 import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "../shell/tenant-branding-provider";
+import { coveredRoute, navigationUrlForClick, RouteTransitionProvider } from "../shell/route-transition";
 
 /**
  * The client workspace shell.
@@ -57,6 +58,11 @@ export function ClientAccountShell({
   const brandingState = useRuntimeBranding(runtimeConfiguration, `${user.id}:${user.companyId}`, true, readRuntimeConfiguration);
   const { branding, unavailable } = brandingState;
 
+  function begin(url: URL) {
+    const route = coveredRoute(url, pathname, (path) => path === "/account" || path.startsWith("/account/"));
+    if (route) setPendingRoute(route);
+  }
+
   function navigate(route: string, event: MouseEvent<HTMLAnchorElement>) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
@@ -69,6 +75,7 @@ export function ClientAccountShell({
 
   return (
     <TenantBrandingProvider value={brandingState}>
+    <RouteTransitionProvider begin={begin}>
     <ServiceChooserProvider catalog={serviceCatalog} available={storeGranted}>
       <PortalDrawerProvider>
       <div
@@ -94,7 +101,10 @@ export function ClientAccountShell({
           onNavigate={navigate}
         />
 
-        <main id="portal-main" className="portal-main">
+        <main id="portal-main" className="portal-main" onClick={(event) => {
+          const url = navigationUrlForClick(event);
+          if (url) startTransition(() => begin(url));
+        }}>
           {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
           <ClientCommandBar
             pendingRoute={pendingRoute}
@@ -115,6 +125,7 @@ export function ClientAccountShell({
       </div>
       </PortalDrawerProvider>
     </ServiceChooserProvider>
+    </RouteTransitionProvider>
     </TenantBrandingProvider>
   );
 }

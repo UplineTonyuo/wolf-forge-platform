@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouteTransitionPush } from "../../shell/route-transition";
+
 import { ArrowLeft, ArrowRight, LibraryBig, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { StoreFolderIcon } from "../store/store-folder-icon";
 import {
@@ -166,7 +167,7 @@ function ChooserBody({
 export function ClientServicesPanel() {
   const chooser = useServiceChooser();
   const panels = useHeaderPanels();
-  const router = useRouter();
+  const push = useRouteTransitionPush();
 
   if (!chooser?.available) return null;
 
@@ -175,7 +176,7 @@ export function ClientServicesPanel() {
 
   const choose = (service: ChooserService) => {
     panels?.close();
-    router.push(service.href);
+    push(service.href);
   };
 
   return (

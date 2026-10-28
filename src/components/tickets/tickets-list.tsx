@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import { createInternalTicketAction } from "../../app/actions/tickets";
 
 import { Bold, Filter, Heading1, Italic, Link2, Plus, Redo2, Search, TicketIcon, Undo2, X } from "lucide-react";
@@ -26,6 +28,7 @@ export function TicketsList({
   canCreate?: boolean;
 }) {
   const router = useRouter();
+  const push = useRouteTransitionPush();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
     const [priority, setPriority] = useState("all");
@@ -565,7 +568,7 @@ export function TicketsList({
 
     ticketDialogRef.current?.close();
 
-    router.push(
+    push(
       `/tickets/${result.ticketId}?created=1`,
     );
 

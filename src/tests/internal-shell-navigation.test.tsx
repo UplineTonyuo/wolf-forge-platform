@@ -1,6 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
+import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { startTransition, use, useEffect, useState } from "react";
 import type { Context, ReactNode } from "react";
@@ -37,10 +38,22 @@ const user = { id: "u1", displayName: "Test User", role: "owner", avatarUrl: nul
 const loaded = Object.assign(Promise.resolve(), { status: "fulfilled" as const, value: undefined });
 let payloads: Map<string, () => void>;
 let redirectTo: string | null;
+let inPageHref: string | null;
+let linkAttributes: Record<string, string>;
+let cancelClick: boolean;
 
 function Page({ pathname, ready }: { pathname: string; ready: Promise<void> }) {
   use(ready);
-  return <p>Page {pathname}</p>;
+  return <><p>Page {pathname}</p>{inPageHref ? <>
+    <input aria-label="Unsent draft" defaultValue="" />
+    <a href={inPageHref} {...linkAttributes} onClick={(event) => {
+      // Model Link's own navigation before the shell's bubble handler.
+      if (cancelClick) { event.preventDefault(); return; }
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.currentTarget.target === "_blank" || event.currentTarget.hasAttribute("download")) return;
+      event.preventDefault();
+      nav.push(inPageHref!);
+    }}><span>Next page</span></a>
+  </> : null}</>;
 }
 
 function Router({ initial }: { initial: string }) {
@@ -48,7 +61,7 @@ function Router({ initial }: { initial: string }) {
   useEffect(() => {
     nav.push = (route) => {
       const ready = new Promise<void>((resolve) => payloads.set(route, resolve));
-      startTransition(() => setState({ pathname: redirectTo ?? route, ready }));
+      startTransition(() => setState({ pathname: redirectTo ?? route.split(/[?#]/)[0]!, ready }));
     };
   }, []);
   return (
@@ -65,6 +78,12 @@ function start(initial: string) {
   const main = container.querySelector("main")!;
   return {
     main,
+    visibleText: () => {
+      const visible = main.cloneNode(true) as HTMLElement;
+      visible.querySelectorAll("[hidden]").forEach((node) => node.remove());
+      return visible.textContent;
+    },
+    inPageClick: (options = {}) => act(async () => { fireEvent.click(main.querySelector("a")!, options); }),
     click: (route: string) => act(async () => { fireEvent.click(container.querySelector(`.app-sidebar a[href='${route}']`)!); }),
     commit: (route: string) => act(async () => payloads.get(route)!()),
     skeleton: () => [...main.querySelectorAll("[data-skeleton]")].map((node) => node.getAttribute("data-skeleton")),
@@ -75,6 +94,9 @@ function start(initial: string) {
 beforeEach(() => {
   payloads = new Map();
   redirectTo = null;
+  inPageHref = null;
+  linkAttributes = {};
+  cancelClick = false;
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
 afterEach(() => {
@@ -85,15 +107,15 @@ afterEach(() => {
 describe("Sidebar navigation renders the destination skeleton", () => {
   it("redacts an internal Ticket segment from the mounted shell on confirmed denial", () => {
     const shell = start('/tickets/70000000-0000-4000-8000-000000000010');
-    expect(shell.main.textContent).toContain('Page /tickets/');
+    expect(shell.visibleText()).toContain('Page /tickets/');
     act(() => notifyTicketAccessUnavailable('70000000-0000-4000-8000-000000000010'));
-    expect(shell.main.textContent).not.toContain('Page /tickets/');
-    expect(shell.main.textContent).toContain('unavailable');
+    expect(shell.visibleText()).not.toContain('Page /tickets/');
+    expect(shell.visibleText()).toContain('unavailable');
   });
   it("leaves independent Team segments visible on a Ticket module denial", () => {
     const shell = start('/team');
     act(() => notifyTicketAccessUnavailable());
-    expect(shell.main.textContent).toBe('Page /team');
+    expect(shell.visibleText()).toBe('Page /team');
   });
   it.each([
     ["/team", "/investment-intent", "investmentIntent"],
@@ -103,17 +125,17 @@ describe("Sidebar navigation renders the destination skeleton", () => {
     ["/team/all-conversations", "/team", "team"],
   ])("%s → %s shows the %s skeleton, marks it active, then shows the page on commit", async (from, to, variant) => {
     const shell = start(from);
-    expect(shell.main.textContent).toBe(`Page ${from}`);
+    expect(shell.visibleText()).toBe(`Page ${from}`);
 
     await shell.click(to);
     expect(shell.skeleton()).toEqual([variant]);
-    expect(shell.main.textContent).not.toContain(`Page ${from}`);
+    expect(shell.visibleText()).not.toContain(`Page ${from}`);
     expect(shell.active()).toBe(to);
     expect(shell.main.className).toBe("workspace-route-stage");
 
     await shell.commit(to);
     expect(shell.skeleton()).toEqual([]);
-    expect(shell.main.textContent).toBe(`Page ${to}`);
+    expect(shell.visibleText()).toBe(`Page ${to}`);
     expect(shell.active()).toBe(to);
   });
 
@@ -141,7 +163,7 @@ describe("Sidebar navigation renders the destination skeleton", () => {
 
     await shell.commit("/investment-intent");
     expect(shell.skeleton()).toEqual([]);
-    expect(shell.main.textContent).toBe("Page /team");
+    expect(shell.visibleText()).toBe("Page /team");
     expect(shell.active()).toBe("/team");
   });
 
@@ -155,7 +177,7 @@ describe("Sidebar navigation renders the destination skeleton", () => {
 
     await shell.commit("/reporting");
     expect(shell.skeleton()).toEqual([]);
-    expect(shell.main.textContent).toBe("Page /reporting");
+    expect(shell.visibleText()).toBe("Page /reporting");
   });
 
   it("leaves modified clicks and the current route to the browser", async () => {
@@ -164,6 +186,78 @@ describe("Sidebar navigation renders the destination skeleton", () => {
     expect(shell.skeleton()).toEqual([]);
     fireEvent.click(document.querySelector(".app-sidebar a[href='/tickets']")!, { ctrlKey: true });
     expect(shell.skeleton()).toEqual([]);
-    expect(shell.main.textContent).toBe("Page /team");
+    expect(shell.visibleText()).toBe("Page /team");
+  });
+});
+
+
+describe("in-page navigation", () => {
+  it("shows the destination on tap and clears only when it commits", async () => {
+    inPageHref = "/forms/example";
+    const shell = start("/forms");
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual(["generic"]);
+    expect(shell.visibleText()).not.toContain("Page /forms");
+    await shell.commit(inPageHref);
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.visibleText()).toContain("Page /forms/example");
+  });
+
+  it.each(["/invoices?status=paid", "/invoices#history"])("keeps same-path %s changes in place", async (href) => {
+    inPageHref = href;
+    const shell = start("/invoices");
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.visibleText()).toContain("Page /invoices");
+    await shell.commit(href);
+  });
+
+  it.each([
+    [{ ctrlKey: true }, {}], [{ metaKey: true }, {}], [{ shiftKey: true }, {}],
+    [{ altKey: true }, {}], [{ button: 1 }, {}], [{}, { target: "_blank" }],
+    [{}, { download: "" }], [{}, { "data-route-skeleton": "off" }],
+  ])("preserves excluded click %j / %j", async (options, attributes) => {
+    inPageHref = "/forms/example";
+    linkAttributes = attributes;
+    const shell = start("/forms");
+    await shell.inPageClick(options);
+    expect(shell.skeleton()).toEqual([]);
+    if (payloads.has(inPageHref)) await shell.commit(inPageHref);
+  });
+
+  it("leaves the persistent Settings frame visible", async () => {
+    inPageHref = "/settings/team";
+    const shell = start("/settings/general");
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.visibleText()).toContain("Page /settings/general");
+    await shell.commit(inPageHref);
+  });
+
+  it("retains the mounted input through a cancelled navigation", async () => {
+    inPageHref = "/forms/example";
+    const shell = start("/forms");
+    const editor = shell.main.querySelector("input")!;
+    fireEvent.change(editor, { target: { value: "Keep this draft" } });
+    redirectTo = "/forms";
+    await shell.inPageClick();
+    expect(editor).not.toBeVisible();
+    expect(shell.main.querySelector("input")).toBe(editor);
+    await shell.commit(inPageHref);
+    expect(editor).toBeVisible();
+    expect(editor.value).toBe("Keep this draft");
+    expect(shell.skeleton()).toEqual([]);
+  });
+
+  it("does not leave a skeleton or discard input after preventDefault cancels a tap", async () => {
+    inPageHref = "/forms/example";
+    cancelClick = true;
+    const shell = start("/forms");
+    const editor = shell.main.querySelector("input")!;
+    fireEvent.change(editor, { target: { value: "Unsent" } });
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.main.querySelector("input")).toBe(editor);
+    expect(editor.value).toBe("Unsent");
   });
 });

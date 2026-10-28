@@ -31,6 +31,7 @@ export type InternalSkeletonVariant =
   | "team"
   | "conversations"
   | "settings"
+  | "section"
   | "generic";
 
 const EXACT: Record<string, InternalSkeletonVariant> = {
@@ -92,8 +93,8 @@ function Frame({
   children: ReactNode;
 }) {
   return (
-    <div className={`${className} internal-page-skeleton`} data-skeleton={variant} role="status">
-      <span className="sr-only">Loading page</span>
+    <div className={`${className} internal-page-skeleton`} data-skeleton={variant} role="status" aria-label={variant === "section" ? "Loading section" : undefined}>
+      {variant !== "section" ? <span className="sr-only">Loading page</span> : null}
       <div aria-hidden="true">{children}</div>
     </div>
   );
@@ -229,6 +230,19 @@ function Fields({ count }: { count: number }) {
 }
 
 /* ---------- destination compositions ---------- */
+
+export function SectionSkeleton() {
+  return (
+    <Frame variant="section" className="route-skeleton-section">
+      <div className="route-skeleton-stack">
+        <Bar w={160} h={20} />
+        <Bar w="60%" h={10} />
+        <Fields count={3} />
+        <Rows count={3} side={false} />
+      </div>
+    </Frame>
+  );
+}
 
 // Header bar widths per column (Ticket, Client / company, Status, Priority, Assigned, Last activity). Shapes only, no labels.
 const TICKET_COLUMNS = [44, 96, 46, 52, 56, 74];
@@ -559,6 +573,7 @@ const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
   team: TeamSkeleton,
   conversations: ConversationsSkeleton,
   settings: SettingsSkeleton,
+  section: SectionSkeleton,
   generic: GenericSkeleton,
 };
 

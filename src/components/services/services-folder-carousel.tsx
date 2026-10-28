@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -230,6 +232,7 @@ export function ServicesFolderCarousel({
   activeFolderId: string | null;
 }) {
   const router = useRouter();
+  const push = useRouteTransitionPush();
 
   const requestedIndex = activeFolderId
     ? items.findIndex((item) => item.id === activeFolderId)
@@ -389,7 +392,7 @@ export function ServicesFolderCarousel({
 
   function openCenterFolder() {
     if (!activeItem || motionLockedRef.current) return;
-    router.push(folderRoute(activeItem.id));
+    push(folderRoute(activeItem.id));
   }
 
   function handleFolderClick(offset: number) {
@@ -614,7 +617,7 @@ export function ServicesFolderCarousel({
             styles.centerFolder,
             styles.singleFolder,
           ].join(" ")}
-          onClick={() => router.push(folderRoute(item.id))}
+          onClick={() => push(folderRoute(item.id))}
           aria-label={`Open ${item.name}, ${countLabel(item.serviceCount)}`}
         >
           <FolderContents

@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import InternalLoading from "../app/(internal)/loading";
-import { RouteSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
+import { RouteSkeleton, SectionSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
 
 const nav = vi.hoisted(() => ({ pathname: "/orders" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
@@ -17,6 +17,13 @@ afterEach(() => {
 });
 
 describe("Internal route loading boundary", () => {
+  it("renders a content-only section with one status, no text and no focusable controls", () => {
+    const { container } = render(<SectionSkeleton />);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(container.textContent).toBe("");
+    expect(container.querySelector(".route-skeleton-section [aria-hidden='true']")).toBeTruthy();
+    expect(container.querySelector(".settings-page-layout, a[href], button, input, [tabindex]")).toBeNull();
+  });
   it("no longer ships a rule that hides the route stage", () => {
     const css = readFileSync(resolve(import.meta.dirname, "../app/globals.css"), "utf8");
     expect(css).not.toMatch(/is-vacuuming|is-entering/u);

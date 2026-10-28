@@ -35,6 +35,7 @@ import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
+import { coveredRoute, navigationUrlForClick, RouteTransitionProvider } from "./route-transition";
 import { TicketAccessBoundary } from "../tickets/ticket-access-boundary";
 import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "./tenant-branding-provider";
@@ -152,6 +153,11 @@ export function InternalShell({
    */
   const [pendingRoute, setPendingRoute] = useOptimistic<string | null>(null);
 
+  function begin(url: URL) {
+    const route = coveredRoute(url, pathname, (path) => !/^\/(account|api|activate|f|launch|login)(\/|$)/.test(path));
+    if (route) setPendingRoute(route);
+  }
+
   function handleSidebarNavigate(
     route: string,
     event: MouseEvent<HTMLAnchorElement>,
@@ -209,6 +215,7 @@ export function InternalShell({
 
   return (
     <TenantBrandingProvider value={brandingState}>
+    <RouteTransitionProvider begin={begin}>
     <TeamPresenceProvider enabled={user.teamMessaging.use}>
       <div
         className={`internal-app${branding ? " tenant-workspace" : ""}`}
@@ -260,6 +267,10 @@ export function InternalShell({
       <div
         id="main-content"
         className="workspace"
+        onClick={(event) => {
+          const url = navigationUrlForClick(event);
+          if (url) startTransition(() => begin(url));
+        }}
       >
         {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
         <WorkspaceCommandBar
@@ -286,17 +297,21 @@ export function InternalShell({
         />
 
         <main className="workspace-route-stage">
-          {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : ticketRoute ? (
+          {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : null}
+          <div className="workspace-route-content" hidden={pendingRoute !== null}>
+          {ticketRoute ? (
             user.tickets.view ? (
               <TicketAccessBoundary key={pathname} ticketId={pathname.split("/")[2]} listenForModuleDenial>
                 {children}
               </TicketAccessBoundary>
             ) : <p role="alert">This conversation is unavailable.</p>
           ) : children}
+          </div>
         </main>
       </div>
       </div>
     </TeamPresenceProvider>
+    </RouteTransitionProvider>
     </TenantBrandingProvider>
   );
 }
