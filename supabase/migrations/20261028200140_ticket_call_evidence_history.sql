@@ -163,6 +163,22 @@ begin
   return found;
 end $$;
 
+create function public.app_reconcile_ticket_call_account(p_account text,p_month date,p_unmapped_seconds numeric,p_observed_at timestamptz)
+returns boolean language plpgsql security definer set search_path='' as $$
+begin
+  perform private.ticket_call_lock();
+  if p_account is distinct from 'wolfforge' or p_month is null or extract(day from p_month)<>1
+    or p_unmapped_seconds is null or p_unmapped_seconds<0 or p_unmapped_seconds>='Infinity'::numeric or p_observed_at is null
+    or p_observed_at>clock_timestamp()+interval '5 seconds' then
+    raise exception 'Invalid account usage evidence' using errcode='22023'; end if;
+  insert into private.ticket_call_account_usage(month,unmapped_seconds,verified_at)
+    values(p_month,p_unmapped_seconds,p_observed_at)
+    on conflict(month) do update set unmapped_seconds=greatest(ticket_call_account_usage.unmapped_seconds,excluded.unmapped_seconds),
+      verified_at=greatest(ticket_call_account_usage.verified_at,excluded.verified_at);
+  perform private.ticket_call_record_budget_alerts(p_month);
+  return true;
+end $$;
+
 create function private.prune_ticket_call_history() returns integer
 language plpgsql security definer set search_path='' as $$
 declare n integer;
@@ -187,7 +203,8 @@ begin
   for func in select p.oid::regprocedure signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where (n.nspname='private' and p.proname in ('ticket_call_overlap','prune_ticket_call_history'))
       or (n.nspname='public' and p.proname in ('app_ticket_call_history','app_ticket_call_owner_summary',
-        'app_complete_ticket_call_room','app_ingest_ticket_call_evidence','app_claim_ticket_call_cleanup','app_finish_ticket_call_cleanup')) loop
+        'app_complete_ticket_call_room','app_ingest_ticket_call_evidence','app_claim_ticket_call_cleanup','app_finish_ticket_call_cleanup',
+        'app_reconcile_ticket_call_account')) loop
     execute format('revoke all on function %s from public,anon,authenticated,service_role',func.signature);
   end loop;
   for config in select * from (values
@@ -202,7 +219,8 @@ end $$;
 grant execute on function public.app_ticket_call_history(uuid,timestamptz,uuid),public.app_ticket_call_owner_summary(date) to authenticated;
 grant execute on function public.app_complete_ticket_call_room(uuid,uuid,jsonb),
   public.app_ingest_ticket_call_evidence(jsonb,boolean),public.app_claim_ticket_call_cleanup(),
-  public.app_finish_ticket_call_cleanup(uuid,uuid,boolean) to service_role;
+  public.app_finish_ticket_call_cleanup(uuid,uuid,boolean),
+  public.app_reconcile_ticket_call_account(text,date,numeric,timestamptz) to service_role;
 
 create function private.ticket_call_bell_visible(p_key text) returns boolean
 language sql stable security definer set search_path='' as $$

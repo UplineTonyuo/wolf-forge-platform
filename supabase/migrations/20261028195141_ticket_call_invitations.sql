@@ -23,6 +23,17 @@ create table private.ticket_call_settings (
   fallback_team_profile_id uuid references public.profiles(id),
   monthly_minutes integer not null default 600 check (monthly_minutes between 1 and 5400)
 );
+create table private.ticket_call_account_usage (
+  month date primary key check (extract(day from month)=1),
+  unmapped_seconds numeric not null check (unmapped_seconds>=0 and unmapped_seconds<'Infinity'::numeric),
+  verified_at timestamptz not null
+);
+create table private.ticket_call_budget_alerts (
+  month date not null,
+  threshold integer not null check (threshold in (75,90,100)),
+  occurred_at timestamptz not null default clock_timestamp(),
+  primary key(month,threshold)
+);
 create table private.ticket_call_settings_audit (
   id bigint generated always as identity primary key,
   tenant_id uuid not null references public.tenants(id),
@@ -171,8 +182,19 @@ create function private.ticket_call_enabled(p_tenant uuid) returns boolean
 language sql stable security definer set search_path='' as $$
 select exists(select 1 from private.ticket_call_environment env
   join private.ticket_call_settings settings on settings.tenant_id=p_tenant and settings.enabled
+  join private.ticket_call_account_usage usage on usage.month=(date_trunc('month',clock_timestamp() at time zone 'UTC'))::date
   where env.enabled and env.verified_at>clock_timestamp()-interval '30 days'
+    and usage.verified_at>clock_timestamp()-interval '1 hour'
     and env.verified_free_minutes>=6000);
+$$;
+
+create function private.ticket_call_record_budget_alerts(p_month date) returns void
+language sql security definer set search_path='' as $$
+insert into private.ticket_call_budget_alerts(month,threshold)
+select p_month,threshold from private.ticket_call_environment env cross join unnest(array[75,90,100]) threshold
+where (coalesce((select sum(coalesce(settled_seconds,reserved_seconds)) from private.ticket_call_reservations where month=p_month),0)
+  +coalesce((select unmapped_seconds from private.ticket_call_account_usage where month=p_month),0))
+  >=env.allocation_minutes*60*threshold/100.0 on conflict do nothing;
 $$;
 
 create function private.ticket_call_month_slices(p_start timestamptz,p_end timestamptz)
@@ -317,6 +339,7 @@ begin
         coalesce(sum(coalesce(r.settled_seconds,r.reserved_seconds)) filter(where call.tenant_id=t.tenant_id),0)
         into used,tenant_used from private.ticket_call_reservations r join private.ticket_calls call on call.id=r.call_id
         where r.month=slice.month;
+      used:=used+coalesce((select unmapped_seconds from private.ticket_call_account_usage where month=slice.month),0);
       if used+slice.seconds>env.allocation_minutes*60 or tenant_used+slice.seconds>settings.monthly_minutes*60 then refusal:='refused'; exit; end if;
     end loop;
   end if;
@@ -332,6 +355,7 @@ begin
     insert into private.ticket_call_reservations(call_id,month,reserved_seconds)
       select c.id,month,seconds from private.ticket_call_month_slices(stamp,c.expires_at);
   end if;
+  perform private.ticket_call_record_budget_alerts((date_trunc('month',stamp at time zone 'UTC'))::date);
   insert into private.ticket_call_events(call_id,event,actor_id) values(c.id,coalesce(refusal,'requested'),auth.uid());
   return private.ticket_call_projection(c);
 end $$;
@@ -413,7 +437,8 @@ revoke all on function public.app_complete_ticket_call_setup(uuid) from public,a
 do $$
 declare table_name text; func record;
 begin
-  foreach table_name in array array['ticket_call_environment','ticket_call_settings','ticket_call_settings_audit','ticket_call_claims',
+  foreach table_name in array array['ticket_call_environment','ticket_call_settings','ticket_call_settings_audit',
+    'ticket_call_account_usage','ticket_call_budget_alerts','ticket_call_claims',
     'ticket_call_reservations','ticket_call_events','ticket_call_cleanup','ticket_call_evidence','ticket_call_intervals'] loop
     execute format('alter table private.%I enable row level security',table_name);
     execute format('alter table private.%I force row level security',table_name);

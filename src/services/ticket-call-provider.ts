@@ -82,3 +82,12 @@ export async function ingestTicketCallEvidence(trusted: CallRpc, value: unknown,
   const evidence = callEvidence.parse(value);
   return z.boolean().parse(await callRpc(trusted, "app_ingest_ticket_call_evidence", { p_evidence: evidence, p_complete: complete }));
 }
+
+export async function reconcileTicketCallAccount(trusted: CallRpc, value: unknown) {
+  const input = z.object({ account: z.literal("wolfforge"), month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-01$/),
+    unmappedSeconds: z.number().finite().nonnegative(), observedAt: z.iso.datetime({ offset: true }),
+  }).strict().parse(value);
+  return z.boolean().parse(await callRpc(trusted, "app_reconcile_ticket_call_account", {
+    p_account: input.account, p_month: input.month, p_unmapped_seconds: input.unmappedSeconds, p_observed_at: input.observedAt,
+  }));
+}

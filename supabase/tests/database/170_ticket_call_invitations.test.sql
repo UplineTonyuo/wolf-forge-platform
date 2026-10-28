@@ -42,6 +42,11 @@ select throws_ok($q$select public.app_ticket_call_command('accept',pg_temp.call_
   '42501','Call already taken or ended','second device cannot take over');
 reset role;
 select ok((select answered_at is null from private.ticket_calls where id=pg_temp.call_id()),'acceptance does not mark answered');
+update private.ticket_calls set state='active' where id=pg_temp.call_id();
+select pg_temp.actor('1702'); set local role authenticated;
+select is(pg_temp.request('0006','1703')->>'outcome','busy','active call refuses call waiting');
+reset role;
+select pg_temp.actor('1704');
 update public.tickets set status='closed',closed_at=clock_timestamp() where id='e1700000-0000-4000-8000-000000001701';
 update private.ticket_call_settings set enabled=false;
 set local role authenticated;
@@ -50,6 +55,9 @@ reset role;
 select is((select settled_seconds from private.ticket_call_reservations),0::numeric,'no-provider end releases hold');
 select is((select count(*) from private.ticket_call_claims),0::bigint,'no-provider end releases claims');
 update private.ticket_call_settings set enabled=true,fallback_team_profile_id=null;
+select pg_temp.actor('1701'); set local role authenticated;
+select throws_ok($q$select pg_temp.request('0007')$q$,'42501','Call unavailable','client cannot start a call on own closed Ticket');
+reset role;
 select pg_temp.actor('1702'); set local role authenticated;
 select is(pg_temp.request('0004','1704')->>'outcome','refused','unassigned with empty setting is logged refused');
 select is(pg_temp.request('0004','1704')->>'message','Please send a message instead','exact fallback refusal copy');
@@ -62,6 +70,9 @@ update private.ticket_calls set ring_deadline=clock_timestamp()-interval '1 seco
 select is(private.process_ticket_call_deadlines(),1,'server job finalizes without a browser');
 select is((select outcome from private.ticket_calls where request_id='71000000-0000-4000-8000-000000000005'),'missed','silent ring becomes missed');
 select is(private.process_ticket_call_deadlines(),0,'deadline finalization is idempotent');
+select is((select count(*) from public.notifications where event_key like 'ticket-call-missed:%'),1::bigint,'exactly one missed bell');
+select is((select count(*) from private.push_deliveries where notification_id in
+  (select id from public.notifications where event_key like 'ticket-call-missed:%')),0::bigint,'missed bell does not enroll or dispatch push');
 select pg_temp.actor('1703'); set local role authenticated;
 select is(public.app_configure_ticket_call_settings(true,'20000000-0000-4000-8000-000000001704',600),true,'owner can configure fallback member');
 select throws_ok($q$select public.app_configure_ticket_call_settings(true,null,601)$q$,'22023','Invalid call settings','Tenant owner cannot take live allocation');

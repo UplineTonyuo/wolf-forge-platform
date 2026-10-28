@@ -60,7 +60,7 @@ async function reset() {
 async function invite(t = "1701", user = "1701") {
   return json(await observer.query(`begin; ${actor(user)} ${request(t, "0001")} commit;`));
 }
-async function race(name, leftActor, leftSql, rightActor, rightSql, verify, expectRightFailure = false) {
+async function race(name, leftActor, leftSql, rightActor, rightSql, verify, expectRightFailure = false, whileBlocked = async () => {}) {
   const a = new Session(`calling-a-${++caseNumber}`); const b = new Session(`calling-b-${caseNumber}`);
   try {
     await a.query(`begin; ${actor(leftActor)}`); await b.query(`begin; ${actor(rightActor)}`);
@@ -77,6 +77,7 @@ async function race(name, leftActor, leftSql, rightActor, rightSql, verify, expe
       await new Promise(resolve => setTimeout(resolve, 20));
     }
     assert.ok(blocked, "losing transaction genuinely overlapped and waited on the winner");
+    await whileBlocked();
     await a.query("commit;");
     const right = await rightPromise;
     if (expectRightFailure) assert.match(right.error?.message ?? "", /Call already taken or ended|Call unavailable/);
@@ -113,6 +114,15 @@ try {
   await race("cancel then accept", "1701", command("cancel", call.id), "1704", command("accept", call.id), async () => {
     assert.equal((await observer.query(`select state from private.ticket_calls where id='${call.id}';`))[0], "ended");
   }, true);
+
+  await reset(); call = await invite();
+  await observer.query(`update private.ticket_calls set ring_deadline=clock_timestamp()+interval '3 seconds' where id='${call.id}';`);
+  await race("accept deadline expires while blocked", "1701", command("status", call.id), "1704", command("accept", call.id), async (left) => {
+    assert.equal(json(left).state, "ringing");
+    assert.equal((await observer.query(`select accepted_at is null from private.ticket_calls where id='${call.id}';`))[0], "t");
+    await observer.query("select private.process_ticket_call_deadlines();");
+    assert.equal((await observer.query(`select outcome from private.ticket_calls where id='${call.id}';`))[0], "missed");
+  }, true, () => observer.query("select pg_sleep(3.2);"));
 
   await reset();
   await race("opposite directions", "1701", request("1701", "0010"), "1704", request("1701", "0011"), async (left, right) => {

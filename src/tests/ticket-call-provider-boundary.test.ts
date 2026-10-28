@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { callRoomProperties } from "../lib/daily/calls";
-import { ingestTicketCallEvidence, prepareTicketCallMedia, reconcileTicketCallCleanup } from "../services/ticket-call-provider";
+import { ingestTicketCallEvidence, prepareTicketCallMedia, reconcileTicketCallAccount, reconcileTicketCallCleanup } from "../services/ticket-call-provider";
 const id = "71000000-0000-4000-8000-000000000001";
 const actor = "71000000-0000-4000-8000-000000000002";
 const claim = () => ({ id, roomName: `wf-call-${id}`, claimId: actor, mode: "audio", created: true, expiresAt: new Date(Date.now() + 850000).toISOString() });
@@ -58,4 +58,14 @@ it("requires a persisted cleanup receipt even after room absence", async () => {
 it("validates bounded trusted evidence before the database", async () => {
   await expect(ingestTicketCallEvidence(trusted, { account: "other" })).rejects.toThrow();
   expect(trusted.rpc).not.toHaveBeenCalled();
+});
+it("validates the account snapshot before trusted reconciliation", async () => {
+  const snapshot = { account: "wolfforge", month: "2026-10-01", unmappedSeconds: 120, observedAt: "2026-10-29T00:00:00Z" };
+  await expect(reconcileTicketCallAccount(trusted, { ...snapshot, unmappedSeconds: Infinity })).rejects.toThrow();
+  await expect(reconcileTicketCallAccount(trusted, { ...snapshot, account: "other" })).rejects.toThrow();
+  expect(trusted.rpc).not.toHaveBeenCalled();
+  expect(await reconcileTicketCallAccount(trusted, snapshot)).toBe(true);
+  expect(trusted.rpc).toHaveBeenCalledWith("app_reconcile_ticket_call_account", {
+    p_account: "wolfforge", p_month: "2026-10-01", p_unmapped_seconds: 120, p_observed_at: "2026-10-29T00:00:00Z",
+  });
 });
