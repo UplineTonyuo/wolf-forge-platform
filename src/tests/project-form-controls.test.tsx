@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CompanyRow, ServiceFolderRow, ServiceRow } from "../lib/supabase/database-rows";
 import type { ServiceAssigneeOption } from "../repositories/service-repository";
@@ -116,21 +116,28 @@ describe("Create Project custom controls", () => {
     const due = dayInCurrentMonth();
 
     fireEvent.click(screen.getByRole("button", { name: "Due date: Select a date" }));
-    fireEvent.click(await screen.findByRole("button", { name: due.label }));
+    const dueCalendar = await screen.findByRole("dialog", { name: "Project due date" });
+    fireEvent.click(within(dueCalendar).getByRole("button", { name: due.label }));
     expect(container.querySelector('input[name="due_at"]')).toHaveValue(due.iso);
+    await waitFor(() => expect(dueCalendar).not.toBeInTheDocument());
 
     const start = dayInCurrentMonth();
     fireEvent.click(screen.getByRole("button", { name: "Start date: Select a date" }));
-    fireEvent.click(await screen.findByRole("button", { name: start.label }));
+    const startCalendar = await screen.findByRole("dialog", { name: "Project start date" });
+    fireEvent.click(within(startCalendar).getByRole("button", { name: start.label }));
     expect(container.querySelector('input[name="started_at"]')).toHaveValue(start.iso);
+    await waitFor(() => expect(startCalendar).not.toBeInTheDocument());
 
     /* Clear is offered and empties the value, preserving the optional field. */
     fireEvent.click(screen.getByRole("button", { name: /^Due date:/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "Clear" }));
+    const dueClearCalendar = await screen.findByRole("dialog", { name: "Project due date" });
+    fireEvent.click(within(dueClearCalendar).getByRole("button", { name: "Clear" }));
     expect(container.querySelector('input[name="due_at"]')).toHaveValue("");
+    await waitFor(() => expect(dueClearCalendar).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /^Start date:/ }));
-    fireEvent.click(await screen.findByRole("button", { name: "Clear" }));
+    const startClearCalendar = await screen.findByRole("dialog", { name: "Project start date" });
+    fireEvent.click(within(startClearCalendar).getByRole("button", { name: "Clear" }));
     expect(container.querySelector('input[name="started_at"]')).toHaveValue("");
   });
 

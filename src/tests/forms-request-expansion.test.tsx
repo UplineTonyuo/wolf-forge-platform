@@ -42,7 +42,7 @@ describe("saved intake forms", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
     await screen.findByRole("heading", { name: "Submitted" });
     expect(screen.getByRole("status").getAttribute("data-state")).toBe("complete");
-    expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: "Synthetic company" }] }));
+    expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: "Synthetic company" }] }), true);
   });
   it("displays agreement content without collecting an answer or saving a dummy draft value", async () => {
     mount({ ...schema, fields: [...schema.fields, { ...schema.fields[0]!, stable_field_key: fileId, field_type: "richtext", label: "SEO Agreement", required: false,
@@ -102,7 +102,7 @@ describe("saved intake forms", () => {
     fireEvent.change(screen.getByLabelText(/Signature/), { target: { value: "Synthetic signer" } });
     fireEvent.click(screen.getByRole("checkbox", { name: /I agree to use my typed name/ }));
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
-    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: { name: "Synthetic signer", consent: true } }] })));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: { name: "Synthetic signer", consent: true } }] }), true));
   });
   it("restores and submits a drawn signature through the existing assigned form flow", async () => {
     const signature = { name: "Synthetic signer", consent: true, drawing: [[[10, 20], [100, 80]]] };
@@ -111,7 +111,7 @@ describe("saved intake forms", () => {
     await screen.findByText("Your saved draft has been restored.");
     expect(screen.getByRole("img", { name: "Signature drawing area" }).querySelector("polyline")?.getAttribute("points")).toBe("10,20 100,80");
     fireEvent.click(screen.getByRole("button", { name: "Submit Form" }));
-    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: signature }] })));
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ values: [{ field_key: key, value: signature }] }), true));
   });
   it("reports confirmed order progress after submission using the server-scoped order link", async () => {
     mocks.submit.mockResolvedValue({ ok: true, data: { id: "response", orderStart: { id: fileId, status: "working", requested: true, started: true } } });

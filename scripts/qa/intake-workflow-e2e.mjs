@@ -19,7 +19,15 @@ const bundle = resolve("data/intake-forms/20261028");
 const output = resolve("artifacts/intake-workflow");
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNg4A38DwABzQFelLyDQQAAAABJRU5ErkJggg==", "base64");
-const report = { status: "incomplete", scope: "Intake workflow using synthetic one-time balance offers for all 59 service IDs; recurring billing is not exercised. Agreement wording and production publication remain separate gates.", checks: [], cases: [], consoleErrors: [], blockedExternalRequests: 0 };
+const report = { status: "incomplete", scope: "Intake workflow using synthetic one-time balance offers for all 59 service IDs; recurring billing is not exercised. Agreement wording and production publication remain separate gates.", checks: [], cases: [], consoleErrors: [], environmentNotices: [], optionalTelemetryScriptsStubbed: 0, blockedExternalRequests: 0 };
+
+function captureConsole(message) {
+  if (message.type() !== "error") return;
+  const text = scrub(message.text());
+  if (text === "The Content Security Policy directive 'upgrade-insecure-requests' is ignored when delivered in a report-only policy.") {
+    if (!report.environmentNotices.includes(text)) report.environmentNotices.push(text);
+  } else report.consoleErrors.push(text);
+}
 const secrets = [];
 let step = "fixture checks", browser, page, proxy, server, temporary;
 const need = (condition, message) => assert.ok(condition, message);
@@ -221,6 +229,12 @@ async function main() {
   // HTTPS preserves the application's production Secure cookies and same-origin action checks.
   proxy = createHttpsServer({ key: await readFile(join(temporary, "key.pem")), cert: await readFile(join(temporary, "cert.pem")) }, (request, response) => {
     if (request.headers.host !== new URL(origin).host) { response.writeHead(403).end(); return; }
+    // Vercel supplies this optional telemetry script only on its hosted platform.
+    if (request.method === "GET" && request.url === "/_vercel/speed-insights/script.js") {
+      report.optionalTelemetryScriptsStubbed++;
+      response.writeHead(200, { "content-type": "application/javascript", "cache-control": "no-store" }).end();
+      return;
+    }
     const upstream = httpRequest({ hostname: "127.0.0.1", port: 3000, path: request.url, method: request.method, headers: { ...request.headers, "x-forwarded-host": new URL(origin).host, "x-forwarded-proto": "https" } }, (received) => {
       response.writeHead(received.statusCode, received.headers); received.pipe(response);
     });
@@ -252,6 +266,7 @@ async function main() {
   const ownerPage = await owner.context.newPage();
   page = ownerPage;
   ownerPage.on("pageerror", (error) => report.consoleErrors.push(scrub(error.message)));
+  ownerPage.on("console", captureConsole);
   step = "owner reviewed-template draft";
   const reviewed = templates.find((entry) => entry.meta.file === "intake-147.json");
   const definition = reviewed.payload.definition;
@@ -367,7 +382,8 @@ async function main() {
             if (!element) return false;
             const box = element.getBoundingClientRect();
             const style = getComputedStyle(element);
-            return style.transform === "none" && Number(style.opacity) === 1
+            const identity = style.transform === "none" || new DOMMatrixReadOnly(style.transform).isIdentity;
+            return identity && Number(style.opacity) === 1
               && box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1;
           });
           need(await dialog.evaluate((element) => { const box = element.getBoundingClientRect(); return box.left >= -1 && box.right <= innerWidth + 1 && box.top >= -1 && box.bottom <= innerHeight + 1; }), "Builder sheet leaves the viewport");
@@ -437,7 +453,7 @@ async function main() {
     page = await buyer.context.newPage();
     page.setDefaultTimeout(20000);
     page.on("pageerror", (error) => report.consoleErrors.push(scrub(error.message)));
-    page.on("console", (message) => { if (message.type() === "error") report.consoleErrors.push(scrub(message.text())); });
+    page.on("console", captureConsole);
     await page.goto(`${origin}/account/store/${serviceId}`, { waitUntil: "networkidle" });
     need((await page.title()).length > 0 && !(await page.locator("nextjs-portal").count()), "Store page is blank or shows a framework overlay");
     await page.getByRole("button", { name: "Purchase with Wolf Forge Balance", exact: true }).click();
@@ -544,7 +560,8 @@ async function main() {
     buyer.pdfCalls.push(Date.now(), Date.now(), Date.now());
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Submit Form", exact: true }).click();
-    await page.getByRole("heading", { name: "Submitted", exact: true }).waitFor();
+    await page.waitForURL((url) => url.pathname === `/account/onboarding/${assignment.id}` && uuid.test(url.searchParams.get("submitted") || ""));
+    await page.getByRole("heading", { name: "Submitted responses", exact: true }).waitFor();
     const automatic = await download;
     const submissionId = automatic.suggestedFilename().match(/^form-submission-([0-9a-f-]{36})\.pdf$/i)?.[1];
     need(submissionId && uuid.test(submissionId), "Automatic download did not identify the saved submission");

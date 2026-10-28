@@ -213,7 +213,7 @@ export function FormRenderer({
     };
     startTransition(async () => {
       const response = mode === "assigned"
-        ? await submitAssignedFormAction(input)
+        ? await submitAssignedFormAction(input, true)
         : await submitPublicFormAction(input);
       if (!response.ok) {
         setError(response.error);

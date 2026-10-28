@@ -20,8 +20,9 @@ export const metadata: Metadata = { title: "Onboarding item" };
  */
 export default async function AssignedFormPage({
   params,
+  searchParams,
 }: PageProps<"/account/onboarding/[assignmentId]">) {
-  const [{ assignmentId }, context] = await Promise.all([params, getClientContext()]);
+  const [{ assignmentId }, query, context] = await Promise.all([params, searchParams, getClientContext()]);
 
   try {
     const [history, workEnabled] = await Promise.all([
@@ -36,7 +37,8 @@ export default async function AssignedFormPage({
         <Link href="/account/onboarding" className={styles.backLink}><ArrowLeft aria-hidden="true" />All onboarding</Link>
         <h1>{history.title}</h1>
         {!workEnabled ? <p>Form collection is paused. Your request and submitted responses are retained.</p> : null}
-        {receipt ? <SubmissionDetail detail={receipt} canCorrect={false} /> : <p>No response has been submitted. This request remains outstanding.</p>}
+        {receipt ? <SubmissionDetail detail={receipt} canCorrect={false} automaticPdf={history.status === "completed" && typeof query.submitted === "string" && query.submitted === history.latest_submission_id && query.submitted === receipt.submission.id} /> : <p>No response has been submitted. This request remains outstanding.</p>}
+        {history.order_id ? <Link href={`/account/projects/${history.order_id}`}>View your order →</Link> : null}
       </div>;
     }
     const detail = await context.services.forms.getAssignedForm(assignmentId);
