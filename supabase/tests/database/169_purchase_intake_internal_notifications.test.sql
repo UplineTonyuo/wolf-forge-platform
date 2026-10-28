@@ -243,7 +243,7 @@ insert into notice_ids select 'owner-purchase-notice',id from public.notificatio
   where recipient_profile_id='c6280000-0000-4000-8000-000000000001'
     and event_key='order-purchased:'||(select id from notice_ids where label='order')::text;
 select set_config('request.jwt.claim.sub','',true);
-update public.orders set status='complete' where tenant_id='c6280000-0000-4000-8000-000000000010';
+update public.orders set status='complete',completed_at=now() where tenant_id='c6280000-0000-4000-8000-000000000010';
 select pg_temp.act(1);
 select private.publish_tenant_modules('c6280000-0000-4000-8000-000000000010',1,
   (select array_agg(module_key order by module_key) from private.white_label_modules where module_key not in('forms','projects')),'Synthetic Projects OFF');
