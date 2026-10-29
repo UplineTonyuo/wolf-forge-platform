@@ -368,7 +368,9 @@ select throws_ok($$update public.form_versions set title='trusted off draft' whe
 select throws_ok($$update public.form_assignments set due_at=now() where id=(select id from wlforms136_ids where label='wf-intake-assignment')$$,'42501',null,'trusted outstanding assignment mutation refuses OFF');
 set local role anon;
 set local "request.jwt.claim.role"='anon';
-select throws_ok($$select public.app_get_published_form_schema('wlforms136-wf-public')$$,'P0002',null,'public schema unavailable OFF');
+set local role service_role;
+select throws_ok($$select public.app_get_public_form_schema('f1360010-0000-4000-8000-000000001800','wlforms136-wf-public')$$,'P0002',null,'trusted public schema unavailable OFF');
+set local role anon;
 select is((public.app_submit_form('f1360050-0000-4000-8000-000000001822',(select id from wlforms136_ids where label='wf-public-v1'),'{}',jsonb_build_array(jsonb_build_object('field_key','f1360060-0000-4000-8000-000000001801','value','synthetic subject'),jsonb_build_object('field_key','f1360060-0000-4000-8000-000000001802','value','synthetic message')),'[]')).id,(select id from wlforms136_ids where label='guest-persisted'),'accepted guest replay returns original ID OFF');
 select throws_ok($$select public.app_submit_form('f1360050-0000-4000-8000-000000001837',(select id from wlforms136_ids where label='wf-public-v1'),'{}',jsonb_build_array(jsonb_build_object('field_key','f1360060-0000-4000-8000-000000001801','value','new subject'),jsonb_build_object('field_key','f1360060-0000-4000-8000-000000001802','value','new message')),'[]')$$,'42501',null,'new guest collection refuses OFF');
 reset role;
