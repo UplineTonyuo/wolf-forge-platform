@@ -121,12 +121,11 @@ insert into secrets176_ids select 'intake-form',(public.app_create_form(gen_rand
     jsonb_build_object('service_id','b1760000-0000-4000-8000-000000000030','role','intake_assignment','sort_order',0)))))).id;
 insert into secrets176_ids select 'intake-version',(public.app_publish_form(gen_random_uuid(),id)).id from secrets176_ids where label='intake-form';
 select ok(exists(select 1 from secrets176_ids where label='intake-version'),'required encrypted intake field publishes with its Service link');
-insert into secrets176_ids select 'typed-password-form',(public.app_create_form(gen_random_uuid(),jsonb_build_object('form_type','contact',
+select throws_ok($q$select public.app_create_form(gen_random_uuid(),jsonb_build_object('form_type','contact',
   'canonical_key','secret176-required-typed-password','definition',jsonb_build_object('name','Typed password deferred','title','Typed password deferred',
     'visibility','public','type_config','{}'::jsonb,'rules','[]'::jsonb,'service_links','[]'::jsonb,'fields',jsonb_build_array(jsonb_build_object(
-      'stable_field_key',pg_temp.secret176_key(90),'sort_order',0,'field_type','password','label','Typed password','required',true)))))).id;
-select throws_ok($q$select public.app_publish_form(gen_random_uuid(),(select id from secrets176_ids where label='typed-password-form'))$q$,
-  '22023',null,'raw typed password integration still cannot be required');
+      'stable_field_key',pg_temp.secret176_key(90),'sort_order',0,'field_type','password','label','Typed password','required',true)))))$q$,
+  '22023',null,'raw typed password integration is rejected when its required definition is created');
 insert into secrets176_ids select 'plain-form',(public.app_create_form(gen_random_uuid(),jsonb_build_object('form_type','onboarding',
   'canonical_key','secret176-no-capture','definition',jsonb_set(pg_temp.secret176_definition(),'{fields,0,required}','false'::jsonb)))).id;
 insert into secrets176_ids select 'plain-version',(public.app_publish_form(gen_random_uuid(),id)).id from secrets176_ids where label='plain-form';
