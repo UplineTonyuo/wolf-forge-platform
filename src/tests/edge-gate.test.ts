@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { TenantHostCache } from "../lib/edge/tenant-host-cache";
+import {
+  AuthApiError, AuthError, AuthInvalidJwtError, AuthInvalidTokenResponseError,
+  AuthRefreshDiscardedError, AuthRetryableFetchError, AuthSessionMissingError, AuthUnknownError,
+} from "@supabase/supabase-js";
 
 const TENANT = "f0f0f0f0-0000-4000-8000-000000000001";
 const OTHER_TENANT = "f0f0f0f0-0000-4000-8000-000000002601";
@@ -13,7 +17,10 @@ const state = vi.hoisted(() => ({
   cookies: undefined as undefined | { setAll: (cookies: { name: string; value: string; options: { path: string; maxAge: number } }[]) => void },
 }));
 
-vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc: state.resolve }) }));
+vi.mock("@supabase/supabase-js", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@supabase/supabase-js")>(),
+  createClient: () => ({ rpc: state.resolve }),
+}));
 vi.mock("@supabase/ssr", async (importOriginal) => ({
   ...await importOriginal<typeof import("@supabase/ssr")>(),
   createServerClient: (_url: string, _key: string, options: { cookies: typeof state.cookies }) => {
@@ -161,8 +168,113 @@ const publicActionPaths = ["/login", "/f/example", "/f/nested/example", "/activa
 const protectedActionPaths = ["/", "/dashboard", "/orders", "/account", "/api/team-live", "/launch", "/missing", "/orders/test.css", "/push-sw.js", "/login-extra", "/activate-extra", "/f", "/forms/example", "/client-support/exit-extra"];
 
 describe("Next-Action POST gate", () => {
+  it.each([
+    ["network failure", new TypeError("fetch failed")],
+    ["timeout", new DOMException("Timed out", "TimeoutError")],
+    ["retryable fetch", new AuthRetryableFetchError("Unavailable", 0)],
+    ["retryable fetch with 400", new AuthRetryableFetchError("Unavailable", 400)],
+    ["retryable fetch with 401", new AuthRetryableFetchError("Unavailable", 401)],
+    ["retryable fetch with 503", new AuthRetryableFetchError("Unavailable", 503)],
+    ["Auth 500", new AuthApiError("Unavailable", 500, "unexpected_failure")],
+    ["Auth 502", new AuthApiError("Unavailable", 502, "unexpected_failure")],
+    ["Auth 503 with a session code", new AuthApiError("Unavailable", 503, "refresh_token_not_found")],
+    ["rate limit", new AuthApiError("Limited", 429, "over_request_rate_limit")],
+    ["discarded refresh", new AuthRefreshDiscardedError()],
+    ["malformed Auth response", new AuthInvalidTokenResponseError()],
+    ["wrapped network failure", new AuthUnknownError("Unavailable", new TypeError("fetch failed"))],
+    ["unclassified Auth error", new AuthError("Unavailable")],
+    ["session-looking message without an Auth type", new Error("JWT expired")],
+  ])("preserves the browser session for %s, even after SDK cookie writes", async (_name, error) => {
+    state.claims.mockImplementation(async () => {
+      state.cookies!.setAll([{ name: "sb-127-auth-token", value: "", options: { path: "/", maxAge: 0 } }]);
+      return { data: null, error };
+    });
+    const response = await request("/orders", "POST", { "next-action": "id", cookie: "sb-127-auth-token=still-valid" });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("5");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("x-middleware-set-cookie")).toBeNull();
+    expect(response.headers.get("x-action-redirect")).toBeNull();
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+    expect(response.cookies.getAll()).toEqual([]);
+    expect(await response.text()).toBe("");
+  });
+
+  it.each([
+    new TypeError("fetch failed"),
+    new DOMException("Timed out", "TimeoutError"),
+    new AuthRetryableFetchError("Unavailable", 503),
+  ])("handles a thrown verifier failure without cookie changes or redirect: %s", async (error) => {
+    state.claims.mockRejectedValue(error);
+    const response = await request("/orders", "POST", { "next-action": "id", cookie: "sb-127-auth-token=still-valid" });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("5");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(response.headers.get("x-action-redirect")).toBeNull();
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+  });
+
+  it.each([
+    null,
+    new AuthSessionMissingError(),
+    new AuthInvalidJwtError("Expired JWT"),
+    new AuthApiError("Invalid refresh token", 400, "refresh_token_not_found"),
+    new AuthApiError("Expired refresh token", 400, "refresh_token_already_used"),
+    new AuthApiError("Invalid session", 401, "bad_jwt"),
+  ])("clears cookies and redirects only for a definitive absent/invalid session: %s", async (error) => {
+    state.claims.mockResolvedValue({ data: null, error });
+    const response = await request("/orders", "POST", { "next-action": "id", cookie: "sb-127-auth-token.0=invalid; preference=keep" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders;replace");
+    expect(response.headers.get("retry-after")).toBeNull();
+    expect(response.cookies.get("sb-127-auth-token.0")).toMatchObject({ value: "", maxAge: 0, path: "/", httpOnly: true });
+    expect(response.cookies.get("preference")).toBeUndefined();
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+  });
+
+  it("forwards a valid session and its refreshed cookie to the action", async () => {
+    state.claims.mockImplementation(async () => {
+      state.cookies!.setAll([{ name: "sb-127-auth-token", value: "refreshed", options: { path: "/", maxAge: 3600 } }]);
+      return { data: { claims: { sub: "actor" } }, error: null };
+    });
+    const response = await request("/orders", "POST", { "next-action": "id" });
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+    expect(response.cookies.get("sb-127-auth-token")).toMatchObject({ value: "refreshed", maxAge: 3600 });
+    expect(response.headers.get("x-action-redirect")).toBeNull();
+    expect(response.headers.get("retry-after")).toBeNull();
+  });
+
+  it("does not replace a session with local QA login after a transient verifier error", async () => {
+    state.localQa.mockResolvedValue(true);
+    state.claims.mockResolvedValue({ data: null, error: new AuthRetryableFetchError("Unavailable", 503) });
+    const response = await request("/orders", "POST", { "next-action": "id" });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(state.ensureQa).not.toHaveBeenCalled();
+  });
+
+  it("still handles a thrown definitive missing-session error as signed out", async () => {
+    state.claims.mockRejectedValue(new AuthSessionMissingError());
+    const response = await request("/orders", "POST", { "next-action": "id", cookie: "sb-127-auth-token=invalid" });
+    expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders;replace");
+    expect(response.cookies.get("sb-127-auth-token")).toMatchObject({ value: "", maxAge: 0 });
+  });
+
+  it.each([
+    ["/login", "POST", { "next-action": "id" }],
+    ["/orders", "GET", { "next-action": "id" }],
+    ["/orders", "POST", {}],
+  ])("preserves existing error handling outside the protected action gate: %s %s", async (path, method, headers) => {
+    const error = new TypeError("fetch failed");
+    state.claims.mockRejectedValue(error);
+    await expect(request(path, method, headers)).rejects.toBe(error);
+  });
+
   it("redirects an expired generic action to login with the validated current page and query", async () => {
-    state.claims.mockResolvedValue({ data: null, error: new Error("JWT expired") });
+    state.claims.mockResolvedValue({ data: null, error: new AuthInvalidJwtError("JWT expired") });
     const response = await request("/orders?status=open&next=https%3A%2F%2Fevil.test", "POST", { "next-action": "generic-action" });
     expect(response.status).toBe(200);
     expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders%3Fstatus%3Dopen%26next%3Dhttps%253A%252F%252Fevil.test;replace");
@@ -176,7 +288,7 @@ describe("Next-Action POST gate", () => {
     ["client sidebar", "/account/projects"],
   ])("clears expired sign-out cookies from the %s and directs the user to login", async (_surface, path) => {
     vi.stubEnv("NODE_ENV", "production");
-    state.claims.mockResolvedValue({ data: null, error: new Error("JWT expired") });
+    state.claims.mockResolvedValue({ data: null, error: new AuthInvalidJwtError("JWT expired") });
     const response = await request(path, "POST", {
       "next-action": "sign-out-action",
       cookie: "sb-127-auth-token=stale; sb-127-auth-token.0=expired; sb-127-auth-token.1=expired; preference=keep; sb-other-auth-token=keep",
@@ -216,16 +328,19 @@ describe("Next-Action POST gate", () => {
     expect((await request(path, "POST", { "next-action": "id" })).headers.get("x-middleware-next")).toBe("1");
   });
 
-  it("fails closed for missing subjects and verifier errors", async () => {
-    for (const result of [
-      { data: { claims: {} }, error: null },
-      { data: { claims: { sub: "actor" } }, error: new Error("unverified") },
-    ]) {
-      state.claims.mockResolvedValue(result);
-      const response = await request("/orders", "POST", { "next-action": "id" });
-      expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders;replace");
-      expect(response.headers.get("x-middleware-next")).toBeNull();
-    }
+  it("fails closed for claims without a subject", async () => {
+    state.claims.mockResolvedValue({ data: { claims: {} }, error: null });
+    const response = await request("/orders", "POST", { "next-action": "id" });
+    expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders;replace");
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+  });
+
+  it("does not trust claims returned alongside a transient verifier failure", async () => {
+    state.claims.mockResolvedValue({ data: { claims: { sub: "actor" } }, error: new AuthRetryableFetchError("Unavailable", 503) });
+    const response = await request("/orders", "POST", { "next-action": "id" });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("x-action-redirect")).toBeNull();
+    expect(response.headers.get("x-middleware-next")).toBeNull();
   });
 
   it("does not gate ordinary POSTs or non-POST requests with an action header", async () => {

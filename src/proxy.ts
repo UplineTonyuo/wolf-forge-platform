@@ -1,5 +1,5 @@
 ﻿import { clearAuthCookiesAtScopes, createServerClient, type SetAllCookies } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, isAuthError, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
@@ -19,6 +19,11 @@ import { WOLF_FORGE_TENANT_ID } from "./domain/tenancy/wolf-forge-tenant";
 
 // Per proxy instance: disabling/remapping a host can lag by up to 60s; new hosts by 10s.
 const tenantHostCache = new TenantHostCache();
+
+function isDefinitiveSessionFailure(error: unknown): boolean {
+  return error == null || (isAuthError(error) && !isAuthRetryableFetchError(error)
+    && (error.status === 400 || error.status === 401));
+}
 
 /** Neutral, uncached, unbranded: names no Tenant and sets no cookie. */
 function workspaceUnavailable(status: 404 | 503) {
@@ -120,7 +125,13 @@ export async function proxy(request: NextRequest) {
     { cookies: cookieMethods },
   );
 
-  let claims = await supabase.auth.getClaims();
+  const pathname = request.nextUrl.pathname;
+  const protectedAction = request.method === "POST" && request.headers.has("next-action") && !isPublicActionPath(pathname);
+  const readClaims = () => supabase.auth.getClaims().catch((error: unknown) => {
+    if (!protectedAction) throw error;
+    return { data: null, error };
+  });
+  let claims = await readClaims();
 
   /*
    * Local-only, opt-in (NODE_ENV=development + LOCAL_UI_QA_BYPASS=true) and
@@ -130,15 +141,18 @@ export async function proxy(request: NextRequest) {
    * its cookie writes above persist the resulting session exactly like any
    * other sign-in. A no-op everywhere else, including once a session exists.
    */
-  if (!claims.data && await localUiQaBypassEnabled(request)) {
+  if (!claims.data && (!protectedAction || isDefinitiveSessionFailure(claims.error)) && await localUiQaBypassEnabled(request)) {
     await ensureLocalQaSession(supabase, request);
-    claims = await supabase.auth.getClaims();
+    claims = await readClaims();
   }
 
   const hasSessionClaims = !claims.error && !!claims.data?.claims?.sub;
-  const pathname = request.nextUrl.pathname;
   let earlyResponse: NextResponse | undefined;
-  if (!hasSessionClaims && request.method === "POST" && request.headers.has("next-action") && !isPublicActionPath(pathname)) {
+  if (!hasSessionClaims && protectedAction) {
+    if (!isDefinitiveSessionFailure(claims.error)) {
+      // Discard any queued SDK cookie writes when verification is unavailable.
+      return new NextResponse(null, { status: 503, headers: { "retry-after": "5", "cache-control": "no-store" } });
+    }
     const next = safeNextPath(`${pathname}${request.nextUrl.search}`);
     // Next's action client consumes this header on a successful, non-HTTP-redirect response.
     earlyResponse = new NextResponse(null, {
