@@ -29,4 +29,4 @@
 .spin { animation: voice-spin 1s linear infinite; }
 @keyframes voice-spin { to { transform: rotate(360deg); } }
 @media (max-width: 430px) { .recording .stop { width: 44px; padding: 0; } .recording .stop span { display: none; } }
-@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .player button, .recording button { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .player .play, .recording .stop, .recording .cancel { transition: none; } }
