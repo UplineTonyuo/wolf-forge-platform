@@ -101,6 +101,8 @@ jobs:
         run: npm run test:db
       - name: real PostgREST client support isolation and missing-hook checks
         run: node scripts/qa/check-client-support-rest.mjs
+      - name: real Storage Team voice upload and media inspection
+        run: node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts --reporter=verbose
 
   dependencies:
     name: production dependency vulnerabilities
