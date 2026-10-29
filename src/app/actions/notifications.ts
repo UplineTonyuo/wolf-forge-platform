@@ -238,11 +238,7 @@ export async function setClientConversationPresenceAction(
 ): Promise<void> {
   try {
     const context = await getClientContext();
-    const rpc = context.client.rpc as unknown as (
-      name: string,
-      args: Record<string, unknown>,
-    ) => Promise<{ error: unknown }>;
-    await rpc("app_set_client_conversation_presence", {
+    await context.client.rpc("app_set_client_conversation_presence", {
       p_conversation_type: conversationType,
       p_conversation_id: uuidSchema.parse(conversationId),
       p_active: active,
