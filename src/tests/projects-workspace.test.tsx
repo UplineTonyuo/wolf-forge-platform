@@ -204,6 +204,17 @@ describe("Projects attention system", () => {
 });
 
 describe("Projects filters and search", () => {
+  it("defaults to all projects and can filter to the signed-in teammate without hiding other people", () => {
+    renderWorkspace({ viewerId: anthony });
+    expect(rowCount()).toBe(3);
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+    fireEvent.click(screen.getByLabelText("Person"));
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Choose a person" })).getByText("Assigned to me"));
+    expect(rowCount()).toBe(1);
+    expect(screen.getByText("Local SEO Growth Campaign")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(rowCount()).toBe(3);
+  });
   it("searches by title, project number and client name", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));

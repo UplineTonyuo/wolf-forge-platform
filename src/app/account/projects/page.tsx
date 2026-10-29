@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ClientProjectsList } from "../../../components/account/projects/client-projects";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
 import { toClientSafeError } from "../../../lib/errors/application-error";
-import { readClientProjects } from "../../../lib/supabase/client-portal-data";
+import { readClientProjects, readClientAssignments } from "../../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../../lib/supabase/next-server";
 
 export const metadata: Metadata = { title: "My Projects" };
@@ -14,6 +14,7 @@ export default async function ClientProjectsPage() {
   let projects: ClientProjectView[] = [];
   let denied = false;
   let loadError: string | null = null;
+  const intakeLinks: Record<string, string> = {};
 
   try {
     /*
@@ -25,6 +26,13 @@ export default async function ClientProjectsPage() {
     // Memoized for the request, so the rail's in-progress count and this page
     // share one read rather than querying twice.
     projects = (await readClientProjects()) ?? [];
+    // Intake links are optional; a Forms denial must not hide authorized Projects.
+    const assignments = await readClientAssignments().catch(() => null);
+    for (const form of assignments ?? []) {
+      if (form.order_id && form.form_type === "intake" && form.required && form.status === "assigned" && form.work_enabled !== false && !intakeLinks[form.order_id]) {
+        intakeLinks[form.order_id] = `/account/onboarding/${form.assignment_id}`;
+      }
+    }
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "PERMISSION_DENIED") denied = true;
@@ -45,5 +53,5 @@ export default async function ClientProjectsPage() {
     );
   }
 
-  return <ClientProjectsList projects={projects} />;
+  return <ClientProjectsList projects={projects} intakeLinks={intakeLinks} />;
 }

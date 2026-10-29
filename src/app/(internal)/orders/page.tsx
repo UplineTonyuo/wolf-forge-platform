@@ -38,6 +38,7 @@ export default async function ProjectsPage() {
           serviceFolders={serviceFolders}
           clients={clients.map((client) => ({ id: client.id, name: client.name }))}
           capabilities={context.user.projects}
+          viewerId={context.user.id}
         />
       </PageFrame>
     );

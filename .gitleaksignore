@@ -5,6 +5,11 @@
 # a stated reason. Do NOT add a path glob, a rule-wide disable, or an entry
 # without a reason — those turn the scanner off rather than triaging it.
 #
+# Previously human-reviewed WordPress field UUID and synthetic legacy-intake-177 slug.
+# The remote backup commit has byte-identical files to reviewed commit 4e3d9d6.
+88c9d251b03993af21f1813ac478ceb9ec7e32f7:supabase/migrations/20261029145058_legacy_intake_secret_collection_policy.sql:generic-api-key:50
+88c9d251b03993af21f1813ac478ceb9ec7e32f7:supabase/tests/database/177_legacy_intake_secret_collection_policy.test.sql:generic-api-key:95
+#
 # Fingerprint format: <commit>:<file>:<rule-id>:<line>
 # Human-reviewed 2026-10-29: existing WordPress form field UUID, not a credential.
 4e3d9d6e67b15d163624d7b2468ef2024e613d55:supabase/migrations/20261029145058_legacy_intake_secret_collection_policy.sql:generic-api-key:50

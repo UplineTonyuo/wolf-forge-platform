@@ -2530,6 +2530,9 @@
 }
 
 .messageAvatar {
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  align-self: start;
   width: 38px;
   height: 38px;
   display: grid;
@@ -3375,6 +3378,17 @@
 }
 
 /* Canonical Ticket attachment composer ------------------------------------ */
+.composer[data-client-view] .ticketRichComposer { min-height: 136px; }
+.composer[data-client-view] footer { justify-content: flex-end; }
+.composer[data-client-view] .composerActions { width: 100%; justify-content: flex-end; }
+.composer[data-recording] .composerActions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
+.composer[data-recording] .composerActions > :first-child { min-width: 0; }
+.messageBubble[data-audio-only] .attachments { margin: 0; padding: 0; border: 0; }
+.messageBubble[data-audio-only] .attachments > li { padding: 0; border: 0; background: transparent; }
+@media (max-width: 600px) {
+  .composer[data-recording] .composerActions { grid-template-columns: 1fr auto; }
+  .composer[data-recording] .composerActions > :first-child { grid-column: 1 / -1; width: 100%; }
+}
 .draftStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--wf-text-muted); font-size: 12px; line-height: 1.5; }
 .draftStatus > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
 .draftStatus > button,.draftActions > button { min-height: 44px; }
@@ -4706,3 +4720,5 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
   border-radius: 6px;
   background: #fffcf3;
 }
+
+.orderChat .thread .messageBubble[data-audio-only] .attachments > li { padding: 0; border: 0; background: transparent; }

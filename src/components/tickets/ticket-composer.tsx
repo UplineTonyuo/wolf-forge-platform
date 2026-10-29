@@ -348,6 +348,7 @@ function TicketComposerBody({
       data-client-view={mode === "client" || undefined}
       data-sending={attached && pending && !disabled || undefined}
       data-compact={compact || undefined}
+      data-recording={recordingVoice || undefined}
     >
       {!isNote && !attached ? (
         <header>
@@ -450,7 +451,7 @@ function TicketComposerBody({
       ) : null}
 
       <footer>
-        <div className={styles.composerMeta}>
+        {mode !== "client" ? <div className={styles.composerMeta}>
           {!compact ? (
             <span>
               {body.length.toLocaleString()}
@@ -463,7 +464,7 @@ function TicketComposerBody({
               {compact ? "Ctrl+Enter" : "Ctrl+Shift+Enter to send"}
             </span>
           ) : null}
-        </div>
+        </div> : null}
 
         <div className={`${styles.composerActions} ${voiceStyles.actions}`}>
           {!isNote && target.kind === "ticket" ? <TicketVoiceRecorder
@@ -519,7 +520,7 @@ function TicketComposerBody({
         <span>{persistent.loading ? "Restoring draft…" : persistent.status === "saving" ? "Saving draft…" : persistent.status === "saved"
           ? "Draft saved on this device for 30 days. Signing out clears it."
           : persistent.status === "error" ? "Draft not saved. Keep this window open; device storage may be unavailable or another window changed this draft."
-          : "Unsent text and files are saved on this device. Signing out clears them."}</span>
+          : null}</span>
         {(body || attachment) && !persistent.loading ? <button className="button button-secondary" type="button" disabled={busy} onClick={() => setDiscardOpen(true)}>Discard draft</button> : null}
       </div> : null}
       <PortalDialog open={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard unsent draft?">
