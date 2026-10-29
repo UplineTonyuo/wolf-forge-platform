@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import { RouteTransitionLink } from "../../../../components/shell/route-transition";
 import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
@@ -306,9 +307,13 @@ export default async function ClientDetailPage({
                 : `/clients/${companyId}?tab=${tab.id}`;
 
             return (
-              <Link
+              <RouteTransitionLink
                 key={tab.id}
                 href={href}
+                feedback="inline"
+                loadingLabel={`Loading ${tab.label}`}
+                scroll={false}
+                aria-current={activeTab === tab.id ? "page" : undefined}
                 className={
                   activeTab === tab.id
                     ? "client-detail-tab is-active"
@@ -317,7 +322,7 @@ export default async function ClientDetailPage({
               >
                 <Icon aria-hidden="true" />
                 {tab.label}
-              </Link>
+              </RouteTransitionLink>
             );
           })}
         </nav>
@@ -438,7 +443,7 @@ export default async function ClientDetailPage({
                   {openProjects
                     .slice(0, 5)
                     .map((project) => (
-                      <Link
+                      <RouteTransitionLink
                         key={project.id}
                         href={`/orders/${project.id}`}
                         className="client-project-summary-row"
@@ -453,7 +458,7 @@ export default async function ClientDetailPage({
                         <StatusBadge
                           status={project.status}
                         />
-                      </Link>
+                      </RouteTransitionLink>
                     ))}
                 </div>
               ) : (
@@ -479,7 +484,7 @@ export default async function ClientDetailPage({
             {projects.length ? (
               <div className="client-project-summary">
                 {projects.map((project) => (
-                  <Link
+                  <RouteTransitionLink
                     key={project.id}
                     href={`/orders/${project.id}`}
                     className="client-project-summary-row"
@@ -494,7 +499,7 @@ export default async function ClientDetailPage({
                     <StatusBadge
                       status={project.status}
                     />
-                  </Link>
+                  </RouteTransitionLink>
                 ))}
               </div>
             ) : (
@@ -592,15 +597,18 @@ export default async function ClientDetailPage({
                 {historyEvents.length >
                 visibleHistoryEvents.length ? (
                   <div className="client-history-more">
-                    <Link
+                    <RouteTransitionLink
                       className="button-secondary"
+                      feedback="inline"
+                      loadingLabel="Loading older history"
+                      scroll={false}
                       href={`/clients/${companyId}?tab=history&historyLimit=${Math.min(
                         historyLimit + 20,
                         100,
                       )}`}
                     >
                       Show older
-                    </Link>
+                    </RouteTransitionLink>
                   </div>
                 ) : null}
               </div>

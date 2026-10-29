@@ -21,6 +21,7 @@ export type InternalSkeletonVariant =
   | "tickets"
   | "reporting"
   | "clients"
+  | "clientDetail"
   | "operations"
   | "invoices"
   | "subscriptions"
@@ -60,6 +61,7 @@ const EXACT: Record<string, InternalSkeletonVariant> = {
 export function getInternalSkeletonVariant(pathname: string): InternalSkeletonVariant {
   const path = (pathname.split(/[?#]/)[0] ?? "").replace(/\/+$/, "") || "/";
   if (EXACT[path]) return EXACT[path];
+  if (/^\/clients\/[^/]+$/.test(path) && path !== "/clients/new") return "clientDetail";
   if (path.startsWith("/settings/")) return "settings";
   return "generic";
 }
@@ -230,6 +232,24 @@ function Fields({ count }: { count: number }) {
 }
 
 /* ---------- destination compositions ---------- */
+
+export function ClientDetailSkeleton() {
+  return <Frame variant="clientDetail">
+    <Header subtitle={false} actions={[[86, 36]]} />
+    <div className="client-detail-context"><Bar w={85} h={18} /><Bar w={90} h={32} /></div>
+    <div className="client-detail-tabs"><Shapes sizes={[[92, 36], [102, 36], [100, 36], [108, 36], [92, 36]]} /></div>
+    <div className="client-detail-content">
+      <section className="client-information-panel">
+        <div className="client-section-heading"><Bar w={160} h={20} /></div>
+        <dl className="client-information-list">{Array.from({ length: 6 }, (_, i) => <div key={i}><dt><Bar w={100} /></dt><dd><Bar w="70%" /></dd></div>)}</dl>
+      </section>
+      <section className="client-side-summary">
+        <div className="client-section-heading"><Bar w={140} h={20} /></div>
+        <Rows count={3} side={false} />
+      </section>
+    </div>
+  </Frame>;
+}
 
 export function SectionSkeleton() {
   return (
@@ -563,6 +583,7 @@ const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
   tickets: TicketsSkeleton,
   reporting: ReportingSkeleton,
   clients: ClientsSkeleton,
+  clientDetail: ClientDetailSkeleton,
   operations: OperationsSkeleton,
   invoices: InvoicesSkeleton,
   subscriptions: SubscriptionsSkeleton,
