@@ -46,11 +46,11 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
       return Array.from(`\\u{${code.toString(16).toUpperCase()}}`).map((text) => ({ text, font: fonts[0]!, width: fonts[0]!.widthOfTextAtSize(text, size) }));
     });
   }
-  function wrappedLines(value: string, size: number) {
+  function wrappedLines(value: string, size: number, maxWidth = 499) {
     const lines: Glyph[][] = []; let line: Glyph[] = [], width = 0;
     for (const paragraph of value.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").split("\n")) {
       for (const glyph of glyphs(paragraph, size)) {
-        while (width + glyph.width > 499 && line.length) {
+        while (width + glyph.width > maxWidth && line.length) {
           let space = line.length - 1;
           while (space >= 0 && line[space]!.text !== " ") space--;
           const cut = space > 0 ? space + 1 : line.length;
@@ -62,18 +62,34 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
     }
     return lines;
   }
-  function text(value: string, size = 10.5, color = rgb(0.1, 0.12, 0.17)) {
-    for (const row of wrappedLines(value, size)) {
-      if (y < 62 + size) newPage();
-      let x = 48;
+  function drawRow(row: Glyph[], size: number, color: ReturnType<typeof rgb>, left = 48) {
+      let x = left;
       for (let start = 0; start < row.length;) {
         let end = start + 1; while (end < row.length && row[end]!.font === row[start]!.font) end++;
         const run = row.slice(start, end); page.drawText(run.map((g) => g.text).join(""), { x, y, size, font: row[start]!.font, color });
         x += run.reduce((sum, g) => sum + g.width, 0); start = end;
       }
+  }
+  function text(value: string, size = 10.5, color = rgb(0.1, 0.12, 0.17)) {
+    for (const row of wrappedLines(value, size)) {
+      if (y < 62 + size) newPage();
+      drawRow(row, size, color);
       y -= size * 1.45;
     }
     y -= 7;
+  }
+  function agreement(value: string) {
+    const rows = wrappedLines(value, 9.5, 475);
+    for (let offset = 0; offset < rows.length;) {
+      if (y < 130) newPage();
+      const count = Math.min(rows.length - offset, Math.floor((y - 86) / 14));
+      const height = count * 14 + 24;
+      page.drawRectangle({ x: 48, y: y + 12 - height, width: 499, height, color: rgb(.98, .985, .99), borderColor: rgb(.83, .85, .89), borderWidth: .7 });
+      for (let index = 0; index < count; index++) { drawRow(rows[offset + index]!, 9.5, muted, 60); y -= 14; }
+      y -= 24;
+      offset += count;
+      if (offset < rows.length) newPage();
+    }
   }
   function heading(label: string) { if (y < 115) newPage(); y -= 10; text(label, 14, navy); }
   function answerValue(field: FormPdfReceipt["form"]["fields"][number], value: unknown): string {
@@ -92,7 +108,12 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
       if (y < 105) newPage(); text(value.label, 11, navy); text(answerValue(field, value.value) || "No answer recorded");
     }
   }
-  newPage(); text(receipt.form.title, 20, navy);
+  newPage();
+  if (receipt.project) {
+    text(`Project #WF-P${String(receipt.project.number).padStart(4, "0")}`, 10, muted);
+    text(receipt.project.title, 20, navy);
+    text(receipt.form.title, 12, navy);
+  } else text(receipt.form.title, 20, navy);
   text(`Form version ${receipt.form.version_number} | Original submission\n${receipt.original.submitted_at}`, 9, muted);
   if (receipt.form.schema_hash) text(`Version fingerprint: ${receipt.form.schema_hash}`, 8, muted);
   if (receipt.form.information_html) { heading("Form instructions"); text(formHtmlText(receipt.form.information_html)); }
@@ -104,7 +125,10 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
     if (y < 105) newPage();
     text(field.label, ["break", "pagebreak"].includes(field.type) ? 14 : 11, navy);
     if (field.conditional) text("Conditional template content: this historical record does not establish whether this section was displayed on screen. It is included as form-version reference, not as additional signed terms.", 9, muted);
-    if (field.html || field.help_html) text(formHtmlText(field.html ?? field.help_html));
+    if (field.html || field.help_html) {
+      const content = formHtmlText(field.html ?? field.help_html);
+      if (field.type === "signature") agreement(content); else text(content);
+    }
     if (["break", "pagebreak", "html"].includes(field.type) || (field.type === "richtext" && field.display_only)) continue;
     if (field.type !== "signature") { text(answer ? answerValue(field, answer.value) || "No answer recorded" : "No answer recorded"); continue; }
     if (!answer) { text("No signature was recorded for this field."); continue; }
@@ -119,17 +143,16 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
       + (statement === null ? 0 : wrappedLines(statement, 9).length * 9 * 1.45 + 7) + (strokes ? 147 : 0);
     if (signingHeight <= 712 && y - signingHeight < 62) newPage();
     text(signer);
-    text(signing);
-    if (statement !== null) text(statement, 9, muted);
     if (strokes) {
       if (y < 190) newPage();
-      page.drawRectangle({ x: 48, y: y - 130, width: 325, height: 130, borderColor: rgb(0.83, 0.85, 0.89), borderWidth: 0.7 });
       for (const stroke of strokes) for (let i = 1; i < stroke.length; i++) {
         const before = stroke[i - 1]!, current = stroke[i]!;
         page.drawLine({ start: { x: 48 + before[0] * 0.325, y: y - before[1] * 0.325 }, end: { x: 48 + current[0] * 0.325, y: y - current[1] * 0.325 }, color: navy, thickness: 1.2 });
       }
       y -= 147;
     }
+    text(signing, 9, muted);
+    if (statement !== null) text(statement, 9, muted);
   }
   if (receipt.correction) {
     heading(`Corrected responses - revision ${receipt.correction.revision_number}`);

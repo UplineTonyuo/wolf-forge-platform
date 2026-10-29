@@ -12,7 +12,7 @@ export function ClientOrderStart({ initial }: { initial: ClientOrderStartState |
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   if (!state) return null;
-  if (state.started) return <section className={styles.card} role="status"><h2>{state.status === "working" ? "Your order is in progress" : "Your order was started"}</h2><p>Your required service forms were completed and your start request was confirmed. The current project status is shown above.</p></section>;
+  if (state.started) return null;
   if (!state.available) return <section className={styles.card}><h2>This order cannot be started</h2><p>Contact the team if you need help with this order.</p></section>;
   return <section className={styles.card} aria-labelledby="client-start-title">
     <h2 id="client-start-title">{state.requested ? "Complete your service form to begin" : "Ready to start your order?"}</h2>

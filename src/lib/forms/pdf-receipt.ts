@@ -3,6 +3,7 @@ import { z } from "zod";
 const answer = z.object({ stable_field_key: z.uuid(), label: z.string().max(500), field_type: z.string().max(40), sort_order: z.number().int(), value: z.json() }).strict();
 const record = z.object({ id: z.uuid(), submitted_at: z.iso.datetime({ offset: true }), revision_number: z.number().int().positive(), values: z.array(answer).max(500) }).strict();
 export const formPdfReceiptSchema = z.object({
+  project: z.object({ number: z.number().int().positive(), title: z.string().max(300_000) }).strict().nullable().optional(),
   original: record,
   correction: record.nullable(),
   form: z.object({ id: z.uuid(), version_id: z.uuid(), version_number: z.number().int().positive(), schema_hash: z.string().max(200).nullable(), title: z.string().max(200), information_html: z.string().nullable(),

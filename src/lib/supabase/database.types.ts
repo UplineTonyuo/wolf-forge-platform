@@ -5565,7 +5565,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      app_get_form_submission_pdf: { Args: { p_submission_id: string }; Returns: Json }
+      app_get_form_submission_pdf: { Args: { p_submission_id: string; p_include_project?: boolean }; Returns: Json }
       app_get_form_submission: {
         Args: { p_submission_id: string }
         Returns: Json

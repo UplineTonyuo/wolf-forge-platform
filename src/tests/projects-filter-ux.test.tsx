@@ -123,7 +123,7 @@ const clients = [
   { id: "c0000000-0000-4000-8000-000000000002", name: "Junk Buddies" },
 ];
 
-function renderWorkspace() {
+function renderWorkspace(viewerId?: string) {
   return render(
     <ProjectsWorkspace
       rows={rows}
@@ -133,6 +133,7 @@ function renderWorkspace() {
       serviceFolders={serviceFolders}
       clients={clients}
       capabilities={capabilities}
+      viewerId={viewerId}
     />,
   );
 }
@@ -158,6 +159,18 @@ afterEach(() => {
 
 describe("Mobile Filters sheet (<=767px)", () => {
   beforeEach(() => stubViewport(true));
+
+  it("offers the same Assigned to me filter on mobile and starts with every project", () => {
+    renderWorkspace(anthony);
+    expect(rowCount()).toBe(3);
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+    fireEvent.click(screen.getByRole("button", { name: /^Person/u }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /Assigned to me/u }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Apply filters/u }));
+    expect(rowCount()).toBe(1);
+    expect(screen.getByText("Local SEO Growth Campaign")).toBeTruthy();
+  });
 
   it("keeps project search permanently visible outside the Filter sheet", () => {
     renderWorkspace();

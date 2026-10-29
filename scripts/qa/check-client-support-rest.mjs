@@ -274,6 +274,32 @@ async function main() {
   await noRows(supportApi.rpc("app_list_form_submissions", { p_form_id: forms[1].id }), "Foreign Form submission filter");
   await denied(makeClient(publicKey, owner.token, capability, foreignTenant).rpc("app_list_form_submissions", {}), "Support capability across Tenant selector");
 
+  step = "delegated PDF receipt and authorized project context";
+  const pdfService = randomUUID(), pdfOrder = randomUUID();
+  await sql(`begin;
+    insert into public.services(id,tenant_id,name,price,currency,is_active,is_public,recurring)
+      values(:'service'::uuid,'${tenant}','Synthetic PDF context service',10,'USD',true,true,false);
+    insert into public.orders(id,tenant_id,company_id,service_id,title)
+      values(:'order'::uuid,'${tenant}',:'company'::uuid,:'service'::uuid,'Synthetic support project');
+    update public.form_assignments set order_id=:'order'::uuid where id=:'assignment'::uuid;
+    commit;`, { service: pdfService, order: pdfOrder, company: client.company, assignment: formCases[0].assignment });
+  const delegatedPdf = () => supportApi.rpc("app_get_form_submission_pdf", { p_submission_id: formCases[0].submission, p_include_project: true });
+  const projectReceipt = await success(delegatedPdf(), "Delegated project PDF receipt");
+  const { project: pdfProject, ...originalReceipt } = projectReceipt;
+  need(pdfProject?.title === "Synthetic support project" && Number.isInteger(pdfProject.number)
+    && originalReceipt.original?.id === formCases[0].submission, "Supported PDF lost its selected-client receipt or project identity");
+  const legacyReceipt = await success(supportApi.rpc("app_get_form_submission_pdf", { p_submission_id: formCases[0].submission }), "Compatible original PDF overload");
+  need(JSON.stringify(originalReceipt) === JSON.stringify(legacyReceipt), "Project context changed the original PDF agreement evidence");
+  for (const fixture of formCases.slice(1)) {
+    await denied(supportApi.rpc("app_get_form_submission_pdf", { p_submission_id: fixture.submission, p_include_project: true }), "PDF selected-client and Tenant isolation");
+  }
+  await sql(`insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
+    values('${tenant}',:'client'::uuid,'projects.view',false);`, { client: client.id });
+  need((await success(delegatedPdf(), "Supported PDF after Project access revocation")).project === null, "Supported PDF disclosed a denied project");
+  need(await sql(`with restored as (delete from public.profile_permission_overrides where tenant_id='${tenant}'
+    and profile_id=:'client'::uuid and permission_key='projects.view' and allowed=false returning 1)
+    select count(*)=1 from restored;`, { client: client.id }) === "t", "Synthetic Project permission override was not restored exactly");
+
   step = "legitimate client reply and actual administrator audit";
   const replyRequest = randomUUID();
   const reply = await success(supportApi.rpc("app_reply_to_ticket", { p_request_id: replyRequest, p_ticket_id: ticket, p_body: "Synthetic delegated client reply" }), "Delegated client Ticket reply");
@@ -296,6 +322,7 @@ async function main() {
   await denied(supportApi.rpc("app_forms_work_enabled"), "Missing-hook Forms availability");
   await denied(supportApi.rpc("app_list_assigned_forms"), "Missing-hook Forms visibility assignments");
   await denied(supportApi.rpc("app_list_form_submissions", {}), "Missing-hook Forms visibility submission summaries");
+  await denied(delegatedPdf(), "Missing-hook PDF receipt");
   const blockedRequest = randomUUID();
   await denied(supportApi.rpc("app_reply_to_ticket", { p_request_id: blockedRequest, p_ticket_id: ticket, p_body: "Synthetic missing-hook reply must never persist" }), "Missing-hook ordinary business mutation");
   need(await sql("select not exists(select 1 from public.ticket_messages where request_id=:'request'::uuid);", { request: blockedRequest }) === "t", "A missing-hook business mutation persisted");
@@ -319,6 +346,7 @@ async function main() {
   await denied(supportApi.rpc("app_forms_work_enabled"), "Revoked client Forms availability");
   await denied(supportApi.rpc("app_list_assigned_forms"), "Revoked client Forms visibility assignments");
   await denied(supportApi.rpc("app_list_form_submissions", {}), "Revoked client Forms visibility submission summaries");
+  await denied(delegatedPdf(), "Revoked client PDF receipt");
   need(await sql(`with restored as (delete from public.profile_permission_overrides where tenant_id='${tenant}'
     and profile_id=:'client'::uuid and permission_key in ('forms.view','forms.submissions_view') and allowed=false returning 1)
     select count(*)=2 from restored;`, { client: client.id }) === "t", "Synthetic Forms permission overrides were not restored exactly");
@@ -455,6 +483,7 @@ async function main() {
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");
   need(ended?.id === started.id && ended.active === false, "Support exit did not persist");
   await denied(proof(), "Exited support capability");
+  await denied(delegatedPdf(), "Exited support PDF receipt");
   const finalOwner = await ownMembership(owner.api);
   need(finalOwner.length === 1 && finalOwner[0].role_name === "owner", "Support exit changed the original Owner session");
   need(await sessionSnapshot() === beforeSessions, "Support changed an existing client Auth session");
