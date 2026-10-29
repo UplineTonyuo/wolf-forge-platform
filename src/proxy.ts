@@ -1,4 +1,4 @@
-﻿import { createServerClient } from "@supabase/ssr";
+﻿import { clearAuthCookiesAtScopes, createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
@@ -8,6 +8,7 @@ import { ensureLocalQaSession, localUiQaBypassEnabled } from "./lib/qa/local-ui-
 import { lanDeviceApproved } from "./lib/qa/lan-device-gate";
 import { TenantHostCache } from "./lib/edge/tenant-host-cache";
 import { isPublicActionPath } from "./lib/edge/public-action-path";
+import { safeNextPath } from "./domain/auth/safe-next-path";
 import {
   CORRELATION_HEADER,
   createCorrelationId,
@@ -99,25 +100,24 @@ export async function proxy(request: NextRequest) {
 
   let response = forwardRequest();
 
+  const cookieMethods = {
+    getAll: () => request.cookies.getAll(),
+    setAll: (cookiesToSet: Parameters<SetAllCookies>[0]) => {
+      cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+      response = forwardRequest();
+      // Every write here is an auth-session cookie: the proxy's refresh
+      // writes AND the maxAge:0 removals that logout emits. Both go
+      // through the policy (D-114) — removals included, because a
+      // deletion that differs in attributes is still a Set-Cookie.
+      cookiesToSet.forEach(({ name, value, options }) =>
+        response.cookies.set(name, value, hardenAuthCookieOptions(options)),
+      );
+    },
+  };
   const supabase = createServerClient<Database>(
     environment.SUPABASE_URL,
     environment.SUPABASE_PUBLISHABLE_KEY,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = forwardRequest();
-          // Every write here is an auth-session cookie: the proxy's refresh
-          // writes AND the maxAge:0 removals that logout emits. Both go
-          // through the policy (D-114) — removals included, because a
-          // deletion that differs in attributes is still a Set-Cookie.
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, hardenAuthCookieOptions(options)),
-          );
-        },
-      },
-    },
+    { cookies: cookieMethods },
   );
 
   let claims = await supabase.auth.getClaims();
@@ -139,7 +139,18 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   let earlyResponse: NextResponse | undefined;
   if (!hasSessionClaims && request.method === "POST" && request.headers.has("next-action") && !isPublicActionPath(pathname)) {
-    earlyResponse = new NextResponse(null, { status: 401 });
+    const next = safeNextPath(`${pathname}${request.nextUrl.search}`);
+    // Next's action client consumes this header on a successful, non-HTTP-redirect response.
+    earlyResponse = new NextResponse(null, {
+      status: 200,
+      headers: { "x-action-redirect": `/login?${new URLSearchParams({ next })};replace` },
+    });
+    // Expired sign-out actions stop here too; remove their local session without running the action.
+    await clearAuthCookiesAtScopes({
+      ...cookieMethods,
+      storageKey: `sb-${new URL(environment.SUPABASE_URL).hostname.split(".")[0]}-auth-token`,
+      scopes: [{ path: "/" }],
+    });
   } else if (!hasSessionClaims && !claims.error && request.method === "GET" && pathname === "/") {
     // getInternalContext redirects anonymous root visits to /login without a next parameter.
     earlyResponse = NextResponse.redirect(new URL("/login", request.url));

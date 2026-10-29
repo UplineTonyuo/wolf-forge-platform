@@ -14,7 +14,8 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ rpc: state.resolve }) }));
-vi.mock("@supabase/ssr", () => ({
+vi.mock("@supabase/ssr", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@supabase/ssr")>(),
   createServerClient: (_url: string, _key: string, options: { cookies: typeof state.cookies }) => {
     state.cookies = options.cookies;
     return { auth: { getClaims: state.claims } };
@@ -160,13 +161,51 @@ const publicActionPaths = ["/login", "/f/example", "/f/nested/example", "/activa
 const protectedActionPaths = ["/", "/dashboard", "/orders", "/account", "/api/team-live", "/launch", "/missing", "/orders/test.css", "/push-sw.js", "/login-extra", "/activate-extra", "/f", "/forms/example", "/client-support/exit-extra"];
 
 describe("Next-Action POST gate", () => {
+  it("redirects an expired generic action to login with the validated current page and query", async () => {
+    state.claims.mockResolvedValue({ data: null, error: new Error("JWT expired") });
+    const response = await request("/orders?status=open&next=https%3A%2F%2Fevil.test", "POST", { "next-action": "generic-action" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders%3Fstatus%3Dopen%26next%3Dhttps%253A%252F%252Fevil.test;replace");
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
+  });
+
+  it.each([
+    ["account menu", "/dashboard"],
+    ["client sidebar", "/account/projects"],
+  ])("clears expired sign-out cookies from the %s and directs the user to login", async (_surface, path) => {
+    vi.stubEnv("NODE_ENV", "production");
+    state.claims.mockResolvedValue({ data: null, error: new Error("JWT expired") });
+    const response = await request(path, "POST", {
+      "next-action": "sign-out-action",
+      cookie: "sb-127-auth-token=stale; sb-127-auth-token.0=expired; sb-127-auth-token.1=expired; preference=keep; sb-other-auth-token=keep",
+    });
+    expect(response.status).toBe(200);
+    const redirect = response.headers.get("x-action-redirect")?.split(";")[0];
+    expect(redirect).toBeDefined();
+    expect(new URL(redirect!, "https://workspace.test").pathname).toBe("/login");
+    for (const name of ["sb-127-auth-token", "sb-127-auth-token.0", "sb-127-auth-token.1"]) {
+      expect(response.cookies.get(name)).toMatchObject({ value: "", path: "/", maxAge: 0, httpOnly: true, secure: true, sameSite: "lax" });
+    }
+    expect(response.cookies.get("preference")).toBeUndefined();
+    expect(response.cookies.get("sb-other-auth-token")).toBeUndefined();
+    expect(response.headers.get("x-middleware-next")).toBeNull();
+  });
+
+  it("never puts an unsafe request path in the sign-in next parameter", async () => {
+    const response = await request("//evil.test/orders", "POST", { "next-action": "generic-action" });
+    expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2F;replace");
+  });
+
   it.each(publicActionPaths)("allows anonymous actions on %s", async (path) => {
     expect((await request(path, "POST", { "next-action": "id" })).headers.get("x-middleware-next")).toBe("1");
   });
 
   it.each(protectedActionPaths)("rejects anonymous action POST %s before the route runs", async (path) => {
     const response = await request(path, "POST", { "Next-Action": "id" });
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-action-redirect")).toMatch(/^\/login\?next=.*;replace$/);
     expect(await response.text()).toBe("");
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-middleware-next")).toBeNull();
@@ -183,7 +222,9 @@ describe("Next-Action POST gate", () => {
       { data: { claims: { sub: "actor" } }, error: new Error("unverified") },
     ]) {
       state.claims.mockResolvedValue(result);
-      expect((await request("/orders", "POST", { "next-action": "id" })).status).toBe(401);
+      const response = await request("/orders", "POST", { "next-action": "id" });
+      expect(response.headers.get("x-action-redirect")).toBe("/login?next=%2Forders;replace");
+      expect(response.headers.get("x-middleware-next")).toBeNull();
     }
   });
 
@@ -225,6 +266,9 @@ describe("Next's compiled proxy matcher", () => {
 
   it.each(assets)("also forces action headers through on excluded path %s", async (path) => {
     expect(await matches(path, { "next-action": "id" })).toBe(true);
-    expect((await request(path, "POST", { "next-action": "id" })).status).toBe(401);
+    const response = await request(path, "POST", { "next-action": "id" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-action-redirect")).toMatch(/^\/login\?next=.*;replace$/);
+    expect(response.headers.get("x-middleware-next")).toBeNull();
   });
 });

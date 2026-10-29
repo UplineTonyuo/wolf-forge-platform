@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoginQueryForm } from "./login-query-form";
 import { PwaInstallButton } from "../../components/pwa/pwa-provider";
+import { LoginForm } from "../../components/forms/login-form";
 
 export const metadata: Metadata = {
   title: "Wolf Forge Access",
@@ -74,7 +75,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Suspense fallback={<p role="status">Loading sign-in…</p>}>
+          <Suspense fallback={<LoginForm />}>
             <LoginQueryForm />
           </Suspense>
           <PwaInstallButton variant="login" />
