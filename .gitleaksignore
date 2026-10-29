@@ -6,6 +6,10 @@
 # without a reason — those turn the scanner off rather than triaging it.
 #
 # Fingerprint format: <commit>:<file>:<rule-id>:<line>
+# Human-reviewed 2026-10-29: existing WordPress form field UUID, not a credential.
+4e3d9d6e67b15d163624d7b2468ef2024e613d55:supabase/migrations/20261029145058_legacy_intake_secret_collection_policy.sql:generic-api-key:50
+# Human-reviewed 2026-10-29: synthetic legacy-intake-177 form URL slug, not a credential.
+4e3d9d6e67b15d163624d7b2468ef2024e613d55:supabase/tests/database/177_legacy_intake_secret_collection_policy.test.sql:generic-api-key:95
 #
 # ---------------------------------------------------------------------------
 # Verified false positives

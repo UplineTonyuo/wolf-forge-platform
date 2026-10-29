@@ -34,8 +34,8 @@ describe("client project status filters", () => {
     expect(button.getAttribute("aria-pressed")).toBe("true");
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(1);
-    expect(links[0].textContent).toContain(`Project ${status}`);
-    expect(links[0].getAttribute("href")).toBe(`/account/projects/project-${orderStatuses.indexOf(status as typeof orderStatuses[number])}`);
+    expect(links[0]!.textContent).toContain(`Project ${status}`);
+    expect(links[0]!.getAttribute("href")).toBe(`/account/projects/project-${orderStatuses.indexOf(status as typeof orderStatuses[number])}`);
     expect(projects).toEqual(before);
     fireEvent.click(screen.getByRole("button", { name: "All projects, 7 projects" }));
     expect(screen.getAllByRole("link")).toHaveLength(7);
