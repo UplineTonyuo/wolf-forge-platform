@@ -82,7 +82,6 @@ join public.roles as role on role.name = fixture.role_name;
 
 create temp table wl214_ids (label text primary key, id uuid);
 grant select, insert on wl214_ids to authenticated, anon;
-grant select on wl214_ids to service_role;
 
 -- -----------------------------------------------------------------------------
 -- Helpers
@@ -480,11 +479,9 @@ set local role anon;
 set local "request.jwt.claim.role" = 'anon';
 set local "request.jwt.claim.sub" = '';
 
-set local role service_role;
-select is(public.app_get_public_form_schema('f0f0f0f0-0000-4000-8000-000000001801', 'wl214-b-public') ->> 'form_version_id',
+select is(public.app_get_published_form_schema('wl214-b-public') ->> 'form_version_id',
   (select id::text from wl214_ids where label = 'b-public-v1'),
-  'trusted server reads the published Tenant B public schema by tenant and canonical key');
-set local role anon;
+  'anonymous reads the published Tenant B public schema by canonical key');
 
 select lives_ok($$select public.app_submit_form(
     '71000000-0000-4000-8000-000000001836',

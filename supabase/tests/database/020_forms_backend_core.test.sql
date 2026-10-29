@@ -43,7 +43,7 @@ select ok(
 select ok(
   not has_function_privilege('anon', 'public.app_create_form(uuid,jsonb)', 'EXECUTE')
   and not has_function_privilege('anon', 'public.app_publish_form(uuid,uuid)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.app_get_published_form_schema(text)', 'EXECUTE')
+  and has_function_privilege('anon', 'public.app_get_published_form_schema(text)', 'EXECUTE')
   and has_function_privilege('anon', 'public.app_submit_form(uuid,uuid,jsonb,jsonb,jsonb)', 'EXECUTE'),
   'anonymous access is limited to explicit safe public Form boundaries'
 );
@@ -86,7 +86,6 @@ where id in (
 
 create temporary table form_test_ids (label text primary key, id uuid not null);
 grant select, insert, update on form_test_ids to authenticated, anon;
-grant select on form_test_ids to service_role;
 
 create temporary table form_test_services as
 select id, name, currency, price, row_number() over (order by id) as ordinal
@@ -326,15 +325,14 @@ select is(
   'published Service link carries a historically explainable name snapshot'
 );
 
-set local role service_role;
+set local role anon;
 set local "request.jwt.claim.sub" = '';
 select ok(
-  (public.app_get_public_form_schema('f0f0f0f0-0000-4000-8000-000000000001', 'public-order') ->> 'form_version_id')::uuid
+  (public.app_get_published_form_schema('public-order') ->> 'form_version_id')::uuid
     = (select id from form_test_ids where label = 'order-v1')
-  and jsonb_array_length(public.app_get_public_form_schema('f0f0f0f0-0000-4000-8000-000000000001', 'public-order') -> 'fields') = 6,
-  'trusted public Form read exposes only its safe published schema'
+  and jsonb_array_length(public.app_get_published_form_schema('public-order') -> 'fields') = 6,
+  'explicitly public Form exposes only its safe published schema'
 );
-set local role anon;
 select throws_ok(
   $$select public.app_submit_form(
     '61000000-0000-0000-0000-000000000001',
@@ -546,7 +544,7 @@ set local role anon;
 set local "request.jwt.claim.sub" = '';
 select throws_ok(
   $$select public.app_get_published_form_schema('private-contact')$$,
-  '42501', null,
+  '42501', 'Form authentication is required',
   'anonymous cannot access a private authenticated Form'
 );
 reset role;

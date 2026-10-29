@@ -1,7 +1,6 @@
 begin;
 
-revoke execute on function public.app_get_published_form_schema(text) from public, anon;
-
+-- Keep the legacy anonymous reader available until the application is deployed.
 create function public.app_get_public_form_schema(p_tenant_id uuid, p_canonical_key text)
 returns jsonb
 language plpgsql

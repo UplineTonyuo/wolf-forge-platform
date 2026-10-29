@@ -1146,10 +1146,9 @@ set local role anon;
 set local "request.jwt.claim.role" = 'anon';
 set local "request.jwt.claim.sub" = '';
 
-select throws_ok(
+select lives_ok(
   $$select public.app_get_published_form_schema('b2-public-order')$$,
-  '42501', null,
-  'anonymous published Form reads cannot bypass the trusted server cache'
+  'the anonymous published Form schema RPC still works after the private revocations'
 );
 
 reset role;
