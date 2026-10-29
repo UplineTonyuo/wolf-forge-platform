@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { ClientPaymentMethodView } from "../../../components/account/billing/client-payment-method";
 import { FinancialVisibilityBoundary } from "../../../components/invoices/financial-visibility-boundary";
 import { walletVisibility, financialAuthority, financialIdentity } from "../../../domain/invoices/visibility";
-import styles from "../../../components/account/billing/payment-rails.module.css";
-import { formatCurrencyCents, formatDateTime } from "../../../lib/format";
+import { WalletHistory } from "../../../components/account/billing/wallet-history";
 import { resolveWalletFunding } from "../../../domain/client-portal/payment-method";
 import { composeClientPaymentRails } from "../../../domain/payments/payment-rails";
 import { toClientSafeError } from "../../../lib/errors/application-error";
@@ -85,14 +84,7 @@ export default async function ClientPaymentMethodPage() {
       holderName={context.user.displayName ?? context.user.companyName}
       workEnabled={workEnabled}
     />
-    <section className="portal-page portal-section" aria-labelledby="wallet-history-heading">
-      <h2 id="wallet-history-heading">Wallet history</h2>
-      <p className="portal-note">Your latest recorded wallet transactions. Refund ledger entries do not automatically credit this balance.</p>
-      {history.length === 0 ? <p className="portal-empty">No wallet transactions recorded.</p> : <ol className={styles.walletHistory}>{history.map((entry) => <li key={entry.id}>
-        <div><strong>{entry.source.replaceAll("_", " ")}</strong>{entry.reason ? <p>{entry.reason}</p> : null}<small>{formatDateTime(entry.created_at)}</small></div>
-        <div><strong>{formatCurrencyCents(entry.amount_cents, entry.currency)}</strong><small>Balance {formatCurrencyCents(entry.balance_after_cents, entry.currency)}</small></div>
-      </li>)}</ol>}
-    </section>
+    <WalletHistory transactions={history} />
     </FinancialVisibilityBoundary>
   );
 }

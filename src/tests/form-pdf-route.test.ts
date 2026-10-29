@@ -14,7 +14,7 @@ beforeEach(() => {
 describe("authenticated saved-form PDF route", () => {
   it("uses the caller's scoped RPC and sends a private PDF attachment", async () => {
     const response = await GET(request(), params());
-    expect(mocks.rpc).toHaveBeenCalledWith("app_get_form_submission_pdf", { p_submission_id: id });
+    expect(mocks.rpc).toHaveBeenCalledWith("app_get_form_submission_pdf", { p_submission_id: id, p_include_project: true });
     expect(response.status).toBe(200);expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(response.headers.get("cache-control")).toBe("private, no-store");expect(response.headers.get("vary")).toBe("Cookie");
     expect(response.headers.get("content-disposition")).toContain(`form-submission-${id}.pdf`);

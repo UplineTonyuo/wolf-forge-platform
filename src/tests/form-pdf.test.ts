@@ -6,6 +6,13 @@ import { receiptFixture } from "./fixtures/form-pdf-fixture";
 vi.mock("server-only", () => ({}));
 
 describe("saved form PDF", () => {
+  it("prints authorized project identity before the form title", async () => {
+    const value=receiptFixture();value.project={number:12,title:"Synthetic project service"};
+    const lines:string[]=[],draw=PDFPage.prototype.drawText;
+    const spy=vi.spyOn(PDFPage.prototype,"drawText").mockImplementation(function(this:PDFPage,text,options){lines.push(text);return draw.call(this,text,options);});
+    try { await renderSubmissionPdf(value);expect(lines.join(" ")).toContain("Project #WF-P0012");expect(lines.indexOf("Synthetic project service")).toBeLessThan(lines.indexOf(value.form.title)); }
+    finally {spy.mockRestore();}
+  });
   it("creates a readable real PDF containing ink, a pinned version and server signing metadata", async () => {
     const bytes = await renderSubmissionPdf(receiptFixture());
     expect(new TextDecoder().decode(bytes.slice(0, 8))).toMatch(/^%PDF-/);
@@ -70,21 +77,26 @@ describe("saved form PDF", () => {
   });
   it("paginates long agreements without dropping the end", async () => {
     const value = receiptFixture(); value.form.fields[1]!.help_html = Array.from({ length: 160 }, (_, n) => `<p>Clause ${n}: Synthetic agreement text must be preserved completely.</p>`).join("");
-    const doc = await PDFDocument.load(await renderSubmissionPdf(value));
-    expect(doc.getPageCount()).toBeGreaterThan(4);
+    const lines: string[] = [], draw = PDFPage.prototype.drawText;
+    const spy = vi.spyOn(PDFPage.prototype, "drawText").mockImplementation(function (this: PDFPage, text, options) { lines.push(text); return draw.call(this, text, options); });
+    try {
+      const doc = await PDFDocument.load(await renderSubmissionPdf(value));
+      expect(doc.getPageCount()).toBeGreaterThan(1);
+      expect(lines.join(" ")).toContain("Clause 159: Synthetic agreement text must be preserved completely.");
+    } finally { spy.mockRestore(); }
   });
   it.each([24, 28, 32, 36, 40, 44])("keeps the signer and drawn ink together after %i agreement lines", async (lines) => {
     const value = receiptFixture();
     value.form.fields[1]!.help_html = Array.from({ length: lines }, (_, index) => `<p>Clause ${index}: The original service agreement remains recorded.</p>`).join("");
     const signerPages: string[] = [], inkPages: string[] = [];
-    const originalText = PDFPage.prototype.drawText, originalRectangle = PDFPage.prototype.drawRectangle;
+    const originalText = PDFPage.prototype.drawText, originalLine = PDFPage.prototype.drawLine;
     const textSpy = vi.spyOn(PDFPage.prototype, "drawText").mockImplementation(function (this: PDFPage, text, options) {
       if (text.startsWith("Signer:")) signerPages.push(this.ref.toString());
       return originalText.call(this, text, options);
     });
-    const inkSpy = vi.spyOn(PDFPage.prototype, "drawRectangle").mockImplementation(function (this: PDFPage, options) {
-      if (options?.width === 325 && options.height === 130) inkPages.push(this.ref.toString());
-      return originalRectangle.call(this, options);
+    const inkSpy = vi.spyOn(PDFPage.prototype, "drawLine").mockImplementation(function (this: PDFPage, options) {
+      if (options?.thickness === 1.2 && !inkPages.includes(this.ref.toString())) inkPages.push(this.ref.toString());
+      return originalLine.call(this, options);
     });
     try {
       await renderSubmissionPdf(value);

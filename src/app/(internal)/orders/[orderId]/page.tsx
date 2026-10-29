@@ -1,5 +1,6 @@
 import { OrderSubmittedForms } from "../../../../components/projects/order-submitted-forms";
 import { OrderTeamNote } from "../../../../components/projects/order-team-note";
+import { ProjectTasks } from "../../../../components/projects/project-tasks";
 import { InternalNotesModal } from "../../../../components/tickets/internal-notes-modal";
 import { OrderConversation } from "../../../../components/tickets/order-conversation";
 import { DataError } from "../../../../components/ui/list-states";
@@ -23,13 +24,12 @@ export default async function OrderDetailsPage({
       context.services.orders.get(orderId),
       context.services.tasks.listForOrder(orderId),
       context.services.catalog.listAssignees(),
-      context.services.tickets.getForOrder(orderId),
+      context.user.tickets.view ? context.services.tickets.getForOrder(orderId) : Promise.resolve(null),
       context.user.teamMessaging.use ? context.services.team.listConversations() : Promise.resolve([]),
     ]);
 
     const canViewForms = context.user.forms.submissionsView;
 
-    const nameById = new Map(people.map((person) => [person.id, person.displayName]));
     const { views: taskViews, counts: taskCounts } = composeProjectTaskViews(tasks);
     const conversationTicket = conversation?.ticket ?? null;
     const legacyTicket = conversationTicket?.id !== orderId ? conversationTicket : null;
@@ -57,7 +57,7 @@ export default async function OrderDetailsPage({
           )}
         </section>
 
-        <section aria-labelledby="order-conversation-heading">
+        {context.user.tickets.view ? <section aria-labelledby="order-conversation-heading">
           <h2 id="order-conversation-heading" className="sr-only">
             Conversation
           </h2>
@@ -80,7 +80,7 @@ export default async function OrderDetailsPage({
               ) : null
             }
           />
-        </section>
+        </section> : null}
 
         <section className={styles.secondary} aria-labelledby="order-secondary-heading">
           <h2 id="order-secondary-heading" className={styles.secondaryHeading}>
@@ -97,40 +97,10 @@ export default async function OrderDetailsPage({
               </div>
 
               <div className={styles.panelBody}>
-                {taskViews.length === 0 ? (
-                  <p className={styles.panelEmpty}>This project has no tasks yet.</p>
-                ) : (
-                  taskViews.map((task) => (
-                    <div className={styles.taskRow} key={task.id}>
-                      <div>
-                        <strong>{task.title}</strong>
-                        <div className={styles.taskMeta}>
-                          <span>
-                            {task.assigneeId
-                              ? nameById.get(task.assigneeId) ?? "Unnamed teammate"
-                              : "Unassigned"}
-                          </span>
-                          {task.dueAt ? (
-                            <span className={task.overdue ? styles.overdue : undefined}>
-                              Due {formatDate(task.dueAt)}
-                              {task.overdue ? ` ${String.fromCharCode(183)} overdue` : ""}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <span
-                        className={
-                          task.status === "complete"
-                            ? `${styles.taskStatus} ${styles.taskStatusComplete}`
-                            : styles.taskStatus
-                        }
-                      >
-                        {task.statusLabel}
-                      </span>
-                    </div>
-                  ))
-                )}
+                <ProjectTasks orderId={order.id}
+                  tasks={taskViews.map((task) => ({ ...task, dueLabel: task.dueAt ? formatDate(task.dueAt) : null }))}
+                  people={people.map((person) => ({ id: person.id, name: person.displayName }))}
+                  capabilities={order.archived_at ? { create: false, edit: false, assign: false, archive: false } : context.user.projects} />
               </div>
             </section>
           </div>
