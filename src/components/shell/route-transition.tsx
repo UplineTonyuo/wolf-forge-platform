@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createContext, startTransition, useContext, type MouseEvent, type ReactNode } from "react";
+import Link, { useLinkStatus } from "next/link";
+import { createContext, startTransition, useContext, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import styles from "./route-transition.module.css";
 
 /*
  * Nested loading boundaries cannot paint before their prefetch arrives, and
@@ -10,6 +12,36 @@ import { createContext, startTransition, useContext, type MouseEvent, type React
  * update inside the navigation transition so commit or cancellation clears it.
  */
 const RouteTransitionContext = createContext<((url: URL) => void) | null>(null);
+
+function LinkPending({ label }: { label: string }) {
+  const { pending } = useLinkStatus();
+  return <>
+    <span className={styles.hint} data-pending={pending || undefined} aria-hidden="true" aria-busy={pending} />
+    {pending ? <span className="sr-only" role="status">{label}</span> : null}
+  </>;
+}
+
+type RouteTransitionLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
+  href: string;
+  feedback?: "page" | "inline";
+  loadingLabel?: string;
+  "data-route-skeleton"?: "off";
+};
+
+export function RouteTransitionLink({ href, feedback = "page", loadingLabel = "Loading section", onNavigate, children, ...props }: RouteTransitionLinkProps) {
+  const begin = useContext(RouteTransitionContext);
+  return <Link {...props} href={href} onNavigate={(event) => {
+    let canceled = false;
+    onNavigate?.({ preventDefault() { canceled = true; event.preventDefault(); } });
+    // Next calls onNavigate only after accepting an unmodified, non-download Link click.
+    if (!canceled && feedback === "page" && props["data-route-skeleton"] !== "off") {
+      startTransition(() => begin?.(new URL(href, window.location.href)));
+    }
+  }}>
+    {children}
+    {feedback === "inline" ? <LinkPending label={loadingLabel} /> : null}
+  </Link>;
+}
 
 export function RouteTransitionProvider({ begin, children }: { begin: (url: URL) => void; children: ReactNode }) {
   return <RouteTransitionContext.Provider value={begin}>{children}</RouteTransitionContext.Provider>;

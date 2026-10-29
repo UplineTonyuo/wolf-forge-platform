@@ -9,6 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InternalShell } from "../components/shell/internal-shell";
 import type { InternalUser } from "../lib/supabase/next-server";
 import { notifyTicketAccessUnavailable } from "../components/tickets/ticket-access-boundary";
+import { RouteTransitionLink } from "../components/shell/route-transition";
+import { interceptNextLinkNavigation, NextLinkRouter } from "./fixtures/next-link-router";
+
+vi.mock("next/link", async () => (await import("./fixtures/next-link-router")).appLinkModule);
 
 /*
  * A small stand-in for the App Router: push() commits the new pathname inside
@@ -41,18 +45,15 @@ let redirectTo: string | null;
 let inPageHref: string | null;
 let linkAttributes: Record<string, string>;
 let cancelClick: boolean;
+let restoreNextLink: () => void;
 
 function Page({ pathname, ready }: { pathname: string; ready: Promise<void> }) {
   use(ready);
   return <><p>Page {pathname}</p>{inPageHref ? <>
     <input aria-label="Unsent draft" defaultValue="" />
-    <a href={inPageHref} {...linkAttributes} onClick={(event) => {
-      // Model Link's own navigation before the shell's bubble handler.
-      if (cancelClick) { event.preventDefault(); return; }
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.currentTarget.target === "_blank" || event.currentTarget.hasAttribute("download")) return;
-      event.preventDefault();
-      nav.push(inPageHref!);
-    }}><span>Next page</span></a>
+    <RouteTransitionLink href={inPageHref} prefetch={false} {...linkAttributes} onClick={(event) => {
+      if (cancelClick) event.preventDefault();
+    }}><span>Next page</span></RouteTransitionLink>
   </> : null}</>;
 }
 
@@ -65,11 +66,11 @@ function Router({ initial }: { initial: string }) {
     };
   }, []);
   return (
-    <nav.path.Provider value={state.pathname}>
+    <NextLinkRouter><nav.path.Provider value={state.pathname}>
       <InternalShell user={user}>
         <Page pathname={state.pathname} ready={state.ready} />
       </InternalShell>
-    </nav.path.Provider>
+    </nav.path.Provider></NextLinkRouter>
   );
 }
 
@@ -83,7 +84,11 @@ function start(initial: string) {
       visible.querySelectorAll("[hidden]").forEach((node) => node.remove());
       return visible.textContent;
     },
-    inPageClick: (options = {}) => act(async () => { fireEvent.click(main.querySelector("a")!, options); }),
+    inPageClick: (options: Record<string, unknown> = {}) => act(async () => {
+      const link = main.querySelector("a")!;
+      if (options.button === 1) fireEvent(link, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+      else fireEvent.click(link, options);
+    }),
     click: (route: string) => act(async () => { fireEvent.click(container.querySelector(`.app-sidebar a[href='${route}']`)!); }),
     commit: (route: string) => act(async () => payloads.get(route)!()),
     skeleton: () => [...main.querySelectorAll("[data-skeleton]")].map((node) => node.getAttribute("data-skeleton")),
@@ -97,10 +102,12 @@ beforeEach(() => {
   inPageHref = null;
   linkAttributes = {};
   cancelClick = false;
+  restoreNextLink = interceptNextLinkNavigation((href) => nav.push(href));
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
 afterEach(() => {
   cleanup();
+  restoreNextLink();
   vi.unstubAllGlobals();
 });
 

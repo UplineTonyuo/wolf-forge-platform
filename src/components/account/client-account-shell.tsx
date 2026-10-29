@@ -13,7 +13,7 @@ import { ServiceChooserProvider } from "./services/service-chooser-context";
 import { portalNavigationFor } from "./portal-nav-registry";
 import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "../shell/tenant-branding-provider";
-import { coveredRoute, navigationUrlForClick, RouteTransitionProvider } from "../shell/route-transition";
+import { coveredRoute, RouteTransitionProvider } from "../shell/route-transition";
 
 /**
  * The client workspace shell.
@@ -101,10 +101,7 @@ export function ClientAccountShell({
           onNavigate={navigate}
         />
 
-        <main id="portal-main" className="portal-main" onClick={(event) => {
-          const url = navigationUrlForClick(event);
-          if (url) startTransition(() => begin(url));
-        }}>
+        <main id="portal-main" className="portal-main">
           {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
           <ClientCommandBar
             pendingRoute={pendingRoute}

@@ -35,7 +35,7 @@ import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
 import { TeamPresenceProvider } from "../team/team-presence-provider";
 import { RouteSkeleton } from "./route-skeletons";
-import { coveredRoute, navigationUrlForClick, RouteTransitionProvider } from "./route-transition";
+import { coveredRoute, RouteTransitionProvider } from "./route-transition";
 import { TicketAccessBoundary } from "../tickets/ticket-access-boundary";
 import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "./tenant-branding-provider";
@@ -267,10 +267,6 @@ export function InternalShell({
       <div
         id="main-content"
         className="workspace"
-        onClick={(event) => {
-          const url = navigationUrlForClick(event);
-          if (url) startTransition(() => begin(url));
-        }}
       >
         {unavailable ? <p className="tenant-branding-error" role="alert">Workspace branding is unavailable. Reload or try again shortly.</p> : null}
         <WorkspaceCommandBar
@@ -296,7 +292,7 @@ export function InternalShell({
           }
         />
 
-        <main className="workspace-route-stage">
+        <main className="workspace-route-stage" aria-busy={pendingRoute !== null}>
           {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : null}
           <div className="workspace-route-content" hidden={pendingRoute !== null}>
           {ticketRoute ? (
