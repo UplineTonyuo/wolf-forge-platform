@@ -1,0 +1,12 @@
+.filterBlock { display: grid; gap: 8px; min-width: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.filters button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; max-width: 100%; padding: 9px 14px; border: 1px solid var(--wf-border); border-radius: 24px; background: var(--wf-surface, #fff); color: var(--wf-navy); font: inherit; font-size: 13px; font-weight: 600; line-height: 1.4; cursor: pointer; touch-action: manipulation; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+.filters button span { display: inline-flex; justify-content: center; align-items: center; min-width: 24px; min-height: 24px; padding-inline: 5px; border-radius: 12px; background: var(--wf-surface-muted, #f1f3f8); color: var(--wf-navy); font-size: 12px; font-variant-numeric: tabular-nums; }
+.filters button[aria-pressed=true] { border-color: var(--wf-navy); background: var(--wf-navy); color: #fff; }
+.filters button[aria-pressed=true] span { background: #fff; }
+.filters button:focus-visible { outline: 2px solid var(--wf-gold); outline-offset: 3px; }
+.filters button:active { border-color: var(--wf-gold); }
+.summary { margin: 0; color: var(--wf-text-muted); font-size: 13px; line-height: 1.5; }
+@media (hover: hover) { .filters button:not([aria-pressed=true]):hover { border-color: var(--wf-gold); background: var(--wf-surface-muted, #f1f3f8); } }
+@media (max-width: 430px) { .filters button { flex: 1 1 calc(50% - 8px); padding-inline: 10px; font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { .filters button { transition: none; } }

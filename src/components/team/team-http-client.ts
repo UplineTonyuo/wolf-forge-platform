@@ -83,8 +83,8 @@ export function finalizeTeamVoiceUpload(input: {
 export function fetchTeamVoicePlayback(input: {
   conversationId: string;
   messageId: string;
-}): Promise<TeamActionResult<{ url: string; expiresAt: string }>> {
-  return post("/api/team-voice/playback", input, "Voice recording could not be loaded.");
+}, signal?: AbortSignal): Promise<TeamActionResult<{ url: string; expiresAt: string }>> {
+  return post("/api/team-voice/playback", input, "Voice recording could not be loaded.", signal);
 }
 
 /**

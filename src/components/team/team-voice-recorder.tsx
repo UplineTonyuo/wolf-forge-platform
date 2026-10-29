@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Mic, Send, Square, Trash2 } from "lucide-react";
+import { Loader2, Mic, Send, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { teamVoiceMaxBytes, teamVoiceMaxDurationMs } from "../../domain/team/schema";
 import {
@@ -9,6 +9,9 @@ import {
   uploadTeamVoiceBlob,
 } from "./team-http-client";
 import { TeamVoicePermissionDialog, type MicDialogKind } from "./team-voice-permission-dialog";
+import { VoiceAudioPlayer } from "../audio/voice-audio-player";
+import { VoiceRecordingStrip } from "../audio/voice-recording-strip";
+import voiceStyles from "../audio/voice-audio.module.css";
 import styles from "./team-messages.module.css";
 
 const choices = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
@@ -56,11 +59,6 @@ function microphoneErrorDialogKind(error: unknown): Exclude<MicDialogKind, "intr
   }
 }
 
-function clock(milliseconds: number) {
-  const seconds = Math.floor(milliseconds / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
 export function TeamVoiceRecorder({
   conversationId,
   disabled,
@@ -77,6 +75,9 @@ export function TeamVoiceRecorder({
   const deviceLostRef = useRef(false);
   const micButtonRef = useRef<HTMLButtonElement>(null);
   const permissionStatusRef = useRef<PermissionStatus | null>(null);
+  const aliveRef = useRef(false);
+  const generationRef = useRef(0);
+  const requestingRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -116,19 +117,48 @@ export function TeamVoiceRecorder({
   useEffect(() => {
     if (!recording) return;
     const timer = window.setInterval(() => {
-      const next = Date.now() - startedAtRef.current;
+      const next = performance.now() - startedAtRef.current;
       setElapsed(Math.min(next, teamVoiceMaxDurationMs));
       if (next >= teamVoiceMaxDurationMs) recorderRef.current?.stop();
     }, 250);
     return () => window.clearInterval(timer);
   }, [recording]);
 
-  useEffect(() => () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  useEffect(() => {
+    aliveRef.current = true;
+    generationRef.current++;
+    return () => {
+      aliveRef.current = false;
+      const recorder = recorderRef.current;
+      if (recorder) { recorder.onstop = null; recorder.ondataavailable = null; recorder.onerror = null; }
+      if (recorder?.state === "recording") recorder.stop();
+      streamRef.current?.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+    };
+  }, []);
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  useEffect(() => {
+    if (!disabled) return;
+    generationRef.current++;
+    requestingRef.current = false;
+    const recorder = recorderRef.current;
+    if (recorder?.state === "recording") recorder.stop();
+    recorderRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+    streamRef.current = null;
+    queueMicrotask(() => { if (aliveRef.current) { setRecording(false); setDialogBusy(false); setDialogKind(null); } });
+  }, [disabled]);
 
   function discard() {
+    generationRef.current++;
+    requestingRef.current = false;
+    const recorder = recorderRef.current;
+    if (recorder?.state === "recording") recorder.stop();
+    recorderRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+    streamRef.current = null;
+    setRecording(false);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     setBlob(null);
@@ -150,10 +180,15 @@ export function TeamVoiceRecorder({
   }
 
   async function requestMicrophoneAndRecord() {
-    if (!supported || busy) return;
+    if (!supported || busy || disabled || requestingRef.current) return;
     discard();
+    const generation = ++generationRef.current;
+    requestingRef.current = true;
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!aliveRef.current || generation !== generationRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
+      const recordingStream = stream;
       microphoneGrantedOnce = true;
       setPermissionState("granted");
       setDialogKind(null);
@@ -164,11 +199,14 @@ export function TeamVoiceRecorder({
       chunksRef.current = [];
       deviceLostRef.current = false;
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
+        if (aliveRef.current && generation === generationRef.current && event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
+        recordingStream.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+        if (!aliveRef.current || generation !== generationRef.current) return;
         streamRef.current = null;
+        recorderRef.current = null;
+        setElapsed(Math.min(teamVoiceMaxDurationMs, Math.max(1, Math.round(performance.now() - startedAtRef.current))));
         setRecording(false);
         if (deviceLostRef.current) {
           deviceLostRef.current = false;
@@ -184,18 +222,26 @@ export function TeamVoiceRecorder({
         setBlob(next);
         setPreviewUrl(URL.createObjectURL(next));
       };
-      recorder.onerror = stopForDeviceLoss;
+      const deviceLost = () => { if (aliveRef.current && generation === generationRef.current) stopForDeviceLoss(); };
+      recorder.onerror = deviceLost;
       stream.getAudioTracks().forEach((track) => {
-        track.onended = stopForDeviceLoss;
+        track.onended = deviceLost;
       });
-      startedAtRef.current = Date.now();
+      startedAtRef.current = performance.now();
       setElapsed(0);
       setRecording(true);
       recorder.start(1000);
     } catch (err) {
+      stream?.getTracks().forEach((track) => { track.onended = null; track.stop(); });
+      if (!aliveRef.current || generation !== generationRef.current) return;
+      streamRef.current = null;
+      recorderRef.current = null;
+      setRecording(false);
       const kind = microphoneErrorDialogKind(err);
       if (kind === "blocked") setPermissionState("denied");
       setDialogKind(kind);
+    } finally {
+      if (generation === generationRef.current) requestingRef.current = false;
     }
   }
 
@@ -243,19 +289,13 @@ export function TeamVoiceRecorder({
   let content;
   if (recording) {
     content = (
-      <div className={styles.voiceRecorder} role="status" aria-label="Recording voice message">
-        <span className={styles.voiceRecordingDot} aria-hidden="true" />
-        <span>{clock(elapsed)} / 5:00</span>
-        <button type="button" onClick={() => recorderRef.current?.stop()} aria-label="Stop recording">
-          <Square aria-hidden="true" /> Stop
-        </button>
-      </div>
+      <VoiceRecordingStrip elapsedMs={elapsed} limitMs={teamVoiceMaxDurationMs} onStop={() => recorderRef.current?.stop()}
+        onCancel={discard} cancelLabel="Discard voice recording" />
     );
   } else if (blob && previewUrl) {
     content = (
-      <div className={styles.voiceRecorder}>
-        <audio src={previewUrl} controls preload="metadata" aria-label="Voice recording preview" />
-        <span>{clock(elapsed)}</span>
+      <div className={`${styles.voiceRecorder} ${voiceStyles.review}`}>
+        <VoiceAudioPlayer key={previewUrl} source={blob} durationMs={elapsed} label="voice recording preview" disabled={busy} />
         <button type="button" onClick={discard} disabled={busy} aria-label="Discard voice recording"><Trash2 aria-hidden="true" /></button>
         <button type="button" onClick={() => void send()} disabled={busy} aria-busy={busy || undefined} aria-label="Send voice message">
           {busy ? <Loader2 className={styles.spin} aria-hidden="true" /> : <Send aria-hidden="true" />}
