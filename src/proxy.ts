@@ -4,8 +4,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./lib/supabase/database.types";
 import { readPublicEnvironment } from "./lib/env/public-env";
 import { hardenAuthCookieOptions } from "./lib/supabase/auth-cookie-options";
-import { ensureLocalQaSession } from "./lib/qa/local-ui-bypass";
+import { ensureLocalQaSession, localUiQaBypassEnabled } from "./lib/qa/local-ui-bypass";
 import { lanDeviceApproved } from "./lib/qa/lan-device-gate";
+import { TenantHostCache } from "./lib/edge/tenant-host-cache";
+import { isPublicActionPath } from "./lib/edge/public-action-path";
 import {
   CORRELATION_HEADER,
   createCorrelationId,
@@ -13,6 +15,9 @@ import {
 import { TENANT_SELECTOR_HEADER, toTenantSelector } from "./domain/tenancy/tenant-selector";
 import { LOOPBACK_HOSTS, normalizeRequestHost } from "./domain/tenancy/request-host";
 import { WOLF_FORGE_TENANT_ID } from "./domain/tenancy/wolf-forge-tenant";
+
+// Per proxy instance: disabling/remapping a host can lag by up to 60s; new hosts by 10s.
+const tenantHostCache = new TenantHostCache();
 
 /** Neutral, uncached, unbranded: names no Tenant and sets no cookie. */
 function workspaceUnavailable(status: 404 | 503) {
@@ -32,9 +37,6 @@ export async function proxy(request: NextRequest) {
    * unknown, unverified or disabled host is refused here, before any session
    * work, with no Wolf Forge fallback. The result is a selector only: the
    * database still requires an active membership in that active Tenant.
-   *
-   * ponytail: one anonymous RPC per request; add a short per-host cache if
-   * proxy latency matters (disabling a host would then lag by its TTL).
    */
   const host = normalizeRequestHost(request.headers.get("host"));
 
@@ -50,11 +52,17 @@ export async function proxy(request: NextRequest) {
   if (host && LOOPBACK_HOSTS.has(host) && process.env.VERCEL !== "1") {
     tenantId = WOLF_FORGE_TENANT_ID;
   } else if (host) {
-    const { data, error } = await createClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    }).rpc("app_resolve_tenant_host", { p_host: host });
-    if (error) return workspaceUnavailable(503);
-    tenantId = data;
+    const cached = tenantHostCache.get(host);
+    if (cached !== undefined) {
+      tenantId = cached;
+    } else {
+      const { data, error } = await createClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      }).rpc("app_resolve_tenant_host", { p_host: host });
+      if (error) return workspaceUnavailable(503);
+      tenantId = data;
+      tenantHostCache.set(host, tenantId);
+    }
   }
   if (!tenantId) return workspaceUnavailable(404);
   const tenantSelector = toTenantSelector(tenantId);
@@ -112,7 +120,7 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const claims = await supabase.auth.getClaims();
+  let claims = await supabase.auth.getClaims();
 
   /*
    * Local-only, opt-in (NODE_ENV=development + LOCAL_UI_QA_BYPASS=true) and
@@ -122,17 +130,37 @@ export async function proxy(request: NextRequest) {
    * its cookie writes above persist the resulting session exactly like any
    * other sign-in. A no-op everywhere else, including once a session exists.
    */
-  if (!claims.data) await ensureLocalQaSession(supabase, request);
+  if (!claims.data && await localUiQaBypassEnabled(request)) {
+    await ensureLocalQaSession(supabase, request);
+    claims = await supabase.auth.getClaims();
+  }
+
+  const hasSessionClaims = !claims.error && !!claims.data?.claims?.sub;
+  const pathname = request.nextUrl.pathname;
+  let earlyResponse: NextResponse | undefined;
+  if (!hasSessionClaims && request.method === "POST" && request.headers.has("next-action") && !isPublicActionPath(pathname)) {
+    earlyResponse = new NextResponse(null, { status: 401 });
+  } else if (!hasSessionClaims && !claims.error && request.method === "GET" && pathname === "/") {
+    // getInternalContext redirects anonymous root visits to /login without a next parameter.
+    earlyResponse = NextResponse.redirect(new URL("/login", request.url));
+  }
+  if (earlyResponse) {
+    earlyResponse.headers.set("cache-control", "no-store");
+    response.cookies.getAll().forEach((cookie) => earlyResponse.cookies.set(cookie));
+    return earlyResponse;
+  }
 
   return response;
 }
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest|txt|xml|js|map|woff|woff2|ttf|otf|css|mp3|mp4|webm)$).*)",
     // A request carrying a forged selector always passes through the proxy, so
     // an excluded path can never deliver a browser value to server code.
     { source: "/:path*", has: [{ type: "header", key: "x-wf-tenant" }] },
+    // Server Action IDs can be dispatched on other paths, including asset-suffix paths.
+    { source: "/:path*", has: [{ type: "header", key: "next-action" }] },
   ],
 };
 

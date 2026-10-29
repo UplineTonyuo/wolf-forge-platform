@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
   memberships: {} as Record<string, { account_class: string; role_name: string }>,
   rpcCalls: [] as { name: string; selector: string | null; body: unknown }[],
   resolverDown: false,
+  sessionPresent: true,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -43,8 +44,8 @@ vi.mock("next/navigation", () => ({
 vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(() => ({
     auth: {
-      getClaims: async () => ({ data: { claims: { sub: ACTOR } } }),
-      getSession: async () => ({ data: { session: { access_token: "signed-token" } }, error: null }),
+      getClaims: async () => ({ data: state.sessionPresent ? { claims: { sub: ACTOR } } : null, error: null }),
+      getSession: async () => ({ data: { session: state.sessionPresent ? { access_token: "signed-token" } : null }, error: null }),
       signInWithPassword: async () => ({ data: { session: { access_token: "signed-token" } }, error: null }),
       signOut: async () => ({ error: null }),
     },
@@ -95,6 +96,8 @@ async function fakePostgrest(input: string | URL | Request, init?: RequestInit) 
 }
 
 beforeEach(() => {
+  // Each test starts a fresh proxy instance; host-cache persistence is tested in edge-gate.test.ts.
+  vi.resetModules();
   vi.stubEnv("SUPABASE_URL", URL_BASE);
   vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "local-key");
   vi.stubGlobal("fetch", vi.fn(fakePostgrest));
@@ -103,6 +106,7 @@ beforeEach(() => {
   state.memberships = {};
   state.rpcCalls = [];
   state.resolverDown = false;
+  state.sessionPresent = true;
 });
 
 afterEach(() => {
@@ -337,6 +341,17 @@ describe("the cookie-session client sends the host's Tenant too", () => {
 });
 
 describe("application access follows the host's Tenant; membership decides", () => {
+  it("the anonymous root shortcut matches the actual home page's /login redirect", async () => {
+    const { proxy } = await import("../proxy");
+    const { default: InternalHomePage } = await import("../app/(internal)/page");
+    state.sessionPresent = false;
+    state.headers = new Headers({ [TENANT_SELECTOR_HEADER]: B });
+    await expect(InternalHomePage()).rejects.toThrow("REDIRECT:/login");
+    const response = await proxy(new NextRequest("https://tenant-b.test/?next=/orders", { headers: { host: "tenant-b.test" } }));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://tenant-b.test/login");
+  });
+
   async function internalContext() {
     const { getInternalContext } = await import("../lib/supabase/next-server");
     return getInternalContext();
