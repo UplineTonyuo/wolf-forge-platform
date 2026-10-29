@@ -10,12 +10,16 @@ const hook = "public.app_apply_client_support_context";
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const need = (condition, message) => assert.ok(condition, message);
 let step = "runner isolation", database, recoveryProof, restoreRequired = false, restoreFailed = false;
+let sqlFailureState = null;
 
 // Child output can contain local keys, JWTs or fixture data; never forward it.
 function captured(command, args, input) {
   return new Promise((accept, reject) => {
-    const child = execFile(command, args, { encoding: "utf8", timeout: 30000, maxBuffer: 2 ** 20 }, (error, stdout) => {
-      if (error) reject(new Error("Captured local command failed; output withheld"));
+    const child = execFile(command, args, { encoding: "utf8", timeout: 30000, maxBuffer: 2 ** 20 }, (error, stdout, stderr) => {
+      if (error) {
+        if (args.includes("psql")) sqlFailureState = /ERROR:\s+([0-9A-Z]{5})(?:\s|$)/.exec(stderr)?.[1] ?? null;
+        reject(new Error("Captured local command failed; output withheld"));
+      }
       else accept(stdout.trim());
     });
     child.stdin?.on("error", () => {});
@@ -24,7 +28,8 @@ function captured(command, args, input) {
 }
 
 async function sql(statement, variables = {}) {
-  const args = ["exec", "-i", database, "psql", "-X", "-qAt", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"];
+  sqlFailureState = null;
+  const args = ["exec", "-i", database, "psql", "-X", "-qAt", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=sqlstate"];
   for (const [key, value] of Object.entries(variables)) {
     need(/^[a-z_]+$/.test(key), "Invalid fixture parameter");
     args.push("-v", `${key}=${typeof value === "string" ? value : JSON.stringify(value)}`);
@@ -139,7 +144,7 @@ async function main() {
   step = "synthetic memberships and Tickets";
   await sql(`begin;
     insert into public.companies(id,tenant_id,name,status)
-      select distinct (a->>'company')::uuid, '${tenant}', 'Synthetic Client Support CI', 'client'
+      select distinct (a->>'company')::uuid, '${tenant}'::uuid, 'Synthetic Client Support CI', 'client'
       from jsonb_array_elements(:'actors'::jsonb) a where a->>'role'='client';
     update public.profiles p set role_id=r.id,company_id=(a->>'company')::uuid,display_name='Synthetic Client Support CI'
       from jsonb_array_elements(:'actors'::jsonb) a,public.roles r where p.id=(a->>'id')::uuid and r.name=a->>'role';
@@ -338,7 +343,7 @@ try {
   await main();
 } catch (error) {
   const detail = error instanceof assert.AssertionError ? ` (${error.message})` : "";
-  console.error(`FAIL client support REST integration during ${step}${detail}; command, credential and response details withheld`);
+  console.error(`FAIL client support REST integration during ${step}${detail}${sqlFailureState ? ` (SQLSTATE ${sqlFailureState})` : ""}; command, credential and response details withheld`);
   process.exitCode = 1;
 } finally {
   if (restoreRequired) {
