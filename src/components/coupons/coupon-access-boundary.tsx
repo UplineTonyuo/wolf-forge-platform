@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { loadCouponAccessAction } from "../../app/actions/coupons";
-import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function CouponAccessBoundary({ children }: { children: ReactNode }) {
   const [unavailable, setUnavailable] = useState(false);

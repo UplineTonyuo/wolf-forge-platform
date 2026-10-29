@@ -1,25 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { TEAM_CLOSED_SYNC_INTERVAL_MS } from "../../domain/polling-constants";
 import {
-  TEAM_BACKGROUND_CLOSED_MS,
   TEAM_BACKGROUND_OPEN_MS,
   TEAM_BACKGROUND_QUIET_MS,
-  TEAM_LIVE_CLOSED_MS,
   TEAM_LIVE_FAST_MS,
   TEAM_LIVE_QUIET_MS,
   TEAM_LIVE_WARM_MS,
+  applyTeamJitter,
   computeTeamBackgroundDelayMs,
   computeTeamLiveDelayMs,
   nextTeamLiveTier,
+  teamBackoffIntervalMs,
   type TeamLiveTier,
 } from "../../domain/team/live-scheduler";
 
+export const TEAM_LIVE_CLOSED_MS = TEAM_CLOSED_SYNC_INTERVAL_MS;
+export const TEAM_BACKGROUND_CLOSED_MS = TEAM_CLOSED_SYNC_INTERVAL_MS;
+
 export {
-  TEAM_BACKGROUND_CLOSED_MS,
   TEAM_BACKGROUND_OPEN_MS,
   TEAM_BACKGROUND_QUIET_MS,
-  TEAM_LIVE_CLOSED_MS,
   TEAM_LIVE_FAST_MS,
   TEAM_LIVE_QUIET_MS,
   TEAM_LIVE_WARM_MS,
@@ -81,9 +83,8 @@ type TeamSyncControllerOptions = {
  *   in flight, and the interval used for the NEXT tick is always freshly
  *   computed rather than fixed at mount.
  *
- * All policy (which tier, which delay, whether a delta counts as activity)
- * is pure and lives in `src/domain/team/live-scheduler.ts`; this hook only
- * owns the real timers and browser event listeners.
+ * OPEN tiers, backoff and jitter use `src/domain/team/live-scheduler.ts`;
+ * CLOSED cadence comes from the shared polling constants.
  */
 export function useTeamSyncController({
   active,
@@ -167,8 +168,10 @@ export function useTeamSyncController({
       scheduleState.current.tier = nextTeamLiveTier(idleMs);
       const delay = immediate
         ? 0
-        : computeTeamLiveDelayMs({
-            open: openRef.current,
+        : !openRef.current
+          ? applyTeamJitter(Math.max(TEAM_LIVE_CLOSED_MS, teamBackoffIntervalMs(scheduleState.current.liveFailures)))
+          : computeTeamLiveDelayMs({
+            open: true,
             tier: scheduleState.current.tier,
             failureCount: scheduleState.current.liveFailures,
           });
@@ -182,8 +185,10 @@ export function useTeamSyncController({
       if (disposed.current || suspended()) return;
       const delay = immediate
         ? 0
-        : computeTeamBackgroundDelayMs({
-            open: openRef.current,
+        : !openRef.current
+          ? applyTeamJitter(Math.max(TEAM_BACKGROUND_CLOSED_MS, teamBackoffIntervalMs(scheduleState.current.backgroundFailures)))
+          : computeTeamBackgroundDelayMs({
+            open: true,
             tier: scheduleState.current.tier,
             failureCount: scheduleState.current.backgroundFailures,
           });

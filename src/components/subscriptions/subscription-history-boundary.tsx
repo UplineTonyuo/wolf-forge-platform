@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { loadSubscriptionVisibilityAction } from "../../app/actions/subscriptions";
-import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function SubscriptionHistoryBoundary({ ids, audience, states = [], workEnabled, onRefresh, children }: {
   ids: string[];

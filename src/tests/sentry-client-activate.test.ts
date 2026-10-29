@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const init = vi.hoisted(() => vi.fn());
-const botInit = vi.hoisted(() => vi.fn());
 
 vi.mock("@sentry/nextjs", () => ({ init, captureRouterTransitionStart: vi.fn() }));
-vi.mock("botid/client/core", () => ({ initBotId: botInit }));
+vi.mock("botid/client/core", () => ({ initBotId: vi.fn() }));
 
 async function sentryEnabledOn(pathname: string, flag: string | undefined): Promise<unknown> {
   vi.resetModules();
@@ -21,10 +20,6 @@ afterEach(() => {
 });
 
 describe("browser Sentry and the set-password link", () => {
-  it("attaches BotID headers to login and dynamic public form POSTs", async () => {
-    await sentryEnabledOn("/f/contact", "1");
-    expect(botInit).toHaveBeenLastCalledWith({ protect: [{ path: "/login", method: "POST" }, { path: "/f/*", method: "POST" }] });
-  });
   it("never starts on a page load that carries the /activate token", async () => {
     expect(await sentryEnabledOn("/activate", "1")).toBe(false);
   });

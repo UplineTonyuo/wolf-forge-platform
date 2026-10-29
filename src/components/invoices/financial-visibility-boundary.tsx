@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { financialAuthority, financialRecordIds } from "../../domain/invoices/visibility";
 import { loadFinancialVisibilityAction } from "../../app/actions/financial-visibility";
-import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function FinancialVisibilityBoundary({ scope, signature, invoiceId, children }: {
   scope: "internal" | "internal-work" | "client" | "client-detail" | "wallet" | "store" | "dashboard";

@@ -11,7 +11,7 @@ import type { Json } from "../../lib/supabase/database.types";
 import { sanitizeFormHtml } from "../../lib/forms/presentation";
 import styles from "./forms.module.css";
 import { loadIntakeDraft, saveIntakeDraft } from "../../app/actions/intake-drafts";
-import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 import { IntakeFileField } from "./intake-file-field";
 import { DrawnSignature } from "./drawn-signature";
 import { readSignatureStrokes } from "../../lib/forms/signature";

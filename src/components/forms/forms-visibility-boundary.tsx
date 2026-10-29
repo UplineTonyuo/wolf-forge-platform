@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { loadFormsVisibility } from "../../app/actions/forms-visibility";
 import { formsAccessChanged } from "../../domain/forms/visibility";
-import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function FormsVisibilityBoundary({ scope, signature, children }: {
   scope: "internal" | "client";

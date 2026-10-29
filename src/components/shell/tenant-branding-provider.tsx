@@ -7,7 +7,7 @@ import {
 import type { RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { decodeRuntimeWhiteLabelConfiguration, WHITE_LABEL_PUBLICATION_CONTRACT_VERSION } from "../../domain/white-label/publication";
 import { tenantBranding } from "./tenant-branding";
-import { BRANDING_REFRESH_INTERVAL_MS } from "../../domain/background-polling";
+import { BRANDING_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export type RuntimeBrandingReader = () => Promise<RuntimeWhiteLabelConfiguration>;
 export type TenantBrandingState = { branding: ReturnType<typeof tenantBranding>; unavailable: boolean };

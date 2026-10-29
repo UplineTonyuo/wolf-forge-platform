@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TEAM_LIVE_CLOSED_MS,
   TEAM_LIVE_FAST_MS,
-} from "../domain/team/live-scheduler";
-import { useTeamSyncController } from "../components/team/use-team-sync-controller";
+  useTeamSyncController,
+} from "../components/team/use-team-sync-controller";
 
 const root = resolve(import.meta.dirname, "..");
 /* Normalized: several of these sources are CRLF on disk. */

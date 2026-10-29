@@ -16,8 +16,6 @@
  * `navigator.onLine`.
  */
 
-import { TEAM_CLOSED_SYNC_INTERVAL_MS } from "../background-polling";
-
 export type TeamLiveTier = "fast" | "warm" | "quiet";
 
 /** Live-lane interval while a conversation is open, by tier. */
@@ -29,17 +27,18 @@ export const TEAM_LIVE_QUIET_MS = 2_000;
  * Live-lane interval while the drawer is closed (no conversation visible).
  * `app_team_live_sync` already returns `detail: null` whenever no
  * conversation id is sent — closed polling never asked for transcript detail
- * — the current 60s cadence reduces idle calls while focus/visibility return
- * still reconciles immediately.
+ * — so the only change here is frequency: 1.2s to 15s, a ~92% cut in the
+ * single largest source of invocations, since every signed-in tab runs this
+ * lane continuously regardless of whether Team is ever opened.
  */
-export const TEAM_LIVE_CLOSED_MS = TEAM_CLOSED_SYNC_INTERVAL_MS;
+export const TEAM_LIVE_CLOSED_MS = 15_000;
 
 /** Background-lane interval while open, by tier. */
 export const TEAM_BACKGROUND_OPEN_MS = 4_000;
 export const TEAM_BACKGROUND_QUIET_MS = 10_000;
 
-/** Background-lane interval while closed. */
-export const TEAM_BACKGROUND_CLOSED_MS = TEAM_CLOSED_SYNC_INTERVAL_MS;
+/** Background-lane interval while closed — unchanged from V2.2-V2.4. */
+export const TEAM_BACKGROUND_CLOSED_MS = 15_000;
 
 /**
  * How long the scheduler stays FAST after the last local activity or

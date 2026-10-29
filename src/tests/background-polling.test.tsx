@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { FormsVisibilityBoundary } from "../components/forms/forms-visibility-boundary";
 import { CouponAccessBoundary } from "../components/coupons/coupon-access-boundary";
@@ -24,12 +24,12 @@ const schema: FormPublishedSchema = {
   schema_hash: null, information_html: null, visibility: "public",
 };
 const cases = [
-  { name: "Forms", read: m.forms, view: () => <FormsVisibilityBoundary scope="internal" signature="same">Form history</FormsVisibilityBoundary> },
-  { name: "Coupons", read: m.coupons, view: () => <CouponAccessBoundary>Coupons</CouponAccessBoundary> },
-  { name: "Financial", read: m.financial, view: () => <FinancialVisibilityBoundary scope="client" signature="same">Invoices</FinancialVisibilityBoundary> },
-  { name: "Subscriptions", read: m.subscriptions, view: () => <SubscriptionHistoryBoundary ids={["a"]} audience="client">History</SubscriptionHistoryBoundary> },
-  { name: "Public form", read: m.availability, view: () => <FormRenderer schema={schema} mode="public" /> },
-  { name: "Assigned form", read: m.availability, view: () => <FormRenderer schema={schema} mode="assigned" assignmentId="assignment" /> },
+  { name: "Forms", read: m.forms, denied: { ok: false, denied: true }, content: "Form history", view: () => <FormsVisibilityBoundary scope="internal" signature="same">Form history</FormsVisibilityBoundary> },
+  { name: "Coupons", read: m.coupons, denied: { ok: false, denied: true }, content: "Coupons", view: () => <CouponAccessBoundary>Coupons</CouponAccessBoundary> },
+  { name: "Financial", read: m.financial, denied: { ok: false, denied: true }, content: "Invoices", view: () => <FinancialVisibilityBoundary scope="client" signature="same">Invoices</FinancialVisibilityBoundary> },
+  { name: "Subscriptions", read: m.subscriptions, denied: { ok: false, denied: true }, content: "History", view: () => <SubscriptionHistoryBoundary ids={["a"]} audience="client">History</SubscriptionHistoryBoundary> },
+  { name: "Public form", read: m.availability, denied: false, content: "Submit Form", view: () => <FormRenderer schema={schema} mode="public" /> },
+  { name: "Assigned form", read: m.availability, denied: false, content: "Submit Form", view: () => <FormRenderer schema={schema} mode="assigned" assignmentId="assignment" /> },
 ];
 beforeEach(() => {
   vi.useFakeTimers();
@@ -80,4 +80,53 @@ it.each(cases)("$name skips an initially hidden tab", async ({ read, view }) => 
   Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
   expect(read).toHaveBeenCalledTimes(1);
+});
+
+it.each(cases)("$name does not overlap a slow check with timer or return events", async ({ read, view, denied }) => {
+  let resolve!: (value: unknown) => void;
+  read.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  render(view());
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(600_000);
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(read).toHaveBeenCalledTimes(1);
+  await act(async () => { resolve(denied); });
+  await act(async () => { window.dispatchEvent(new Event("focus")); });
+  expect(read).toHaveBeenCalledTimes(2);
+});
+
+it.each(cases)("$name applies authoritative denial immediately on focus", async ({ read, view, denied, content }) => {
+  render(view());
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(screen.getByText(content)).toBeTruthy();
+  read.mockResolvedValue(denied);
+  await act(async () => { window.dispatchEvent(new Event("focus")); });
+  expect(screen.queryByText(content)).toBeNull();
+});
+
+it.each(cases)("$name ignores a denial arriving after unmount", async ({ read, view, denied }) => {
+  let resolve!: (value: unknown) => void;
+  read.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  const mounted = render(view());
+  mounted.unmount();
+  await act(async () => {
+    resolve(denied);
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(600_000);
+  });
+  expect(read).toHaveBeenCalledTimes(1);
+  expect(m.router.refresh).not.toHaveBeenCalled();
+});
+
+it.each(["preview", "readonly"] as const)("does not check availability in %s mode", async (mode) => {
+  render(<FormRenderer schema={schema} mode={mode} />);
+  await act(async () => {
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(600_000);
+  });
+  expect(m.availability).not.toHaveBeenCalled();
 });
