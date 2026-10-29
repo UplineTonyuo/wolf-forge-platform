@@ -29,7 +29,7 @@ insert into private.client_order_start_rollout values
 ('b1770000-0000-4000-8000-000000000010','b1770000-0000-4000-8000-000000000030',true);
 create temp table legacy177_ids(label text primary key,id uuid not null);
 create temp table legacy177_evidence(label text primary key,value jsonb not null);
-create temp table legacy177_boundary(enabled boolean);
+create temp table legacy177_boundary(mode text);
 grant all on legacy177_ids,legacy177_evidence,legacy177_boundary to authenticated;
 create function pg_temp.legacy177_key(n integer) returns uuid language sql immutable as $$
 select ('b1770000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid;
@@ -73,7 +73,7 @@ select (public.app_capture_intake_secret(gen_random_uuid(),(select id from legac
 $$;
 create function pg_temp.legacy177_revoke_policy() returns trigger language plpgsql security definer set search_path='' as $$
 begin
-  if new.scope='intake-secret-capture-minute' and exists(select 1 from pg_temp.legacy177_boundary where enabled) then
+  if new.scope='intake-secret-capture-minute' and exists(select 1 from pg_temp.legacy177_boundary where mode='capture') then
     delete from private.intake_secret_collection_policy where form_version_id=(select id from pg_temp.legacy177_ids where label='original');
   end if;
   return new;
@@ -81,12 +81,27 @@ end;
 $$;
 create trigger legacy177_revoke_after_rate after insert or update on private.rate_limit_counters
 for each row execute function pg_temp.legacy177_revoke_policy();
+create function pg_temp.legacy177_revoke_after_write() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if exists(select 1 from pg_temp.legacy177_boundary where mode=tg_table_name) then
+    delete from private.intake_secret_collection_policy where form_version_id=(select id from pg_temp.legacy177_ids where label='original');
+  end if;
+  return new;
+end;
+$$;
+create trigger legacy177_revoke_after_draft after insert or update on private.intake_drafts
+for each row execute function pg_temp.legacy177_revoke_after_write();
+create trigger legacy177_revoke_after_binding after update of submission_id on private.intake_secret_references
+for each row when (new.submission_id is not null) execute function pg_temp.legacy177_revoke_after_write();
+create trigger legacy177_revoke_after_submission_ledger after insert on private.form_submission_requests
+for each row execute function pg_temp.legacy177_revoke_after_write();
 
 select ok(not has_table_privilege('authenticated','private.intake_secret_collection_policy','select'),'collection policy is not client-readable');
 select ok(not has_table_privilege('authenticated','private.intake_secret_collection_policy','insert'),'clients cannot enable legacy collection');
 select ok(not has_table_privilege('service_role','private.intake_secret_collection_policy','update'),'service role has no policy write bypass');
 select ok(not has_function_privilege('authenticated','private.intake_secret_field_collection_enabled(uuid,uuid)','execute'),'policy helper is private');
 select ok(not has_function_privilege('anon','private.intake_secret_field_collection_enabled(uuid,uuid)','execute'),'anonymous callers cannot probe policy');
+select ok(not has_function_privilege('authenticated','private.require_intake_secret_collection_write(uuid,uuid)','execute'),'write-lock guard is not a client RPC');
 select ok((select relrowsecurity and relforcerowsecurity from pg_class where oid='private.intake_secret_collection_policy'::regclass),'policy has RLS and FORCE RLS');
 select is((select count(*) from private.intake_secret_collection_policy),0::bigint,'fresh database does not seed production-specific policy');
 set local role authenticated;
@@ -165,12 +180,21 @@ select throws_ok($q$select pg_temp.legacy177_capture()$q$,'42501',null,'same-com
 select pg_temp.legacy177_act(4,'b1770000-0000-4000-8000-000000000011');
 select throws_ok($q$select pg_temp.legacy177_capture()$q$,'42501',null,'foreign company and Tenant cannot use policy');
 select pg_temp.legacy177_act(2);
-insert into legacy177_boundary values(true);
+insert into legacy177_boundary values('capture');
 select throws_ok($q$select pg_temp.legacy177_capture()$q$,'42501',null,'capture rechecks policy after a blocking boundary');
-update legacy177_boundary set enabled=false;
+update legacy177_boundary set mode='off';
 insert into legacy177_ids select 'credential',pg_temp.legacy177_capture();
 select throws_ok($q$select public.app_save_intake_draft((select id from legacy177_ids where label='assignment'),
   jsonb_build_array(jsonb_build_object('field_key',pg_temp.legacy177_key(50),'value','synthetic raw input')))$q$,'23514',null,'policy never admits plaintext to ordinary drafts');
+update legacy177_boundary set mode='intake_drafts';
+select throws_ok($q$select public.app_save_intake_draft((select id from legacy177_ids where label='assignment'),
+  pg_temp.legacy177_values((select id from legacy177_ids where label='credential')))$q$,'42501',null,'draft rechecks current policy after the actual UPSERT write');
+reset role;
+select is((select answers from private.intake_drafts where assignment_id=(select id from legacy177_ids where label='assignment')),
+  pg_temp.legacy177_values(),'late draft policy denial rolls back the write and preserves prior answers and ink');
+set local role authenticated;
+select pg_temp.legacy177_act(2);
+update legacy177_boundary set mode='off';
 select lives_ok($q$select public.app_save_intake_draft((select id from legacy177_ids where label='assignment'),
   pg_temp.legacy177_values((select id from legacy177_ids where label='credential')))$q$,'legacy draft accepts the bound opaque Vault reference');
 select is(public.app_get_intake_draft((select id from legacy177_ids where label='assignment'))->'values',
@@ -196,6 +220,33 @@ delete from public.profile_permission_overrides where tenant_id=pg_temp.legacy17
   and profile_id=pg_temp.legacy177_key(2) and permission_key='forms.view';
 set local role authenticated;
 select pg_temp.legacy177_act(2);
+update legacy177_boundary set mode='intake_secret_references';
+select throws_ok($q$select public.app_submit_form(gen_random_uuid(),(select id from legacy177_ids where label='original'),
+  jsonb_build_object('assignment_id',(select id from legacy177_ids where label='assignment')),
+  pg_temp.legacy177_values((select id from legacy177_ids where label='credential')),'[]'::jsonb)$q$,'42501',null,'binding rechecks current policy after the actual reference UPDATE');
+reset role;
+select ok((select submission_id is null from private.intake_secret_references where id=(select id from legacy177_ids where label='credential')),
+  'late binding denial rolls back reference consumption');
+select is((select count(*) from public.form_submissions where form_assignment_id=(select id from legacy177_ids where label='assignment')),
+  0::bigint,'late binding denial creates no receipt');
+select is((select status from public.form_assignments where id=(select id from legacy177_ids where label='assignment')),
+  'assigned','late binding denial leaves the request outstanding');
+select is((select answers from private.intake_drafts where assignment_id=(select id from legacy177_ids where label='assignment')),
+  pg_temp.legacy177_values((select id from legacy177_ids where label='credential')),'late binding denial preserves the saved draft');
+set local role authenticated;
+select pg_temp.legacy177_act(2);
+update legacy177_boundary set mode='form_submission_requests';
+select throws_ok($q$select public.app_submit_form(gen_random_uuid(),(select id from legacy177_ids where label='original'),
+  jsonb_build_object('assignment_id',(select id from legacy177_ids where label='assignment')),
+  pg_temp.legacy177_values((select id from legacy177_ids where label='credential')),'[]'::jsonb)$q$,'42501',null,'final submission check catches policy drift in the final evidence write');
+reset role;
+select is((select count(*) from public.form_submissions where form_assignment_id=(select id from legacy177_ids where label='assignment')),
+  0::bigint,'late evidence denial rolls back receipt, binding and completion');
+select is((select status from public.form_assignments where id=(select id from legacy177_ids where label='assignment')),
+  'assigned','late evidence denial restores the original outstanding assignment');
+set local role authenticated;
+select pg_temp.legacy177_act(2);
+update legacy177_boundary set mode='off';
 select public.app_request_my_order_start(id) from legacy177_ids where label='order';
 insert into legacy177_ids select 'submission',(public.app_submit_form(gen_random_uuid(),(select id from legacy177_ids where label='original'),
   jsonb_build_object('assignment_id',(select id from legacy177_ids where label='assignment')),
