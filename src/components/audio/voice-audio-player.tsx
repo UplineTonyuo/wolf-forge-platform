@@ -53,6 +53,7 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
   const audioRef = useRef<HTMLAudioElement>(null);
   const aliveRef = useRef(false);
   const requestRef = useRef<AbortController | null>(null);
+  const loadingTimerRef = useRef<number | null>(null);
   const cachedUrlRef = useRef<string | null>(null);
   const ownedUrlRef = useRef<string | null>(null);
   const [total, setTotal] = useState(validDuration(durationMs) ? durationMs : 0);
@@ -60,7 +61,7 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
-  const [error, setError] = useState<"permission" | "playback" | null>(null);
+  const [error, setError] = useState<"permission" | "playback" | "timeout" | null>(null);
   const [previous, setPrevious] = useState({ source, durationMs });
 
   if (previous.source !== source || previous.durationMs !== durationMs) {
@@ -72,6 +73,8 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
   }
 
   const pause = useCallback(() => {
+    if (loadingTimerRef.current !== null) window.clearTimeout(loadingTimerRef.current);
+    loadingTimerRef.current = null;
     requestRef.current?.abort();
     requestRef.current = null;
     audioRef.current?.pause();
@@ -117,6 +120,10 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
     requestRef.current = request;
     setLoading(true);
     setError(null);
+    const timer = window.setTimeout(() => {
+      if (requestRef.current === request && aliveRef.current) { fail(); setError("timeout"); }
+    }, 15_000);
+    loadingTimerRef.current = timer;
     try {
       let url = cachedUrlRef.current;
       if (!url) {
@@ -154,6 +161,8 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
         } else fail();
       }
     } finally {
+      window.clearTimeout(timer);
+      if (loadingTimerRef.current === timer) loadingTimerRef.current = null;
       if (requestRef.current === request) {
         requestRef.current = null;
         if (aliveRef.current) setLoading(false);
@@ -173,8 +182,8 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
     }}
     onEnded={(event) => { event.currentTarget.currentTime = 0; setPosition(0); setPlaying(false); }} onError={fail} />
     <button type="button" className={styles.play} disabled={disabled || loading} aria-busy={loading || undefined}
-      aria-label={`${error === "playback" ? "Retry" : playing ? "Pause" : "Play"} ${label}`} onClick={() => playing ? pause() : void play()}>
-      {loading ? <Loader2 className={styles.spin} aria-hidden="true" /> : error === "playback" ? <RotateCcw aria-hidden="true" /> : playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+      aria-label={`${error && error !== "permission" ? "Retry" : playing ? "Pause" : "Play"} ${label}`} onClick={() => playing ? pause() : void play()}>
+      {loading ? <Loader2 className={styles.spin} aria-hidden="true" /> : error && error !== "permission" ? <RotateCcw aria-hidden="true" /> : playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
     </button>
     <div className={styles.track}>
       <input type="range" min="0" max={total ? total / 1000 : 1} step="0.1" value={Math.min(position, total) / 1000}
@@ -189,6 +198,6 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
         }} />
       <span className={styles.time}><span aria-label="Elapsed time">{voiceClock(position)}</span><span aria-hidden="true"> / </span><span aria-label="Total duration">{total ? voiceClock(total) : "--:--"}</span></span>
     </div>
-    {error ? <span className={styles.error} role="alert">{error === "permission" ? "Press Play to start this recording." : "Recording could not be played. Try again."}</span> : null}
+    {error ? <span className={styles.error} role="alert">{error === "permission" ? "Press Play to start this recording." : error === "timeout" ? "Loading took too long. Try again." : "Recording could not be played. Try again."}</span> : null}
   </div>;
 }

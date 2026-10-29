@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(async function (this: HTMLMediaElement) { fireEvent.play(this); });
   fetchPlayback.mockResolvedValue({ ok: true, data: { url: "https://storage.example.test/signed", expiresAt: "2099-01-01" } });
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 function media(container: HTMLElement) {
   const audio = container.querySelector("audio");
@@ -38,6 +38,80 @@ function media(container: HTMLElement) {
 const clickPlay = (label = "Play voice message") => fireEvent.click(screen.getByRole("button", { name: label }));
 
 describe("private voice playback", () => {
+  it("times out a stalled signed-source request, aborts it, and retries only on another click", async () => {
+    const source = vi.fn<(signal: AbortSignal) => Promise<string>>().mockImplementationOnce(() => new Promise(() => {}))
+      .mockResolvedValue("https://storage.example.test/retry");
+    const view = render(<VoiceAudioPlayer source={source} durationMs={2000} />);
+    vi.useFakeTimers();
+    await act(async () => clickPlay());
+    const signal = source.mock.calls[0]![0];
+    expect(screen.getByRole("button", { name: "Play voice message" })).toBeDisabled();
+    await act(async () => { vi.advanceTimersByTime(14_999); });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(1); });
+    expect(signal.aborted).toBe(true);
+    expect(screen.getByRole("alert")).toHaveTextContent("Loading took too long");
+    expect(screen.getByRole("button", { name: "Retry voice message" })).toBeEnabled();
+    expect(source).toHaveBeenCalledTimes(1);
+    await act(async () => clickPlay("Retry voice message"));
+    expect(screen.getByRole("button", { name: "Pause voice message" })).toBeEnabled();
+    expect(source).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+    view.unmount(); expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("times out a stalled response body and ignores its late completion", async () => {
+    let finish!: (value: { done: boolean }) => void;
+    const cancel = vi.fn().mockResolvedValue(undefined), releaseLock = vi.fn();
+    fetchAudio.mockResolvedValue({ ok: true, headers: new Headers({ "Content-Type": "audio/webm" }), body: { getReader: () => ({
+      read: () => new Promise((resolve) => { finish = resolve; }), cancel, releaseLock,
+    }) } });
+    render(<VoiceAudioPlayer source="/api/ticket-attachments/attachment" />);
+    vi.useFakeTimers();
+    await act(async () => clickPlay());
+    const signal = fetchAudio.mock.calls[0]![1].signal as AbortSignal;
+    await act(async () => { vi.advanceTimersByTime(15_000); });
+    expect(signal.aborted).toBe(true);
+    expect(screen.getByRole("button", { name: "Retry voice message" })).toBeEnabled();
+    expect(fetchAudio).toHaveBeenCalledTimes(1);
+    await act(async () => finish({ done: true }));
+    expect(cancel).toHaveBeenCalledTimes(1); expect(releaseLock).toHaveBeenCalledTimes(1);
+    expect(createUrl).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+    expect(screen.getByRole("button", { name: "Retry voice message" })).toBeEnabled();
+  });
+
+  it("clears a pending loading timeout when another player starts or it unmounts", async () => {
+    const pending = vi.fn<(signal: AbortSignal) => Promise<string>>(() => new Promise(() => {}));
+    const first = render(<VoiceAudioPlayer source={pending} durationMs={1000} label="first" />);
+    const second = render(<VoiceAudioPlayer source="https://storage.example.test/two" durationMs={1000} label="second" />);
+    vi.useFakeTimers();
+    await act(async () => clickPlay("Play first"));
+    expect(vi.getTimerCount()).toBe(1);
+    await act(async () => clickPlay("Play second"));
+    expect(pending.mock.calls[0]![0].aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => clickPlay("Play first"));
+    expect(vi.getTimerCount()).toBe(1);
+    first.unmount(); expect(vi.getTimerCount()).toBe(0);
+    expect(pending.mock.calls[1]![0].aborted).toBe(true);
+    expect(screen.getByRole("button", { name: "Play second" })).toBeEnabled();
+    second.unmount();
+  });
+
+  it("times out a stalled native play promise and ignores its late completion", async () => {
+    let finish!: () => void;
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementationOnce(() => new Promise<void>((done) => { finish = done; }));
+    render(<VoiceAudioPlayer source="https://storage.example.test/stalled" durationMs={2000} />);
+    vi.useFakeTimers();
+    await act(async () => clickPlay());
+    await act(async () => { vi.advanceTimersByTime(15_000); });
+    expect(screen.getByRole("alert")).toHaveTextContent("Loading took too long");
+    expect(screen.getByRole("button", { name: "Retry voice message" })).toBeEnabled();
+    await act(async () => finish());
+    expect(screen.getByRole("button", { name: "Retry voice message" })).toBeEnabled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("keeps Team URLs and media unloaded until Play and shows trusted duration before metadata", async () => {
     const view = render(<TeamVoiceMessage conversationId="conversation" messageId="message" durationMs={16_020} expired={false} />);
     expect(fetchPlayback).not.toHaveBeenCalled(); expect(fetchAudio).not.toHaveBeenCalled();
