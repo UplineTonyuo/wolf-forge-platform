@@ -1,7 +1,7 @@
 "use client";
 
 import { History, Info, Paperclip } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { usePathname } from "next/navigation";
 import styles from "./project-detail.module.css";
 
@@ -25,6 +25,8 @@ export function OrderTabs({ orderId }: { orderId: string }) {
           <Link
             key={item.href}
             href={item.href}
+            feedback="inline"
+            loadingLabel={`Loading ${item.label}`}
             className={active ? styles.tabActive : styles.tab}
             aria-current={active ? "page" : undefined}
           >

@@ -204,6 +204,7 @@ describe("in-page navigation", () => {
     const shell = start("/forms");
     await shell.inPageClick();
     expect(shell.skeleton()).toEqual(["generic"]);
+    expect(shell.main.querySelector('[role="status"]')?.closest('[aria-busy="true"]')).toBeNull();
     expect(shell.visibleText()).not.toContain("Page /forms");
     await shell.commit(inPageHref);
     expect(shell.skeleton()).toEqual([]);

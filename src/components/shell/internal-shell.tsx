@@ -292,9 +292,9 @@ export function InternalShell({
           }
         />
 
-        <main className="workspace-route-stage" aria-busy={pendingRoute !== null}>
+        <main className="workspace-route-stage">
           {pendingRoute ? <RouteSkeleton pathname={pendingRoute} /> : null}
-          <div className="workspace-route-content" hidden={pendingRoute !== null}>
+          <div className="workspace-route-content" hidden={pendingRoute !== null} aria-busy={pendingRoute !== null}>
           {ticketRoute ? (
             user.tickets.view ? (
               <TicketAccessBoundary key={pathname} ticketId={pathname.split("/")[2]} listenForModuleDenial>

@@ -80,6 +80,7 @@ describe("client navigation loading", () => {
     fireEvent.change(editor, { target: { value: "UNSENT QA draft" } });
     await click("/account/projects");
     expect(screen.getByRole("status", { name: "Loading Projects" })).toBeVisible();
+    expect(screen.getByRole("status").closest('[aria-busy="true"]')).toBeNull();
     expect(editor).not.toBeVisible();
     expect(editor).toHaveValue("UNSENT QA draft");
     expect(active()).toBe("/account/projects");
@@ -88,7 +89,7 @@ describe("client navigation loading", () => {
     await commit("/account/projects");
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByRole("heading", { name: "Page /account/projects" })).toBeVisible();
-    expect(document.querySelector(".portal-main-inner")).toHaveAttribute("aria-busy", "false");
+    expect(document.querySelector(".portal-main-inner > [aria-busy]")).toHaveAttribute("aria-busy", "false");
   });
 
   it("follows the last destination on rapid section changes", async () => {

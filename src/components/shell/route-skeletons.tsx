@@ -3,6 +3,7 @@ import { TasksLoading } from "../operations/tasks-loading";
 import supervisionRows from "../team-supervision/supervised-conversation-list.module.css";
 import supervision from "../team-supervision/supervised-transcript.module.css";
 import tickets from "../tickets/tickets.module.css";
+import project from "../projects/project-detail.module.css";
 
 /*
  * Destination-shaped loading skeletons for the internal shell. A sidebar click
@@ -18,6 +19,7 @@ import tickets from "../tickets/tickets.module.css";
 export type InternalSkeletonVariant =
   | "dashboard"
   | "projects"
+  | "projectDetail"
   | "tickets"
   | "reporting"
   | "clients"
@@ -62,6 +64,7 @@ export function getInternalSkeletonVariant(pathname: string): InternalSkeletonVa
   const path = (pathname.split(/[?#]/)[0] ?? "").replace(/\/+$/, "") || "/";
   if (EXACT[path]) return EXACT[path];
   if (/^\/clients\/[^/]+$/.test(path) && path !== "/clients/new") return "clientDetail";
+  if (/^\/orders\/(?!new(?:\/|$))[^/]+(?:\/|$)/.test(path)) return "projectDetail";
   if (path.startsWith("/settings/")) return "settings";
   return "generic";
 }
@@ -89,13 +92,15 @@ function Frame({
   className = "page-frame",
   variant,
   children,
+  label,
 }: {
   className?: string;
   variant: InternalSkeletonVariant;
   children: ReactNode;
+  label?: string;
 }) {
   return (
-    <div className={`${className} internal-page-skeleton`} data-skeleton={variant} role="status" aria-label={variant === "section" ? "Loading section" : undefined}>
+    <div className={`${className} internal-page-skeleton`} data-skeleton={variant} role="status" aria-label={label ?? (variant === "section" ? "Loading section" : undefined)}>
       {variant !== "section" ? <span className="sr-only">Loading page</span> : null}
       <div aria-hidden="true">{children}</div>
     </div>
@@ -262,6 +267,55 @@ export function SectionSkeleton() {
       </div>
     </Frame>
   );
+}
+
+type ProjectSection = "details" | "files" | "history";
+
+function ProjectBody({ section }: { section: ProjectSection }) {
+  if (section === "files") return <section data-skeleton-body="files">
+    <Bar w={100} h={20} />
+    <div className={project.filesTable}>
+      <div className={project.filesHeaderRow}><Bar w={110} /><Bar w={80} /></div>
+      <ul className={project.filesList}>{Array.from({ length: 3 }, (_, i) => <li key={i}><Bar w={18} h={22} /><span className={project.filesNameGroup}><Bar w="70%" /><Bar w="45%" /></span><span className={project.filesDate}><Bar w={80} /></span></li>)}</ul>
+    </div>
+  </section>;
+  if (section === "history") return <section data-skeleton-body="history">
+    <Bar w={100} h={20} />
+    <div className={project.historyStream}><div className={project.historyGroup}>
+      <Bar w={120} h={14} />
+      <ul className={project.historyList}>{Array.from({ length: 3 }, (_, i) => <li key={i}><Bar w={28} h={28} r={999} /><div className={project.historyBody}><Bar w="75%" /><Bar w={100} /></div></li>)}</ul>
+    </div></div>
+  </section>;
+  return <div className="route-skeleton-stack" data-skeleton-body="details">
+    <div className="route-skeleton-panel"><Bar w="60%" h={40} /></div>
+    <section className={project.fieldsCard} data-skeleton-block="project-responses"><Bar w={160} h={20} /><Rows count={2} side={false} /></section>
+    <div className="route-skeleton-panel route-skeleton-stack" data-skeleton-block="project-conversation"><Bar w={140} h={20} /><Rows count={3} side={false} /><Bar h={100} /></div>
+    <section className={project.secondary} data-skeleton-block="project-tasks"><div className={project.panel}><div className={project.panelHeading}><Bar w={100} h={18} /></div><div className={project.panelBody}><Rows count={3} side={false} /></div></div></section>
+  </div>;
+}
+
+export function ProjectDetailsSkeleton() {
+  return <Frame variant="section" className="route-skeleton-section" label="Loading project details"><ProjectBody section="details" /></Frame>;
+}
+export function ProjectFilesSkeleton() {
+  return <Frame variant="section" className="route-skeleton-section" label="Loading project files"><ProjectBody section="files" /></Frame>;
+}
+export function ProjectHistorySkeleton() {
+  return <Frame variant="section" className="route-skeleton-section" label="Loading project history"><ProjectBody section="history" /></Frame>;
+}
+
+function ProjectDetailSkeleton({ section = "details" }: { section?: ProjectSection } = {}) {
+  return <Frame variant="projectDetail" className={`page-frame ${project.orderFrame}`}>
+    <Header />
+    <div className={project.subnav}><div className={project.subnavLeft}><Shapes sizes={[[75, 36], [75, 36], [75, 36]]} /></div></div>
+    <div className={project.layout}><div className={project.main}><ProjectBody section={section} /></div><aside className={project.rail}><div className={project.railCard}><Rows count={6} side={false} /></div></aside></div>
+  </Frame>;
+}
+
+export function SettingsSectionSkeleton() {
+  return <Frame variant="section" className="route-skeleton-section" label="Loading settings section">
+    <div className="route-skeleton-stack" data-skeleton-body="settings"><Bar w={180} h={22} /><Bar w="60%" /><Cards count={2} height={140} className="route-skeleton-stack" /></div>
+  </Frame>;
 }
 
 // Header bar widths per column (Ticket, Client / company, Status, Priority, Assigned, Last activity). Shapes only, no labels.
@@ -580,6 +634,7 @@ function GenericSkeleton() {
 const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
   dashboard: DashboardSkeleton,
   projects: ProjectsSkeleton,
+  projectDetail: ProjectDetailSkeleton,
   tickets: TicketsSkeleton,
   reporting: ReportingSkeleton,
   clients: ClientsSkeleton,
@@ -599,6 +654,11 @@ const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
 };
 
 export function RouteSkeleton({ pathname }: { pathname: string }) {
-  const Skeleton = SKELETONS[getInternalSkeletonVariant(pathname)];
+  const variant = getInternalSkeletonVariant(pathname);
+  if (variant === "projectDetail") {
+    const path = pathname.split(/[?#]/)[0]?.replace(/\/+$/, "");
+    return <ProjectDetailSkeleton section={path?.endsWith("/files") ? "files" : path?.endsWith("/history") ? "history" : "details"} />;
+  }
+  const Skeleton = SKELETONS[variant];
   return <Skeleton />;
 }

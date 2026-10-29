@@ -113,10 +113,10 @@ export function ClientAccountShell({
             notificationSoundEnabled={notificationSoundEnabled}
           />
 
-          <div className="portal-main-inner" aria-busy={pendingRoute !== null}>
+          <div className="portal-main-inner">
             {pendingRoute ? <ClientRouteSkeleton pathname={pendingRoute} /> : null}
             {/* Keep unsent editor state mounted until navigation commits. */}
-            <div hidden={pendingRoute !== null}>{children}</div>
+            <div hidden={pendingRoute !== null} aria-busy={pendingRoute !== null}>{children}</div>
           </div>
         </main>
       </div>

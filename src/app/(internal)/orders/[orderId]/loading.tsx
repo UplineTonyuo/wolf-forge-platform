@@ -1,1 +1,1 @@
-export { SectionSkeleton as default } from "../../../../components/shell/route-skeletons";
+export { ProjectDetailsSkeleton as default } from "../../../../components/shell/route-skeletons";
