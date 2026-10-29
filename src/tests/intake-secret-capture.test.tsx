@@ -38,6 +38,27 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("encrypted assigned intake password capture", () => {
+  it("captures an explicitly authorized legacy field without changing its frozen settings", async () => {
+    const legacy = { ...schema, fields: [{ ...schema.fields[0]!, settings: { collection_mode: "disabled" }, encrypted_collection_allowed: true }] };
+    render(<FormRenderer schema={legacy} mode="assigned" assignmentId={assignment} />);
+    await waitFor(() => expect(input()).not.toBeDisabled());
+    fireEvent.change(input(), { target: { value: "synthetic-legacy-example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save and continue later" }));
+    await screen.findByText(/Draft saved\./);
+    expect(mocks.capture).toHaveBeenCalledOnce();
+    expect(mocks.save).toHaveBeenCalledWith(assignment, [{ field_key: key, value: reference }]);
+    expect(legacy.fields[0]!.settings.collection_mode).toBe("disabled");
+  });
+  it.each(["public", "preview", "readonly"] as const)("does not enable a projected legacy field in %s mode", (mode) => {
+    render(<FormRenderer schema={{ ...schema, fields: [{ ...schema.fields[0]!, settings: { collection_mode: "disabled" }, encrypted_collection_allowed: true }] }} mode={mode} />);
+    expect(screen.queryByLabelText(/WordPress password/, { selector: "input" })).toBeNull();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
+  it("keeps unapproved disabled fields disabled", () => {
+    render(<FormRenderer schema={{ ...schema, fields: [{ ...schema.fields[0]!, settings: { collection_mode: "disabled" } }] }} mode="assigned" assignmentId={assignment} />);
+    expect(screen.queryByLabelText(/WordPress password/, { selector: "input" })).toBeNull();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
   it("requires a value or an existing encrypted reference before submission", async () => {
     await mount();
     fireEvent.submit(input().closest("form")!);

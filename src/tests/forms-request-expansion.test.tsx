@@ -32,6 +32,20 @@ afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 function mount(value = schema) { return render(<FormRenderer schema={value} mode="assigned" assignmentId="50000000-0000-4000-8000-000000000001" />); }
 
 describe("saved intake forms", () => {
+  it("keeps Save beside Submit without submitting an incomplete draft", async () => {
+    mount();
+    const input = screen.getByRole("textbox", { name: "Business" });
+    await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+    const save = screen.getByRole("button", { name: "Save and continue later" });
+    const submit = screen.getByRole("button", { name: "Submit Form" });
+    expect(save.parentElement).toBe(submit.parentElement);
+    expect(save.closest("footer")).toBe(submit.closest("footer"));
+    fireEvent.click(save);
+    await screen.findByText(/Draft saved\./);
+    expect(mocks.save).toHaveBeenCalledOnce();
+    expect(mocks.submit).not.toHaveBeenCalled();
+    expect((input as HTMLInputElement).value).toBe("");
+  });
   it("associates field guidance with its input without changing the answer", async () => {
     mount({ ...schema, fields: [{ ...schema.fields[0]!, help_html: "Use the registered business name." }] });
     const input = screen.getByRole("textbox", { name: "Business" });

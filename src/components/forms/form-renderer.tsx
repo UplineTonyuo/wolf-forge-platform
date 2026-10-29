@@ -129,7 +129,7 @@ function FormRendererContent({
   const secretRef = useRef<Record<string, { value: string; requestId: string }>>({});
   const [secretInputs, setSecretInputs] = useState<Record<string, { value: string; requestId: string }>>({});
   const [secretErrors, setSecretErrors] = useState<Record<string, string>>({});
-  const encrypted = useCallback((field: FormPublishedSchema["fields"][number]) => field.field_type === "secret" && field.settings.collection_mode === "encrypted"
+  const encrypted = useCallback((field: FormPublishedSchema["fields"][number]) => field.field_type === "secret" && (field.settings.collection_mode === "encrypted" || field.encrypted_collection_allowed === true)
     && ["intake", "onboarding"].includes(schema.form_type) && schema.visibility === "assigned" && mode === "assigned" && Boolean(assignmentId), [schema.form_type, schema.visibility, mode, assignmentId]);
   const setAnswers = useCallback((next: AnswerMap | ((current: AnswerMap) => AnswerMap)) => {
     answerRef.current = typeof next === "function" ? next(answerRef.current) : next;
@@ -389,10 +389,16 @@ function FormRendererContent({
       </div>
       {error ? <p className={styles.actionError} role="alert">{error}</p> : null}
       {draftError ? <div role="alert" className={styles.actionError}><p>{draftError}</p><button type="button" onClick={() => { setDraftLoading(true); setDraftError(null); setDraftLoadAttempt((attempt) => attempt + 1); }}>Retry saved draft</button></div> : null}
-      {supportsDraft ? <div className={styles.draftBar} data-state={draftState}><button className="button-secondary" type="button" onClick={saveDraft} aria-busy={draftState === "saving" || undefined} disabled={pending || readonly}>
-        {draftState === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : draftState === "saved" ? <CheckCircle2 className={styles.savedCheck} aria-hidden="true" /> : null}
-        {draftLoading ? "Restoring draft…" : draftState === "saving" ? "Saving draft…" : "Save and continue later"}</button><p role="status">{draftState === "saving" ? "Saving your progress…" : draftMessage || "Save your progress before leaving this form."}</p></div> : null}
-      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter}><button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending || readonly}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Submit Form</button></footer> : null}
+      {mode !== "preview" && mode !== "readonly" ? <footer className={styles.rendererFooter} data-state={draftState}>
+        <div className={styles.rendererActions}>
+          {supportsDraft ? <button className="button-secondary" type="button" onClick={saveDraft} aria-busy={draftState === "saving" || undefined} disabled={pending || readonly}>
+            {draftState === "saving" ? <LoaderCircle className="spinner" aria-hidden="true" /> : draftState === "saved" ? <CheckCircle2 className={styles.savedCheck} aria-hidden="true" /> : null}
+            {draftLoading ? "Restoring draft…" : draftState === "saving" ? "Saving draft…" : "Save and continue later"}
+          </button> : null}
+          <button className="button-primary" type="submit" aria-busy={pending || undefined} disabled={pending || readonly}>{pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}Submit Form</button>
+        </div>
+        {supportsDraft ? <p role="status">{draftState === "saving" ? "Saving your progress…" : draftMessage || "Save your progress before leaving this form."}</p> : null}
+      </footer> : null}
     </form>
   );
 }

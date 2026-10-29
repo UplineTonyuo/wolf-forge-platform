@@ -125,15 +125,15 @@
 .renderer .integrationNotice strong { font-size: 14px; line-height: 1.5; }
 .renderer .integrationNotice span { font-size: 13px; line-height: 1.6; }
 .renderer .integrationNotice svg { margin-top: 2px; }
-.renderer .draftBar { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px 16px; padding: 20px var(--form-gutter); }
-.renderer .draftBar p { margin: 0; font-size: 13px; line-height: 1.6; }
-.rendererFooter { gap: 12px 20px; padding: 20px var(--form-gutter); }
-.rendererFooter > button, .formComplete button { min-height: 44px; }
-.rendererFooter > button, .draftBar > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.rendererFooter > button svg, .draftBar > button svg { width: 18px; height: 18px; flex: 0 0 auto; }
-.draftBar[data-state=saved] .savedCheck { color: #267044; animation: draft-saved 180ms ease-out; }
+.rendererFooter { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 20px var(--form-gutter); }
+.rendererActions { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; min-width: 0; }
+.rendererActions > button, .formComplete button { min-height: 44px; }
+.rendererActions > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; white-space: normal; }
+.rendererActions > button svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.rendererFooter > p { margin: 0; color: var(--wf-text-muted); font-size: 13px; line-height: 1.6; }
+.rendererFooter[data-state=saved] .savedCheck { color: #267044; animation: draft-saved 180ms ease-out; }
 @keyframes draft-saved { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .draftBar .savedCheck, .draftBar .spinner, .rendererFooter .spinner { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rendererFooter .savedCheck, .rendererFooter .spinner { animation: none; } }
 .rendererFooter span { font-size: 12px; line-height: 1.5; }
 .renderer > .actionError { margin: 0; padding: 16px var(--form-gutter); font-size: 14px; line-height: 1.6; }
 .intakeFile { gap: 8px; }
@@ -159,9 +159,7 @@
   .renderer { --form-gutter: 16px; }
   .rendererHeader { padding-top: 24px; padding-bottom: 20px; }
   .rendererHeader h1 { font-size: 20px; }
-  .renderer .draftBar { grid-template-columns: minmax(0, 1fr); }
-  .renderer .draftBar > button, .rendererFooter > button { width: 100%; }
-  .rendererFooter { align-items: stretch; }
+  .rendererActions > button { flex: 1 1 auto; }
   .formComplete { gap: 16px; padding: 24px 16px; }
   .formComplete h2 { font-size: 22px; }
 }
