@@ -5,6 +5,7 @@ import { formSubmissionValueSchema } from "../../domain/forms/schema";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { mapDatabaseError } from "../../lib/errors/map-database-error";
 import { getClientContext, getSelfServiceContext } from "../../lib/supabase/next-server";
+import { FormRepository } from "../../repositories/form-repository";
 
 export async function loadIntakeFollowUp(submissionId: string) {
   try {
@@ -32,6 +33,7 @@ export async function saveIntakeDraft(assignmentId: string, values: unknown) {
     z.uuid().parse(assignmentId);
     const answers = z.array(formSubmissionValueSchema).max(300).parse(values);
     const context = await getClientContext();
+    await new FormRepository(context.client).assertAssignedValues(assignmentId, answers);
     const result = await context.client.rpc("app_save_intake_draft", { p_assignment_id: assignmentId, p_values: answers });
     if (result.error) throw mapDatabaseError(result.error, "Saved form");
     return { ok: true as const };

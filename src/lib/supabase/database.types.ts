@@ -5525,6 +5525,18 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      app_capture_intake_secret: {
+        Args: { p_request_id: string; p_assignment_id: string; p_field_key: string; p_secret: string }
+        Returns: Json
+      }
+      app_list_intake_secret_references: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
+      app_reveal_intake_secret: {
+        Args: { p_credential_id: string }
+        Returns: string
+      }
       app_end_client_support: {
         Args: { p_support_id: string | null }
         Returns: undefined
