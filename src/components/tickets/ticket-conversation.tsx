@@ -713,6 +713,7 @@ export function TicketConversation({
               const showOtherIdentity = orderChat && !ownMessage;
               const showIdentityTime = showOtherIdentity && !grouped;
               const bareImageMessage = isBareImageMessage(message);
+              const audioOnly = !hasVisibleText(message.body) && message.attachments.length > 0 && message.attachments.every((item) => item.mime_type.startsWith("audio/"));
 
               return (
                 <li
@@ -790,8 +791,9 @@ export function TicketConversation({
                       <div className={styles.messageStack}>
                         <div
                           tabIndex={orderChat ? 0 : undefined}
+                          data-audio-only={audioOnly || undefined}
                           className={
-                            `${styles.messageBubble}${bareImageMessage ? ` ${styles.bareMediaBubble}` : ""}${message.pending ? ` ${styles.messagePending}` : ""}${message.failed ? ` ${styles.messageFailed}` : ""}`
+                            `${styles.messageBubble}${bareImageMessage || audioOnly ? ` ${styles.bareMediaBubble}` : ""}${message.pending ? ` ${styles.messagePending}` : ""}${message.failed ? ` ${styles.messageFailed}` : ""}`
                           }
                         >
                         {message.reply_to_message_id ? (
@@ -815,7 +817,7 @@ export function TicketConversation({
                             ) : null}
                           </div>
                         ) : null}
-                        {bareImageMessage ? null : (
+                        {bareImageMessage || audioOnly ? null : (
                           <TicketMessageBody
                             body={
                               message.body

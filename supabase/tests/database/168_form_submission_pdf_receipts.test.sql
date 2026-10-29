@@ -111,6 +111,29 @@ select isnt((select id from pdf_ids where label='version'),(select id from pdf_i
 select pg_temp.pdf_act(2);
 insert into pdf_ids select 'submission',pg_temp.pdf_submit('{"consent":true,"drawing":[[[10,20],[90,60]]]}');
 insert into pdf_data select 'original-pdf',public.app_get_form_submission_pdf(id) from pdf_ids where label='submission';
+insert into pdf_data select 'project-pdf',public.app_get_form_submission_pdf(id,true) from pdf_ids where label='submission';
+select ok(not (select value ? 'project' from pdf_data where label='original-pdf'),'old PDF overload remains compatible with existing app versions');
+select is((select (value->'project'->>'number')::bigint from pdf_data where label='project-pdf'),
+ (select order_number from public.app_get_my_client_project((select id from pdf_ids where label='order'))),'PDF includes the authorized project number');
+select is((select value->'project'->>'title' from pdf_data where label='project-pdf'),
+ (select title from public.app_get_my_client_project((select id from pdf_ids where label='order'))),'PDF includes the authorized project title');
+select is((select value-'project' from pdf_data where label='project-pdf'),(select value from pdf_data where label='original-pdf'),'adding context preserves all original agreement and signature evidence');
+select ok(not (public.app_get_form_submission_pdf((select id from pdf_ids where label='submission'),false) ? 'project'),'explicit opt out returns the original receipt shape');
+reset role;
+select pg_temp.pdf_act(1);
+insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed) values
+ ('b6280000-0000-4000-8000-000000000010','b6280000-0000-4000-8000-000000000002','projects.view',false);
+select pg_temp.pdf_act(2);
+set local role authenticated;
+select is(public.app_get_form_submission_pdf((select id from pdf_ids where label='submission'),true)->'project','null'::jsonb,'PDF does not reveal project context after Project view is denied');
+select pg_temp.pdf_act(4);
+select throws_ok($$select public.app_get_form_submission_pdf((select id from pdf_ids where label='submission'),true)$$,'42501',null,'new PDF overload refuses an unrelated client');
+reset role;
+select pg_temp.pdf_act(1);
+delete from public.profile_permission_overrides where tenant_id='b6280000-0000-4000-8000-000000000010' and profile_id='b6280000-0000-4000-8000-000000000002' and permission_key='projects.view';
+select ok(not has_function_privilege('anon','public.app_get_form_submission_pdf(uuid,boolean)','execute'),'anonymous users cannot call the new PDF overload');
+set local role authenticated;
+select pg_temp.pdf_act(2);
 select is((select value->'form'->>'version_id' from pdf_data where label='original-pdf'),
   (select id::text from pdf_ids where label='version'),'PDF pins the purchased version after republication');
 select is((select value->'form'->>'title' from pdf_data where label='original-pdf'),'Original PDF Intake','PDF retains the original title');
