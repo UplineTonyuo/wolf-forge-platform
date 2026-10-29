@@ -294,6 +294,7 @@ export type FormSchemaField = {
   default_value: Json | null;
   required: boolean;
   settings: Record<string, Json | undefined>;
+  encrypted_collection_allowed?: boolean;
   options: Array<{
     option_id: string;
     value: string;
