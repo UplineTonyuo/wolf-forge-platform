@@ -97,6 +97,7 @@ export function ProjectsWorkspace({
   serviceFolders,
   clients,
   capabilities,
+  viewerId,
 }: {
   rows: ProjectListRow[];
   complete: boolean;
@@ -105,6 +106,7 @@ export function ProjectsWorkspace({
   serviceFolders: ServiceFolderRow[];
   clients: ProjectOption[];
   capabilities: ProjectCapabilities;
+  viewerId?: string;
 }) {
   const router = useRouter();
 
@@ -161,8 +163,11 @@ export function ProjectsWorkspace({
     Number(search.trim().length > 0);
 
   const personOptions: SimpleFilterOption[] = useMemo(
-    () => people.map((person) => ({ id: person.id, label: person.name, avatarUrl: person.avatarUrl ?? null })),
-    [people],
+    () => [
+      ...(viewerId ? [{ id: viewerId, label: "Assigned to me" }] : []),
+      ...people.filter((person) => person.id !== viewerId).map((person) => ({ id: person.id, label: person.name, avatarUrl: person.avatarUrl ?? null })),
+    ],
+    [people, viewerId],
   );
 
   const clientOptions: SimpleFilterOption[] = useMemo(
@@ -180,6 +185,7 @@ export function ProjectsWorkspace({
       ? "Everyone"
       : personFilter === "unassigned"
         ? "Unassigned"
+        : personFilter === viewerId ? "Assigned to me"
         : (people.find((person) => person.id === personFilter)?.name ?? "Everyone");
 
   const selectedClientName =
@@ -550,7 +556,7 @@ export function ProjectsWorkspace({
       <ProjectsFilterSheet
         open={filterOpen && mobileFilters}
         onClose={() => setFilterOpen(false)}
-        people={people}
+        people={viewerId ? [{ id: viewerId, name: "Assigned to me" }, ...people.filter((person) => person.id !== viewerId)] : people}
         clients={clients}
         serviceFolders={serviceFolders}
         services={services}

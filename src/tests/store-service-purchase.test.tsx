@@ -125,7 +125,7 @@ describe("resolveStorePurchaseOffer", () => {
     const result = resolveStorePurchaseOffer({ service: service(), ...base, invoicesEnabled: false });
     expect(result).toMatchObject({ purchasable: false, reason: "invoices_disabled", balanceCents: 210000 });
     render(<StoreServiceDetail service={service()} folderName={null} backHref="/account/store" purchaseOffer={result} />);
-    expect(screen.queryByRole("button", { name: "Purchase with Wolf Forge Balance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Purchase" })).not.toBeInTheDocument();
     expect(screen.getByText(storePurchaseBlockedLabel("invoices_disabled"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Add to cart/i })).toBeEnabled();
     expect(purchaseServiceWithBalanceAction).not.toHaveBeenCalled();
@@ -227,7 +227,7 @@ describe("PurchaseWithBalance", () => {
   it("shows the purchase CTA and the current balance", () => {
     renderControl();
     expect(
-      screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+      screen.getByRole("button", { name: /Purchase/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Balance \$2,100\.00/)).toBeInTheDocument();
   });
@@ -243,7 +243,7 @@ describe("PurchaseWithBalance", () => {
     });
 
     expect(
-      screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+      screen.queryByRole("button", { name: /Purchase/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByText(/does not cover this yet/i)).toBeInTheDocument();
     expect(screen.getByText("$500.00")).toBeInTheDocument();
@@ -252,7 +252,7 @@ describe("PurchaseWithBalance", () => {
 
   it("confirms with the real service, amount, method and resulting balance", () => {
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent("Purchase Platinum SEO Success Blueprint?");
@@ -264,7 +264,7 @@ describe("PurchaseWithBalance", () => {
 
   it("moves no money until the client confirms", () => {
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
     expect(purchaseServiceWithBalanceAction).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
@@ -278,7 +278,7 @@ describe("PurchaseWithBalance", () => {
     );
 
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
 
     const confirm = screen.getByRole("button", { name: /Confirm purchase/i });
     fireEvent.click(confirm);
@@ -300,7 +300,7 @@ describe("PurchaseWithBalance", () => {
 
   it("sends only stable identifiers — never a price, balance or company", async () => {
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
     fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
 
     await waitFor(() => expect(purchaseServiceWithBalanceAction).toHaveBeenCalled());
@@ -316,7 +316,7 @@ describe("PurchaseWithBalance", () => {
     });
 
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
     fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
 
@@ -332,7 +332,7 @@ describe("PurchaseWithBalance", () => {
     vi.useFakeTimers();
     try {
       renderControl();
-      fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
       fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
 
       await vi.waitFor(() => expect(screen.getByText("Purchase confirmed")).toBeInTheDocument());
@@ -356,7 +356,7 @@ describe("PurchaseWithBalance", () => {
     });
 
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
     fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
 
     await waitFor(() =>
@@ -373,7 +373,7 @@ describe("PurchaseWithBalance", () => {
     vi.useFakeTimers();
     try {
       renderControl();
-      fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+      fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
       fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
       await vi.waitFor(() => expect(screen.getByText("You have not been charged again.")).toBeInTheDocument());
       expect(screen.getByText(/Your earlier purchase/)).toBeInTheDocument();
@@ -388,7 +388,7 @@ describe("PurchaseWithBalance", () => {
     });
 
     renderControl();
-    fireEvent.click(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Purchase/i }));
     fireEvent.click(screen.getByRole("button", { name: /Confirm purchase/i }));
 
     await waitFor(() =>
@@ -422,7 +422,7 @@ describe("StoreServiceDetail", () => {
   it("explains disabled Projects without a purchase dialog and keeps the cart available", () => {
     renderDetail(resolveStorePurchaseOffer({ service: service(), balanceCents: 210000, walletCurrency: "USD", projectsEnabled: false }));
     expect(screen.getByText("New service purchases are unavailable while Projects is disabled.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Purchase/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Add to cart/i }));
     expect(screen.getByRole("button", { name: /In your cart/i })).toBeInTheDocument();
@@ -435,7 +435,7 @@ describe("StoreServiceDetail", () => {
     // The purchase CTA is present purely from service + balance. No membership
     // row, status or prop is consulted anywhere in this tree.
     expect(
-      screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+      screen.getByRole("button", { name: /Purchase/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Add to cart/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Talk to your team/i })).toBeInTheDocument();
@@ -446,7 +446,7 @@ describe("StoreServiceDetail", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Add to cart/i }));
     expect(screen.getByRole("button", { name: /In your cart/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Purchase with Wolf Forge Balance/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Purchase/i })).toBeInTheDocument();
   });
 
   it("keeps Talk to Team as the no-purchase route", () => {
@@ -461,7 +461,7 @@ describe("StoreServiceDetail", () => {
 
     expect(screen.getByRole("link", { name: /Talk to your team/i })).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Purchase with Wolf Forge Balance/i }),
+      screen.queryByRole("button", { name: /Purchase/i }),
     ).not.toBeInTheDocument();
   });
 });
@@ -469,7 +469,7 @@ describe("StoreServiceDetail", () => {
 describe("accepted purchases during offer refresh", () => {
   it.each([200000, 0])("preserves confirmation after balance becomes %i", async (balanceCents) => {
     const view = render(<PurchaseWithBalance serviceId="s-1" serviceName="Synthetic service" offer={offer()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Purchase with Wolf Forge Balance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Purchase" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));
     await screen.findByText("Purchase confirmed");
     const refreshed = resolveStorePurchaseOffer({ service: service(), balanceCents, walletCurrency: "USD" });
@@ -480,7 +480,7 @@ describe("accepted purchases during offer refresh", () => {
   it("reuses the decision request after an uncertain transport response", async () => {
     purchaseServiceWithBalanceAction.mockRejectedValueOnce(new Error("Connection lost"));
     render(<PurchaseWithBalance serviceId="s-1" serviceName="Synthetic service" offer={offer()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Purchase with Wolf Forge Balance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Purchase" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));
     await screen.findByRole("alert");
     fireEvent.click(screen.getByRole("button", { name: "Confirm purchase" }));

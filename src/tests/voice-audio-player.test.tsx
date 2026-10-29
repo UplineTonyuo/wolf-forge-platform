@@ -120,7 +120,7 @@ describe("private voice playback", () => {
     expect(screen.getByLabelText("Total duration")).toHaveTextContent("0:16");
     expect(screen.getByRole("slider")).toBeDisabled();
     clickPlay();
-    await screen.findByRole("button", { name: "Pause voice message" });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Pause voice message" })).toBeEnabled());
     expect(fetchPlayback).toHaveBeenCalledTimes(1);
     expect(fetchPlayback).toHaveBeenCalledWith({ conversationId: "conversation", messageId: "message" }, expect.any(AbortSignal));
     expect(fetchAudio).not.toHaveBeenCalled();

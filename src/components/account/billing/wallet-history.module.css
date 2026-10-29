@@ -1,0 +1,15 @@
+.filters { display: flex; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--wf-border); }
+.filters button { min-height: 44px; padding: 8px 0; border: 0; border-bottom: 2px solid transparent; color: var(--wf-text-muted); background: none; font: inherit; font-size: 13px; cursor: pointer; }
+.filters button[aria-pressed=true] { border-bottom-color: var(--wf-navy); color: var(--wf-navy); }
+.filters button:focus-visible, .list summary:focus-visible { outline: 2px solid var(--wf-gold); outline-offset: 2px; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { border-bottom: 1px solid var(--wf-border); }
+.list summary { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 14px 0; cursor: pointer; }
+.icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--wf-navy); }
+.description { display: grid; gap: 4px; min-width: 0; }
+.description strong { text-transform: capitalize; font-size: 14px; }
+.description time { color: var(--wf-text-muted); font-size: 12px; }
+.amount { margin-left: auto; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.detail { padding: 0 0 16px 32px; font-size: 13px; overflow-wrap: anywhere; }
+.detail p { margin: 0 0 6px; }
+@media (max-width: 360px) { .list summary { gap: 8px; } .amount { font-size: 13px; } }

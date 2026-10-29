@@ -186,6 +186,12 @@ export function VoiceAudioPlayer({ source, durationMs = 0, label = "voice messag
       {loading ? <Loader2 className={styles.spin} aria-hidden="true" /> : error && error !== "permission" ? <RotateCcw aria-hidden="true" /> : playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
     </button>
     <div className={styles.track}>
+      <svg className={styles.waveform} viewBox="0 0 180 40" preserveAspectRatio="none" aria-hidden="true">
+        {Array.from({ length: 30 }, (_, index) => {
+          const height = [10, 22, 32, 18, 28, 14][index % 6]!;
+          return <rect key={index} x={index * 6 + 1} y={(40 - height) / 2} width="3" height={height} rx="1.5" />;
+        })}
+      </svg>
       <input type="range" min="0" max={total ? total / 1000 : 1} step="0.1" value={Math.min(position, total) / 1000}
         disabled={disabled || loading || !ready || !total} aria-label={`Seek ${label}`}
         aria-valuetext={`${voiceClock(position)} of ${total ? voiceClock(total) : "duration unavailable"}`}
