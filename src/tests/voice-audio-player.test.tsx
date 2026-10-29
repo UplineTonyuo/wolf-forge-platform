@@ -244,10 +244,11 @@ describe("private voice playback", () => {
 
   it("resets the previous timeline and media when its source identity changes", async () => {
     const view = render(<VoiceAudioPlayer source="https://storage.example.test/one" durationMs={2000} />);
-    clickPlay(); await screen.findByRole("button", { name: "Pause voice message" });
+    await act(async () => { clickPlay(); });
+    expect(screen.getByRole("button", { name: "Pause voice message" })).toBeEnabled();
     const audio = media(view.container);
     audio.currentTime = 1; fireEvent.timeUpdate(audio); fireEvent.canPlay(audio);
-    view.rerender(<VoiceAudioPlayer source="https://storage.example.test/two" durationMs={4000} />);
+    await act(async () => { view.rerender(<VoiceAudioPlayer source="https://storage.example.test/two" durationMs={4000} />); });
     expect(screen.getByLabelText("Total duration")).toHaveTextContent("0:04");
     expect(screen.getByLabelText("Elapsed time")).toHaveTextContent("0:00");
     expect(screen.getByRole("slider")).toBeDisabled();
