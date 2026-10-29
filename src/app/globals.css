@@ -21,7 +21,7 @@
 }
 
 * { box-sizing: border-box; }
-html { background: var(--wf-warm-50); color: var(--wf-text); font-family: "Inter Variable", Inter, system-ui, sans-serif; }
+html { background: var(--wf-warm-50); color: var(--wf-text); font-family: "Inter Variable", Inter, system-ui, sans-serif; scrollbar-gutter: stable; }
 body { margin: 0; background: var(--wf-white); }
 /* The Subscription calendar portals above the app; the page behind it must not scroll. */
 body.wf-subscription-calendar-open { overflow: hidden; }
@@ -8936,9 +8936,8 @@ td {
  * collapsed at rest and revealed when the command bar is hovered, focused, or
  * holding an open notification panel. The notification bell lives outside
  * these rails so the unread badge stays visible without hover/focus (KI-059).
- * Search contracts because the rails take real width in the flex row — that is
- * the intended behaviour, so this geometry animation is deliberate rather than
- * accidental.
+ * Reserve the rails' width so hover, focus and opening Inbox cannot move
+ * Search, Notifications or Profile. Only the controls fade into their slots.
  *
  * This block is the single source of truth for the reveal. It replaces an
  * earlier version that also toggled `width: 0 -> auto` (not interpolable, so
@@ -8955,18 +8954,26 @@ td {
   gap: 8px;
 
   min-width: 0;
-  max-width: 0;
+  max-width: 200px;
 
   opacity: 0;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: none;
 
   transform: translateX(6px);
 
   transition:
-    max-width 220ms cubic-bezier(.2, .8, .2, 1),
     transform 220ms cubic-bezier(.2, .8, .2, 1),
     opacity 150ms ease;
+}
+
+.workspace-command-secondary:empty { display: none; }
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .workspace-command-profile,
+  .workspace-command-profile .account,
+  .workspace-command-profile .avatar-button { width: 42px; height: 42px; }
+  .workspace-command-profile { flex: 0 0 42px; }
 }
 
 .workspace-command-shortcuts > * {
@@ -9024,7 +9031,6 @@ td {
     transform: none;
 
     transition:
-      max-width 150ms ease,
       opacity 120ms ease;
   }
 

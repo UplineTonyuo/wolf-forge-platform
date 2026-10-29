@@ -39,7 +39,7 @@ function ProjectRow({ project, intakeHref }: { project: ClientProjectView; intak
   </Link></li>;
 }
 
-export function ClientProjectsList({ projects, intakeLinks = {} }: { projects: ClientProjectView[]; intakeLinks?: Record<string, string> }) {
+export function ClientProjectsList({ projects, intakeLinks = {}, intakeError }: { projects: ClientProjectView[]; intakeLinks?: Record<string, string>; intakeError?: string | null }) {
   const [filter, setFilter] = useState<ProjectFilter>("all");
   const [page, setPage] = useState(1);
   const open = projects.filter((project) => clientProjectIsOpen(project.status));
@@ -59,6 +59,7 @@ export function ClientProjectsList({ projects, intakeLinks = {} }: { projects: C
   return <div className="portal-page">
     <header className="portal-page-head"><h1>Projects</h1><p>{projects.length === 0 ? "Your projects will appear here once work is underway." : blocked.length > 0 ? `${blocked.length} ${blocked.length === 1 ? "project needs" : "projects need"} information from you.` : `${open.length} in progress of ${projects.length} total.`}</p></header>
     <div className={styles.filterBlock}>
+      {intakeError ? <p role="alert">{intakeError}</p> : null}
       <div className={styles.filters} role="group" aria-label="Filter projects by status">
       {filters.map((option) => {
         const count = projects.filter((project) => matches(project.status, option.value)).length;

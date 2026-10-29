@@ -14,6 +14,7 @@ export default async function ClientProjectsPage() {
   let projects: ClientProjectView[] = [];
   let denied = false;
   let loadError: string | null = null;
+  let intakeError: string | null = null;
   const intakeLinks: Record<string, string> = {};
 
   try {
@@ -27,7 +28,9 @@ export default async function ClientProjectsPage() {
     // share one read rather than querying twice.
     projects = (await readClientProjects()) ?? [];
     // Intake links are optional; a Forms denial must not hide authorized Projects.
-    const assignments = await readClientAssignments().catch(() => null);
+    let assignments: Awaited<ReturnType<typeof readClientAssignments>> = null;
+    try { assignments = await readClientAssignments(); }
+    catch { intakeError = "Intake status could not be loaded. Open the project or reload to check its required forms."; }
     for (const form of assignments ?? []) {
       if (form.order_id && form.form_type === "intake" && form.required && form.status === "assigned" && form.work_enabled !== false && !intakeLinks[form.order_id]) {
         intakeLinks[form.order_id] = `/account/onboarding/${form.assignment_id}`;
@@ -53,5 +56,5 @@ export default async function ClientProjectsPage() {
     );
   }
 
-  return <ClientProjectsList projects={projects} intakeLinks={intakeLinks} />;
+  return <ClientProjectsList projects={projects} intakeLinks={intakeLinks} intakeError={intakeError} />;
 }

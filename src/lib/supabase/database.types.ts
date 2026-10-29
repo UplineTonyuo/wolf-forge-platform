@@ -5565,6 +5565,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_get_primary_contact_summary: {
+        Args: { p_company_id: string }
+        Returns: { name: string; email: string | null; phone: string | null; job_title: string | null }[]
+      }
       app_get_form_submission_pdf: { Args: { p_submission_id: string; p_include_project?: boolean }; Returns: Json }
       app_get_form_submission: {
         Args: { p_submission_id: string }

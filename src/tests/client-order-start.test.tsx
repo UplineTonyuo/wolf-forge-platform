@@ -17,24 +17,25 @@ describe("client-controlled order start", () => {
     const view=render(<ClientOrderStart initial={null} />);
     expect(view.container.textContent).toBe(""); expect(mocks.start).not.toHaveBeenCalled();
   });
-  it("offers start now or later without automatically requesting a start", () => {
+  it("offers the required intake before Start order without requesting a start", () => {
     render(<ClientOrderStart initial={state} />);
-    expect(screen.getByRole("button", { name: "Start order" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
+    expect(screen.getByRole("link", { name: /Complete intake form/ }).getAttribute("href")).toBe(`/account/onboarding/${state.forms[0]!.id}`);
     expect(screen.getByRole("link", { name: "Do this later" }).getAttribute("href")).toBe("/account/projects");
     expect(mocks.start).not.toHaveBeenCalled();
   });
-  it("opens required form links only after a confirmed start request", async () => {
-    mocks.start.mockResolvedValue({ ok: true, state: { ...state, requested: true } });
-    render(<ClientOrderStart initial={state} />);
-    fireEvent.click(screen.getByRole("button", { name: "Start order" }));
-    const link=await screen.findByRole("link", { name: /Complete form/ });
-    expect(link.getAttribute("href")).toBe(`/account/onboarding/${state.forms[0]!.id}`);
-    expect(mocks.refresh).not.toHaveBeenCalled();
-    expect(screen.queryByText("Your order is in progress")).toBeNull();
+  it("keeps all incomplete requirements and skips completed forms", () => {
+    render(<ClientOrderStart initial={{ ...state, forms: [
+      { ...state.forms[0]!, completed: true },
+      { ...state.forms[0]!, id: "20000000-0000-4000-8000-000000000002", title: "Second intake" },
+    ] }} />);
+    expect(screen.getAllByRole("link", { name: /Complete intake form/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Complete intake form/ }).getAttribute("href")).toMatch(/000000000002$/);
+    expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
   });
   it("does not claim an order started when the server rejects it", async () => {
     mocks.start.mockResolvedValue({ ok: false, error: "Order unavailable" });
-    render(<ClientOrderStart initial={state} />);
+    render(<ClientOrderStart initial={{ ...state, forms: state.forms.map((form) => ({ ...form, completed: true })) }} />);
     fireEvent.click(screen.getByRole("button", { name: "Start order" }));
     expect((await screen.findByRole("alert")).textContent).toBe("Order unavailable");
     expect(screen.queryByRole("link", { name: /Complete form/ })).toBeNull();
@@ -50,6 +51,17 @@ describe("client-controlled order start", () => {
     render(<ClientOrderStart initial={{ ...state, requested: true, forms: state.forms.map((form) => ({ ...form, available: false })) }} />);
     expect(screen.getByText(/Form unavailable/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
+  });
+  it("does not treat a missing requirements response as permission to start", () => {
+    render(<ClientOrderStart initial={{ ...state, forms: [] }} />);
+    expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/could not be loaded/);
+  });
+  it("uses refreshed server evidence when the required forms become complete", () => {
+    const view = render(<ClientOrderStart initial={state} />);
+    expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
+    view.rerender(<ClientOrderStart initial={{ ...state, forms: state.forms.map((form) => ({ ...form, completed: true })) }} />);
+    expect(screen.getByRole("button", { name: "Start order" })).toBeTruthy();
   });
   it("does not label an already completed order as currently in progress", () => {
     render(<ClientOrderStart initial={{ ...state, status: "complete", requested: true, started: true, available: false }} />);

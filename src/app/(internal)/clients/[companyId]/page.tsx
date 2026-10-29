@@ -120,7 +120,7 @@ export default async function ClientDetailPage({
   const context = await getInternalContext();
 
   try {
-    const [client, contacts, projects, wallet, wfCardMembership] = await Promise.all([
+    const [client, contacts, projects, wallet, wfCardMembership, contactSummary] = await Promise.all([
       context.services.companies.get(companyId),
       context.user.clients.privateManage
         ? context.services.contacts.listForCompany(companyId)
@@ -133,6 +133,9 @@ export default async function ClientDetailPage({
       // all, and that is simply "not active" rather than an error.
       context.user.invoices.manage
         ? context.services.wfCard.getMembership(companyId).catch(() => null)
+        : Promise.resolve(null),
+      context.user.clients.contactRead
+        ? context.services.contacts.getPrimarySummary(companyId)
         : Promise.resolve(null),
     ]);
 
@@ -355,7 +358,7 @@ export default async function ClientDetailPage({
                     Primary contact
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.name ?? "Not set" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.name || "Not set" : "Restricted"}
                   </dd>
                 </div>
 
@@ -365,8 +368,10 @@ export default async function ClientDetailPage({
                     Email
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.email
-                      ? <ClientContactEmail contactId={primaryContact.id} name={primaryContact.name} email={primaryContact.email} available={emailAvailable} />
+                    {context.user.clients.contactRead ? contactSummary?.email
+                      ? context.user.clients.privateManage && primaryContact
+                        ? <ClientContactEmail contactId={primaryContact.id} name={contactSummary.name} email={contactSummary.email} available={emailAvailable} />
+                        : contactSummary.email
                       : "Not available" : "Restricted"}
                   </dd>
                 </div>
@@ -377,7 +382,7 @@ export default async function ClientDetailPage({
                     Phone
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.phone ?? "Not available" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.phone || "Not available" : "Restricted"}
                   </dd>
                 </div>
 
@@ -387,7 +392,7 @@ export default async function ClientDetailPage({
                     Job title
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.job_title ?? "Not available" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.job_title || "Not available" : "Restricted"}
                   </dd>
                 </div>
 

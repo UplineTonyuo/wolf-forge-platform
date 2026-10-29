@@ -31,6 +31,9 @@ describe('project task actions',()=>{
   expect(await manageProjectTaskAction(id,{kind:'create',title:' QA task ',requestId:taskId})).toEqual({ok:true});
   expect(mocks.create).toHaveBeenCalledWith({order_id:id,title:'QA task',request_id:taskId},{id});
   expect(mocks.revalidate).toHaveBeenCalledWith(`/orders/${id}`);
+  expect(mocks.revalidate).toHaveBeenCalledWith(`/account/projects/${id}`);
+  expect(mocks.revalidate).toHaveBeenCalledWith('/account/projects');
+  expect(mocks.revalidate).toHaveBeenCalledWith('/account');
  });
  it('lets the database reject a stale or invalid assignment without claiming success',async()=>{
   mocks.assign.mockRejectedValue(new PermissionDeniedError());

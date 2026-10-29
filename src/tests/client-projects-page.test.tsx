@@ -11,6 +11,7 @@ it("keeps authorized projects available when Forms access is denied", async () =
   const result = await page();
   expect(result.props.projects).toEqual([{ id: "project" }]);
   expect(result.props.intakeLinks).toEqual({});
+  expect(result.props.intakeError).toMatch(/could not be loaded/);
   expect(mocks.redirect).not.toHaveBeenCalled();
 });
 it("links only incomplete required enabled intakes and picks the first per order", async () => {

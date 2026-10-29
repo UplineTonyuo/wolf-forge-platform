@@ -12,6 +12,7 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
+import { useBodyScrollLock } from "../../ui/use-body-scroll-lock";
 import { TenantBrandingScope } from "../../shell/tenant-branding-provider";
 
 /**
@@ -145,15 +146,12 @@ export function PortalDialog({
     target?.focus();
 
     return () => {
-      returnFocusRef.current?.focus();
+      returnFocusRef.current?.focus({ preventScroll: true });
     };
   }, [open, focusables, initialFocusRef]);
 
   useEffect(() => {
     if (!render) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -192,9 +190,10 @@ export function PortalDialog({
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
-      document.body.style.overflow = previousOverflow;
     };
   }, [render, focusables, onClose]);
+
+  useBodyScrollLock(render);
 
   if (!mounted || !render) return null;
 
