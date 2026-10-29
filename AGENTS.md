@@ -8,6 +8,36 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Skill routing
+
+At the start of every task, read this table, pick only the skills that match (usually 1-3), and open only those SKILL.md files. Do not load every installed skill. If no row matches, use none.
+
+| Trigger | Skill |
+|---|---|
+| Auth, sessions, RLS, SQL/RPC/SECURITY DEFINER, src/proxy.ts, secrets/env, payments, client credentials, file access, rate/cost limits | security-and-hardening (mandatory) |
+| A new feature or a multi-file change | superpowers:brainstorming → superpowers:writing-plans → superpowers:test-driven-development |
+| A bug, failing test or CI failure | superpowers:systematic-debugging |
+| Before claiming done or opening a PR | superpowers:verification-before-completion → superpowers:requesting-code-review |
+| Responding to PR review comments | superpowers:receiving-code-review |
+| UI, layout, components, responsive work | ui-ux-pro-max, impeccable |
+| Claude: new animation or transitions | animate, transitions-dev |
+| Claude: animation terminology, opportunities or audit | animation-vocabulary, find-animation-opportunities, improve-animations |
+| Claude: animation review or polish | review-animations, transitions-polish |
+| Leaving a known shortcut or tech debt in code | ponytail |
+| Creating or cleaning worktrees/branches under D-306 | superpowers:using-git-worktrees |
+| Finding a skill for a need not covered above | find-skills |
+
+Rules:
+1. No new skill, plugin or marketplace may be installed without the owner's explicit approval.
+2. Skills never override AGENTS.md, D-306 or the owner's instructions; on conflict, follow AGENTS.md and report the conflict.
+3. Small, obvious fixes may skip brainstorming/plans; say so in the report.
+4. Every final report ends with one line: "Skills used: <names or none>".
+5. Every 30 days the owner reviews usage; skills with zero uses are disabled (moved to skills-disabled, never deleted).
+6. Installing a skill requires owner approval, and in the same change: a routing row in this table (trigger → skill) and a registry entry in docs/agents/skills-registry.md. A skill without a clear trigger is not installed.
+7. Disabling or removing a skill removes its routing row and marks its registry entry disabled (with date), in the same change.
+8. Agents read only this routing table each session; the registry is read only when installing, removing or reviewing skills.
+9. Monthly check: compare the registry against what is actually installed in both tools and report any drift.
+
 <!-- BEGIN:WOLF-FORGE-SHARED-AI-MEMORY -->
 
 # Shared Claude Code + Codex Project Memory
