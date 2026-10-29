@@ -3,7 +3,8 @@
     "deploymentEnabled": {
       "codex/client-navigation-skeletons-20261023": false,
       "codex/forms-gmail-release-20261028": false,
-      "codex/intake-publication-20261028": false
+      "codex/intake-publication-20261028": false,
+      "codex/validate-qa-ecfd4d9-20261030": false
     }
   },
   "crons": [

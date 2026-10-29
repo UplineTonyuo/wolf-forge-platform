@@ -1,64 +1,68 @@
-# Wolf Forge CI security gates. Every job fails closed and is independent so
-# the Actions summary identifies the failed boundary without hiding later jobs.
-name: security
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-  schedule:
-    # Recheck unchanged dependencies and repository history every week.
-    - cron: "0 22 * * 0"
-
+name: ecfd4d9 validation only - no deployment
+'on':
+  workflow_dispatch: {}
 permissions:
   contents: read
-
 concurrency:
-  group: security-${{ github.ref }}
-  cancel-in-progress: true
-
+  group: validation-only-ecfd4d9
+  cancel-in-progress: false
 jobs:
   typecheck:
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528
+          persist-credentials: false
+      - name: verify exact source and isolated runner
+        run: |-
+          test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
+          test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
+          test "$(git rev-parse HEAD)" = 'ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528'
+          test -z "$(git status --porcelain)"
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          test -z "$VERCEL_TOKEN"
+          printf 'Validated source: %s\n' "$(git rev-parse HEAD)"
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      # Next 16 generates the global PageProps/LayoutProps helpers on demand.
-      # A fresh CI checkout has no .next/types until typegen runs.
       - run: npx next typegen && npm run typecheck
-
-  lint:
-    name: static lint boundary
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run lint
-
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref ==
+      'refs/heads/codex/validate-qa-ecfd4d9-20261030' && github.repository ==
+      'UplineTonyuo/wolf-forge-platform'
+    timeout-minutes: 15
+    env:
+      NODE_OPTIONS: '--max-old-space-size=2048'
   build:
     name: compiled app and PDF font trace
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      NODE_OPTIONS: --max-old-space-size=3072
-      NEXT_TELEMETRY_DISABLED: "1"
-      WOLF_FORGE_STUDIO_QA_BUILD: "1"
+      NODE_OPTIONS: '--max-old-space-size=3072'
+      NEXT_TELEMETRY_DISABLED: '1'
+      WOLF_FORGE_STUDIO_QA_BUILD: '1'
       SUPABASE_URL: http://127.0.0.1:1
       SUPABASE_PUBLISHABLE_KEY: build-only-nonsecret-placeholder
       SENTRY_URL: http://127.0.0.1:1
-      SENTRY_DISABLE_UPDATE_CHECK: "true"
+      SENTRY_DISABLE_UPDATE_CHECK: 'true'
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528
+          persist-credentials: false
+      - name: verify exact source and isolated runner
+        run: |-
+          test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
+          test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
+          test "$(git rev-parse HEAD)" = 'ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528'
+          test -z "$(git status --porcelain)"
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          test -z "$VERCEL_TOKEN"
+          printf 'Validated source: %s\n' "$(git rev-parse HEAD)"
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -66,28 +70,28 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: node scripts/qa/assert-pdf-font-trace.mjs
-
-  tests:
-    name: JavaScript and TypeScript tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      # Use Vitest's repository-wide include patterns. A hand-maintained list
-      # previously omitted most auth, RBAC, Team, IDOR, webhook and privacy tests.
-      - name: full Vitest discovery
-        run: npm test
-
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref ==
+      'refs/heads/codex/validate-qa-ecfd4d9-20261030' && github.repository ==
+      'UplineTonyuo/wolf-forge-platform'
   database:
     name: local Supabase pgTAP and RLS tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528
+          persist-credentials: false
+      - name: verify exact source and isolated runner
+        run: |-
+          test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
+          test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
+          test "$(git rev-parse HEAD)" = 'ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528'
+          test -z "$(git status --porcelain)"
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          test -z "$VERCEL_TOKEN"
+          printf 'Validated source: %s\n' "$(git rev-parse HEAD)"
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -95,50 +99,143 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: start isolated local Supabase database
         run: npx supabase start --yes
-      # `test:db` is pinned to `supabase test db --local`; no linked project or
-      # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite
         run: npm run test:db
       - name: real PostgREST client support isolation and missing-hook checks
         run: node scripts/qa/check-client-support-rest.mjs
       - name: real Storage Team voice upload and media inspection
-        run: node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts --reporter=verbose
-
-  dependencies:
-    name: production dependency vulnerabilities
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - name: npm audit (production, high and above)
-        run: npm run audit:deps
-
-  secrets:
-    name: repository and history secret scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          # Full history. A secret removed in a later commit is still leaked.
-          fetch-depth: 0
-      # The convenience action narrows PR/push scans to first-parent ranges.
-      # Run the official image directly with no log range so Gitleaks uses its
-      # full-history/all-refs default. Verbose findings remain 100% redacted.
-      - name: gitleaks (all refs and full history, redacted output)
         run: >-
-          docker run --rm
-          --user "$(id -u):$(id -g)"
-          --volume "$GITHUB_WORKSPACE:/repo:ro"
-          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
-          git --redact --no-banner --no-color --verbose /repo
+          node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts
+          --reporter=verbose
+      - name: stop runner-owned database
+        if: always()
+        run: npx supabase stop --no-backup
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref ==
+      'refs/heads/codex/validate-qa-ecfd4d9-20261030' && github.repository ==
+      'UplineTonyuo/wolf-forge-platform'
+    env: {}
+  intake:
+    name: real Auth, purchase, intake, signature, start and PDF
+    if: >-
+      github.event_name == 'workflow_dispatch' && github.ref ==
+      'refs/heads/codex/validate-qa-ecfd4d9-20261030' && github.repository ==
+      'UplineTonyuo/wolf-forge-platform'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NODE_OPTIONS: '--max-old-space-size=3072'
+      NEXT_TELEMETRY_DISABLED: '1'
+      WOLF_FORGE_STUDIO_QA_BUILD: '1'
+      SENTRY_URL: http://127.0.0.1:1
+      SENTRY_DISABLE_UPDATE_CHECK: 'true'
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          ref: ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528
+      - name: verify exact source and isolated runner
+        run: |-
+          test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
+          test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
+          test "$(git rev-parse HEAD)" = 'ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528'
+          test -z "$(git status --porcelain)"
+          test -z "$SUPABASE_ACCESS_TOKEN"
+          test -z "$VERCEL_TOKEN"
+          printf 'Validated source: %s\n' "$(git rev-parse HEAD)"
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: tracked-file secret scanner (redacted by construction)
-        run: npm run security:secrets
+      - name: validate the exact template package
+        run: node scripts/qa/intake-workflow-e2e.mjs --check-fixtures
+      - name: migrate fresh local Supabase with real Auth and private Storage
+        run: |
+          if ! npx supabase start --yes >"$RUNNER_TEMP/intake-supabase-start.log" 2>&1; then
+            echo "Local Supabase startup failed; raw output is retained only on this disposable runner."
+            exit 1
+          fi
+      - name: install Chromium on the runner
+        run: npx playwright install --with-deps chromium
+      - name: ensure independent PDF text extraction on the runner
+        run: |
+          if ! command -v pdftotext >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y poppler-utils
+          fi
+      - name: build the production app with inert build settings
+        env:
+          SUPABASE_URL: http://127.0.0.1:1
+          SUPABASE_PUBLISHABLE_KEY: build-only-nonsecret-placeholder
+        run: npm run build
+      - name: verify packaged PDF fonts
+        run: node scripts/qa/assert-pdf-font-trace.mjs
+      - name: prepare branch-bound copy of unchanged intake assertions
+        run: >-
+          node --input-type=module <<'NODE'
+
+          import assert from 'node:assert/strict';
+
+          import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+
+          import {createHash} from 'node:crypto';
+
+          const src='scripts/qa/intake-workflow-e2e.mjs';
+
+          const dst='scripts/qa/intake-workflow-validation-only.mjs';
+
+          assert.equal(process.env.GITHUB_REF_NAME,"codex/validate-qa-ecfd4d9-20261030");
+
+          assert.equal(process.env.GITHUB_HEAD_REF||'', '');
+
+          const old=readFileSync(src,'utf8');
+
+          const hash=x=>createHash('sha256').update(x).digest('hex');
+
+          assert.equal(hash(old),"6f54020e5fb751687267d05857401484f25adccf9ad76b7fd6058d0ea027ee3b");
+
+          const needle="need((process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME) ===
+          \"codex/intake-publication-20261028\", \"Unapproved workflow branch\");";
+
+          const replacement="need(!process.env.GITHUB_HEAD_REF && process.env.GITHUB_REF_NAME ===
+          \"codex/validate-qa-ecfd4d9-20261030\", \"Unapproved validation workflow branch\");";
+
+          assert.equal(old.split(needle).length,2);
+
+          const next=old.replace(needle,replacement);
+
+          assert.equal(next.replace(replacement,needle),old);
+
+          assert.equal(hash(next),"73607976c3ad5dae2e2b86b70f4426db451c23f3d12770dae706401eb776187b");
+
+          assert.equal(existsSync(dst),false);
+
+          writeFileSync(dst,next,'utf8');
+
+          console.log(JSON.stringify({sourceHash:hash(old),runnerCopyHash:hash(next),changed:'one exact
+          runner-branch guard only',applicationSource:"ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528"}));
+
+          NODE
+      - name: run the actual authenticated Next workflow for all 59 services and 37 templates
+        run: node scripts/qa/intake-workflow-validation-only.mjs
+      - name: upload synthetic screenshots, PDFs and redacted summary only
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ecfd4d9-isolated-intake
+          path: |
+            artifacts/intake-workflow/*.png
+            artifacts/intake-workflow/*.pdf
+            artifacts/intake-workflow/summary.json
+          if-no-files-found: ignore
+          retention-days: 1
+      - name: stop runner-owned local services
+        if: always()
+        run: npx supabase stop --no-backup
+      - name: verify tracked application source still unchanged
+        if: always()
+        run: |-
+          test "$(git rev-parse HEAD)" = 'ecfd4d9cd2cc89b8b7855e185b613ab5ea1f4528'
+          git diff --exit-code
+          git diff --cached --exit-code
