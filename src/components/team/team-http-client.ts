@@ -62,7 +62,7 @@ export async function uploadTeamVoiceBlob(
     form.append("cacheControl", "3600");
     form.append("", blob, "audio-file");
     const response = await fetch(uploadUrl, {
-      method: "POST",
+      method: "PUT",
       headers: { "x-upsert": "false" },
       body: form,
     });
