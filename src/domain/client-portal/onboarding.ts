@@ -1,4 +1,5 @@
 import { formatDate } from "../../lib/format";
+import { assignedFormTitle } from "../forms/assignment-title";
 import type { FormAssignmentSummary } from "../forms/schema";
 import { onboardingAttention, type AttentionState } from "./attention";
 
@@ -74,7 +75,7 @@ function toItem(assignment: FormAssignmentSummary): OnboardingItem {
 
   return {
     assignmentId: assignment.assignment_id,
-    title: assignment.title,
+    title: assignedFormTitle(assignment),
     context,
     attention,
     required: assignment.required,

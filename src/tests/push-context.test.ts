@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { clientPushContext } from "../lib/notifications/push-server";
 import { getClientContext } from "../lib/supabase/next-server";
 
-vi.mock("next/headers", () => ({ headers: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: vi.fn(), cookies: vi.fn() }));
 vi.mock("../lib/supabase/next-server", () => ({ getClientContext: vi.fn() }));
 
 const productionProject = "https://jwynqsyirgenqlmkooah.supabase.co";
@@ -14,6 +14,7 @@ const rpc = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(cookies).mockResolvedValue({ getAll: () => [] } as unknown as Awaited<ReturnType<typeof cookies>>);
   vi.stubEnv("VERCEL_ENV", "production");
   vi.stubEnv("SUPABASE_URL", productionProject);
   vi.mocked(getClientContext).mockResolvedValue({ client: { rpc } } as unknown as Awaited<ReturnType<typeof getClientContext>>);
@@ -22,6 +23,13 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.unstubAllEnvs());
+
+it("refuses device enrollment during client support before reading client configuration", async () => {
+  vi.mocked(cookies).mockResolvedValue({ getAll: () => [{ name: "wf-client-support", value: "synthetic" }] } as unknown as Awaited<ReturnType<typeof cookies>>);
+  expect(await clientPushContext()).toBeNull();
+  expect(getClientContext).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
+});
 
 it.each([
   ["production", productionProject, productionOrigin],

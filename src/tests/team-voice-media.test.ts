@@ -28,6 +28,19 @@ describe("Team voice media validation", () => {
     expect(mockedParse).not.toHaveBeenCalled();
   });
 
+  it.each([0, -1, NaN, Infinity])("does not replace an invalid explicit duration %s with a browser timer", async (duration) => {
+    mockedParse.mockResolvedValueOnce({ format: { container: "WebM", codec: "Opus", duration } } as never);
+    await expect(inspectTeamVoiceBytes({ bytes, objectSize: bytes.length, objectMimeType: "audio/webm", declaredMimeType: "audio/webm", recordedDurationMs: 1000 })).rejects.toThrow("not supported");
+  });
+
+  it.each([
+    { container: "Ogg", codec: "Opus", mime: "audio/ogg" as const },
+    { container: "M4A", codec: "AAC", mime: "audio/mp4" as const },
+  ])("does not use the WebM fallback for $container recordings", async ({ container, codec, mime }) => {
+    mockedParse.mockResolvedValueOnce({ format: { container, codec } } as never);
+    await expect(inspectTeamVoiceBytes({ bytes, objectSize: bytes.length, objectMimeType: mime, declaredMimeType: mime, recordedDurationMs: 1000 })).rejects.toThrow("not supported");
+  });
+
   it("rejects unsupported codecs, MIME mismatches, and recordings over five minutes", async () => {
     mockedParse.mockResolvedValueOnce({ format: { container: "WAVE", codec: "PCM", duration: 2 } } as never);
     await expect(inspectTeamVoiceBytes({ bytes, objectSize: 4, objectMimeType: "audio/wav", declaredMimeType: "audio/webm", recordedDurationMs: 2000 })).rejects.toThrow("not supported");

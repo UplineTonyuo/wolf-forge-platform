@@ -3,10 +3,12 @@ import "server-only";
 import { headers } from "next/headers";
 import { clientPushAvailable, type ClientPushConfiguration } from "../../domain/notifications/push";
 import { getClientContext } from "../supabase/next-server";
+import { clientSupportRequested } from "../supabase/client-support";
 
 type PushRpc = (name: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
 
 export async function clientPushContext() {
+  if (await clientSupportRequested()) return null;
   if (!clientPushAvailable(process.env)) return null;
   const context = await getClientContext();
   const rpc = context.client.rpc.bind(context.client) as unknown as PushRpc;

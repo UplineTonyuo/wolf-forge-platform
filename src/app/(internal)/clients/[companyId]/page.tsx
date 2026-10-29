@@ -18,6 +18,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
+import { ClientSignIn } from "../../../../components/clients/client-sign-in";
+import clientSignInStyles from "../../../../components/clients/client-sign-in.module.css";
 import { ClientStatusControl } from "../../../../components/clients/client-status-control";
 import { ClientBalanceControl } from "../../../../components/clients/client-balance-control";
 import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
@@ -221,6 +223,8 @@ export default async function ClientDetailPage({
       <PageFrame
         title={client.name}
         action={
+          <div className={clientSignInStyles.toolbar}>
+          {['owner', 'admin'].includes(context.user.role) && context.user.clients.privateManage ? <ClientSignIn accounts={contacts.filter((contact) => contact.profile_id).map((contact) => ({ id: contact.profile_id!, label: contact.name }))} /> : null}
           <ClientDetailActions
             companyId={client.id}
             clientName={client.name}
@@ -247,6 +251,7 @@ export default async function ClientDetailPage({
             eligibleProfiles={eligibleProfiles}
             welcomeEmailProfileId={welcomeEmailProfileId}
           />
+          </div>
         }
       >
         {query.created === "1" ? (

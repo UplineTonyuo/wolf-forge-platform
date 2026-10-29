@@ -3015,11 +3015,9 @@
 }
 
 .voiceMicButton,
-.voiceRecorder button,
-.voicePlayButton,
-.voiceRetry {
-  min-width: 30px;
-  min-height: 30px;
+.voiceRecorder button {
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid #dfe3ec;
   border-radius: 8px;
   background: #ffffff;
@@ -3032,9 +3030,7 @@
 }
 
 .voiceMicButton svg,
-.voiceRecorder button svg,
-.voicePlayButton svg,
-.voiceRetry svg { width: 14px; height: 14px; }
+.voiceRecorder button svg { width: 14px; height: 14px; }
 .voiceMicButton:disabled,
 .voiceRecorder button:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -3049,22 +3045,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.voiceRecorder audio { width: min(230px, 42vw); height: 30px; }
-.voiceRecordingDot { width: 7px; height: 7px; border-radius: 50%; background: #b42318; }
 .voiceError { color: #b42318; font-size: 10.5px; line-height: 1.35; }
-
-.voiceMessage {
-  min-width: 220px;
-  display: grid;
-  grid-template-columns: 30px minmax(90px, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.voiceMessage progress { width: 100%; height: 5px; accent-color: var(--wf-navy, #000d51); }
-.voiceRetry { grid-column: 1 / -1; justify-self: start; padding: 0 8px; }
 .voiceExpired { display: inline-flex; align-items: center; gap: 6px; color: #6b7280; font-size: 12px; }
 .voiceExpired svg { width: 14px; height: 14px; }
 
@@ -3158,8 +3139,6 @@
 @media (max-width: 860px) {
   .pinsPanel { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; max-height: 58dvh; }
   .pinsPanel::before { display: none; }
-  .voiceMessage { min-width: min(210px, 62vw); }
-  .voiceRecorder audio { width: min(190px, 48vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {

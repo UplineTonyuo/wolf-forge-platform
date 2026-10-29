@@ -1,5 +1,7 @@
 "use client";
 
+import { VoiceAudioPlayer } from "../audio/voice-audio-player";
+
 import {
   useEffect,
   useRef,
@@ -860,7 +862,7 @@ export function TicketConversation({
                                       />
                                     </button>
                                   ) : attachment.mime_type.startsWith("audio/") ? (
-                                    <audio controls preload="none" src={attachmentUrl} aria-label={`Voice message: ${attachment.original_name}`} style={{ maxWidth: "100%" }} />
+                                    <VoiceAudioPlayer key={attachment.id} source={attachmentUrl} />
                                   ) : (
                                     <a
                                       className={styles.attachmentLink}

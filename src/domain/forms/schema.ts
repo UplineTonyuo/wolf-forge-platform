@@ -35,6 +35,22 @@ const safeHtmlSchema = z.string().max(100_000).refine(
 );
 const jsonObjectSchema = z.record(z.string(), z.json());
 
+export const intakeSecretReferenceSchema = z.object({ credential_id: uuidSchema }).strict();
+export const intakeSecretFieldsSchema = z.array(z.object({
+  field_key: uuidSchema, collection_mode: z.enum(["encrypted", "disabled"]),
+}).strict()).max(500);
+export const intakeSecretCaptureSchema = z.object({
+  request_id: uuidSchema,
+  assignment_id: uuidSchema,
+  field_key: uuidSchema,
+  secret: z.string().min(1).max(4096).refine((value) => new TextEncoder().encode(value).length <= 16384),
+}).strict();
+export const intakeSecretListSchema = z.array(z.object({
+  credential_id: uuidSchema, field_key: uuidSchema, label: z.string().max(500),
+}).strict()).max(300);
+export type IntakeSecretCaptureInput = z.infer<typeof intakeSecretCaptureSchema>;
+export type IntakeSecretReference = z.infer<typeof intakeSecretReferenceSchema>;
+
 export const formFieldOptionSchema = z.object({
   stable_option_key: uuidSchema,
   option_value: z.string().trim().min(1).max(500),
@@ -73,11 +89,13 @@ export const formFieldSchema = z.object({
     context.addIssue({ code: "custom", path: ["settings", "signature_mode"], message: "Choose a drawn or typed signature." });
   }
   if (field.field_type === "secret"
-    && (field.required || field.settings.collection_mode !== "disabled")) {
+    && (!["disabled", "encrypted"].includes(String(field.settings.collection_mode))
+      || (field.settings.collection_mode === "disabled" && field.required)
+      || (field.default_value !== undefined && field.default_value !== null))) {
     context.addIssue({
       code: "custom",
       path: ["settings", "collection_mode"],
-      message: "Secret collection stays disabled until encrypted storage exists.",
+      message: "Choose disabled or encrypted collection without a default password.",
     });
   }
   if (field.field_type === "html") {
@@ -122,6 +140,9 @@ export const formDefinitionSchema = z.object({
     context.addIssue({ code: "custom", path: ["type_config", "reminder_days"], message: "Choose a reminder interval from 0 to 30 days." });
   }
   const fieldKeys = definition.fields.map((field) => field.stable_field_key);
+  if (definition.visibility !== "assigned" && definition.fields.some((field) => field.field_type === "secret" && field.settings.collection_mode === "encrypted")) {
+    context.addIssue({ code: "custom", path: ["visibility"], message: "Encrypted passwords require an assigned intake form." });
+  }
   if (new Set(fieldKeys).size !== fieldKeys.length) {
     context.addIssue({ code: "custom", path: ["fields"], message: "Field keys must be unique." });
   }
@@ -145,6 +166,9 @@ function validateTypeBoundary(
     });
   }
   definition.fields.forEach((field, index) => {
+    if (field.field_type === "secret" && field.settings.collection_mode === "encrypted" && !assignedType) {
+      context.addIssue({ code: "custom", path: ["definition", "fields", index, "settings", "collection_mode"], message: "Encrypted passwords require assigned Intake or Onboarding Forms." });
+    }
     if (["optgroup", "dropdown", "payment"].includes(field.field_type) && formType !== "order") {
       context.addIssue({
         code: "custom",
@@ -270,6 +294,7 @@ export type FormSchemaField = {
   default_value: Json | null;
   required: boolean;
   settings: Record<string, Json | undefined>;
+  encrypted_collection_allowed?: boolean;
   options: Array<{
     option_id: string;
     value: string;
@@ -305,6 +330,7 @@ export type FormPublishedSchema = {
 
 export type FormAssignmentSummary = {
   work_enabled?: boolean;
+  service_name?: string | null;
   assignment_id: string;
   form_id: string;
   form_type: "intake" | "onboarding";
@@ -356,6 +382,7 @@ export type FormSubmissionSummary = {
 };
 
 export type FormSubmissionDetail = {
+  has_saved_credentials?: boolean;
   submission: FormSubmissionRow;
   values: Array<{
     stable_field_key: string;

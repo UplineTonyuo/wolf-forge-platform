@@ -1,0 +1,5 @@
+.form{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;max-width:100%;min-width:0}
+.toolbar{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap;min-width:0;max-width:100%}
+.form>button{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:44px;white-space:nowrap}
+.error{flex-basis:100%;margin:0;color:var(--color-danger,#a22323);font-size:.875rem}
+@media(max-width:600px){.form{width:100%}.form>button{width:100%}}

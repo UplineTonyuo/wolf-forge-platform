@@ -5504,6 +5504,10 @@ export type Database = {
         Args: { p_assignment_id: string }
         Returns: Json
       }
+      app_get_assigned_form_service_labels: {
+        Args: { p_assignment_ids: string[] }
+        Returns: { assignment_id: string; service_name: string }[]
+      }
       app_get_client_account_context: {
         Args: never
         Returns: {
@@ -5512,6 +5516,38 @@ export type Database = {
           display_name: string
           profile_id: string
         }[]
+      }
+      app_begin_client_support: {
+        Args: { p_client_id: string; p_capability_hash: string }
+        Returns: Json
+      }
+      app_get_client_support_context: {
+        Args: never
+        Returns: Json
+      }
+      app_capture_intake_secret: {
+        Args: { p_request_id: string; p_assignment_id: string; p_field_key: string; p_secret: string }
+        Returns: Json
+      }
+      app_list_intake_secret_references: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
+      app_reveal_intake_secret: {
+        Args: { p_credential_id: string }
+        Returns: string
+      }
+      app_end_client_support: {
+        Args: { p_support_id: string | null }
+        Returns: undefined
+      }
+      app_get_own_client_support_state: {
+        Args: { p_support_id: string | null }
+        Returns: Json
+      }
+      app_apply_client_support_context: {
+        Args: never
+        Returns: undefined
       }
       app_get_company_wallet: {
         Args: { p_company_id: string }
