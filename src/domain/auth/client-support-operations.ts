@@ -6,7 +6,7 @@ export const CLIENT_SUPPORT_RPCS = [
   "app_current_user_modules", "app_require_module_access", "app_get_client_account_context", "app_get_my_profile",
   "app_get_runtime_white_label_configuration", "app_list_my_client_projects", "app_get_my_client_project",
   "app_get_my_order_start", "app_request_my_order_start", "app_reconcile_my_order_start", "app_my_intake_version_available", "app_get_project_conversation",
-  "app_get_published_form_schema", "app_list_assigned_forms", "app_forms_work_enabled",
+  "app_get_published_form_schema", "app_list_assigned_forms", "app_list_form_submissions", "app_forms_work_enabled",
   "app_get_form_assignment_history", "app_get_assigned_form_schema", "app_get_assigned_form_service_labels",
   "app_submit_form", "app_get_intake_follow_up", "app_get_intake_draft", "app_save_intake_draft",
   "app_prepare_intake_file", "app_finish_intake_file", "app_get_intake_file", "app_get_form_submission_pdf", "app_get_form_submission",

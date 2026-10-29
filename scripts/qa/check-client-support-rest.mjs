@@ -10,12 +10,16 @@ const hook = "public.app_apply_client_support_context";
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const need = (condition, message) => assert.ok(condition, message);
 let step = "runner isolation", database, recoveryProof, restoreRequired = false, restoreFailed = false;
+let sqlFailureState = null;
 
 // Child output can contain local keys, JWTs or fixture data; never forward it.
 function captured(command, args, input) {
   return new Promise((accept, reject) => {
-    const child = execFile(command, args, { encoding: "utf8", timeout: 30000, maxBuffer: 2 ** 20 }, (error, stdout) => {
-      if (error) reject(new Error("Captured local command failed; output withheld"));
+    const child = execFile(command, args, { encoding: "utf8", timeout: 30000, maxBuffer: 2 ** 20 }, (error, stdout, stderr) => {
+      if (error) {
+        if (args.includes("psql")) sqlFailureState = /ERROR:\s+([0-9A-Z]{5})(?:\s|$)/.exec(stderr)?.[1] ?? null;
+        reject(new Error("Captured local command failed; output withheld"));
+      }
       else accept(stdout.trim());
     });
     child.stdin?.on("error", () => {});
@@ -24,7 +28,8 @@ function captured(command, args, input) {
 }
 
 async function sql(statement, variables = {}) {
-  const args = ["exec", "-i", database, "psql", "-X", "-qAt", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"];
+  sqlFailureState = null;
+  const args = ["exec", "-i", database, "psql", "-X", "-qAt", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=sqlstate"];
   for (const [key, value] of Object.entries(variables)) {
     need(/^[a-z_]+$/.test(key), "Invalid fixture parameter");
     args.push("-v", `${key}=${typeof value === "string" ? value : JSON.stringify(value)}`);
@@ -102,10 +107,10 @@ async function main() {
     need(url.origin === api.origin, "Supabase request escaped the local API");
     return fetch(input, { ...init, redirect: "error", signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000) });
   };
-  const makeClient = (key, token, capability) => createClient(api.origin, key, {
+  const makeClient = (key, token, capability, selectedTenant = tenant) => createClient(api.origin, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: boundedFetch, headers: {
-      "x-wf-tenant": tenant,
+      "x-wf-tenant": selectedTenant,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(capability ? { "x-wf-client-support": capability } : {}),
     } },
@@ -113,31 +118,73 @@ async function main() {
   const admin = makeClient(serverKey);
   const accounts = [];
   step = "synthetic Auth users";
-  for (const role of ["owner", "client", "client"]) {
+  for (const role of ["owner", "client", "client", "client"]) {
     const email = `client-support-ci-${randomUUID()}@example.invalid`;
     const password = randomBytes(32).toString("base64url");
     const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     need(!created.error && uuid.test(created.data.user?.id ?? ""), "Synthetic Auth provisioning failed");
     accounts.push({ id: created.data.user.id, email, password, role, company: role === "client" ? randomUUID() : null });
   }
-  const [owner, client, other] = accounts;
+  const [owner, client, other, sibling] = accounts;
+  sibling.company = client.company;
   const ticket = randomUUID();
   const otherTicket = randomUUID();
+  const foreignTenant = randomUUID();
+  const foreignCompany = randomUUID();
+  const forms = [
+    { id: randomUUID(), version: randomUUID(), tenant },
+    { id: randomUUID(), version: randomUUID(), tenant: foreignTenant },
+  ];
+  const formCases = [
+    { client: client.id, company: client.company, form: forms[0].id, version: forms[0].version },
+    { client: sibling.id, company: sibling.company, form: forms[0].id, version: forms[0].version },
+    { client: other.id, company: other.company, form: forms[0].id, version: forms[0].version },
+    { client: other.id, company: foreignCompany, form: forms[1].id, version: forms[1].version },
+  ].map((fixture) => ({ ...fixture, assignment: randomUUID(), submission: randomUUID() }));
   step = "synthetic memberships and Tickets";
   await sql(`begin;
     insert into public.companies(id,tenant_id,name,status)
-      select (a->>'company')::uuid, '${tenant}', 'Synthetic Client Support CI', 'client'
+      select distinct (a->>'company')::uuid, '${tenant}'::uuid, 'Synthetic Client Support CI', 'client'
       from jsonb_array_elements(:'actors'::jsonb) a where a->>'role'='client';
     update public.profiles p set role_id=r.id,company_id=(a->>'company')::uuid,display_name='Synthetic Client Support CI'
       from jsonb_array_elements(:'actors'::jsonb) a,public.roles r where p.id=(a->>'id')::uuid and r.name=a->>'role';
     insert into public.tickets(id,tenant_id,company_id,client_profile_id,subject,created_by_profile_id)
       values(:'ticket'::uuid,'${tenant}',:'company'::uuid,:'client'::uuid,'Synthetic support Ticket',:'client'::uuid),
         (:'other_ticket'::uuid,'${tenant}',:'other_company'::uuid,:'other'::uuid,'Synthetic other Ticket',:'other'::uuid);
+    insert into public.tenants(id,slug,display_name,status)
+      values(:'foreign_tenant'::uuid,'support-ci-'||:'foreign_tenant','Synthetic Foreign Support CI','active');
+    insert into public.companies(id,tenant_id,name,status)
+      values(:'foreign_company'::uuid,:'foreign_tenant'::uuid,'Synthetic Foreign Support Company','client');
+    insert into public.tenant_memberships(tenant_id,profile_id,account_class,role_id,company_id)
+      select :'foreign_tenant'::uuid,p.id,case when p.id=:'owner'::uuid then 'internal' else 'client' end,p.role_id,
+        case when p.id=:'owner'::uuid then null else :'foreign_company'::uuid end
+      from public.profiles p where p.id in (:'owner'::uuid,:'other'::uuid);
+    insert into public.forms(id,tenant_id,form_type,canonical_key,name,status,visibility,created_by_profile_id,updated_by_profile_id)
+      select (f->>'id')::uuid,(f->>'tenant')::uuid,'onboarding','support-ci-'||(f->>'id'),
+        'Synthetic Support Onboarding','published','assigned',:'owner'::uuid,:'owner'::uuid
+      from jsonb_array_elements(:'forms'::jsonb) f;
+    insert into public.form_versions(id,form_id,version_number,lifecycle_state,title,visibility,schema_hash,
+        created_by_profile_id,published_by_profile_id,published_at)
+      select (f->>'version')::uuid,(f->>'id')::uuid,1,'published','Synthetic Support Onboarding','assigned',
+        repeat('a',64),:'owner'::uuid,:'owner'::uuid,now() from jsonb_array_elements(:'forms'::jsonb) f;
+    update public.forms f set published_version_id=(fixture->>'version')::uuid
+      from jsonb_array_elements(:'forms'::jsonb) fixture where f.id=(fixture->>'id')::uuid;
+    insert into public.form_assignments(id,form_id,form_version_id,company_id,client_profile_id,assigned_by_profile_id)
+      select (f->>'assignment')::uuid,(f->>'form')::uuid,(f->>'version')::uuid,(f->>'company')::uuid,
+        (f->>'client')::uuid,:'owner'::uuid from jsonb_array_elements(:'form_cases'::jsonb) f;
+    insert into public.form_submissions(id,form_id,form_version_id,form_assignment_id,company_id,client_profile_id,
+        root_submission_id,submitted_by_profile_id)
+      select (f->>'submission')::uuid,(f->>'form')::uuid,(f->>'version')::uuid,(f->>'assignment')::uuid,
+        (f->>'company')::uuid,(f->>'client')::uuid,(f->>'submission')::uuid,(f->>'client')::uuid
+      from jsonb_array_elements(:'form_cases'::jsonb) f;
+    update public.form_assignments a set status='completed',completed_at=now(),latest_submission_id=(f->>'submission')::uuid
+      from jsonb_array_elements(:'form_cases'::jsonb) f where a.id=(f->>'assignment')::uuid;
     commit;`, {
     actors: accounts.map(({ id, role, company }) => ({ id, role, company })), ticket, other_ticket: otherTicket,
-    company: client.company, client: client.id, other_company: other.company, other: other.id,
+    company: client.company, client: client.id, other_company: other.company, other: other.id, owner: owner.id,
+    foreign_tenant: foreignTenant, foreign_company: foreignCompany, forms, form_cases: formCases,
   });
-  need(await sql(`select count(*)=3 from public.tenant_memberships where tenant_id='${tenant}' and archived_at is null;`) === "t", "Synthetic real memberships were not established");
+  need(await sql(`select count(*)=4 from public.tenant_memberships where tenant_id='${tenant}' and archived_at is null;`) === "t", "Synthetic real memberships were not established");
   step = "real password sign-ins";
   for (const account of accounts) {
     const signed = await makeClient(publicKey).auth.signInWithPassword({ email: account.email, password: account.password });
@@ -149,9 +196,10 @@ async function main() {
   need(!anotherOwner.error && anotherOwner.data.session?.access_token, "Second synthetic Owner session failed");
   const otherOwnerApi = makeClient(publicKey, anotherOwner.data.session.access_token);
   const sessionSnapshot = () => sql(`select coalesce(jsonb_agg(to_jsonb(s) order by s.id),'[]'::jsonb)
-    from auth.sessions s where user_id in (:'client'::uuid,:'other'::uuid);`, { client: client.id, other: other.id });
+    from auth.sessions s where user_id in (:'client'::uuid,:'other'::uuid,:'sibling'::uuid);`,
+  { client: client.id, other: other.id, sibling: sibling.id });
   const beforeSessions = await sessionSnapshot();
-  need(JSON.parse(beforeSessions).length === 2, "Expected one real session for each synthetic client");
+  need(JSON.parse(beforeSessions).length === 3, "Expected one real session for each synthetic client");
   const ownMembership = async (actor) => success(actor.rpc("app_current_tenant_membership"), "Current membership read");
   const baseline = await ownMembership(owner.api);
   need(baseline.length === 1 && baseline[0].role_name === "owner", "Owner baseline membership differs");
@@ -191,6 +239,41 @@ async function main() {
   const clientContext = await success(client.api.rpc("app_get_client_account_context"), "Original client session context");
   need(clientContext.length === 1 && clientContext[0].profile_id === client.id, "The original client session changed identity");
 
+  // loadFormsVisibility("client") also reaches the repository's nested availability read.
+  const formsVisibility = async (actor) => {
+    await success(actor.rpc("app_require_module_access", { p_module_key: "portal_forms" }), "Client Forms module entry");
+    const [enabled, submissions, assignments] = await Promise.all([
+      success(actor.rpc("app_forms_work_enabled"), "Forms visibility availability"),
+      success(actor.rpc("app_list_form_submissions", {}), "Forms visibility submission summaries"),
+      (async () => {
+        const rows = await success(actor.rpc("app_list_assigned_forms"), "Forms visibility assignments");
+        need(await success(actor.rpc("app_forms_work_enabled"), "Assignment repository availability") === true, "Forms collection unexpectedly paused");
+        return rows;
+      })(),
+    ]);
+    need(enabled === true, "Forms visibility unexpectedly paused");
+    return { submissions, assignments };
+  };
+  const assertForms = (visible, fixture) => {
+    need(visible.submissions.length === 1 && visible.submissions[0].id === fixture.submission
+      && visible.submissions[0].client_profile_id === fixture.client && visible.submissions[0].company_id === fixture.company,
+    "Forms visibility disclosed or omitted a submission outside the selected client");
+    need(visible.assignments.length === 1 && visible.assignments[0].assignment_id === fixture.assignment
+      && visible.assignments[0].latest_submission_id === fixture.submission
+      && visible.assignments[0].client_profile_id === fixture.client && visible.assignments[0].company_id === fixture.company,
+    "Forms visibility disclosed or omitted an assignment outside the selected client");
+  };
+  step = "real client Forms visibility sequence and assignee isolation";
+  assertForms(await formsVisibility(supportApi), formCases[0]);
+  assertForms(await formsVisibility(client.api), formCases[0]);
+  assertForms(await formsVisibility(sibling.api), formCases[1]);
+  assertForms(await formsVisibility(other.api), formCases[2]);
+  assertForms(await formsVisibility(makeClient(publicKey, other.token, undefined, foreignTenant)), formCases[3]);
+  const filtered = await success(supportApi.rpc("app_list_form_submissions", { p_form_id: forms[0].id, p_order_id: undefined }), "Selected Form submission filter");
+  need(filtered.length === 1 && filtered[0].id === formCases[0].submission, "Form filter widened selected-client visibility");
+  await noRows(supportApi.rpc("app_list_form_submissions", { p_form_id: forms[1].id }), "Foreign Form submission filter");
+  await denied(makeClient(publicKey, owner.token, capability, foreignTenant).rpc("app_list_form_submissions", {}), "Support capability across Tenant selector");
+
   step = "legitimate client reply and actual administrator audit";
   const replyRequest = randomUUID();
   const reply = await success(supportApi.rpc("app_reply_to_ticket", { p_request_id: replyRequest, p_ticket_id: ticket, p_body: "Synthetic delegated client reply" }), "Delegated client Ticket reply");
@@ -210,6 +293,9 @@ async function main() {
   await noRows(supportApi.rpc("app_get_my_profile"), "Missing-hook self-profile RPC");
   await noRows(supportApi.from("profiles").select("id"), "Missing-hook direct profile read");
   await noRows(supportApi.from("companies").select("id"), "Missing-hook direct company read");
+  await denied(supportApi.rpc("app_forms_work_enabled"), "Missing-hook Forms availability");
+  await denied(supportApi.rpc("app_list_assigned_forms"), "Missing-hook Forms visibility assignments");
+  await denied(supportApi.rpc("app_list_form_submissions", {}), "Missing-hook Forms visibility submission summaries");
   const blockedRequest = randomUUID();
   await denied(supportApi.rpc("app_reply_to_ticket", { p_request_id: blockedRequest, p_ticket_id: ticket, p_body: "Synthetic missing-hook reply must never persist" }), "Missing-hook ordinary business mutation");
   need(await sql("select not exists(select 1 from public.ticket_messages where request_id=:'request'::uuid);", { request: blockedRequest }) === "t", "A missing-hook business mutation persisted");
@@ -225,6 +311,19 @@ async function main() {
   assertProof(await success(proof(), "Restored support proof"));
   need(await sql("select setting from pg_db_role_setting s join pg_roles r on r.oid=s.setrole cross join lateral unnest(s.setconfig) setting where r.rolname='authenticator' and s.setdatabase=0 and setting like 'pgrst.db_pre_request=%';") === `pgrst.db_pre_request=${hook}`, "Restored request hook did not persist");
   restoreRequired = false;
+  assertForms(await formsVisibility(supportApi), formCases[0]);
+  step = "revoked selected-client Forms permissions";
+  await sql(`insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
+    select '${tenant}',:'client'::uuid,permission,false from unnest(array['forms.view','forms.submissions_view']) permission;`, { client: client.id });
+  assertProof(await success(proof(), "Support proof after Forms permission revocation"));
+  await denied(supportApi.rpc("app_forms_work_enabled"), "Revoked client Forms availability");
+  await denied(supportApi.rpc("app_list_assigned_forms"), "Revoked client Forms visibility assignments");
+  await denied(supportApi.rpc("app_list_form_submissions", {}), "Revoked client Forms visibility submission summaries");
+  need(await sql(`with restored as (delete from public.profile_permission_overrides where tenant_id='${tenant}'
+    and profile_id=:'client'::uuid and permission_key in ('forms.view','forms.submissions_view') and allowed=false returning 1)
+    select count(*)=2 from restored;`, { client: client.id }) === "t", "Synthetic Forms permission overrides were not restored exactly");
+  assertForms(await formsVisibility(supportApi), formCases[0]);
+  step = "explicit support exit";
   await success(owner.api.rpc("app_end_client_support", { p_support_id: started.id }), "Explicit support exit");
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");
   need(ended?.id === started.id && ended.active === false, "Support exit did not persist");
@@ -237,14 +336,14 @@ async function main() {
       and actor_class='internal' and resource_type='client_support' and outcome='succeeded')
     from public.security_audit_events where resource_id=:'support'::uuid;`,
   { support: started.id, owner: owner.id, client: client.id }) === "t", "Support start/exit real-administrator audits differ");
-  console.log("PASS real PostgREST support identity, isolation, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
+  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
 }
 
 try {
   await main();
 } catch (error) {
   const detail = error instanceof assert.AssertionError ? ` (${error.message})` : "";
-  console.error(`FAIL client support REST integration during ${step}${detail}; command, credential and response details withheld`);
+  console.error(`FAIL client support REST integration during ${step}${detail}${sqlFailureState ? ` (SQLSTATE ${sqlFailureState})` : ""}; command, credential and response details withheld`);
   process.exitCode = 1;
 } finally {
   if (restoreRequired) {
