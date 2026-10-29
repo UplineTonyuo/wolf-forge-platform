@@ -69,16 +69,15 @@ insert into support175_ids select 'form-a',(public.app_create_form(gen_random_uu
   'form_type','onboarding','canonical_key','support-forms-175-a','definition',pg_temp.forms175_definition()))).id;
 insert into support175_ids select 'version-a',(public.app_publish_form(gen_random_uuid(),id)).id from support175_ids where label='form-a';
 insert into support175_ids select 'assignment-'||v.n,(public.app_assign_form(gen_random_uuid(),
-  (select id from support175_ids where label='form-a'),jsonb_build_object('company_id',v.company,
+  (select id from support175_ids where label='form-a'),jsonb_build_object(
     'client_profile_id','b1750000-0000-4000-8000-00000000000'||v.n))).id
-from (values(2,'b1750000-0000-4000-8000-000000000020'),(3,'b1750000-0000-4000-8000-000000000020'),
-  (4,'b1750000-0000-4000-8000-000000000021'))v(n,company);
+from generate_series(2,4)v(n);
 select pg_temp.forms175_act(6,'b1750000-0000-4000-8000-000000000011');
 insert into support175_ids select 'form-b',(public.app_create_form(gen_random_uuid(),jsonb_build_object(
   'form_type','onboarding','canonical_key','support-forms-175-b','definition',pg_temp.forms175_definition()))).id;
 insert into support175_ids select 'version-b',(public.app_publish_form(gen_random_uuid(),id)).id from support175_ids where label='form-b';
 insert into support175_ids select 'assignment-5',(public.app_assign_form(gen_random_uuid(),id,jsonb_build_object(
-  'company_id','b1750000-0000-4000-8000-000000000022','client_profile_id','b1750000-0000-4000-8000-000000000005'))).id
+  'client_profile_id','b1750000-0000-4000-8000-000000000005'))).id
 from support175_ids where label='form-b';
 select pg_temp.forms175_act(2);
 insert into support175_ids select 'submission-2',pg_temp.forms175_submit(2);
