@@ -3,8 +3,8 @@
 .recorder svg { width: 17px; height: 17px; flex-shrink: 0; }
 .recorder span { font-size: 12px; }
 .error { color: var(--color-danger, #a1132a); flex-basis: 100%; }
-.preview { width: min(100%, 320px); min-width: 0; }
 .draft[data-voice] { grid-template-columns: minmax(0, 1fr) auto; }
-.draft .preview { grid-column: 1 / -1; }
+.draft[data-voice] > div { grid-column: 1 / -1; }
+.draft[data-voice] > button { min-width: 44px; min-height: 44px; }
 .actions { min-width: 0; flex-wrap: wrap; }
 .recorder[data-recording] { flex-basis: 100%; }

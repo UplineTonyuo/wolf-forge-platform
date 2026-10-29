@@ -24,6 +24,7 @@ import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-fi
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketRichTextEditor } from "./ticket-rich-text-editor";
 import { TicketVoiceRecorder } from "./ticket-voice-recorder";
+import { VoiceAudioPlayer } from "../audio/voice-audio-player";
 import voiceStyles from "./ticket-voice-recorder.module.css";
 import { usePersistentReplyDraft } from "./use-persistent-reply-draft";
 import { useClientDraftSession } from "./client-draft-provider";
@@ -116,6 +117,7 @@ function TicketComposerBody({
     useState(0);
 
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [voiceDurationMs, setVoiceDurationMs] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
@@ -177,13 +179,15 @@ function TicketComposerBody({
     previewUrlRef.current = null;
     setPreviewUrl(null);
     setAttachment(null);
+    setVoiceDurationMs(0);
   }
 
-  function pickAttachment(file: File | null) {
+  function pickAttachment(file: File | null, durationMs = 0) {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = null;
     setPreviewUrl(null);
     setAttachment(file);
+    setVoiceDurationMs(durationMs);
     // Note: there is no client-side MIME/size validation here — that check
     // only happens server-side in sendTicketComposerAction / the DB RPC.
     if ((file?.type.startsWith("image/") || file?.type.startsWith("audio/")) && typeof URL.createObjectURL === "function") {
@@ -420,7 +424,7 @@ function TicketComposerBody({
       {attachment ? (
         <div className={`${styles.attachmentDraft} ${attachment.type.startsWith("audio/") ? voiceStyles.draft : ""}`} data-voice={attachment.type.startsWith("audio/") || undefined}>
           {previewUrl && attachment.type.startsWith("audio/") ? (
-            <audio controls preload="metadata" src={previewUrl} aria-label="Voice message preview" className={voiceStyles.preview} />
+            <VoiceAudioPlayer key={previewUrl} source={attachment} durationMs={voiceDurationMs} label="voice message preview" disabled={busy} />
           ) : previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- local blob: preview URL, not eligible for next/image optimization
             <img src={previewUrl} alt="" />
@@ -429,7 +433,7 @@ function TicketComposerBody({
           ) : (
             <FileText aria-hidden="true" />
           )}
-          <span>{attachment.name}</span>
+          <span>{attachment.type.startsWith("audio/") ? "Voice message" : attachment.name}</span>
           <button
             type="button"
             aria-label={`Remove ${attachment.name}`}
@@ -467,7 +471,7 @@ function TicketComposerBody({
             ticketId={target.ticketId}
             disabled={busy || !!attachment}
             onRecordingChange={setRecordingVoice}
-            onPickAttachment={(file) => { pickAttachment(file); saveDraft(body, file); }}
+            onPickAttachment={(file, durationMs) => { pickAttachment(file, durationMs); saveDraft(body, file); }}
           /> : null}
           {!isNote ? (
             <>

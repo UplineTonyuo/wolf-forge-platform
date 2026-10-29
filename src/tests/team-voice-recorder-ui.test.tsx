@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   TeamVoiceRecorder,
@@ -10,13 +10,90 @@ import {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   __resetTeamVoiceRecorderPermissionMemory();
+});
+
+describe("Voice recording lifecycle", () => {
+  it("cancels active recording without producing a preview or uploading", async () => {
+    const stream = fakeStream();
+    stubRecording(vi.fn().mockResolvedValue(stream), "granted");
+    renderRecorder();
+    await act(async () => {});
+    fireEvent.click(micButton());
+    await screen.findByRole("button", { name: "Stop recording" });
+    fireEvent.click(screen.getByRole("button", { name: "Discard voice recording" }));
+    expect(stream.track.stop).toHaveBeenCalled();
+    expect(micButton()).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Play voice recording preview" })).not.toBeInTheDocument();
+  });
+
+  it("releases permission granted after unmount", async () => {
+    const stream = fakeStream();
+    let resolve!: (value: unknown) => void;
+    stubRecording(vi.fn(() => new Promise((done) => { resolve = done; })), "granted");
+    const view = render(<TeamVoiceRecorder conversationId={CONVERSATION} disabled={false} onSent={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(micButton());
+    view.unmount();
+    await act(async () => resolve(stream));
+    expect(stream.track.stop).toHaveBeenCalled();
+  });
+
+  it("ignores delayed device errors from a discarded recording after another recording starts", async () => {
+    const stream = fakeStream();
+    stubRecording(vi.fn().mockResolvedValue(stream), "granted");
+    renderRecorder();
+    await act(async () => {});
+    fireEvent.click(micButton());
+    await screen.findByRole("button", { name: "Stop recording" });
+    const oldError = FakeMediaRecorder.latest.onerror;
+    const oldEnded = stream.track.onended;
+    fireEvent.click(screen.getByRole("button", { name: "Discard voice recording" }));
+    fireEvent.click(micButton());
+    await screen.findByRole("button", { name: "Stop recording" });
+    stream.track.stop.mockClear();
+    act(() => { oldError?.(); oldEnded?.(); });
+    expect(stream.track.stop).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Stop recording" })).toBeInTheDocument();
+  });
+
+  it("stops capture when its existing capability becomes disabled", async () => {
+    const stream = fakeStream();
+    stubRecording(vi.fn().mockResolvedValue(stream), "granted");
+    const view = render(<TeamVoiceRecorder conversationId={CONVERSATION} disabled={false} onSent={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(micButton());
+    await screen.findByRole("button", { name: "Stop recording" });
+    view.rerender(<TeamVoiceRecorder conversationId={CONVERSATION} disabled onSent={vi.fn()} />);
+    await waitFor(() => expect(micButton()).toBeDisabled());
+    expect(stream.track.stop).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Play voice recording preview" })).not.toBeInTheDocument();
+  });
+
+  it("captures the actual stop time between timer ticks for local preview", async () => {
+    const stream = fakeStream();
+    stubRecording(vi.fn().mockResolvedValue(stream), "granted");
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:recording");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+    vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+    renderRecorder();
+    await act(async () => {});
+    vi.useFakeTimers();
+    await act(async () => { fireEvent.click(micButton()); });
+    await act(async () => { vi.advanceTimersByTime(1999); });
+    fireEvent.click(screen.getByRole("button", { name: "Stop recording" }));
+    expect(screen.getByLabelText("Total duration")).toHaveTextContent("0:01");
+    expect(screen.getByRole("slider")).toHaveAttribute("max", "1.999");
+  });
 });
 
 const CONVERSATION = "10000000-0000-4000-8000-000000000001";
 
 class FakeMediaRecorder {
+  static latest: FakeMediaRecorder;
   static isTypeSupported() {
     return true;
   }
@@ -24,7 +101,7 @@ class FakeMediaRecorder {
   ondataavailable: ((event: { data: { size: number } }) => void) | null = null;
   onstop: (() => void) | null = null;
   onerror: (() => void) | null = null;
-  constructor(public stream: unknown, public options: unknown) {}
+  constructor(public stream: unknown, public options: unknown) { FakeMediaRecorder.latest = this; }
   start() {
     this.state = "recording";
   }
