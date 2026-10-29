@@ -2,11 +2,16 @@
 
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TeamVoiceRecorder,
   __resetTeamVoiceRecorderPermissionMemory,
 } from "../components/team/team-voice-recorder";
+
+beforeEach(() => {
+  vi.spyOn(HTMLMediaElement.prototype, "load").mockImplementation(() => {});
+  vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+});
 
 afterEach(() => {
   cleanup();
