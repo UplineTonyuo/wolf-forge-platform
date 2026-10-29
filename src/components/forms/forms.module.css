@@ -45,9 +45,6 @@
 .signatureControl > input { font-family: Georgia, serif; font-size: 22px; }
 .signatureControl .checkControl { align-items: flex-start; line-height: 1.5; }
 .signatureControl .checkControl input { margin-top: 4px; flex-shrink: 0; }
-.draftBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 20px 28px; border-top: 1px solid #e2e7f0; }
-.draftBar p { flex: 1 1 200px; margin: 0; color: #56647a; font-size: 12px; line-height: 1.6; }
-.draftBar button { min-height: 44px; white-space: normal; }
 .intakeFile { display: grid; gap: 10px; min-width: 0; }
 .intakeFile > div { display: flex; align-items: center; gap: 12px; justify-content: space-between; min-width: 0; }
 .intakeFile a { overflow-wrap: anywhere; color: var(--wf-navy); text-decoration: underline; }
