@@ -116,11 +116,12 @@ select pg_temp.forms175_request();
 select public.app_apply_client_support_context();
 select ok(pg_temp.forms175_no_access(),'revoked selected-client Forms permission returns no submissions');
 reset role;
-insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed) values
-('b1750000-0000-4000-8000-000000000010','b1750000-0000-4000-8000-000000000001','client_private.manage',false);
+update public.tenant_memberships set archived_at=now()
+where tenant_id='b1750000-0000-4000-8000-000000000010'
+  and profile_id='b1750000-0000-4000-8000-000000000001';
 set local role authenticated;
 select pg_temp.forms175_request();
-select throws_ok($q$select public.app_apply_client_support_context()$q$,'42501',null,'administrator access revocation denies the next delegated listing');
+select throws_ok($q$select public.app_apply_client_support_context()$q$,'42501',null,'administrator membership revocation denies the next delegated listing');
 reset role;
 select ok(not has_function_privilege('authenticated','private.client_support_operation_allowed(text,text)','execute'),
   'extending the reviewed list adds no direct authority-helper grant');
