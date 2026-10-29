@@ -62,7 +62,9 @@ select is(
   jsonb_build_object(
     'storage_object_key', 'ticket-attachments/secdl-client.png',
     'mime_type', 'image/png',
-    'original_name', 'client-visible.png'
+    'original_name', 'client-visible.png',
+    'size_bytes', 1000,
+    'tenant_id', (select tenant_id from public.app_current_tenant_membership())
   ),
   'authorized owner resolves the attachment with the fields the route needs (key, mime, filename)'
 );
