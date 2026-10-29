@@ -323,6 +323,70 @@ async function main() {
     and profile_id=:'client'::uuid and permission_key in ('forms.view','forms.submissions_view') and allowed=false returning 1)
     select count(*)=2 from restored;`, { client: client.id }) === "t", "Synthetic Forms permission overrides were not restored exactly");
   assertForms(await formsVisibility(supportApi), formCases[0]);
+  step = "real delegated encrypted credential capture and submission";
+  const secretField = randomUUID();
+  const secretLabel = "Synthetic WordPress password";
+  const secretForm = await success(owner.api.rpc("app_create_form", {
+    p_request_id: randomUUID(), p_payload: {
+      form_type: "onboarding", canonical_key: `support-secret-${randomUUID()}`,
+      definition: { name: "Synthetic credential request", title: "Synthetic credential request", visibility: "assigned",
+        type_config: { reuse_policy: "company_profile" },
+        fields: [{ stable_field_key: secretField, sort_order: 0, field_type: "secret", label: secretLabel,
+          required: true, settings: { collection_mode: "encrypted" } }], rules: [], service_links: [] },
+    },
+  }), "Owner credential Form creation");
+  need(uuid.test(secretForm?.id ?? ""), "Credential Form creation returned no identifier");
+  const secretVersion = await success(owner.api.rpc("app_publish_form", { p_request_id: randomUUID(), p_form_id: secretForm.id }), "Required encrypted field publication");
+  need(uuid.test(secretVersion?.id ?? ""), "Credential Form publication returned no version");
+  const secretAssignment = await success(owner.api.rpc("app_assign_form", {
+    p_request_id: randomUUID(), p_form_id: secretForm.id, p_context: { client_profile_id: client.id },
+  }), "Owner credential Form assignment");
+  need(uuid.test(secretAssignment?.id ?? ""), "Credential Form assignment returned no identifier");
+  const wordpressPassword = randomBytes(32).toString("base64url");
+  const secretReference = await success(supportApi.rpc("app_capture_intake_secret", {
+    p_request_id: randomUUID(), p_assignment_id: secretAssignment.id, p_field_key: secretField, p_secret: wordpressPassword,
+  }), "Delegated encrypted password capture");
+  need(uuid.test(secretReference?.credential_id ?? "") && Object.keys(secretReference).length === 1, "Capture returned more than an opaque credential reference");
+  const rejectedRequest = randomUUID();
+  const rawSubmission = await supportApi.rpc("app_submit_form", {
+    p_request_id: rejectedRequest, p_form_version_id: secretVersion.id,
+    p_context: { assignment_id: secretAssignment.id }, p_values: [{ field_key: secretField, value: wordpressPassword }], p_files: [],
+  });
+  need(rawSubmission.error?.code === "23514", "Ordinary submission did not reject a raw password");
+  const secretValues = [{ field_key: secretField, value: secretReference }];
+  await success(supportApi.rpc("app_save_intake_draft", { p_assignment_id: secretAssignment.id, p_values: secretValues }), "Opaque credential draft save");
+  const secretDraft = await success(supportApi.rpc("app_get_intake_draft", { p_assignment_id: secretAssignment.id }), "Opaque credential draft reload");
+  need(Array.isArray(secretDraft?.values) && secretDraft.values.length === 1 && secretDraft.values[0].field_key === secretField
+    && secretDraft.values[0].value?.credential_id === secretReference.credential_id && Object.keys(secretDraft.values[0].value).length === 1
+    && !JSON.stringify(secretDraft).includes(wordpressPassword), "Credential draft did not preserve only the reference");
+  const secretSubmission = await success(supportApi.rpc("app_submit_form", {
+    p_request_id: randomUUID(), p_form_version_id: secretVersion.id,
+    p_context: { assignment_id: secretAssignment.id }, p_values: secretValues, p_files: [],
+  }), "Opaque credential Form submission");
+  need(uuid.test(secretSubmission?.id ?? ""), "Credential Form submission returned no identifier");
+  const genericReceipt = await success(supportApi.rpc("app_get_form_submission", { p_submission_id: secretSubmission.id }), "Credential-safe generic receipt");
+  need(genericReceipt?.has_saved_credentials === true && Array.isArray(genericReceipt.values)
+    && !JSON.stringify(genericReceipt).includes(wordpressPassword)
+    && !JSON.stringify(genericReceipt.values).includes(secretReference.credential_id)
+    && genericReceipt.values.every((value) => value.field_type !== "secret"), "Generic receipt disclosed credential data or lost its safe presence flag");
+  const listedSecrets = await success(owner.api.rpc("app_list_intake_secret_references", { p_submission_id: secretSubmission.id }), "Explicit Owner credential reference listing");
+  need(listedSecrets.length === 1 && listedSecrets[0].credential_id === secretReference.credential_id
+    && listedSecrets[0].field_key === secretField && listedSecrets[0].label === secretLabel, "Owner credential metadata differs from the submitted field");
+  need(await success(owner.api.rpc("app_reveal_intake_secret", { p_credential_id: secretReference.credential_id }), "Explicit Owner credential reveal") === wordpressPassword, "Explicit Owner reveal did not roundtrip the exact password");
+  for (const actor of [client.api, other.api, supportApi]) {
+    await denied(actor.rpc("app_list_intake_secret_references", { p_submission_id: secretSubmission.id }), "Non-internal credential metadata lookup");
+    await denied(actor.rpc("app_reveal_intake_secret", { p_credential_id: secretReference.credential_id }), "Non-internal credential reveal");
+  }
+  need(await sql(`select exists(select 1 from private.intake_secret_references where id=:'credential'::uuid
+    and assignment_id=:'assignment'::uuid and submission_id=:'submission'::uuid and profile_id=:'client'::uuid
+    and company_id=:'company'::uuid and captured_by_administrator_id=:'owner'::uuid)
+    and exists(select 1 from public.security_audit_events where resource_type='intake_secret' and resource_id=:'credential'::uuid
+      and event_code='integration.intake_secret.captured' and actor_profile_id=:'owner'::uuid and target_actor_id=:'client'::uuid)
+    and exists(select 1 from public.security_audit_events where resource_type='intake_secret' and resource_id=:'credential'::uuid
+      and event_code='integration.intake_secret.revealed' and actor_profile_id=:'owner'::uuid and target_actor_id=:'client'::uuid)
+    and not exists(select 1 from private.form_submission_requests where request_id=:'rejected'::uuid);`,
+  { credential: secretReference.credential_id, assignment: secretAssignment.id, submission: secretSubmission.id,
+    client: client.id, company: client.company, owner: owner.id, rejected: rejectedRequest }) === "t", "Credential binding, actual-administrator audit or raw-value rejection did not persist");
   step = "explicit support exit";
   await success(owner.api.rpc("app_end_client_support", { p_support_id: started.id }), "Explicit support exit");
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");
@@ -336,7 +400,7 @@ async function main() {
       and actor_class='internal' and resource_type='client_support' and outcome='succeeded')
     from public.security_audit_events where resource_id=:'support'::uuid;`,
   { support: started.id, owner: owner.id, client: client.id }) === "t", "Support start/exit real-administrator audits differ");
-  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
+  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, encrypted credential roundtrip, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
 }
 
 try {

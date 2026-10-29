@@ -5,6 +5,7 @@ import type { FormSubmissionDetail } from "../../domain/forms/schema";
 import { formatDateTime } from "../../lib/format";
 import { DownloadFormPdf } from "../forms/download-form-pdf";
 import { SubmittedAnswer } from "../forms/submitted-answer";
+import { IntakeSecretReferences } from "../forms/intake-secret-reveal";
 import { visibleSubmittedFields } from "../../lib/forms/submitted-fields";
 import styles from "./order-responses.module.css";
 
@@ -37,6 +38,7 @@ export function OrderResponse({ detail, latest = true }: { detail: FormSubmissio
         {fields.length ? <dl className={styles.fields}>
           {fields.map((field) => <Fragment key={field.stable_field_key}><dt>{field.label}</dt><dd><SubmittedAnswer field={field} /></dd></Fragment>)}
         </dl> : <p>No visible responses were recorded.</p>}
+        {expanded && detail.has_saved_credentials === true ? <IntakeSecretReferences key={detail.submission.id} submissionId={detail.submission.id} /> : null}
       </div>
     </div>
   </section>;

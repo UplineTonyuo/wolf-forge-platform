@@ -160,6 +160,9 @@ export const SECURITY_EVENTS = {
 
   /* ------------------------------------------------------- integration --- */
 
+  "integration.intake_secret.captured": { category: "integration", severity: "info" },
+  "integration.intake_secret.revealed": { category: "integration", severity: "info" },
+
   "integration.gmail.connect_started": { category: "integration", severity: "info" },
   "integration.gmail.authorization_ready": { category: "integration", severity: "info" },
 
