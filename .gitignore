@@ -22,3 +22,9 @@ coverage/
 
 # Local Sentry source-map upload credential. Never commit.
 .env.sentry-build-plugin
+
+# Local Graphify graph artifacts from the approved trial.
+/graphify-out/
+
+# Machine-local Claude Code settings and permissions.
+/.claude/settings.local.json

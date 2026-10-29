@@ -1,8 +1,8 @@
 # Approved skills registry
 
-This registry records the 20 owner-approved skills in the AGENTS.md routing table. Read it when installing, disabling, removing or reviewing skills. Daily task selection uses only the routing table.
+This registry records the 21 owner-approved skills in the AGENTS.md routing table, including the time-limited Graphify trial. Read it when installing, disabling, removing or reviewing skills. Daily task selection uses only the routing table.
 
-Availability records verified SKILL.md presence and exact declared names on this machine, checked on 2026-10-30. Versions come from skill frontmatter or the containing plugin manifest; "not declared" means neither declares a version. User skills live under `~/.agents/skills` for Codex and `~/.claude/skills` for Claude; project skills live under `.agents/skills` and `.claude/skills`, respectively. The superpowers package is installed in each tool's plugin cache.
+For the 20 pre-existing entries, availability records verified SKILL.md presence and exact declared names on this machine, checked on 2026-10-30. Graphify's availability column records its approved trial scope; its registration status is documented below. Versions come from skill frontmatter, the containing plugin manifest or installed package metadata; "not declared" means no version is declared. User skills live under `~/.agents/skills` for Codex and `~/.claude/skills` for Claude; project skills live under `.agents/skills` and `.claude/skills`, respectively. The superpowers package is installed in each tool's plugin cache.
 
 | skill | source (user / project / plugin + package) | version | available in (Codex / Claude / both) | routing trigger | approved by + date | last reviewed |
 |---|---|---|---|---|---|---|
@@ -25,6 +25,9 @@ Availability records verified SKILL.md presence and exact declared names on this
 | transitions-polish | project | not declared | Claude | Refine timing, easing, tokens or stagger in existing motion | pre-existing, approved 2026-10-30 by owner | 2026-10-30 |
 | ponytail | user | not declared | both | Leave a known shortcut or tech debt in code; use the "ponytail:" note convention | pre-existing, approved 2026-10-30 by owner | 2026-10-30 |
 | superpowers:using-git-worktrees | plugin + superpowers | 7.0.1 | both | Create or clean worktrees/branches under Worktree lifecycle rules (D-306) | pre-existing, approved 2026-10-30 by owner | 2026-10-30 |
+| graphify | pip package graphifyy | graphifyy==0.9.90 | Claude only | Exploring an unfamiliar area, or checking what a change affects across files | approved by owner 2026-10-30, trial until 2026-11-13 | 2026-10-30; review due 2026-11-13 |
 | find-skills | user | not declared | both | Find a skill for an uncovered need; ask the owner before installing anything | pre-existing, approved 2026-10-30 by owner | 2026-10-30 |
+
+Graphify is approved only for Claude Code from 2026-10-30 through 2026-11-13. Its exact pin, `graphifyy==0.9.90`, matches the existing CLI installation reported by `uv tool list` and installed distribution metadata, and the [published PyPI release](https://pypi.org/project/graphifyy/0.9.90/). No `graphify/SKILL.md` was found in either tool's checked user or project skill roots; Claude skill registration remains pending. This change records approval and ignores local artifacts; it does not register the skill or install/upgrade the package. Review the trial on 2026-11-13.
 
 At the monthly review, compare these entries with installed skills in both tools and report missing, extra, version or availability drift. Other installed skills must be reported as drift for owner review; their presence alone does not add approval. When disabling or removing a skill, remove its routing reference and mark its registry entry disabled with the date in the same change. Keep the historical entry.

@@ -25,6 +25,7 @@ At the start of every task, read this table, pick only the skills that match (us
 | Claude: animation review or polish | review-animations, transitions-polish |
 | Leaving a known shortcut or tech debt in code | ponytail |
 | Creating or cleaning worktrees/branches under D-306 | superpowers:using-git-worktrees |
+| Exploring an unfamiliar area, or checking what a change affects across files | graphify (Claude Code only, trial until 2026-11-13) |
 | Finding a skill for a need not covered above | find-skills |
 
 Rules:
