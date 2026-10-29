@@ -1,7 +1,7 @@
 begin;
 select no_plan();
 
-select ok(has_function_privilege('anon', 'public.app_get_published_form_schema(text)', 'EXECUTE'), 'legacy anonymous schema RPC remains available during application rollout');
+select ok(not has_function_privilege('anon', 'public.app_get_published_form_schema(text)', 'EXECUTE'), 'legacy schema RPC no longer grants anon execution after application rollout');
 select ok(has_function_privilege('authenticated', 'public.app_get_published_form_schema(text)', 'EXECUTE'), 'authenticated schema RPC execution is preserved');
 select ok(not has_function_privilege('anon', 'public.app_get_public_form_schema(uuid,text)', 'EXECUTE'), 'anon cannot execute the trusted public read');
 select ok(not has_function_privilege('authenticated', 'public.app_get_public_form_schema(uuid,text)', 'EXECUTE'), 'authenticated cannot execute the trusted public read');
@@ -73,7 +73,7 @@ select set_config('request.jwt.claim.sub', '', true);
 set local role service_role;
 select throws_ok($$select public.app_get_public_form_schema('f0f0f0f0-0000-4000-8000-000000000001','public178-published')$$, 'P0002', null, 'archived published form is not found');
 set local role anon;
-select throws_ok($$select public.app_get_published_form_schema('public178-published')$$, 'P0002', null, 'legacy anonymous reader still rejects archived forms');
+select throws_ok($$select public.app_get_published_form_schema('public178-published')$$, '42501', null, 'anonymous legacy direct read is denied after application rollout');
 select throws_ok($$select public.app_get_public_form_schema('f0f0f0f0-0000-4000-8000-000000000001','public178-published')$$, '42501', null, 'anonymous new direct read is denied');
 
 reset role;
