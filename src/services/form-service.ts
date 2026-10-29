@@ -6,6 +6,7 @@ import {
   formRequestSchema,
   submitFormSchema,
   updateFormDraftSchema,
+  intakeSecretCaptureSchema,
 } from "../domain/forms/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
 import { FormRepository } from "../repositories/form-repository";
@@ -120,5 +121,19 @@ export class FormService {
 
   getSubmission(id: unknown) {
     return this.dependencies.repository.getSubmission(parseInput(uuidSchema, id));
+  }
+
+  captureIntakeSecret(input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.captureIntakeSecret(parseInput(intakeSecretCaptureSchema, input));
+  }
+
+  listIntakeSecretReferences(submissionId: unknown) {
+    return this.dependencies.repository.listIntakeSecretReferences(parseInput(uuidSchema, submissionId));
+  }
+
+  revealIntakeSecret(credentialId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.revealIntakeSecret(parseInput(uuidSchema, credentialId));
   }
 }

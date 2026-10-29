@@ -1,0 +1,33 @@
+.player { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; width: min(280px, 100%); min-width: 0; padding: 8px 12px 8px 8px; border: 1px solid var(--wf-navy); border-radius: 18px; background: var(--wf-navy); color: var(--wf-white, #fff); }
+.player audio { display: none; }
+.player .play, .recording .stop, .recording .cancel { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; transition: background var(--wf-motion-fast, 140ms) var(--wf-ease, ease); }
+.player .play { background: var(--wf-gold); color: var(--wf-navy); }
+.player .play:hover:not(:disabled) { background: #c8a65a; }
+.player .play svg { width: 19px; height: 19px; }
+.player button:focus-visible, .recording button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.player button:disabled, .recording button:disabled { opacity: .6; cursor: not-allowed; }
+.track { position: relative; display: grid; min-width: 0; }
+.track .waveform { position: absolute; inset: 2px 0; width: 100%; height: 40px; fill: currentColor; pointer-events: none; }
+.track input { appearance: none; width: 100%; min-width: 0; height: 44px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; accent-color: var(--wf-gold); }
+.track input::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: transparent; }
+.track input::-moz-range-track { height: 4px; border-radius: 4px; background: transparent; }
+.track input::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; margin-top: -4px; border: 0; border-radius: 50%; background: #d4b46d; }
+.track input::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #d4b46d; }
+.track input:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+.track input:disabled { cursor: default; }
+.time { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.player .error { grid-column: 1 / -1; color: #fff; font-size: 12px; line-height: 1.5; }
+.recording { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; padding: 8px; border-radius: 18px; background: var(--wf-navy); color: #fff; }
+.recordingLabel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #f19b9b; }
+.recordingTime { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; margin-right: auto; }
+.recording .stop { gap: 6px; padding: 0 12px; border-radius: 22px; background: #fff; color: var(--wf-navy); font-size: 12px; }
+.recording .cancel { background: transparent; color: #fff; }
+.recording .cancel:hover { background: #26336d; }
+.recording svg { width: 17px; height: 17px; }
+.review { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.review .player { flex: 1 1 180px; }
+.spin { animation: voice-spin 1s linear infinite; }
+@keyframes voice-spin { to { transform: rotate(360deg); } }
+@media (max-width: 430px) { .recording .stop { width: 44px; padding: 0; } .recording .stop span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } .player .play, .recording .stop, .recording .cancel { transition: none; } }

@@ -163,7 +163,7 @@ export function PurchaseWithBalance({
   return (
     <>
       <button type="button" className={styles.purchase} onClick={openConfirm}>
-        <span>Purchase with Wolf Forge Balance</span>
+        <span>Purchase</span>
         <ArrowRight aria-hidden={true} />
       </button>
 

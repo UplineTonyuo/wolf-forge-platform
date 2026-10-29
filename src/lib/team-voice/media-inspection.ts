@@ -7,6 +7,7 @@ import {
   type TeamVoiceMimeType,
 } from "../../domain/team/schema";
 import { ValidationError } from "../errors/application-error";
+import { webmOpusDurationMs } from "../tickets/webm-opus-duration";
 
 export type InspectedTeamVoice = {
   durationMs: number;
@@ -52,7 +53,14 @@ export async function inspectTeamVoiceBytes(input: {
   }
 
   const mimeType = canonicalMime(metadata.format.container, metadata.format.codec);
-  const measuredSeconds = metadata.format.duration;
+  let measuredSeconds = metadata.format.duration;
+  if (mimeType === "audio/webm" && measuredSeconds === undefined) {
+    try {
+      measuredSeconds = webmOpusDurationMs(input.bytes) / 1000;
+    } catch (error) {
+      throw new ValidationError("Voice recording format is not supported.", error);
+    }
+  }
   if (!mimeType || !Number.isFinite(measuredSeconds) || !measuredSeconds || measuredSeconds <= 0) {
     throw new ValidationError("Voice recording format is not supported.");
   }

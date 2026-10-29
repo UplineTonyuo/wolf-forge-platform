@@ -13504,6 +13504,7 @@ td {
  * "Print or save as PDF" on an invoice prints the invoice, not the workspace.
  */
 @media print {
+  @page wf-invoice { size: A4; margin: 16mm; }
   .portal-sidebar,
   .portal-topbar,
   .portal-scrim,
@@ -13517,6 +13518,22 @@ td {
   .portal-main-inner { width: 100%; max-width: none; padding: 0; }
   .portal-main-inner > * { animation: none; }
   .portal-invoice-content { grid-template-columns: minmax(0, 1fr) 260px; }
+  html:has(.portal-invoice-detail), body:has(.portal-invoice-detail) { background: #fff; color: #172033; }
+  body:has(.portal-invoice-detail) .portal-command-header,
+  body:has(.portal-invoice-detail) .portal-command-bar,
+  body:has(.portal-invoice-detail) .portal-command-plus,
+  body:has(.portal-invoice-detail) [role="dialog"],
+  body:has(.portal-invoice-detail) .portal-mobile-header { display: none !important; }
+  .portal-invoice-detail { page: wf-invoice; display: block; max-width: none; margin: 0; padding: 0; font-size: 10pt; line-height: 1.5; }
+  .portal-invoice-detail .portal-invoice-hero { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 7mm; margin-bottom: 7mm; border-bottom: 2px solid #000d51; }
+  .portal-invoice-detail h1 { color: #000d51; font-size: 25pt; }
+  .portal-invoice-detail .portal-fact-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 8mm; }
+  .portal-invoice-detail .portal-invoice-content { display: block; }
+  .portal-invoice-detail .portal-invoice-item-head { display: grid; grid-template-columns: minmax(0, 1fr) 40px 80px 85px; padding-block: 3mm; background: #f4f5f8; }
+  .portal-invoice-detail .portal-invoice-item { display: grid; grid-template-columns: minmax(0, 1fr) 40px 80px 85px; break-inside: avoid; padding-block: 4mm; }
+  .portal-invoice-detail .portal-invoice-item [data-label]::before { display: none; }
+  .portal-invoice-detail .portal-invoice-totals { width: 72mm; margin: 7mm 0 0 auto; padding: 5mm; break-inside: avoid; background: #f4f5f8; }
+  .portal-invoice-detail .portal-invoice-totals dd { text-align: right; }
 }
 
 /* WF CLIENT PORTAL V2 END */

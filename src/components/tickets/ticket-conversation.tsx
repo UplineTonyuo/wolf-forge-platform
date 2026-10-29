@@ -1,5 +1,7 @@
 "use client";
 
+import { VoiceAudioPlayer } from "../audio/voice-audio-player";
+
 import {
   useEffect,
   useRef,
@@ -711,6 +713,7 @@ export function TicketConversation({
               const showOtherIdentity = orderChat && !ownMessage;
               const showIdentityTime = showOtherIdentity && !grouped;
               const bareImageMessage = isBareImageMessage(message);
+              const audioOnly = !hasVisibleText(message.body) && message.attachments.length > 0 && message.attachments.every((item) => item.mime_type.startsWith("audio/"));
 
               return (
                 <li
@@ -788,8 +791,9 @@ export function TicketConversation({
                       <div className={styles.messageStack}>
                         <div
                           tabIndex={orderChat ? 0 : undefined}
+                          data-audio-only={audioOnly || undefined}
                           className={
-                            `${styles.messageBubble}${bareImageMessage ? ` ${styles.bareMediaBubble}` : ""}${message.pending ? ` ${styles.messagePending}` : ""}${message.failed ? ` ${styles.messageFailed}` : ""}`
+                            `${styles.messageBubble}${bareImageMessage || audioOnly ? ` ${styles.bareMediaBubble}` : ""}${message.pending ? ` ${styles.messagePending}` : ""}${message.failed ? ` ${styles.messageFailed}` : ""}`
                           }
                         >
                         {message.reply_to_message_id ? (
@@ -813,7 +817,7 @@ export function TicketConversation({
                             ) : null}
                           </div>
                         ) : null}
-                        {bareImageMessage ? null : (
+                        {bareImageMessage || audioOnly ? null : (
                           <TicketMessageBody
                             body={
                               message.body
@@ -860,7 +864,7 @@ export function TicketConversation({
                                       />
                                     </button>
                                   ) : attachment.mime_type.startsWith("audio/") ? (
-                                    <audio controls preload="none" src={attachmentUrl} aria-label={`Voice message: ${attachment.original_name}`} style={{ maxWidth: "100%" }} />
+                                    <VoiceAudioPlayer key={attachment.id} source={attachmentUrl} />
                                   ) : (
                                     <a
                                       className={styles.attachmentLink}

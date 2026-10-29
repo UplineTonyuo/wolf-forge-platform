@@ -43,8 +43,8 @@ describe("client-controlled order start", () => {
     mocks.start.mockResolvedValue({ ok: true, state: { ...state, status: "working", requested: true, started: true, available: false } });
     render(<ClientOrderStart initial={{ ...state, forms: state.forms.map((form) => ({ ...form, completed: true })) }} />);
     fireEvent.click(screen.getByRole("button", { name: "Start order" }));
-    await screen.findByText("Your order is in progress");
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
+    expect(screen.queryByText("Your order is in progress")).toBeNull();
   });
   it("retains unavailable required forms rather than silently skipping them", () => {
     render(<ClientOrderStart initial={{ ...state, requested: true, forms: state.forms.map((form) => ({ ...form, available: false })) }} />);
@@ -53,7 +53,7 @@ describe("client-controlled order start", () => {
   });
   it("does not label an already completed order as currently in progress", () => {
     render(<ClientOrderStart initial={{ ...state, status: "complete", requested: true, started: true, available: false }} />);
-    expect(screen.getByText("Your order was started")).toBeTruthy();
+    expect(screen.queryByText("Your order was started")).toBeNull();
     expect(screen.queryByText("Your order is in progress")).toBeNull();
     expect(screen.queryByRole("button", { name: "Start order" })).toBeNull();
   });

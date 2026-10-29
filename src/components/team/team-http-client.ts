@@ -62,7 +62,7 @@ export async function uploadTeamVoiceBlob(
     form.append("cacheControl", "3600");
     form.append("", blob, "audio-file");
     const response = await fetch(uploadUrl, {
-      method: "POST",
+      method: "PUT",
       headers: { "x-upsert": "false" },
       body: form,
     });
@@ -83,8 +83,8 @@ export function finalizeTeamVoiceUpload(input: {
 export function fetchTeamVoicePlayback(input: {
   conversationId: string;
   messageId: string;
-}): Promise<TeamActionResult<{ url: string; expiresAt: string }>> {
-  return post("/api/team-voice/playback", input, "Voice recording could not be loaded.");
+}, signal?: AbortSignal): Promise<TeamActionResult<{ url: string; expiresAt: string }>> {
+  return post("/api/team-voice/playback", input, "Voice recording could not be loaded.", signal);
 }
 
 /**

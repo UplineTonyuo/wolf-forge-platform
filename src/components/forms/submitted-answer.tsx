@@ -37,8 +37,10 @@ export function SubmittedAnswer({ field }: { field: SubmittedField }) {
     const signedAt = typeof value.signed_at === "string" && Number.isFinite(Date.parse(value.signed_at)) ? value.signed_at : null;
     return <div className={styles.answer}>
       {drawing ? <SignatureDrawing strokes={drawing} label="Submitted client signature" /> : null}
-      <p>{typeof value.name === "string" && value.name ? value.name : "Signer not recorded"}</p>
+      <p>{typeof value.name === "string" && value.name.trim() ? value.name : drawing ? "Drawn electronic signature" : "Signer not recorded"}</p>
       <p>{value.consent === true ? "Electronic signature · consent recorded" : "Consent not recorded"}</p>
+      {typeof value.support_administrator_id === "string" && typeof value.support_session_id === "string"
+        ? <p>Recorded by authorized support on behalf of this client.</p> : null}
       {signedAt ? <p>Signed <time dateTime={signedAt}>{formatDate(signedAt)}</time></p> : null}
       {value.drawing != null && !drawing ? <p>Signature drawing unavailable</p> : null}
     </div>;

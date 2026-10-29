@@ -24,6 +24,7 @@ import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-fi
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketRichTextEditor } from "./ticket-rich-text-editor";
 import { TicketVoiceRecorder } from "./ticket-voice-recorder";
+import { VoiceAudioPlayer } from "../audio/voice-audio-player";
 import voiceStyles from "./ticket-voice-recorder.module.css";
 import { usePersistentReplyDraft } from "./use-persistent-reply-draft";
 import { useClientDraftSession } from "./client-draft-provider";
@@ -116,6 +117,7 @@ function TicketComposerBody({
     useState(0);
 
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [voiceDurationMs, setVoiceDurationMs] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
@@ -177,13 +179,15 @@ function TicketComposerBody({
     previewUrlRef.current = null;
     setPreviewUrl(null);
     setAttachment(null);
+    setVoiceDurationMs(0);
   }
 
-  function pickAttachment(file: File | null) {
+  function pickAttachment(file: File | null, durationMs = 0) {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     previewUrlRef.current = null;
     setPreviewUrl(null);
     setAttachment(file);
+    setVoiceDurationMs(durationMs);
     // Note: there is no client-side MIME/size validation here — that check
     // only happens server-side in sendTicketComposerAction / the DB RPC.
     if ((file?.type.startsWith("image/") || file?.type.startsWith("audio/")) && typeof URL.createObjectURL === "function") {
@@ -344,6 +348,7 @@ function TicketComposerBody({
       data-client-view={mode === "client" || undefined}
       data-sending={attached && pending && !disabled || undefined}
       data-compact={compact || undefined}
+      data-recording={recordingVoice || undefined}
     >
       {!isNote && !attached ? (
         <header>
@@ -420,7 +425,7 @@ function TicketComposerBody({
       {attachment ? (
         <div className={`${styles.attachmentDraft} ${attachment.type.startsWith("audio/") ? voiceStyles.draft : ""}`} data-voice={attachment.type.startsWith("audio/") || undefined}>
           {previewUrl && attachment.type.startsWith("audio/") ? (
-            <audio controls preload="metadata" src={previewUrl} aria-label="Voice message preview" className={voiceStyles.preview} />
+            <VoiceAudioPlayer key={previewUrl} source={attachment} durationMs={voiceDurationMs} label="voice message preview" disabled={busy} />
           ) : previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- local blob: preview URL, not eligible for next/image optimization
             <img src={previewUrl} alt="" />
@@ -429,7 +434,7 @@ function TicketComposerBody({
           ) : (
             <FileText aria-hidden="true" />
           )}
-          <span>{attachment.name}</span>
+          <span>{attachment.type.startsWith("audio/") ? "Voice message" : attachment.name}</span>
           <button
             type="button"
             aria-label={`Remove ${attachment.name}`}
@@ -446,7 +451,7 @@ function TicketComposerBody({
       ) : null}
 
       <footer>
-        <div className={styles.composerMeta}>
+        {mode !== "client" ? <div className={styles.composerMeta}>
           {!compact ? (
             <span>
               {body.length.toLocaleString()}
@@ -459,7 +464,7 @@ function TicketComposerBody({
               {compact ? "Ctrl+Enter" : "Ctrl+Shift+Enter to send"}
             </span>
           ) : null}
-        </div>
+        </div> : null}
 
         <div className={`${styles.composerActions} ${voiceStyles.actions}`}>
           {!isNote && target.kind === "ticket" ? <TicketVoiceRecorder
@@ -467,7 +472,7 @@ function TicketComposerBody({
             ticketId={target.ticketId}
             disabled={busy || !!attachment}
             onRecordingChange={setRecordingVoice}
-            onPickAttachment={(file) => { pickAttachment(file); saveDraft(body, file); }}
+            onPickAttachment={(file, durationMs) => { pickAttachment(file, durationMs); saveDraft(body, file); }}
           /> : null}
           {!isNote ? (
             <>
@@ -515,7 +520,7 @@ function TicketComposerBody({
         <span>{persistent.loading ? "Restoring draft…" : persistent.status === "saving" ? "Saving draft…" : persistent.status === "saved"
           ? "Draft saved on this device for 30 days. Signing out clears it."
           : persistent.status === "error" ? "Draft not saved. Keep this window open; device storage may be unavailable or another window changed this draft."
-          : "Unsent text and files are saved on this device. Signing out clears them."}</span>
+          : null}</span>
         {(body || attachment) && !persistent.loading ? <button className="button button-secondary" type="button" disabled={busy} onClick={() => setDiscardOpen(true)}>Discard draft</button> : null}
       </div> : null}
       <PortalDialog open={discardOpen} onClose={() => setDiscardOpen(false)} title="Discard unsent draft?">

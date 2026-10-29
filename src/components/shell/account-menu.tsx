@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle, LogOut } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { signOutAction } from "../../app/actions/auth";
@@ -8,13 +8,14 @@ import type { InternalUser } from "../../lib/supabase/next-server";
 import { AccountAvatar } from "../ui/account-avatar";
 import { useHeaderOverlay } from "./use-header-overlay";
 import { PwaInstallButton } from "../pwa/pwa-provider";
+import styles from "./account-menu.module.css";
 
 function SignOutButton() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" role="menuitem" aria-busy={pending || undefined} disabled={pending}>
-      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : null}
-      Sign out
+      {pending ? <LoaderCircle className="spinner" aria-hidden="true" /> : <LogOut aria-hidden="true" />}
+      <span>Sign out</span>
     </button>
   );
 }
@@ -159,7 +160,7 @@ export function AccountMenu({ user, mobile = false, sidebar = false }: { user: I
             <strong>{user.displayName ?? "Unnamed user"}</strong>
             <span>{roleLabel}</span>
           </div>
-          <div role="menu" aria-labelledby={identityId}>
+          <div className={styles.actions} role="menu" aria-labelledby={identityId}>
             <PwaInstallButton variant="menu" focusReturnRef={buttonRef} />
             <form action={signOutAction} role="none">
               <SignOutButton />

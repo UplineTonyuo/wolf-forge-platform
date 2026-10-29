@@ -1137,6 +1137,7 @@ export function TeamConversationPane({
 
             {detail.capabilities.canSendVoice ? (
               <TeamVoiceRecorder
+                key={detail.conversationId}
                 conversationId={detail.conversationId}
                 disabled={slowModeSecondsLeft > 0}
                 onSent={onConversationChanged}
