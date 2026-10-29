@@ -387,6 +387,69 @@ async function main() {
     and not exists(select 1 from private.form_submission_requests where request_id=:'rejected'::uuid);`,
   { credential: secretReference.credential_id, assignment: secretAssignment.id, submission: secretSubmission.id,
     client: client.id, company: client.company, owner: owner.id, rejected: rejectedRequest }) === "t", "Credential binding, actual-administrator audit or raw-value rejection did not persist");
+  step = "legacy collection policy transaction serialization";
+  const legacyField = randomUUID();
+  const legacyForm = await success(owner.api.rpc("app_create_form", { p_request_id: randomUUID(), p_payload: {
+    form_type: "onboarding", canonical_key: `legacy-policy-${randomUUID()}`, definition: {
+      name: "Legacy policy fixture", title: "Legacy policy fixture", visibility: "assigned", type_config: {},
+      fields: [{ stable_field_key: legacyField, sort_order: 0, field_type: "secret", label: "WordPress access",
+        required: false, settings: { collection_mode: "disabled" } }], rules: [], service_links: [],
+    },
+  } }), "Legacy policy fixture creation");
+  const legacyVersion = await success(owner.api.rpc("app_publish_form", { p_request_id: randomUUID(), p_form_id: legacyForm.id }), "Legacy policy fixture publication");
+  const legacyAssignment = await success(owner.api.rpc("app_assign_form", {
+    p_request_id: randomUUID(), p_form_id: legacyForm.id, p_context: { client_profile_id: client.id },
+  }), "Legacy policy fixture assignment");
+  need([legacyForm.id, legacyVersion.id, legacyAssignment.id].every((id) => uuid.test(id)), "Legacy policy fixture IDs are invalid");
+  const enableLegacy = () => sql(`insert into private.intake_secret_collection_policy(form_version_id,field_key,schema_hash)
+    select id,:'field'::uuid,schema_hash from public.form_versions where id=:'version'::uuid on conflict do nothing;`,
+  { version: legacyVersion.id, field: legacyField });
+  await enableLegacy();
+  const legacyReference = await success(client.api.rpc("app_capture_intake_secret", {
+    p_request_id: randomUUID(), p_assignment_id: legacyAssignment.id, p_field_key: legacyField, p_secret: wordpressPassword,
+  }), "Legacy policy encrypted capture");
+  const legacyValues = [{ field_key: legacyField, value: legacyReference }];
+  const session = await sql("select id from auth.sessions where user_id=:'client'::uuid order by created_at desc limit 1;", { client: client.id });
+  need(uuid.test(session), "Legacy policy race requires a legitimate current client session");
+  const raceParams = { version: legacyVersion.id, assignment: legacyAssignment.id, field: legacyField, values: legacyValues,
+    claims: { sub: client.id, role: "authenticated", session_id: session }, headers: { "x-wf-tenant": tenant }, request: randomUUID() };
+  const raceAuth = "set local role authenticated; set local request.jwt.claims=:'claims'; set local request.headers=:'headers';";
+  const saveLegacy = "select public.app_save_intake_draft(:'assignment'::uuid,:'values'::jsonb);";
+  const submitLegacy = "select public.app_submit_form(:'request'::uuid,:'version'::uuid,jsonb_build_object('assignment_id',:'assignment'::uuid),:'values'::jsonb);";
+  const settle = (operation) => operation.then(() => ({ ok: true }), () => ({ ok: false, code: sqlFailureState }));
+  const sleeping = (name) => sql("select exists(select 1 from pg_stat_activity where application_name=:'name' and wait_event='PgSleep');", { name });
+  const blocked = (name, blocker) => sql(`select exists(select 1 from pg_stat_activity waiter
+    join pg_stat_activity holder on holder.pid=any(pg_blocking_pids(waiter.pid))
+    where waiter.application_name=:'name' and waiter.wait_event_type='Lock' and holder.application_name=:'blocker');`, { name, blocker });
+  for (const [kind, operation] of [["save", saveLegacy], ["submit", submitLegacy]]) {
+    await enableLegacy();
+    const writerName = `wf-legacy-${kind}-writer`, revokeName = `wf-legacy-${kind}-revoke`;
+    const finish = kind === "save" ? "commit" : "rollback";
+    const writer = settle(sql(`set application_name='${writerName}'; begin; ${raceAuth} ${operation} select pg_sleep(8); ${finish};`, raceParams));
+    await waitFor(async () => await sleeping(writerName) === "t", `Legacy ${kind} writer holding its transaction`);
+    const revoke = settle(sql(`set application_name='${revokeName}'; delete from private.intake_secret_collection_policy where form_version_id=:'version'::uuid;`, raceParams));
+    await waitFor(async () => await blocked(revokeName, writerName) === "t", `Legacy ${kind} policy deletion blocked by the writer`);
+    need((await writer).ok && (await revoke).ok, `Legacy ${kind} serialization failed`);
+    need(await sql("select not exists(select 1 from private.intake_secret_collection_policy where form_version_id=:'version'::uuid);", raceParams) === "t", "Revocation did not persist after the write transaction ended");
+  }
+  await enableLegacy();
+  const revoker = settle(sql("set application_name='wf-legacy-revoke-first'; begin; delete from private.intake_secret_collection_policy where form_version_id=:'version'::uuid; select pg_sleep(8); commit;", raceParams));
+  await waitFor(async () => await sleeping("wf-legacy-revoke-first") === "t", "Policy revocation holding its transaction");
+  need((await sql(`begin; set local statement_timeout='1000ms'; ${raceAuth}
+    select (public.app_get_assigned_form_schema(:'assignment'::uuid)->'schema'->'fields'->0->>'encrypted_collection_allowed')::boolean; rollback;`, raceParams)) === "t", "Read-only schema unexpectedly blocked on the policy write lock");
+  const waitingWriter = settle(sql(`set application_name='wf-legacy-write-after-revoke'; begin; ${raceAuth} ${saveLegacy} commit;`, raceParams));
+  await waitFor(async () => await blocked("wf-legacy-write-after-revoke", "wf-legacy-revoke-first") === "t", "Writer waiting for the policy revocation transaction");
+  need((await revoker).ok, "Policy revocation transaction failed");
+  const refusedWrite = await waitingWriter;
+  need(!refusedWrite.ok && refusedWrite.code === "42501", "Writer did not recheck policy after revocation committed");
+  await denied(client.api.rpc("app_capture_intake_secret", {
+    p_request_id: randomUUID(), p_assignment_id: legacyAssignment.id, p_field_key: legacyField, p_secret: wordpressPassword,
+  }), "Capture after committed policy revocation");
+  need(await sql(`select not exists(select 1 from public.form_submissions where form_assignment_id=:'assignment'::uuid)
+    and exists(select 1 from private.intake_secret_references where id=:'credential'::uuid and submission_id is null)
+    and exists(select 1 from public.form_assignments where id=:'assignment'::uuid and status='assigned')
+    and exists(select 1 from private.intake_drafts where assignment_id=:'assignment'::uuid and answers=:'values'::jsonb);`,
+  { ...raceParams, credential: legacyReference.credential_id }) === "t", "Race probes changed the fixture assignment or consumed its reference");
   step = "explicit support exit";
   await success(owner.api.rpc("app_end_client_support", { p_support_id: started.id }), "Explicit support exit");
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");
@@ -400,7 +463,7 @@ async function main() {
       and actor_class='internal' and resource_type='client_support' and outcome='succeeded')
     from public.security_audit_events where resource_id=:'support'::uuid;`,
   { support: started.id, owner: owner.id, client: client.id }) === "t", "Support start/exit real-administrator audits differ");
-  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, encrypted credential roundtrip, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
+  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, encrypted credential roundtrip, legacy policy transaction races and nonblocking reads, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
 }
 
 try {
