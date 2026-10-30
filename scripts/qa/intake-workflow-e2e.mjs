@@ -128,7 +128,7 @@ async function main() {
   secrets.push(publicKey, serverKey);
   step = "fresh database guard";
   need(sql("select (not exists(select 1 from auth.users) and not exists(select 1 from public.orders) and not exists(select 1 from public.form_submissions))::text;") === "true", "Requires an empty, newly migrated test database");
-  need(Number(sql("select count(*) from supabase_migrations.schema_migrations;")) === 182, "Expected all 182 migrations before seeding");
+  need(Number(sql("select count(*) from supabase_migrations.schema_migrations;")) === 193, "Expected all 193 candidate migrations before seeding");
   await mkdir(output, { recursive: true });
   const boundedFetch = (input, init = {}) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
@@ -459,7 +459,7 @@ async function main() {
     page.on("console", captureConsole);
     await page.goto(`${origin}/account/store/${serviceId}`, { waitUntil: "networkidle" });
     need((await page.title()).length > 0 && !(await page.locator("nextjs-portal").count()), "Store page is blank or shows a framework overlay");
-    await page.getByRole("button", { name: "Purchase with Wolf Forge Balance", exact: true }).click();
+    await page.getByRole("button", { name: "Purchase", exact: true }).click();
     const actionRequest = page.waitForRequest((request) => request.method() === "POST" && Boolean(request.headers()["next-action"]) && (request.postData() ?? "").includes(serviceId));
     await page.getByRole("button", { name: "Confirm purchase", exact: true }).click();
     const request = await actionRequest;
@@ -481,17 +481,20 @@ async function main() {
     await page.goto(`${origin}/account/projects/${sale.id}`, { waitUntil: "networkidle" });
     let state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
     need(state && !state.requested && !state.started, "Purchase or page load automatically requested a start");
+    await page.getByRole("heading", { name: "Complete your service form to begin", exact: true }).waitFor();
+    need(await page.getByRole("button", { name: "Start order", exact: true }).count() === 0, "Start order was offered before required intake");
+    need(await page.getByRole("link", { name: "Complete intake form →", exact: true }).getAttribute("href") === `/account/onboarding/${assignment.id}`, "Incomplete intake link targets a different assignment");
     const requestFirst = index % 2 === 0;
     if (requestFirst) {
-      await page.getByRole("button", { name: "Start order", exact: true }).click();
-      await page.getByRole("heading", { name: "Complete your service form to begin", exact: true }).waitFor();
+      // Exercise the server's early-intent guard directly; the current UI correctly hides Start until intake is complete.
+      await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id, p_request_id: randomUUID() });
       state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
       need(state.requested && !state.started && state.status === "pending", "Start skipped required intake");
     }
     await page.goto(`${origin}/account/onboarding/${assignment.id}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Submit Form", exact: true }).waitFor({ state: "visible" });
     await page.waitForFunction(() => [...document.querySelectorAll('form button[type="submit"]')].some((button) => button.textContent.includes("Submit Form") && !button.disabled));
-    await page.getByRole("heading", { name: entry.payload.definition.title, exact: true }).waitFor();
+    await page.getByRole("heading", { name: `Synthetic CI ${catalog.find((service) => service.id === serviceId).name}`, exact: true }).waitFor();
     await page.getByRole("button", { name: "Submit Form", exact: true }).click();
     need(await page.locator("form :invalid").count() > 0, "Empty required fields were not blocked");
     const detail = await rpc(buyer.client, "app_get_assigned_form_schema", { p_assignment_id: assignment.id });
@@ -509,12 +512,13 @@ async function main() {
         await control.setInputFiles({ name: fileName, mimeType: "image/png", buffer: png });
         await page.getByRole("link", { name: fileName, exact: true }).waitFor();
         uploads++;
-      } else if (field.field_type === "signature") await control.fill("Synthetic CI Signer");
+      }
     }
     if (index === 0 && fields.some((field) => field.field_type === "signature")) {
+      need(await page.locator('input[autocomplete="name"]').count() === 0, "Drawn signatures unexpectedly require a typed name");
       await page.getByRole("button", { name: "Submit Form", exact: true }).click();
       await page.getByRole("alert").filter({ hasText: "Draw your signature and confirm consent" }).waitFor();
-      check("Name alone cannot submit a required drawn signature");
+      check("Required signatures reject missing ink/consent without requiring a typed name");
     }
     for (const field of fields.filter((field) => field.field_type === "signature")) {
       const pad = page.getByRole("img", { name: `${field.label} drawing area`, exact: true });
@@ -592,7 +596,7 @@ async function main() {
     for (const [key, value] of answers) need(receipt.original.values.some((answer) => answer.stable_field_key === key && answer.value === value), "Saved PDF receipt lost an entered answer");
     for (const field of fields.filter((field) => field.field_type === "signature")) {
       const signed = receipt.original.values.find((value) => value.stable_field_key === field.stable_field_key)?.value;
-      need(signed?.method === "drawn" && signed.consent && signed.name === "Synthetic CI Signer" && signed.signed_at && signed.drawing?.length, "Saved signature lacks server attestation or ink");
+      need(signed?.method === "drawn" && signed.consent === true && !Object.hasOwn(signed, "name") && signed.profile_id === buyer.id && !Number.isNaN(Date.parse(signed.signed_at)) && signed.drawing?.length, "Saved signature lacks the authenticated server attestation or ink");
       need(receipt.form.fields.find((value) => value.key === field.stable_field_key)?.help_html === field.help_html, "PDF receipt changed the frozen agreement text");
     }
     const extracted = execFileSync("pdftotext", ["-layout", pdfPath, "-"], { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] });
@@ -603,7 +607,7 @@ async function main() {
     for (const field of fields.filter((field) => field.field_type === "signature")) {
       for (const segment of htmlSegments(field.help_html)) requirePdfText(pdfText, segment, "frozen agreement text");
       const signed = receipt.original.values.find((value) => value.stable_field_key === field.stable_field_key).value;
-      requirePdfText(pdfText, signed.name, "the signer name");
+      requirePdfText(pdfText, "Drawn electronic signature", "the unnamed drawn signature record");
       requirePdfText(pdfText, signed.signed_at, "the server signing date");
       requirePdfText(pdfText, "Consent: Recorded", "the recorded consent");
     }
@@ -628,7 +632,7 @@ async function main() {
       need(!state.requested && !state.started && state.status === "pending", "Form submission started an order without explicit intent");
       await page.goto(`${origin}/account/projects/${sale.id}`, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Start order", exact: true }).click();
-      await page.getByRole("heading", { name: "Your order is in progress", exact: true }).waitFor();
+      await page.getByRole("button", { name: "Start order", exact: true }).waitFor({ state: "detached" });
     }
     state = await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id });
     need(state.started && state.requested && state.status === "working", "Required completion and explicit intent did not start the order");
