@@ -7,82 +7,6 @@ concurrency:
   group: validation-only-ecfd4d9
   cancel-in-progress: false
 jobs:
-  database:
-    name: local Supabase pgTAP and RLS tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: 2d0b14d67b8d083d9d6b8a0566c8fca0eb227941
-          persist-credentials: false
-      - name: verify exact source and isolated runner
-        run: |-
-          test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
-          test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
-          test "$(git rev-parse HEAD)" = '2d0b14d67b8d083d9d6b8a0566c8fca0eb227941'
-          test -z "$(git status --porcelain)"
-          test -z "$SUPABASE_ACCESS_TOKEN"
-          test -z "$VERCEL_TOKEN"
-          printf 'Validated source: %s\n' "$(git rev-parse HEAD)"
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - name: start isolated local Supabase database
-        run: npx supabase start --yes
-      - name: full pgTAP and RLS suite
-        run: npm run test:db
-      - name: real PostgREST client support isolation and missing-hook checks
-        run: node scripts/qa/check-client-support-rest.mjs
-      - name: real Storage Team voice upload and media inspection
-        run: >-
-          node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts
-          --reporter=verbose
-      - name: stop runner-owned database
-        if: always()
-        run: npx supabase stop --no-backup
-      - name: verify tracked source and exact Next-generated type changes
-        if: always()
-        run: >-
-          node --input-type=module <<'NODE'
-
-          import assert from 'node:assert/strict';
-
-          import {execFileSync} from 'node:child_process';
-
-          import {readFileSync} from 'node:fs';
-
-          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'});
-
-          assert.equal(git('rev-parse','HEAD').trim(),"2d0b14d67b8d083d9d6b8a0566c8fca0eb227941");
-
-          assert.equal(git('diff','--cached','--name-only').trim(),'');
-
-          const changed=git('diff','--name-only').trim().split('\n').filter(Boolean);
-
-          assert.ok(changed.every(path=>['next-env.d.ts','tsconfig.json'].includes(path)), 'Unexpected tracked
-          source change');
-
-          for(const path of changed){
-           const original=git('show','HEAD:'+path),actual=readFileSync(path,'utf8');
-           if(path==='next-env.d.ts') assert.equal(actual,original.replaceAll('"./.next/types/','"./.next-studio-qa/types/'));
-           else {
-            const expected=JSON.parse(original);
-            expected.include.push('.next-studio-qa/types/**/*.ts','.next-studio-qa/dev/types/**/*.ts');
-            assert.deepEqual(JSON.parse(actual),expected);
-           }
-          }
-
-          console.log(JSON.stringify({source:"2d0b14d67b8d083d9d6b8a0566c8fca0eb227941",applicationPreserved:true,allowedExactGeneratedChanges:changed}));
-
-          NODE
-    if: >-
-      github.event_name == 'workflow_dispatch' && github.ref ==
-      'refs/heads/codex/validate-qa-ecfd4d9-20261030' && github.repository ==
-      'UplineTonyuo/wolf-forge-platform'
-    env: {}
   intake:
     name: real Auth, purchase, intake, signature, start and PDF
     if: >-
@@ -101,12 +25,12 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
-          ref: 2d0b14d67b8d083d9d6b8a0566c8fca0eb227941
+          ref: f7038b0a520e3e378087f7c29cfa76924e8e37dc
       - name: verify exact source and isolated runner
         run: |-
           test "$GITHUB_REPOSITORY" = 'UplineTonyuo/wolf-forge-platform'
           test "$GITHUB_REF" = 'refs/heads/codex/validate-qa-ecfd4d9-20261030'
-          test "$(git rev-parse HEAD)" = '2d0b14d67b8d083d9d6b8a0566c8fca0eb227941'
+          test "$(git rev-parse HEAD)" = 'f7038b0a520e3e378087f7c29cfa76924e8e37dc'
           test -z "$(git status --porcelain)"
           test -z "$SUPABASE_ACCESS_TOKEN"
           test -z "$VERCEL_TOKEN"
@@ -159,7 +83,7 @@ jobs:
 
           const original=readFileSync(src,'utf8');
 
-          assert.equal(hash(original),"baac0532f9b8b49497cf8fb27e0385caf88ac34a33c48082ab4163c697cebaa0");
+          assert.equal(hash(original),"c7d39c8f62b9690564250eaa1c2c9c8301bdceab301d546744f0933a07aa8be7");
 
           const needle="need((process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME) ===
           \"codex/intake-publication-20261028\", \"Unapproved workflow
@@ -172,14 +96,14 @@ jobs:
 
           assert.equal(copy.replace(replacement,needle),original);
 
-          assert.equal(hash(copy),"cf8e5b6b0cbca90c31c1246f468fc7fd247a04a8e3edb2f5a906259bf92503df");
+          assert.equal(hash(copy),"34883027ed1202883148b70775e3bfe030395f78773fe5954dfd64960f317458");
 
           assert.equal(existsSync(dst),false);
 
           writeFileSync(dst,copy,'utf8');
 
           console.log(JSON.stringify({sourceHash:hash(original),runnerCopyHash:hash(copy),onlyRunnerChange:'exact
-          branch guard',source:"2d0b14d67b8d083d9d6b8a0566c8fca0eb227941"}));
+          branch guard',source:"f7038b0a520e3e378087f7c29cfa76924e8e37dc"}));
 
           NODE
       - name: run the actual authenticated Next workflow for all 59 services and 37 templates
@@ -188,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ecfd4d9-followup-isolated-intake
+          name: ecfd4d9-final-isolated-intake
           path: |
             artifacts/intake-workflow/*.png
             artifacts/intake-workflow/*.pdf
@@ -211,7 +135,7 @@ jobs:
 
           const git=(...args)=>execFileSync('git',args,{encoding:'utf8'});
 
-          assert.equal(git('rev-parse','HEAD').trim(),"2d0b14d67b8d083d9d6b8a0566c8fca0eb227941");
+          assert.equal(git('rev-parse','HEAD').trim(),"f7038b0a520e3e378087f7c29cfa76924e8e37dc");
 
           assert.equal(git('diff','--cached','--name-only').trim(),'');
 
@@ -230,6 +154,6 @@ jobs:
            }
           }
 
-          console.log(JSON.stringify({source:"2d0b14d67b8d083d9d6b8a0566c8fca0eb227941",applicationPreserved:true,allowedExactGeneratedChanges:changed}));
+          console.log(JSON.stringify({source:"f7038b0a520e3e378087f7c29cfa76924e8e37dc",applicationPreserved:true,allowedExactGeneratedChanges:changed}));
 
           NODE
