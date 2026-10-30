@@ -487,7 +487,7 @@ async function main() {
     const requestFirst = index % 2 === 0;
     if (requestFirst) {
       // Exercise the server's early-intent guard directly; the current UI correctly hides Start until intake is complete.
-      await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id, p_request_id: randomUUID() });
+      await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id });
       state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
       need(state.requested && !state.started && state.status === "pending", "Start skipped required intake");
     }
