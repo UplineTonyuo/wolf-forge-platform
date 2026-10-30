@@ -59,7 +59,7 @@ select public.app_change_task_status(id,'complete') from public.order_tasks wher
 select pg_temp.act(3);
 select is((select task_total from public.app_get_my_client_project('d3000000-0000-4000-8000-000000001781')),2,'client authoritative progress includes created task');
 select is((select task_open from public.app_get_my_client_project('d3000000-0000-4000-8000-000000001781')),1,'client progress reflects task completion');
-select ok(not (to_jsonb(public.app_get_my_client_project('d3000000-0000-4000-8000-000000001781')) ? 'tasks'),'client receives counts without private task rows');
+select ok((select count(*)=1 and bool_and(not (to_jsonb(p) ? 'tasks')) from public.app_get_my_client_project('d3000000-0000-4000-8000-000000001781') p),'client receives counts without private task rows');
 select pg_temp.act(1);
 select public.app_change_task_status(id,'todo') from public.order_tasks where order_id='d3000000-0000-4000-8000-000000001781' and title='Manager created task';
 select pg_temp.act(3);
