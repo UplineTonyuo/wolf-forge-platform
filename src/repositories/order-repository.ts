@@ -34,6 +34,14 @@ const orderResponseStatesSchema = z.array(z.object({
 export class OrderRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  async listClientResponseStates(orderIds: string[]): Promise<OrderResponseState[]> {
+    if (orderIds.length === 0) return [];
+    const ids = [...new Set(z.array(z.uuid()).max(projectListRowLimit).parse(orderIds))];
+    const result = await this.client.rpc("app_list_my_order_response_states", { p_order_ids: ids });
+    if (result.error) throw mapDatabaseError(result.error, "Order reply status");
+    return orderResponseStatesSchema.parse(result.data);
+  }
+
   async listResponseStates(orderIds: string[]): Promise<OrderResponseState[]> {
     if (orderIds.length === 0) return [];
     const ids = z.array(z.uuid()).max(projectListRowLimit).parse([...new Set(orderIds)]);

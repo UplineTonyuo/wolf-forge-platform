@@ -6,6 +6,7 @@ import { FormsVisibilityBoundary } from "../../../components/forms/forms-visibil
 import { loadFormsVisibility } from "../../actions/forms-visibility";
 import { composeClientOnboarding } from "../../../domain/client-portal/onboarding";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
+import type { OrderResponseState } from "../../../domain/orders/projections";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { readClientProjects, readClientAssignments } from "../../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../../lib/supabase/next-server";
@@ -17,6 +18,8 @@ export default async function ClientProjectsPage() {
   let showProjects = false;
   let showForms = false;
   let projects: ClientProjectView[] = [];
+  let responseStates: OrderResponseState[] = [];
+  let replyError: string | null = null;
   let assignments: Awaited<ReturnType<typeof readClientAssignments>> = null;
   let loadError: string | null = null;
   let intakeError: string | null = null;
@@ -30,6 +33,13 @@ export default async function ClientProjectsPage() {
       await services.permissions.requireModuleAccess("portal_projects");
       showProjects = true;
       projects = (await readClientProjects()) ?? [];
+      if (projects.length > 0) {
+        try {
+          responseStates = await services.projects.listClientResponseStates(projects.map((project) => project.id));
+          const states = new Map(responseStates.map((state) => [state.order_id, state.unanswered]));
+          if (projects.some((project) => states.get(project.id) == null)) replyError = "Some reply statuses are unavailable. Reload to try again.";
+        } catch { replyError = "Reply status could not be loaded. Reload to try again."; }
+      }
     } catch (error) {
       const safe = toClientSafeError(error);
       if (safe.code === "PERMISSION_DENIED") showProjects = false;
@@ -62,6 +72,8 @@ export default async function ClientProjectsPage() {
 
   return <ClientProjectsList
     projects={projects}
+    responseStates={responseStates}
+    replyError={replyError}
     showProjects={showProjects}
     intakeLinks={intakeLinks}
     intakeError={intakeError}

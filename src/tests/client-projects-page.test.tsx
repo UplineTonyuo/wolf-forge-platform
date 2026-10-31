@@ -1,13 +1,30 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { PermissionDeniedError } from "../lib/errors/application-error";
-const mocks = vi.hoisted(() => ({ projects: vi.fn(), assignments: vi.fn(), module: vi.fn(), redirect: vi.fn(), visibility: vi.fn() }));
+const mocks = vi.hoisted(() => ({ projects: vi.fn(), replies: vi.fn(), assignments: vi.fn(), module: vi.fn(), redirect: vi.fn(), visibility: vi.fn() }));
 const access = { portal_projects: true, portal_forms: true };
 vi.mock("next/navigation", () => ({ redirect: (...args: unknown[]) => { mocks.redirect(...args); throw new Error("redirect"); } }));
 vi.mock("../lib/supabase/client-portal-data", () => ({ readClientProjects: mocks.projects, readClientAssignments: mocks.assignments }));
 vi.mock("../app/actions/forms-visibility", () => ({ loadFormsVisibility: mocks.visibility }));
-vi.mock("../lib/supabase/next-server", () => ({ getClientContext: async () => ({ user: { modules: access }, services: { permissions: { requireModuleAccess: mocks.module } } }) }));
+vi.mock("../lib/supabase/next-server", () => ({ getClientContext: async () => ({ user: { modules: access }, services: { projects: {listClientResponseStates:mocks.replies}, permissions: { requireModuleAccess: mocks.module } } }) }));
 const { default: page } = await import("../app/account/projects/page");
-beforeEach(() => { vi.resetAllMocks(); access.portal_projects = true; access.portal_forms = true; mocks.projects.mockResolvedValue([{ id: "project" }]); mocks.assignments.mockResolvedValue([]); mocks.visibility.mockResolvedValue({ ok: true, signature: "current-scope" }); });
+beforeEach(() => { vi.resetAllMocks(); access.portal_projects = true; access.portal_forms = true; mocks.projects.mockResolvedValue([{ id: "project" }]); mocks.replies.mockResolvedValue([{order_id:"project",unanswered:false}]); mocks.assignments.mockResolvedValue([]); mocks.visibility.mockResolvedValue({ ok: true, signature: "current-scope" }); });
+it("loads reply metadata only for the authorized order IDs", async () => {
+  mocks.replies.mockResolvedValue([{order_id:"project",unanswered:true}]);
+  const result=await page();
+  expect(mocks.replies).toHaveBeenCalledExactlyOnceWith(["project"]);
+  expect(result.props.responseStates).toEqual([{order_id:"project",unanswered:true}]);
+  expect(result.props.replyError).toBeNull();
+});
+it("preserves orders and intake when reply metadata fails or is unknown", async () => {
+  mocks.replies.mockRejectedValue(new PermissionDeniedError());
+  let result=await page();
+  expect(result.props.projects).toHaveLength(1);
+  expect(result.props.replyError).toMatch(/could not be loaded/);
+  expect(mocks.redirect).not.toHaveBeenCalled();
+  mocks.replies.mockResolvedValue([{order_id:"project",unanswered:null}]);
+  result=await page();
+  expect(result.props.replyError).toMatch(/unavailable/);
+});
 it("keeps authorized projects available when Forms access is denied", async () => {
   mocks.assignments.mockRejectedValue(new PermissionDeniedError());
   const result = await page();
@@ -23,6 +40,7 @@ it("retains standalone forms for Forms-only clients without reading orders", asy
   expect(result.props.showProjects).toBe(false);
   expect(result.props.formsContent).toBeTruthy();
   expect(mocks.projects).not.toHaveBeenCalled();
+  expect(mocks.replies).not.toHaveBeenCalled();
   expect(mocks.module).not.toHaveBeenCalledWith("portal_projects");
   expect(mocks.redirect).not.toHaveBeenCalled();
 });

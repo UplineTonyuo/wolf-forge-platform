@@ -8,6 +8,12 @@ afterEach(() => vi.unstubAllGlobals());
 const delegated = () => clientSupportFetch("https://provider.example.invalid");
 
 describe("delegated provider operation boundary", () => {
+  it("permits reviewed client reply metadata without granting internal reply metadata", async () => {
+    await delegated()("https://provider.example.invalid/rest/v1/rpc/app_list_my_order_response_states",{method:"POST"});
+    expect(network).toHaveBeenCalledOnce();
+    await expect(delegated()("https://provider.example.invalid/rest/v1/rpc/app_list_order_response_states",{method:"POST"})).rejects.toThrow("unavailable");
+    expect(network).toHaveBeenCalledOnce();
+  });
   it.each(CLIENT_SUPPORT_READ_TABLES)("permits scoped GET of %s", async (table) => {
     await delegated()(`https://provider.example.invalid/rest/v1/${table}?select=id`);
     expect(network).toHaveBeenCalledOnce();

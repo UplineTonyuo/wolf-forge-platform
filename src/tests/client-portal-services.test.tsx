@@ -120,8 +120,8 @@ function renderChooser(
 
 /** Opens the catalogue explorer through its own trigger. */
 async function openChooser() {
-  fireEvent.click(screen.getByRole("button", { name: "Explore investments" }));
-  return screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+  fireEvent.click(screen.getByRole("button", { name: "Explore services" }));
+  return screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 }
 
 describe("service chooser projection", () => {
@@ -202,7 +202,7 @@ describe("service chooser interaction", () => {
     expect(within(dialog).queryByText("Press Release Distribution")).not.toBeInTheDocument();
   });
 
-  it("reveals a category's real investments when it is chosen", async () => {
+  it("reveals a category's real services when it is chosen", async () => {
     renderChooser();
     const dialog = await openChooser();
 
@@ -217,24 +217,24 @@ describe("service chooser interaction", () => {
     renderChooser();
     const dialog = await openChooser();
 
-    fireEvent.change(within(dialog).getByLabelText("Search investments"), {
+    fireEvent.change(within(dialog).getByLabelText("Search services"), {
       target: { value: "press" },
     });
 
     expect(within(dialog).getByText("Press Release Distribution")).toBeInTheDocument();
     expect(within(dialog).queryByText("Local SEO Starter")).not.toBeInTheDocument();
-    expect(within(dialog).getByText("1 investment found")).toBeInTheDocument();
+    expect(within(dialog).getByText("1 service found")).toBeInTheDocument();
   });
 
   it("says so honestly when nothing matches", async () => {
     renderChooser();
     const dialog = await openChooser();
 
-    fireEvent.change(within(dialog).getByLabelText("Search investments"), {
+    fireEvent.change(within(dialog).getByLabelText("Search services"), {
       target: { value: "zzzz" },
     });
 
-    expect(within(dialog).getByText(/No investments match/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/No services match/)).toBeInTheDocument();
   });
 
   it("hands a chosen service to the existing detail route", async () => {
@@ -259,7 +259,7 @@ describe("service chooser interaction", () => {
   it("renders no explorer trigger at all when the account has no Store module", () => {
     renderChooser({ folders: [], services: [] }, false);
 
-    expect(screen.queryByRole("button", { name: "Explore investments" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Explore services" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
@@ -326,8 +326,8 @@ describe("client quick actions", () => {
 
     // Opening the services panel must dismiss the quick-action panel rather
     // than stacking on top of it.
-    fireEvent.click(screen.getByRole("button", { name: "Explore investments" }));
-    await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    fireEvent.click(screen.getByRole("button", { name: "Explore services" }));
+    await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
@@ -339,7 +339,7 @@ describe("client quick actions", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: /Invest in a service/ }));
 
     expect(
-      await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+      await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" }),
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
@@ -352,11 +352,11 @@ describe("header panel interaction model", () => {
     stubHover(true);
     renderChooser();
 
-    const explorer = screen.getByRole("button", { name: "Explore investments" });
+    const explorer = screen.getByRole("button", { name: "Explore services" });
     fireEvent.pointerEnter(explorer, { pointerType: "mouse" });
 
     expect(
-      await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+      await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" }),
     ).toBeInTheDocument();
 
     fireEvent.pointerLeave(explorer);
@@ -365,7 +365,7 @@ describe("header panel interaction model", () => {
     // crosses the gap between the trigger and the panel.
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+        screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -374,12 +374,12 @@ describe("header panel interaction model", () => {
     stubHover(true);
     renderChooser();
 
-    fireEvent.pointerEnter(screen.getByRole("button", { name: "Explore investments" }), {
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Explore services" }), {
       pointerType: "mouse",
     });
-    await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 
-    fireEvent.pointerLeave(screen.getByRole("button", { name: "Explore investments" }));
+    fireEvent.pointerLeave(screen.getByRole("button", { name: "Explore services" }));
     fireEvent.pointerEnter(screen.getByRole("button", { name: "Quick actions" }), {
       pointerType: "mouse",
     });
@@ -388,12 +388,12 @@ describe("header panel interaction model", () => {
 
     // The previous panel is already animating out (and no longer interactive)
     // rather than sitting open behind the new one.
-    const previous = screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    const previous = screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" });
     expect(previous?.getAttribute("data-phase") ?? "gone").not.toBe("open");
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+        screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -402,16 +402,16 @@ describe("header panel interaction model", () => {
     stubHover(true);
     renderChooser();
 
-    const explorer = screen.getByRole("button", { name: "Explore investments" });
+    const explorer = screen.getByRole("button", { name: "Explore services" });
     fireEvent.click(explorer);
-    await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 
     fireEvent.pointerLeave(explorer);
 
     // Still open well past the grace period, because the click pinned it.
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(
-      screen.getByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+      screen.getByRole("dialog", { name: "Explore Wolf Forge Services" }),
     ).toBeInTheDocument();
   });
 
@@ -419,15 +419,15 @@ describe("header panel interaction model", () => {
     stubHover(true);
     renderChooser();
 
-    const explorer = screen.getByRole("button", { name: "Explore investments" });
+    const explorer = screen.getByRole("button", { name: "Explore services" });
     fireEvent.click(explorer);
-    await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 
     fireEvent.click(explorer);
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+        screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -436,14 +436,14 @@ describe("header panel interaction model", () => {
     stubHover(true);
     renderChooser();
 
-    fireEvent.click(screen.getByRole("button", { name: "Explore investments" }));
-    await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" });
+    fireEvent.click(screen.getByRole("button", { name: "Explore services" }));
+    await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" });
 
     fireEvent.pointerDown(document.body);
 
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+        screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -452,19 +452,19 @@ describe("header panel interaction model", () => {
     stubHover(false);
     renderChooser();
 
-    fireEvent.pointerEnter(screen.getByRole("button", { name: "Explore investments" }), {
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Explore services" }), {
       pointerType: "mouse",
     });
 
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(
-      screen.queryByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+      screen.queryByRole("dialog", { name: "Explore Wolf Forge Services" }),
     ).not.toBeInTheDocument();
 
     // Tap still opens it.
-    fireEvent.click(screen.getByRole("button", { name: "Explore investments" }));
+    fireEvent.click(screen.getByRole("button", { name: "Explore services" }));
     expect(
-      await screen.findByRole("dialog", { name: "Explore Wolf Forge Investments" }),
+      await screen.findByRole("dialog", { name: "Explore Wolf Forge Services" }),
     ).toBeInTheDocument();
   });
 });

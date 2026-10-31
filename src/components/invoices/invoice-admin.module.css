@@ -175,7 +175,7 @@
 .activity li strong { color: #303746; font-size: 11px; font-weight: 600; }
 .activity li small { color: var(--wf-text-muted); font-size: 9px; }
 
-.dialog { width: min(480px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--wf-border); border-radius: 10px; color: var(--wf-text); background: #fff; box-shadow: 0 24px 72px rgba(0, 13, 81, .22); animation: invoice-dialog-enter 190ms var(--wf-ease) both; }
+.dialog { width: min(480px, calc(100vw - 32px)); margin: auto; padding: 0; border: 1px solid var(--wf-border); border-radius: 10px; color: var(--wf-text); background: #fff; box-shadow: 0 24px 72px rgba(0, 13, 81, .22); animation: invoice-dialog-enter 190ms var(--wf-ease) both; }
 @keyframes invoice-dialog-enter { from { opacity: 0; transform: translateY(4px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .dialog::backdrop { background: rgba(0, 8, 48, .5); animation: invoice-backdrop-enter 180ms ease both; }
 @keyframes invoice-backdrop-enter { from { opacity: 0; } to { opacity: 1; } }

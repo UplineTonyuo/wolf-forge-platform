@@ -7,6 +7,29 @@ import { orderStatuses } from "../domain/orders/schema";
 const projects: ClientProjectView[] = orderStatuses.map((status,index) => ({ id:`project-${index}`, title:`Project ${status}`, status,statusLabel:status,reference:`WF-P${index}`,serviceName:"Synthetic service",createdLabel:"Oct 30, 2026",startedLabel:null,dueLabel:null,completedLabel:null,progress:{total:0,completed:0,percent:null} }));
 afterEach(cleanup);
 describe("compact client project browsing",()=>{
+ it("shows client Unanswered separately from order status and preserves pagination",()=>{
+  const responseStates = [{order_id:'project-2',unanswered:true},{order_id:'project-0',unanswered:false},{order_id:'project-1',unanswered:null}];
+  render(<ClientProjectsList projects={projects} responseStates={responseStates}/>);
+  const waiting = screen.getByRole('link',{name:/Project working/});
+  expect(within(waiting).getByText('Unanswered')).toBeTruthy();
+  expect(within(waiting).getByText('working')).toBeTruthy();
+  expect(screen.getAllByText('Unanswered')).toHaveLength(1);
+  expect(screen.getAllByRole('link')).toHaveLength(5);
+  fireEvent.click(screen.getByRole('button',{name:'Working, 1 order'}));
+  expect(within(screen.getByRole('link')).getByText('Unanswered')).toBeTruthy();
+ });
+ it("clears the client badge only when refreshed authoritative metadata says answered",()=>{
+  const view=render(<ClientProjectsList projects={projects} responseStates={[{order_id:'project-2',unanswered:true}]}/>);
+  expect(screen.getByText('Unanswered')).toBeTruthy();
+  view.rerender(<ClientProjectsList projects={projects} responseStates={[{order_id:'project-2',unanswered:false}]}/>);
+  expect(screen.queryByText('Unanswered')).toBeNull();
+ });
+ it("keeps unknown reply metadata and intake actions visible without claiming answered",()=>{
+  render(<ClientProjectsList projects={projects} responseStates={[]} replyError="Reply status could not be loaded." intakeLinks={{'project-0':'/account/onboarding/required'}}/>);
+  expect(screen.getByRole('alert').textContent).toContain('Reply status could not be loaded');
+  expect(screen.queryByText('Unanswered')).toBeNull();
+  expect(screen.getByRole('link',{name:/Start order · Form required/})).toBeTruthy();
+ });
  it("shows six tabs and at most five projects per page",()=>{
   render(<ClientProjectsList projects={projects}/>);
   expect(within(screen.getByRole('group',{name:'Filter orders by status'})).getAllByRole('button')).toHaveLength(6);

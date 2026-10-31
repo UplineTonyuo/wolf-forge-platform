@@ -23,7 +23,7 @@ import { useHeaderPanels } from "./header-panels";
  * trigger, so nothing was lost — this is still the fastest way to jump straight
  * into a category from any page.
  *
- * Categories and investments are the real, RLS-scoped catalog the layout already
+ * Categories and services are the real, RLS-scoped catalog the layout already
  * loads. Choosing one hands off to the existing detail route.
  */
 
@@ -76,7 +76,7 @@ function ChooserBody({
     <div className="chooser">
       <header className="portal-header-panel-head">
         <div>
-          <strong>Explore Wolf Forge Investments</strong>
+          <strong>Explore Wolf Forge Services</strong>
           <span>Jump straight into a category.</span>
         </div>
       </header>
@@ -86,8 +86,8 @@ function ChooserBody({
         <input
           type="search"
           value={query}
-          placeholder="Search investments..."
-          aria-label="Search investments"
+          placeholder="Search services..."
+          aria-label="Search services"
           onChange={(event) => setQuery(event.target.value)}
         />
       </div>
@@ -96,12 +96,12 @@ function ChooserBody({
         <div className="chooser-panel" key="search">
           {results.length === 0 ? (
             <p className="chooser-empty">
-              No investments match â€œ{query.trim()}â€. Try a shorter word.
+              No services match â€œ{query.trim()}â€. Try a shorter word.
             </p>
           ) : (
             <>
               <p className="chooser-caption" role="status">
-                {results.length} {results.length === 1 ? "investment" : "investments"} found
+                {results.length} {results.length === 1 ? "service" : "services"} found
               </p>
               <ul className="chooser-list">
                 {results.map((service) => (
@@ -131,7 +131,7 @@ function ChooserBody({
           <p className="chooser-caption">Categories</p>
 
           {catalog.folders.length === 0 ? (
-            <p className="chooser-empty">No investments are available to your account yet.</p>
+            <p className="chooser-empty">No services are available to your account yet.</p>
           ) : (
             <ul className="chooser-grid">
               {catalog.folders.map((folder) => (
@@ -148,7 +148,7 @@ function ChooserBody({
                       <strong>{folder.name}</strong>
                       <span>
                         {folder.serviceCount}{" "}
-                        {folder.serviceCount === 1 ? "investment" : "investments"}
+                        {folder.serviceCount === 1 ? "service" : "services"}
                       </span>
                     </span>
                     <ArrowRight aria-hidden={true} />
@@ -180,11 +180,11 @@ export function ClientServicesPanel() {
 
   return (
     <HeaderPanelAnchor>
-      <HeaderPanelTrigger panel="services" label="Explore investments">
+      <HeaderPanelTrigger panel="services" label="Explore services">
         <LibraryBig aria-hidden={true} />
       </HeaderPanelTrigger>
 
-      <HeaderPanel panel="services" label="Explore Wolf Forge Investments" width="wide">
+      <HeaderPanel panel="services" label="Explore Wolf Forge Services" width="wide">
         {/*
          * Mounted only while open, so its query and category reset each time
          * the panel opens without an effect watching the open flag.
