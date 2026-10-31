@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { loadSubscriptionVisibilityAction } from "../../app/actions/subscriptions";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function SubscriptionHistoryBoundary({ ids, audience, states = [], workEnabled, onRefresh, children }: {
   ids: string[];
@@ -46,7 +47,7 @@ export function SubscriptionHistoryBoundary({ ids, audience, states = [], workEn
       }
     };
     void check();
-    const interval = window.setInterval(() => void check(), 15_000);
+    const interval = window.setInterval(() => void check(), ACCESS_REFRESH_INTERVAL_MS);
     const resume = () => void check();
     window.addEventListener("focus", resume);
     document.addEventListener("visibilitychange", resume);

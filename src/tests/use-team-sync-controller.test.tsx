@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TEAM_LIVE_CLOSED_MS, TEAM_LIVE_FAST_MS } from "../domain/team/live-scheduler";
+import { TEAM_LIVE_FAST_MS } from "../domain/team/live-scheduler";
 import { useTeamSyncController } from "../components/team/use-team-sync-controller";
 
 /**
@@ -31,6 +31,21 @@ function setOnline(value: boolean) {
 }
 
 describe("useTeamSyncController", () => {
+  it("reconciles closed Team immediately on focus and visibility return", async () => {
+    const syncLive = vi.fn().mockResolvedValue(ok());
+    const syncBackground = vi.fn().mockResolvedValue(okBackground());
+    const hook = renderHook(() => useTeamSyncController({ active: true, open: false, syncKey: "closed", syncLive, syncBackground }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(async () => { window.dispatchEvent(new Event("focus")); await vi.advanceTimersByTimeAsync(0); });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    expect(syncBackground).toHaveBeenCalledTimes(2);
+    await act(async () => { setVisibility("hidden"); await vi.advanceTimersByTimeAsync(600_000); });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    await act(async () => { setVisibility("visible"); await vi.advanceTimersByTimeAsync(0); });
+    expect(syncLive).toHaveBeenCalledTimes(3);
+    expect(syncBackground).toHaveBeenCalledTimes(3);
+    hook.unmount();
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0.5);
@@ -39,6 +54,7 @@ describe("useTeamSyncController", () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -281,15 +297,56 @@ describe("useTeamSyncController", () => {
     expect(syncLive).toHaveBeenCalledTimes(1); // still reconciles immediately on mount
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(TEAM_LIVE_FAST_MS);
+      await vi.advanceTimersByTimeAsync(59_999);
     });
-    expect(syncLive).toHaveBeenCalledTimes(1); // nowhere near the closed cadence yet
+    expect(syncLive).toHaveBeenCalledTimes(1);
+    expect(syncBackground).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(TEAM_LIVE_CLOSED_MS);
+      await vi.advanceTimersByTimeAsync(1);
     });
     expect(syncLive).toHaveBeenCalledTimes(2); // and still ticks, just on the closed cadence
-    expect(syncBackground).toHaveBeenCalled(); // background lane keeps reconciling too
+    expect(syncBackground).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([0, 0.5, 1])("keeps CLOSED jitter and failure backoff at the 60-second floor (random %s)", async (random) => {
+    vi.mocked(Math.random).mockReturnValue(random);
+    const syncLive = vi.fn().mockResolvedValue({ ok: false, changed: false });
+    const syncBackground = vi.fn().mockResolvedValue({ ok: false });
+    renderHook(() => useTeamSyncController({ active: true, open: false, syncKey: "closed", syncLive, syncBackground }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    const delay = 55_200 + random * 9_600;
+    for (let tick = 1; tick <= 6; tick++) {
+      await act(() => vi.advanceTimersByTimeAsync(delay - 1));
+      expect(syncLive).toHaveBeenCalledTimes(tick);
+      expect(syncBackground).toHaveBeenCalledTimes(tick);
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      expect(syncLive).toHaveBeenCalledTimes(tick + 1);
+      expect(syncBackground).toHaveBeenCalledTimes(tick + 1);
+    }
+  });
+
+  it("pauses CLOSED lanes offline, reconciles on return, and cancels both on unmount", async () => {
+    const syncLive = vi.fn().mockResolvedValue(ok());
+    const syncBackground = vi.fn().mockResolvedValue(okBackground());
+    const hook = renderHook(() => useTeamSyncController({ active: true, open: false, syncKey: "closed", syncLive, syncBackground }));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    setOnline(false);
+    await act(() => vi.advanceTimersByTimeAsync(600_000));
+    expect(syncLive).toHaveBeenCalledTimes(1);
+    expect(syncBackground).toHaveBeenCalledTimes(1);
+    await act(async () => { setOnline(true); window.dispatchEvent(new Event("online")); });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    expect(syncBackground).toHaveBeenCalledTimes(2);
+    hook.unmount();
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      window.dispatchEvent(new Event("focus"));
+      setVisibility("visible");
+      await vi.advanceTimersByTimeAsync(600_000);
+    });
+    expect(syncLive).toHaveBeenCalledTimes(2);
+    expect(syncBackground).toHaveBeenCalledTimes(2);
   });
 
   it("13. never more than one live request in flight", async () => {
