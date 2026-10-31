@@ -27,7 +27,7 @@ afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 
 describe('explicit invoice sharing',()=>{
   it('copies authenticated invoice/payment paths without automatically creating a public capability',()=>{
-    open();expect((screen.getByLabelText('Private invoice link') as HTMLInputElement).value).toBe(`${window.location.origin}/account/invoices/${invoiceId}`);
+    open();expect((screen.getByLabelText('Private invoice link') as HTMLInputElement).value).toBe(`${window.location.origin}/view/invoices/${invoiceId}`);
     expect((screen.getByLabelText('Payment link') as HTMLInputElement).value).toBe(`${window.location.origin}/pay/invoices/${invoiceId}`);
     expect(mocks.create).not.toHaveBeenCalled();expect(mocks.list).not.toHaveBeenCalled();expect(mocks.send).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe('invoice email is a reviewed composition',()=>{
     fireEvent.click(screen.getByRole('button',{name:'Email invoice'}));
     expect((await screen.findByLabelText('Subject') as HTMLInputElement).value).toBe('Invoice #WF-0191 · Wolf Forge');
     const body=(screen.getByLabelText('Message') as HTMLTextAreaElement).value;
-    expect(body).toContain(`${window.location.origin}/account/invoices/${invoiceId}`);
+    expect(body).toContain(`${window.location.origin}/view/invoices/${invoiceId}`);
     expect(body).toContain(`${window.location.origin}/pay/invoices/${invoiceId}`);
     expect(body).not.toContain('/share/invoices/');expect(mocks.send).not.toHaveBeenCalled();expect(mocks.create).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button',{name:'Cancel'}));expect(mocks.send).not.toHaveBeenCalled();

@@ -3,6 +3,7 @@ const mocks=vi.hoisted(()=>({session:vi.fn(),redirect:vi.fn((path:string)=>{thro
 vi.mock('next/navigation',()=>({redirect:mocks.redirect,notFound:mocks.notFound}));
 vi.mock('../lib/supabase/next-server',()=>({getVerifiedSessionContext:mocks.session}));
 import InvoicePaymentLinkPage from '../app/pay/invoices/[invoiceId]/page';
+import InvoiceViewLinkPage from '../app/view/invoices/[invoiceId]/page';
 const id='10000000-0000-4000-8000-000000001931';
 const destination=`/account/invoices/${id}#invoice-payment-options`;
 beforeEach(()=>{vi.clearAllMocks();});
@@ -24,4 +25,13 @@ it('does not turn an unavailable verified-session lookup into successful account
   mocks.session.mockRejectedValue(new Error('Session lookup unavailable'));
   await expect(InvoicePaymentLinkPage({params:Promise.resolve({invoiceId:id})})).rejects.toThrow('Session lookup unavailable');
   expect(mocks.redirect).not.toHaveBeenCalled();
+});
+it('retains the private invoice destination through sign-in without jumping to payment',async()=>{
+  mocks.session.mockResolvedValue(null);
+  await expect(InvoiceViewLinkPage({params:Promise.resolve({invoiceId:id})})).rejects.toThrow(`REDIRECT:/login?next=${encodeURIComponent(`/account/invoices/${id}`)}`);
+  expect(mocks.redirect).toHaveBeenCalledExactlyOnceWith(`/login?next=${encodeURIComponent(`/account/invoices/${id}`)}`);
+});
+it('opens a private invoice directly for an existing verified session',async()=>{
+  mocks.session.mockResolvedValue({actor:{id}});
+  await expect(InvoiceViewLinkPage({params:Promise.resolve({invoiceId:id})})).rejects.toThrow(`REDIRECT:/account/invoices/${id}`);
 });

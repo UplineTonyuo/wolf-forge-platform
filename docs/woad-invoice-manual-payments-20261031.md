@@ -1,6 +1,6 @@
 # Manual invoice payment and sharing candidate
 
-Base: live main `90f881c8ef3c388189edc3b27b961aab3ca6ea04`. Branch: `codex/woad-invoice-manual-payments-20261031`. This candidate is not deployed.
+Started from main `90f881c8ef3c388189edc3b27b961aab3ca6ea04`; incorporates upstream PR92 at `e6edf25b0af5dc00c4cd7445f446964b2d636331`. Branch: `codex/woad-invoice-manual-payments-20261031`, draft PR99. This candidate is not deployed.
 
 ## Behavior
 
@@ -10,7 +10,7 @@ An authorized client pays the full outstanding invoice balance outside WOAD, upl
 
 An authorized `invoices.mark_paid` reviewer sees a pending report and receipt, verifies actual receipt of money in their external account, and enters the actual paid date and reconciliation reference. Approval records one successful payment and provisions each unlinked service invoice line once, including frozen required intake forms. Existing linked orders are reused, custom lines create none, and quantity does not silently multiply orders. Start order still requires the frozen forms. Rejection requires an explanation. Review history and existing financial history are preserved.
 
-Share offers an authenticated invoice link, `/pay/invoices/{id}` (preserves the private invoice/payment anchor through login), and explicitly created public invoice links. Public links expire after 30 days and can be revoked. Only a hash is stored; copy the raw URL when creating it. The public projection includes commercial invoice items/totals/dates and enabled payment instructions, with no contacts, address, receipt, wallet or internal history. Receipt submission requires a currently authorized client session.
+Share offers `/view/invoices/{id}` for the authenticated invoice, `/pay/invoices/{id}` for payment options, and explicitly created public invoice links. Both authenticated entry links retain the exact invoice destination through login. Public links expire after 30 days and can be revoked. Only a hash is stored; copy the raw URL when creating it. The public projection includes commercial invoice items/totals/dates and enabled payment instructions, with no contacts, address, receipt, wallet or internal history. Receipt submission requires a currently authorized client session.
 
 Email invoice opens the existing Gmail composer with private invoice/payment links. Nothing is sent automatically. Existing Edit, Issue, Record Payment, Refund and Void authority remains; the UI directs pending manual claims through review. Print uses the existing browser PDF path.
 
@@ -44,6 +44,8 @@ Local output directory: `outputs/invoice-manual-payments-20261031` outside the c
 PC RAM remains below the existing 5.5 GiB full-build guard. No local full build or Docker was launched. RojanCRM, William, clients and production are excluded from synthetic validation.
 
 ## Release gate and manual acceptance
+
+The owner chose to leave the single history-scanner alert unresolved. It is the synthetic privacy-test literal at commit0679fe73, `src/tests/invoice-share-privacy.test.ts:7`. `.gitleaksignore` remains unchanged. Keep this PR draft and do not merge or deploy while the release gate is unresolved.
 
 Before rollout: exact-head typecheck/build/unit/lint/dependency/history-secret checks, all pgTAP tests, real manual-payment REST/Storage/race checks, and the 59-service workflow must pass. Review the three migrations and prepare a fresh verified encrypted production backup plus exact ledger/function/data fingerprints. Apply only those migrations with bounded locks/timeouts, verify their source/ACL/provenance invariants and unchanged business data, then separately promote the exact tested app. Keep manual settings disabled until the owner privately configures the real payment destination.
 

@@ -26,7 +26,7 @@ function ShareDialog({invoiceId,origin,canCreate,onClose}:{invoiceId:string;orig
   const [generatedLinkId,setGeneratedLinkId]=useState<string|null>(null),[error,setError]=useState<string|null>(null);
   const [pending,startTransition]=useTransition();
   function load() {startTransition(async()=>{try{const result=await listInvoiceShareLinksAction(invoiceId);if(result.ok)setLinks(result.data);else setError(result.error);}catch{setError("Invoice links could not be loaded. Try again.");}});}
-  const privateUrl=`${origin}/account/invoices/${invoiceId}`;
+  const privateUrl=`${origin}/view/invoices/${invoiceId}`;
   const paymentUrl=`${origin}/pay/invoices/${invoiceId}`;
   return <PortalDialog open title="Share invoice" description="Choose the link your client needs." onClose={()=>{if(!pending)onClose();}} showClose closeOnBackdrop={false}>
     <div className={styles.links}>
@@ -55,7 +55,7 @@ export function InvoiceEmailAction({invoiceId,invoiceLabel}:{invoiceId:string;in
   const [pending,startTransition]=useTransition();
   return <><button type="button" className={styles.menuItem} disabled={pending} onClick={(event)=>{
     const details=event.currentTarget.closest("details");details?.removeAttribute("open");details?.querySelector<HTMLElement>("summary")?.focus();
-    const base=`${window.location.origin}/account/invoices/${invoiceId}`;
+    const base=`${window.location.origin}/view/invoices/${invoiceId}`;
     setBody(`You can view ${invoiceLabel} here:\n${base}\n\nPayment options:\n${window.location.origin}/pay/invoices/${invoiceId}`);
     startTransition(async()=>{try{const result=await loadInvoiceEmailTargetAction(invoiceId);if(result.ok)setTarget(result.data);else setError(result.error);}catch{setError("Email details could not be loaded. Try again.");}});
   }}><Mail size={15} aria-hidden="true"/>{pending?"Loading email…":"Email invoice"}</button>
