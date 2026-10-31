@@ -11,6 +11,7 @@ import type { Json } from "../../lib/supabase/database.types";
 import { sanitizeFormHtml } from "../../lib/forms/presentation";
 import styles from "./forms.module.css";
 import { loadIntakeDraft, saveIntakeDraft } from "../../app/actions/intake-drafts";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 import { IntakeFileField } from "./intake-file-field";
 import { DrawnSignature } from "./drawn-signature";
 import { readSignatureStrokes } from "../../lib/forms/signature";
@@ -184,9 +185,10 @@ function FormRendererContent({
       } finally { checking = false; }
     }
     void check();
-    const timer = window.setInterval(() => { void check(); }, 15000);
+    const timer = window.setInterval(() => { void check(); }, ACCESS_REFRESH_INTERVAL_MS);
     window.addEventListener("focus", check);
-    return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("focus", check); };
+    document.addEventListener("visibilitychange", check);
+    return () => { disposed = true; window.clearInterval(timer); window.removeEventListener("focus", check); document.removeEventListener("visibilitychange", check); };
   }, [mode, assignmentId, schema.canonical_key, schema.form_version_id]);
   const readonly = mode === "preview" || mode === "readonly" || completed || result != null || !available || draftLoading || Boolean(draftError) || uploading || draftState === "saving";
   const fields = useMemo(() => [...schema.fields].sort((a, b) => a.sort_order - b.sort_order), [schema.fields]);
