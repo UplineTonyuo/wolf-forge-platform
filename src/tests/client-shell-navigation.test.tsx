@@ -69,7 +69,7 @@ describe("client navigation loading", () => {
     const editor = screen.getByRole("textbox", { name: "Unsent draft" });
     fireEvent.change(editor, { target: { value: "UNSENT QA draft" } });
     await click("/account/projects");
-    expect(screen.getByRole("status", { name: "Loading Projects" })).toBeVisible();
+    expect(screen.getByRole("status", { name: "Loading Orders" })).toBeVisible();
     expect(editor).not.toBeVisible();
     expect(editor).toHaveValue("UNSENT QA draft");
     expect(active()).toBe("/account/projects");
@@ -127,7 +127,7 @@ describe("client navigation loading", () => {
 
   it("provides an accessible route fallback for a nested client page without placeholder controls", () => {
     render(<nav.path.Provider value="/account/onboarding/test-assignment"><Loading /></nav.path.Provider>);
-    expect(screen.getByRole("status", { name: "Loading Onboarding" })).toBeVisible();
+    expect(screen.getByRole("status", { name: "Loading Orders" })).toBeVisible();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });

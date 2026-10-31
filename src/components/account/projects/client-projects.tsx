@@ -47,7 +47,7 @@ export function ClientProjectDetail({
     <div className="portal-page">
       <Link href="/account/projects" className="portal-back">
         <ArrowLeft aria-hidden={true} />
-        All projects
+        All orders
       </Link>
 
       <header className="portal-page-head portal-page-head-actions">
@@ -63,7 +63,7 @@ export function ClientProjectDetail({
 
       {attention.tone === "waiting_on_you" ? (
         <div className="portal-callout" data-tone="waiting_on_you">
-          <strong>This project is waiting on you.</strong>
+          <strong>This order is waiting on you.</strong>
           <span>
             Wolf Forge needs something from you before this can move forward.{" "}
             <Link href="/account/messages">Send us a message</Link> if you are not sure what.

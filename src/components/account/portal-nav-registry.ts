@@ -96,8 +96,7 @@ export const portalNavigationCategories: PortalNavigationCategory[] = [
     id: "work",
     label: "Work",
     items: [
-      { id: "portal_projects", label: "Projects", route: "/account/projects" },
-      { id: "portal_forms", label: "Onboarding", route: "/account/onboarding" },
+      { id: "portal_projects", label: "Orders", route: "/account/projects" },
       { id: "portal_tickets", label: "Inbox", route: "/account/messages" },
       { id: "portal_reporting", label: "Reporting", route: "/account/reporting" },
     ],
@@ -143,7 +142,6 @@ const countSources: Array<{
   actionable: boolean;
 }> = [
   { id: "portal_projects", key: "projects", actionable: false },
-  { id: "portal_forms", key: "onboarding", actionable: true },
   { id: "portal_tickets", key: "messages", actionable: true },
   /*
    * Unopened reports. Actionable because a report the client has not seen is
@@ -187,6 +185,9 @@ export function portalNavigationFor(
       ...category,
       items: category.items
         .filter((item) => {
+          // Orders also houses assigned forms; each dataset keeps its own
+          // server-side grant. This must not orphan Forms-only accounts.
+          if (item.id === "portal_projects") return modules.portal_projects === true || modules.portal_forms === true;
           const gate = portalModuleGate(item.id);
           return gate === null || modules[gate] === true;
         })
@@ -200,6 +201,7 @@ export function portalRouteIsCurrent(
   pathname: string,
 ): boolean {
   if (item.exact) return pathname === item.route;
+  if (item.route === "/account/projects" && (pathname === "/account/onboarding" || pathname.startsWith("/account/onboarding/"))) return true;
   return pathname === item.route || pathname.startsWith(`${item.route}/`);
 }
 

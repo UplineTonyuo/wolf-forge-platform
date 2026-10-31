@@ -23,7 +23,10 @@ jobs:
     name: real Auth, purchase, intake, signature, start and PDF
     if: >-
       github.head_ref == 'codex/intake-publication-20261028' ||
-      (github.event_name == 'workflow_dispatch' && github.ref_name == 'codex/intake-publication-20261028')
+      github.head_ref == 'codex/woad-qa-followups-20261030' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (github.ref_name == 'codex/intake-publication-20261028' ||
+          github.ref_name == 'codex/woad-qa-followups-20261030'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

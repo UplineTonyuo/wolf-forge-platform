@@ -139,7 +139,7 @@ function renderWorkspace(viewerId?: string) {
 }
 
 function rowCount() {
-  return screen.getAllByRole("button", { name: /^Select .* project /u }).length;
+  return screen.getAllByRole("button", { name: /^Select .* order /u }).length;
 }
 
 function stubViewport(matches: boolean) {
@@ -175,7 +175,7 @@ describe("Mobile Filters sheet (<=767px)", () => {
   it("keeps project search permanently visible outside the Filter sheet", () => {
     renderWorkspace();
 
-    expect(screen.getByRole("searchbox", { name: "Search projects" })).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "Search orders" })).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

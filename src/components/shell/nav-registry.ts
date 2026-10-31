@@ -37,7 +37,7 @@ export const navigationCategories: NavigationCategory[] = [
     id: "activity",
     label: "Activity",
     items: [
-      { id: "projects", label: "Projects", route: "/orders" },
+      { id: "projects", label: "Orders", route: "/orders" },
       { id: "tickets", label: "Tickets", route: "/tickets" },
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },

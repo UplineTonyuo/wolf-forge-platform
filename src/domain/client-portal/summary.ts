@@ -211,13 +211,13 @@ export function composeClientPortalSummary(
     attention.push({
       id: "onboarding",
       tone: "waiting_on_you",
-      label: count === 1 ? "Complete 1 onboarding item" : `Complete ${count} onboarding items`,
+      label: count === 1 ? "Complete 1 required form" : `Complete ${count} required forms`,
       detail: onboarding.outstanding
         .slice(0, 3)
         .map((item) => item.title)
         .join(" · "),
-      href: "/account/onboarding",
-      cta: "Open onboarding",
+      href: "/account/projects#forms",
+      cta: "Review forms",
     });
   }
 
@@ -246,14 +246,14 @@ export function composeClientPortalSummary(
       tone: "waiting_on_you",
       label:
         count === 1
-          ? "1 project needs information from you"
-          : `${count} projects need information from you`,
+          ? "1 order needs information from you"
+          : `${count} orders need information from you`,
       detail: blockedProjects
         .slice(0, 3)
         .map((project) => project.title)
         .join(" · "),
       href: "/account/projects",
-      cta: "Review projects",
+      cta: "Review orders",
     });
   }
 

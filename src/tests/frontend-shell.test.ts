@@ -5,7 +5,7 @@ describe("Phase 3A navigation registry", () => {
   it("renders the complete Phase 3A.1 sidebar structure", () => {
     expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Marketing", "Setup"]);
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.label))).toEqual([
-      "Dashboard", "Projects", "Tickets", "Reporting", "Clients", "Operations", "White Label", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "All Conversations", "Settings",
+      "Dashboard", "Orders", "Tickets", "Reporting", "Clients", "Operations", "White Label", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Services", "Forms", "Team", "All Conversations", "Settings",
     ]);
   });
 
@@ -28,9 +28,9 @@ describe("Phase 3A navigation registry", () => {
     ).not.toContain("dashboard");
   });
 
-  it("keeps user-facing project terminology in the shell", () => {
-    expect(titleForPath("/orders")).toBe("Projects");
-    expect(titleForPath("/orders/00000000-0000-0000-0000-000000000000")).toBe("Projects");
+  it("keeps user-facing order terminology in the shell", () => {
+    expect(titleForPath("/orders")).toBe("Orders");
+    expect(titleForPath("/orders/00000000-0000-0000-0000-000000000000")).toBe("Orders");
     expect(titleForPath("/todo")).toBe("Operations");
     expect(titleForPath("/coupons")).toBe("Coupons");
     expect(titleForPath("/companies")).toBe("Companies");
@@ -65,7 +65,7 @@ describe("navigation derived from real module access", () => {
     const visible = navigationForModules(staffModules);
     const labels = visible.flatMap((category) => category.items.map((item) => item.label));
 
-    expect(labels).toEqual(["Projects", "Tickets", "Operations", "Services", "Forms"]);
+    expect(labels).toEqual(["Orders", "Tickets", "Operations", "Services", "Forms"]);
     expect(visible.map((category) => category.label)).toEqual(["Activity", "Setup"]);
   });
 

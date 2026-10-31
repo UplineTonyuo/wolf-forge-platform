@@ -46,8 +46,8 @@ it("opens the native modal, preserves permitted navigation and closes on destina
   const account = within(dialog).getByRole("button", { name: "Account" });
   expect(within(account).getByText("Test User")).toBeInTheDocument();
   expect(within(account).getByText("staff")).toBeInTheDocument();
-  expect(within(dialog).getAllByRole("link").map((link) => link.textContent)).toEqual(["Projects", "Tickets"]);
-  const destination = within(dialog).getByRole("link", { name: "Projects" });
+  expect(within(dialog).getAllByRole("link").map((link) => link.textContent)).toEqual(["Orders", "Tickets"]);
+  const destination = within(dialog).getByRole("link", { name: "Orders" });
   destination.addEventListener("click", (event) => event.preventDefault());
   fireEvent.click(destination);
   expect(dialog).not.toHaveAttribute("open");

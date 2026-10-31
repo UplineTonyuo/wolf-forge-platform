@@ -36,15 +36,18 @@ export class OrderService {
   }
 
   /**
-   * The authoritative Projects read model: one embedded query for the projects
-   * plus one batched query for their tasks, regardless of row count.
+   * One order query plus bounded task and public-response metadata batches.
    */
   async listProjects(filter?: ListOrdersFilter): Promise<ProjectListResult> {
     const page = await this.dependencies.repository.listWithRelations(filter);
-    const taskFacts = await this.dependencies.repository.listTaskFacts(page.rows.map((row) => row.id));
+    const ids = page.rows.map((row) => row.id);
+    const [taskFacts, responseStates] = await Promise.all([
+      this.dependencies.repository.listTaskFacts(ids),
+      this.dependencies.repository.listResponseStates(ids).catch(() => []),
+    ]);
 
     return {
-      rows: composeProjectRows(page.rows, taskFacts),
+      rows: composeProjectRows(page.rows, taskFacts, new Date(), responseStates),
       complete: page.totalCount === null || page.totalCount <= page.rows.length,
       totalCount: page.totalCount,
     };

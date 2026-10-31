@@ -244,7 +244,7 @@ describe("result grouping", () => {
       ...rankResults("seo", services),
     ];
 
-    expect(groupResults(results).map((group) => group.label)).toEqual(["Projects", "Services"]);
+    expect(groupResults(results).map((group) => group.label)).toEqual(["Orders", "Services"]);
   });
 
   it("emits no group at all when nothing matches", () => {
@@ -276,7 +276,7 @@ describe("client search panel", () => {
     renderSearch();
     expect(screen.getByRole("combobox")).toHaveAttribute(
       "placeholder",
-      "Search projects, messages, services...",
+      "Search orders, messages, services...",
     );
   });
 

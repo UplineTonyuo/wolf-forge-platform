@@ -6,7 +6,7 @@ import { PageFrame } from "../../../../components/ui/page-frame";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
-export const metadata: Metadata = { title: "New Project" };
+export const metadata: Metadata = { title: "New Order" };
 
 export default async function NewProjectPage({
   searchParams,
@@ -28,13 +28,13 @@ export default async function NewProjectPage({
 
   if (!context.user.projects.create) {
     return (
-      <PageFrame title="New Project">
+      <PageFrame title="New Order">
         <section className="error-state">
-          <strong>Project creation is not available for your account.</strong>
-          <span>You need the projects.create capability to create projects.</span>
+          <strong>Order creation is not available for your account.</strong>
+          <span>You need permission to create orders.</span>
           <div className="error-retry">
             <Link className="button-secondary" href="/orders">
-              Back to projects
+              Back to orders
             </Link>
           </div>
         </section>
@@ -61,10 +61,10 @@ export default async function NewProjectPage({
 
     if (clients.length === 0) {
       return (
-        <PageFrame title="New Project">
+        <PageFrame title="New Order">
           <EmptyState
             title="No clients yet"
-            body="A project always belongs to a client. Create the client first, then start the project."
+            body="An order always belongs to a client. Create the client first, then start the order."
             action={
               <Link className="button-primary" href="/clients/new">
                 Create a client
@@ -77,10 +77,10 @@ export default async function NewProjectPage({
 
     if (services.length === 0) {
       return (
-        <PageFrame title="New Project">
+        <PageFrame title="New Order">
           <EmptyState
             title="No active services"
-            body="A project delivers a service from the catalog. Activate or create a service first."
+            body="An order delivers a service from the catalog. Activate or create a service first."
             action={
               <Link className="button-primary" href="/services/new">
                 Create a service
@@ -93,7 +93,7 @@ export default async function NewProjectPage({
 
     return (
       <PageFrame
-        title="New Project"
+        title="New Order"
         description="Start delivery work for a client against a catalog service."
         narrow
       >
@@ -110,7 +110,7 @@ export default async function NewProjectPage({
     );
   } catch (error) {
     return (
-      <PageFrame title="New Project">
+      <PageFrame title="New Order">
         <DataError message={toClientSafeError(error).message} />
       </PageFrame>
     );

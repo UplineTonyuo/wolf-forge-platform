@@ -9,7 +9,7 @@ afterEach(cleanup);
 describe("compact client project browsing",()=>{
  it("shows six tabs and at most five projects per page",()=>{
   render(<ClientProjectsList projects={projects}/>);
-  expect(within(screen.getByRole('group',{name:'Filter projects by status'})).getAllByRole('button')).toHaveLength(6);
+  expect(within(screen.getByRole('group',{name:'Filter orders by status'})).getAllByRole('button')).toHaveLength(6);
   expect(screen.getAllByRole('link')).toHaveLength(5);
   fireEvent.click(screen.getByRole('button',{name:'Next'}));
   expect(screen.getAllByRole('link')).toHaveLength(2);
@@ -19,23 +19,23 @@ describe("compact client project browsing",()=>{
  });
  it("groups Pending, Getting started and Needs information without changing data",()=>{
   const before=structuredClone(projects);render(<ClientProjectsList projects={projects}/>);
-  fireEvent.click(screen.getByRole('button',{name:'Pending, 3 projects'}));
+  fireEvent.click(screen.getByRole('button',{name:'Pending, 3 orders'}));
   expect(screen.getAllByRole('link').map(link=>link.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Project pending'),expect.stringContaining('Project submitted'),expect.stringContaining('Project pending_update')]));
   expect(screen.getAllByRole('link')).toHaveLength(3);expect(projects).toEqual(before);
  });
  it.each([['Working','working'],['Complete','complete'],['Canceled','canceled'],['Waiting reply','waiting_reply']])('filters %s and resets pagination',(label,status)=>{
   render(<ClientProjectsList projects={projects}/>);fireEvent.click(screen.getByRole('button',{name:'Next'}));
-  fireEvent.click(screen.getByRole('button',{name:`${label}, 1 project`}));
+  fireEvent.click(screen.getByRole('button',{name:`${label}, 1 order`}));
   expect(screen.getAllByRole('link')).toHaveLength(1);expect(screen.getByRole('link').textContent).toContain(`Project ${status}`);
-  fireEvent.click(screen.getByRole('button',{name:'All, 7 projects'}));expect(screen.getAllByRole('link')).toHaveLength(5);
+  fireEvent.click(screen.getByRole('button',{name:'All, 7 orders'}));expect(screen.getAllByRole('link')).toHaveLength(5);
  });
- it("links Pending directly to its required intake and keeps working project links intact",()=>{
+ it("opens pending order start controls and keeps working order links intact",()=>{
   render(<ClientProjectsList projects={projects} intakeLinks={{'project-0':'/account/onboarding/assigned','project-2':'/account/onboarding/wrong'}}/>);
-  expect(screen.getByRole('link',{name:/Complete intake form/}).getAttribute('href')).toBe('/account/onboarding/assigned');
+  expect(screen.getByRole('link',{name:/Start order · Form required/}).getAttribute('href')).toBe('/account/projects/project-0#start-order');
   expect(screen.getByRole('link',{name:/Project working/}).getAttribute('href')).toBe('/account/projects/project-2');
  });
  it("clamps the page when refreshed data shrinks",()=>{
   const view=render(<ClientProjectsList projects={projects}/>);fireEvent.click(screen.getByRole('button',{name:'Next'}));
-  view.rerender(<ClientProjectsList projects={[projects[0]!]}/>);expect(screen.getAllByRole('link')).toHaveLength(1);expect(screen.getByRole('status').textContent).toBe('1–1 of 1 projects');
+  view.rerender(<ClientProjectsList projects={[projects[0]!]}/>);expect(screen.getAllByRole('link')).toHaveLength(1);expect(screen.getByRole('status').textContent).toBe('1–1 of 1 orders');
  });
 });

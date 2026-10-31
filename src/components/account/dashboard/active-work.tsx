@@ -103,7 +103,7 @@ export function ActiveWorkSection({
       <header className="portal-section-head">
         <h2 id="portal-active-work">Active work</h2>
         <Link className="portal-secondary-action" href="/account/projects">
-          All projects
+          All orders
           <ArrowUpRight aria-hidden={true} />
         </Link>
       </header>
@@ -112,7 +112,7 @@ export function ActiveWorkSection({
         <p className="portal-empty">
           {totalProjects === 0
             ? "No projects yet. When Wolf Forge starts work for your account, it appears here."
-            : "Nothing is in progress right now. Your completed projects are on the Projects page."}
+            : "Nothing is in progress right now. Your completed orders are on the Orders page."}
         </p>
       ) : (
         <ul className={styles.rail}>

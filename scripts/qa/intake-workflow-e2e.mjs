@@ -3,7 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { createServer as createHttpsServer } from "node:https";
 import { request as httpRequest } from "node:http";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -107,7 +107,7 @@ async function main() {
     return;
   }
   need(process.env.GITHUB_ACTIONS === "true" && process.env.CI === "true" && process.platform === "linux", "This destructive disposable fixture runs only on a GitHub Linux runner");
-  need((process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME) === "codex/intake-publication-20261028", "Unapproved workflow branch");
+  need(["codex/intake-publication-20261028", "codex/woad-qa-followups-20261030"].includes(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME), "Unapproved workflow branch");
   need(!process.env.SUPABASE_ACCESS_TOKEN && !process.env.VERCEL && !process.env.LOCAL_UI_QA_BYPASS, "Hosted credentials or an auth bypass are forbidden");
   step = "reviewed-template deployment trace";
   const build = process.env.WOLF_FORGE_STUDIO_QA_BUILD === "1" ? ".next-studio-qa" : ".next";
@@ -128,7 +128,12 @@ async function main() {
   secrets.push(publicKey, serverKey);
   step = "fresh database guard";
   need(sql("select (not exists(select 1 from auth.users) and not exists(select 1 from public.orders) and not exists(select 1 from public.form_submissions))::text;") === "true", "Requires an empty, newly migrated test database");
-  need(Number(sql("select count(*) from supabase_migrations.schema_migrations;")) === 193, "Expected all 193 candidate migrations before seeding");
+  const migrationVersions = (await readdir(resolve("supabase/migrations")))
+    .filter((file) => /^\d{14}_.+\.sql$/.test(file)).map((file) => file.slice(0, 14)).sort();
+  need(migrationVersions.length > 0 && new Set(migrationVersions).size === migrationVersions.length, "Reviewed migration filenames must have unique versions");
+  assert.deepEqual(JSON.parse(sql("select coalesce(json_agg(version order by version), '[]'::json) from supabase_migrations.schema_migrations;")), migrationVersions,
+    "Full migration ledger must match this reviewed candidate before seeding");
+  report.migrations = migrationVersions.length;
   await mkdir(output, { recursive: true });
   const boundedFetch = (input, init = {}) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
@@ -482,16 +487,21 @@ async function main() {
     let state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
     need(state && !state.requested && !state.started, "Purchase or page load automatically requested a start");
     await page.getByRole("heading", { name: "Complete your service form to begin", exact: true }).waitFor();
-    need(await page.getByRole("button", { name: "Start order", exact: true }).count() === 0, "Start order was offered before required intake");
+    need(await page.getByRole("button", { name: "Start order", exact: true }).isEnabled(), "Explicit Start order is unavailable before intake");
     need(await page.getByRole("link", { name: "Complete intake form →", exact: true }).getAttribute("href") === `/account/onboarding/${assignment.id}`, "Incomplete intake link targets a different assignment");
     const requestFirst = index % 2 === 0;
     if (requestFirst) {
-      // Exercise the server's early-intent guard directly; the current UI correctly hides Start until intake is complete.
-      await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id });
+      await page.getByRole("button", { name: "Start order", exact: true }).click();
+      await page.waitForURL((url) => url.pathname === `/account/onboarding/${assignment.id}`);
       state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
-      need(state.requested && !state.started && state.status === "pending", "Start skipped required intake");
+      need(state.requested && !state.started && state.status === "pending", "Explicit Start skipped required intake");
+      need(state.forms.find((form) => !form.completed)?.id === assignment.id, "Start did not open the first frozen incomplete form");
+    } else {
+      await page.getByRole("link", { name: "Complete intake form →", exact: true }).click();
+      await page.waitForURL((url) => url.pathname === `/account/onboarding/${assignment.id}`);
+      state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
+      need(!state.requested && !state.started && state.status === "pending", "Browsing a form recorded implicit start intent");
     }
-    await page.goto(`${origin}/account/onboarding/${assignment.id}`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Submit Form", exact: true }).waitFor({ state: "visible" });
     await page.waitForFunction(() => [...document.querySelectorAll('form button[type="submit"]')].some((button) => button.textContent.includes("Submit Form") && !button.disabled));
     await page.getByRole("heading", { name: `Synthetic CI ${catalog.find((service) => service.id === serviceId).name}`, exact: true }).waitFor();
@@ -634,8 +644,10 @@ async function main() {
       await page.getByRole("button", { name: "Start order", exact: true }).click();
       await page.getByRole("button", { name: "Start order", exact: true }).waitFor({ state: "detached" });
     }
-    state = await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id });
+    state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
     need(state.started && state.requested && state.status === "working", "Required completion and explicit intent did not start the order");
+    state = await rpc(buyer.client, "app_request_my_order_start", { p_order_id: sale.id });
+    need(state.started && state.requested && state.status === "working", "An idempotent start replay changed the completed start");
     need((await foreign.client.rpc("app_request_my_order_start", { p_order_id: sale.id })).error, "Foreign client could request order start");
     report.cases.push({ template: entry.meta.file, serviceId, sourceServiceId, pages: pdf.getPageCount(), pdfTextVerified: true, signatures: fields.filter((field) => field.field_type === "signature").length, uploads: fileIds.length, ordering: requestFirst ? "start then intake" : "intake then explicit start", status: "passed" });
     await writeFile(join(output, "summary.json"), JSON.stringify(report, null, 2));
