@@ -15,9 +15,13 @@ const invoiceId='10000000-0000-4000-8000-000000001911';
 const first={id:'10000000-0000-4000-8000-000000001912',created_at:'2026-10-31T12:00:00Z',expires_at:'2099-11-30T12:00:00Z',revoked_at:null};
 const second={...first,id:'10000000-0000-4000-8000-000000001913'};
 function open(){render(<InvoiceShareButton invoiceId={invoiceId} canCreate/>);fireEvent.click(screen.getByRole('button',{name:'Share'}));}
-const create=()=>fireEvent.click(screen.getByRole('button',{name:'Create public link'}));
+async function clickWhenReady(button:HTMLElement){
+  await waitFor(()=>expect((button as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(button);
+}
+const create=()=>clickWhenReady(screen.getByRole('button',{name:'Create public link'}));
 beforeEach(()=>{
-  vi.clearAllMocks();vi.stubGlobal('crypto',webcrypto);
+  vi.resetAllMocks();vi.stubGlobal('crypto',webcrypto);
   mocks.create.mockResolvedValue({ok:true,data:first});mocks.list.mockResolvedValue({ok:true,data:[]});
   mocks.revoke.mockImplementation(async(id:string)=>({ok:true,data:{...(id===second.id?second:first),revoked_at:'2026-10-31T12:01:00Z'}}));
   mocks.target.mockResolvedValue({ok:true,data:{contactId:'10000000-0000-4000-8000-000000001914',name:'Synthetic contact',email:'invoice-test@example.invalid',available:true}});
@@ -33,7 +37,7 @@ describe('explicit invoice sharing',()=>{
   });
   it('retains the exact token and request when creation outcome is uncertain',async()=>{
     mocks.create.mockRejectedValueOnce(new Error('transport lost')).mockResolvedValueOnce({ok:true,data:first});
-    open();create();await screen.findByRole('alert');create();
+    open();await create();await screen.findByRole('alert');await create();
     await screen.findByLabelText('New public link');expect(mocks.create).toHaveBeenCalledTimes(2);
     expect(mocks.create.mock.calls[1]).toEqual(mocks.create.mock.calls[0]);
     const token=mocks.create.mock.calls[0]![2];expect(token).toMatch(/^[a-f0-9]{64}$/);
@@ -41,20 +45,20 @@ describe('explicit invoice sharing',()=>{
   });
   it('creates a new token/request after deliberately revoking the new capability',async()=>{
     mocks.create.mockResolvedValueOnce({ok:true,data:first}).mockResolvedValueOnce({ok:true,data:second});
-    open();create();await screen.findByLabelText('New public link');
-    fireEvent.click(screen.getByRole('button',{name:'Revoke'}));await waitFor(()=>expect(screen.queryByLabelText('New public link')).toBeNull());
-    create();await waitFor(()=>expect(mocks.create).toHaveBeenCalledTimes(2));
+    open();await create();await screen.findByLabelText('New public link');
+    await clickWhenReady(screen.getByRole('button',{name:'Revoke'}));await waitFor(()=>expect(screen.queryByLabelText('New public link')).toBeNull());
+    await create();await waitFor(()=>expect(mocks.create).toHaveBeenCalledTimes(2));
     expect(mocks.create.mock.calls[1]![1]).not.toBe(mocks.create.mock.calls[0]![1]);
     expect(mocks.create.mock.calls[1]![2]).not.toBe(mocks.create.mock.calls[0]![2]);
   });
   it('does not lose the freshly copied link when revoking a different existing link',async()=>{
     mocks.list.mockResolvedValue({ok:true,data:[first,second]});
-    open();create();await screen.findByLabelText('New public link');
+    open();await create();await screen.findByLabelText('New public link');
     const original=(screen.getByLabelText('New public link') as HTMLInputElement).value;
-    fireEvent.click(screen.getByRole('button',{name:'Manage existing links'}));
+    await clickWhenReady(screen.getByRole('button',{name:'Manage existing links'}));
     await waitFor(()=>expect(screen.getAllByRole('button',{name:'Revoke'})).toHaveLength(2));
     const rows=within(screen.getByRole('list',{name:'Public invoice links'})).getAllByRole('listitem');
-    fireEvent.click(within(rows[1]!).getByRole('button',{name:'Revoke'}));
+    await clickWhenReady(within(rows[1]!).getByRole('button',{name:'Revoke'}));
     await waitFor(()=>expect(mocks.revoke).toHaveBeenCalledWith(second.id));
     await waitFor(()=>expect(screen.getByLabelText('New public link')).toBeTruthy());
     expect((screen.getByLabelText('New public link') as HTMLInputElement).value).toBe(original);
