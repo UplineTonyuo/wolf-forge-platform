@@ -118,6 +118,9 @@ select is((select count(*) from public.app_list_order_response_states(array['d30
 reset role;
 select pg_temp.act(1);
 select private.grant_platform_admin('20000000-0000-4000-8000-000000001811','Isolated Unanswered module checks');
+-- Module disablement requires the isolated workspace's open work to be retired.
+update public.tickets set archived_at=now() where id='d4000000-0000-4000-8000-000000001811';
+update public.orders set archived_at=now() where tenant_id='f0f0f0f0-0000-4000-8000-000000001811';
 select private.publish_tenant_modules('f0f0f0f0-0000-4000-8000-000000001811',0,(select array_agg(module_key order by module_key) from private.white_label_modules where module_key not in ('projects','tickets')),'Disable isolated conversation modules');
 select pg_temp.act(2);
 set local role authenticated;
