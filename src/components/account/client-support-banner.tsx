@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { endClientSupportAction } from "../../app/actions/client-support";
 import type { ClientSupportProof } from "../../domain/auth/client-support";
 import styles from "./client-support-banner.module.css";
@@ -12,8 +13,15 @@ export function ClientSupportBanner({ support }: { support: ClientSupportProof }
     const timer = setTimeout(() => router.replace("/client-support/exit"), Math.max(0, Date.parse(support.expiresAt) - Date.now()));
     return () => clearTimeout(timer);
   }, [support.expiresAt, router]);
-  return <aside className={styles.banner} aria-label="Client support session">
-    <div><strong>Acting as {support.displayName ?? "client"}</strong><p>Actions are recorded under your administrator account. Ends at <time dateTime={support.expiresAt}>{new Date(support.expiresAt).toISOString().slice(11, 16)} UTC</time>.</p></div>
-    <form action={endClientSupportAction}><button type="submit" className="button-secondary">Exit client view</button></form>
-  </aside>;
+  return (
+    <aside className={styles.toolbar} aria-label="Client support session">
+      <span className={styles.identity}>Client view · <strong>{support.displayName ?? "client"}</strong></span>
+      <form action={endClientSupportAction}>
+        <button type="submit" className={`button-secondary ${styles.backButton}`}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          Back to admin account
+        </button>
+      </form>
+    </aside>
+  );
 }

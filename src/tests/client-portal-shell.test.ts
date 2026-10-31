@@ -36,8 +36,7 @@ describe("client portal navigation registry", () => {
       portalNavigationCategories.flatMap((category) => category.items.map((item) => item.label)),
     ).toEqual([
       "Dashboard",
-      "Projects",
-      "Onboarding",
+      "Orders",
       "Inbox",
       "Reporting",
       "Investments",
@@ -56,7 +55,6 @@ describe("client portal navigation registry", () => {
     expect(routes).toEqual([
       "/account",
       "/account/projects",
-      "/account/onboarding",
       "/account/messages",
       "/account/reporting",
       "/account/store",
@@ -130,7 +128,7 @@ describe("client portal navigation registry", () => {
     ]);
     expect(visible.flatMap((category) => category.items.map((item) => item.label))).toEqual([
       "Dashboard",
-      "Projects",
+      "Orders",
       "Inbox",
       "Invoices",
       "Subscriptions",
@@ -158,8 +156,7 @@ describe("rail counts", () => {
     const counted = items.filter((item) => item.count !== undefined);
 
     expect(counted.map((item) => [item.label, item.count])).toEqual([
-      ["Projects", 3],
-      ["Onboarding", 2],
+      ["Orders", 3],
     ]);
 
     // Zero is not a badge; it is the absence of one.
@@ -180,8 +177,7 @@ describe("rail counts", () => {
     );
 
     expect(actionable).toEqual({
-      Projects: false,
-      Onboarding: true,
+      Orders: false,
       Inbox: true,
     });
   });
@@ -245,9 +241,9 @@ describe("portal active-route resolution", () => {
 
   it("titles portal paths for the mobile top bar", () => {
     expect(portalTitleForPath("/account")).toBe("Dashboard");
-    expect(portalTitleForPath("/account/projects")).toBe("Projects");
-    expect(portalTitleForPath("/account/projects/abc")).toBe("Projects");
-    expect(portalTitleForPath("/account/onboarding")).toBe("Onboarding");
+    expect(portalTitleForPath("/account/projects")).toBe("Orders");
+    expect(portalTitleForPath("/account/projects/abc")).toBe("Orders");
+    expect(portalTitleForPath("/account/onboarding")).toBe("Orders");
     expect(portalTitleForPath("/account/messages/abc")).toBe("Inbox");
     expect(portalTitleForPath("/account/payment-method")).toBe("Payment method");
     expect(portalTitleForPath("/account/store/abc")).toBe("Investments");

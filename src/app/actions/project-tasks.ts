@@ -32,6 +32,9 @@ export async function manageProjectTaskAction(orderId: string, input: ProjectTas
     }
     revalidatePath(`/orders/${id}`);
     revalidatePath("/orders");
+    revalidatePath(`/account/projects/${id}`);
+    revalidatePath("/account/projects");
+    revalidatePath("/account");
     return { ok: true };
   } catch (error) { return { ok: false, error: toClientSafeError(error).message }; }
 }

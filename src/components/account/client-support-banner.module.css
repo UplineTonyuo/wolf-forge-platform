@@ -1,4 +1,46 @@
-.banner{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.875rem 1rem;border:1px solid #d4ad4e;border-radius:12px;background:#fff8e5;color:#07154c;margin:0 0 1rem;min-width:0}
-.banner p{margin:.25rem 0 0;font-size:.875rem;line-height:1.5}
-.banner form{flex-shrink:0}.banner button{min-height:44px;white-space:nowrap}
-@media(max-width:600px){.banner{align-items:stretch;flex-direction:column;gap:.75rem}.banner button{width:100%}}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  min-width: 0;
+  margin-bottom: .75rem;
+}
+
+.identity {
+  min-width: 0;
+  color: var(--wf-text-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.identity strong {
+  color: var(--wf-navy);
+  font-weight: 600;
+}
+
+.toolbar form {
+  max-width: 100%;
+}
+
+.toolbar .backButton {
+  min-height: 44px;
+  max-width: 100%;
+  padding: .5rem .75rem;
+  font-size: .8125rem;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.backButton svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

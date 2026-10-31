@@ -1,8 +1,9 @@
 ﻿import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import type { ClientProjectSourceRow } from "../domain/orders/client-projections";
 import { clientOrderStartSchema } from "../domain/orders/client-start";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
-import type { ProjectRelationRow, ProjectTaskFact } from "../domain/orders/projections";
+import type { OrderResponseState, ProjectRelationRow, ProjectTaskFact } from "../domain/orders/projections";
 import type { CreateOrderInput, UpdateOrderInput } from "../domain/orders/schema";
 import type { OrderRow } from "../lib/supabase/database-rows";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
@@ -25,8 +26,21 @@ export type ProjectRelationPage = {
 /** Guard against an unbounded scan; the caller reports truncation honestly. */
 export const projectListRowLimit = 2000;
 
+const orderResponseStatesSchema = z.array(z.object({
+  order_id: z.uuid(),
+  unanswered: z.boolean().nullable(),
+}));
+
 export class OrderRepository {
   constructor(private readonly client: UserMutationClient) {}
+
+  async listResponseStates(orderIds: string[]): Promise<OrderResponseState[]> {
+    if (orderIds.length === 0) return [];
+    const ids = z.array(z.uuid()).max(projectListRowLimit).parse([...new Set(orderIds)]);
+    const result = await this.client.rpc("app_list_order_response_states", { p_order_ids: ids });
+    if (result.error) throw mapDatabaseError(result.error, "Order response status");
+    return orderResponseStatesSchema.parse(result.data);
+  }
 
   async getClientStartState(id: string) {
     const result = await this.client.rpc("app_get_my_order_start", { p_order_id: id });

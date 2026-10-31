@@ -53,8 +53,9 @@ export function ProjectsFilterSheet({
   onServiceFilterChange,
   statusFilter,
   onStatusFilterChange,
-  attentionOnly,
-  onAttentionOnlyChange,
+  unansweredOnly,
+  responseStatesAvailable,
+  onUnansweredOnlyChange,
   onClear,
   activeFilterCount,
 }: {
@@ -72,8 +73,9 @@ export function ProjectsFilterSheet({
   onServiceFilterChange: (value: string) => void;
   statusFilter: ProjectTab;
   onStatusFilterChange: (value: ProjectTab) => void;
-  attentionOnly: boolean;
-  onAttentionOnlyChange: (value: boolean) => void;
+  unansweredOnly: boolean;
+  responseStatesAvailable: boolean;
+  onUnansweredOnlyChange: (value: boolean) => void;
   onClear: () => void;
   activeFilterCount: number;
 }) {
@@ -252,17 +254,18 @@ export function ProjectsFilterSheet({
               <button
                 type="button"
                 className={sheetStyles.menuRow}
-                aria-pressed={attentionOnly}
-                onClick={() => onAttentionOnlyChange(!attentionOnly)}
+                aria-pressed={unansweredOnly}
+                disabled={!responseStatesAvailable}
+                onClick={() => onUnansweredOnlyChange(!unansweredOnly)}
               >
                 <span className={sheetStyles.menuIcon}>
                   <BellRing size={18} aria-hidden="true" />
                 </span>
                 <span className={sheetStyles.menuCopy}>
-                  <strong>Needs attention</strong>
-                  <small>{attentionOnly ? "On" : "Off"}</small>
+                  <strong>Unanswered</strong>
+                  <small>{unansweredOnly ? "On" : "Off"}</small>
                 </span>
-                {attentionOnly ? <Check size={16} aria-hidden="true" /> : null}
+                {unansweredOnly ? <Check size={16} aria-hidden="true" /> : null}
               </button>
             </div>
           ) : null}

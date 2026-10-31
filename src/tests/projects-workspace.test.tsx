@@ -81,6 +81,11 @@ const rows = composeProjectRows(
   ],
   [{ order_id: "10000000-0000-4000-8000-000000000003", status: "todo", due_at: "2026-08-01T09:00:00.000Z" }],
   now,
+  [
+    { order_id: "10000000-0000-4000-8000-000000000001", unanswered: true },
+    { order_id: "10000000-0000-4000-8000-000000000002", unanswered: false },
+    { order_id: "10000000-0000-4000-8000-000000000003", unanswered: true },
+  ],
 );
 
 const capabilities = { create: true, edit: true, assign: true, archive: true };
@@ -120,7 +125,7 @@ function tab(label: string) {
 }
 
 function rowCount() {
-  return screen.getAllByRole("button", { name: /^Select .* project /u }).length;
+  return screen.getAllByRole("button", { name: /^Select .* order /u }).length;
 }
 
 function requestBulkAction(kind: ProjectBulkActionKind) {
@@ -180,15 +185,15 @@ describe("Projects status tabs and counts", () => {
     expect(screen.getByText("Foundation Build")).toBeTruthy();
 
     fireEvent.click(tab("Pending Update"));
-    expect(screen.queryAllByRole("button", { name: /^Select .* project /u })).toHaveLength(0);
-    expect(screen.getByText("No projects match this view")).toBeTruthy();
+    expect(screen.queryAllByRole("button", { name: /^Select .* order /u })).toHaveLength(0);
+    expect(screen.getByText("No orders match this view")).toBeTruthy();
   });
 });
 
-describe("Projects attention system", () => {
-  it("counts waiting_reply and overdue-task projects with one predicate", () => {
+describe("Orders unanswered system", () => {
+  it("counts public client messages independently of waiting-on-client and tasks", () => {
     renderWorkspace();
-    expect(screen.getByText("projects need attention.")).toBeTruthy();
+    expect(screen.getByText("unanswered orders.")).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
   });
 
@@ -197,9 +202,22 @@ describe("Projects attention system", () => {
     fireEvent.click(screen.getByRole("button", { name: "View" }));
 
     expect(rowCount()).toBe(2);
-    expect(screen.getByText("Foundation Build")).toBeTruthy();
+    expect(screen.queryByText("Foundation Build")).toBeNull();
     expect(screen.getByText("Maps Ranking Campaign")).toBeTruthy();
-    expect(screen.queryByText("Local SEO Growth Campaign")).toBeNull();
+    expect(screen.getByText("Local SEO Growth Campaign")).toBeTruthy();
+  });
+  it("places an Unanswered badge beside each eligible client name", () => {
+    renderWorkspace();
+    const link = screen.getByRole("link", { name: /Local SEO Growth Campaign/u });
+    expect(within(link).getByText("Unanswered")).toBeTruthy();
+    expect(within(screen.getByRole("link", { name: /Foundation Build/u })).queryByText("Unanswered")).toBeNull();
+  });
+  it("shows missing metadata honestly without hiding authorized order rows", () => {
+    renderWorkspace({ rows: rows.map((row) => ({ ...row, unanswered: null })) });
+    expect(screen.getByRole("status").textContent).toMatch(/Unanswered status is unavailable/u);
+    expect(rowCount()).toBe(3);
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+    expect(screen.getByRole("button", { name: "Unanswered" }).hasAttribute("disabled")).toBe(true);
   });
 });
 
@@ -294,14 +312,14 @@ describe("Projects filters and search", () => {
 describe("Projects selection", () => {
   it("selects a single row and reports it in the footer", () => {
     renderWorkspace();
-    fireEvent.click(screen.getByRole("button", { name: /^Select Junk Buddies project/u }));
+    fireEvent.click(screen.getByRole("button", { name: /^Select Junk Buddies order/u }));
 
     expect(screen.getByText("1 selected")).toBeTruthy();
   });
 
   it("selects and clears every visible row", () => {
     renderWorkspace();
-    const selectAll = screen.getByRole("button", { name: "Select all visible projects" });
+    const selectAll = screen.getByRole("button", { name: "Select all visible orders" });
 
     fireEvent.click(selectAll);
     expect(screen.getByText("3 selected")).toBeTruthy();
@@ -314,7 +332,7 @@ describe("Projects selection", () => {
   it("only selects rows in the current view", () => {
     renderWorkspace();
     fireEvent.click(tab("Waiting Reply"));
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
 
     expect(screen.getByText("1 selected")).toBeTruthy();
   });
@@ -329,12 +347,12 @@ describe("Projects action controls", () => {
 
   it("links accounts with create capability to the new-project flow", () => {
     renderWorkspace();
-    expect(screen.getByRole("link", { name: "New Project" }).getAttribute("href")).toBe("/orders/new");
+    expect(screen.getByRole("link", { name: "New Order" }).getAttribute("href")).toBe("/orders/new");
   });
 
   it("hides the new-project action without create capability", () => {
     renderWorkspace({ capabilities: { create: false, edit: false, assign: false, archive: false } });
-    expect(screen.queryByRole("link", { name: "New Project" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "New Order" })).toBeNull();
   });
 
   it("sends selected project ids to the bulk status action and refreshes on success", async () => {
@@ -345,7 +363,7 @@ describe("Projects action controls", () => {
     });
 
     renderWorkspace();
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
     requestBulkAction("status");
 
     fireEvent.change(screen.getByLabelText(/New status/u), { target: { value: "complete" } });
@@ -377,7 +395,7 @@ describe("Projects action controls", () => {
     });
 
     renderWorkspace();
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
     requestBulkAction("archive");
     fireEvent.click(screen.getByRole("button", { name: "Archive" }));
 
@@ -398,7 +416,7 @@ describe("Projects action controls", () => {
 
     renderWorkspace();
     fireEvent.click(
-      screen.getByRole("button", { name: "Select Kraken Junk Removal project Local SEO Growth Campaign" }),
+      screen.getByRole("button", { name: "Select Kraken Junk Removal order Local SEO Growth Campaign" }),
     );
     requestBulkAction("assign");
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
@@ -410,7 +428,7 @@ describe("Projects action controls", () => {
 
   it("closes the confirmation dialog with the keyboard", () => {
     renderWorkspace();
-    fireEvent.click(screen.getByRole("button", { name: "Select all visible projects" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
     requestBulkAction("archive");
 
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -422,8 +440,8 @@ describe("Projects action controls", () => {
 describe("Projects empty and incomplete states", () => {
   it("shows an honest empty state when there are no projects at all", () => {
     renderWorkspace({ rows: [] });
-    expect(screen.getByText("No projects yet")).toBeTruthy();
-    expect(screen.getByText("0 projects")).toBeTruthy();
+    expect(screen.getByText("No orders yet")).toBeTruthy();
+    expect(screen.getByText("0 orders")).toBeTruthy();
   });
 
   it("warns that counts are incomplete rather than presenting partial totals", () => {

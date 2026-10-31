@@ -71,7 +71,7 @@ function toItem(assignment: FormAssignmentSummary): OnboardingItem {
     ? assignment.order_title
     : assignment.form_type === "onboarding"
       ? "Account setup"
-      : "Project intake";
+      : "Order intake";
 
   return {
     assignmentId: assignment.assignment_id,
@@ -109,7 +109,7 @@ export function composeClientOnboarding(
   if (project.length > 0) {
     groups.push({
       id: "project",
-      label: "Project information",
+      label: "Order information",
       description: "Details tied to specific work already underway.",
       items: project,
     });

@@ -124,6 +124,7 @@ export type ClientAdministrationCapabilities = {
   edit: boolean;
   archive: boolean;
   privateManage: boolean;
+  contactRead: boolean;
 };
 
 export type ServiceAdministrationCapabilities = {
@@ -368,6 +369,7 @@ export async function resolveInternalUser(
       edit: granted.has("clients.edit"),
       archive: granted.has("clients.archive"),
       privateManage: granted.has("client_private.manage"),
+      contactRead: granted.has("clients.contact_read"),
     },
     services: {
       view: granted.has("services.view"),

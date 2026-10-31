@@ -961,7 +961,7 @@ export function WorkspaceCommandBar({
           while Calendar / Team Messages / Quick Action keep hover/focus reveal.
           Order when expanded stays Calendar → Team → Bell → Quick Action.
         */}
-        <div className="workspace-command-shortcuts">
+        <div className="workspace-command-shortcuts workspace-command-secondary">
           <DashboardDateTrigger />
           {/*
             Team Messages. This slot held a dead "Gallery" placeholder that
@@ -1015,11 +1015,11 @@ export function WorkspaceCommandBar({
           ) : null}
         </button>
 
-        <div className="workspace-command-shortcuts">
+        {user.role === "owner" || user.role === "admin" ? <div className="workspace-command-shortcuts workspace-command-create">
           <WorkspaceQuickAction
             user={user}
           />
-        </div>
+        </div> : null}
 
         <div className="workspace-command-profile">
           <AccountMenu

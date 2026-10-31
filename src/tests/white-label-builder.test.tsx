@@ -221,7 +221,7 @@ describe("White Label builder", () => {
     expect(moduleSwitch("Services")).toHaveAttribute("aria-checked", "true");
     expect(shown("projects")).toBe(true);
     expect(live().getByRole("status")).toHaveTextContent("Projects needs Services. Remove it first.");
-    fireEvent.click(moduleSwitch("Projects"));
+    fireEvent.click(moduleSwitch("Orders"));
     fireEvent.click(moduleSwitch("Services"));
     expect(moduleSwitch("Services")).toHaveAttribute("aria-checked", "false");
     for (const id of ["services", "projects"]) expect(shown(id)).toBe(false);
