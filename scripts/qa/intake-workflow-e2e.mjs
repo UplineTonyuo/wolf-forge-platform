@@ -642,7 +642,8 @@ async function main() {
       need(!state.requested && !state.started && state.status === "pending", "Form submission started an order without explicit intent");
       await page.goto(`${origin}/account/projects/${sale.id}`, { waitUntil: "networkidle" });
       await page.getByRole("button", { name: "Start order", exact: true }).click();
-      await page.getByRole("button", { name: "Start order", exact: true }).waitFor({ state: "detached" });
+      // The button changes to Checking before the action commits; the card leaves only after confirmed start.
+      await page.locator("#start-order").waitFor({ state: "hidden" });
     }
     state = await rpc(buyer.client, "app_get_my_order_start", { p_order_id: sale.id });
     need(state.started && state.requested && state.status === "working", "Required completion and explicit intent did not start the order");
