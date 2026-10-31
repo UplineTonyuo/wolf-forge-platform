@@ -94,15 +94,21 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - name: start isolated local Supabase database
+        id: supabase
         run: npx supabase start --yes
       # `test:db` is pinned to `supabase test db --local`; no linked project or
       # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite
         run: npm run test:db
       - name: real PostgREST client support isolation and missing-hook checks
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node scripts/qa/check-client-support-rest.mjs
       - name: real Storage Team voice upload and media inspection
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts --reporter=verbose
+      - name: real manual invoice receipts, public links and concurrent settlement
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
+        run: node scripts/qa/check-invoice-manual-payments-rest.mjs
 
   dependencies:
     name: production dependency vulnerabilities

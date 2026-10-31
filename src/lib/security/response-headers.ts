@@ -157,5 +157,15 @@ export function readSecurityHeaderEnvironment(
 
 /** The `headers()` entry applied to every path. */
 export function securityHeaderRules(environment: SecurityHeaderEnvironment) {
-  return [{ source: "/:path*", headers: buildSecurityHeaders(environment) }];
+  return [
+    { source: "/:path*", headers: buildSecurityHeaders(environment) },
+    // All route headers stay in this authority; the last matching header wins.
+    { source: "/share/invoices/:path*", headers: [
+      { key: "Referrer-Policy", value: "no-referrer" },
+      { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
+      { key: "CDN-Cache-Control", value: "no-store" },
+      { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, nosnippet" },
+    ] },
+  ];
 }

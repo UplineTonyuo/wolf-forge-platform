@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { initBotId } from "botid/client/core";
+import { sanitizeInvoiceShareTelemetry } from "./domain/observability/invoice-share-privacy";
 
 const environment =
   process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? "development";
@@ -10,8 +11,13 @@ Sentry.init({
   // in the URL fragment, and Sentry sends the full URL, fragment included.
   enabled:
     process.env.NEXT_PUBLIC_SENTRY_ENABLED === "1" &&
-    window.location.pathname !== "/activate",
+    window.location.pathname !== "/activate" &&
+    !window.location.pathname.startsWith("/share/invoices/"),
   environment,
+  // Also protects client navigation from a page where the SDK already started.
+  beforeSend: (event) => sanitizeInvoiceShareTelemetry(event),
+  beforeSendSpan: (span) => sanitizeInvoiceShareTelemetry(span),
+  beforeBreadcrumb: (breadcrumb) => sanitizeInvoiceShareTelemetry(breadcrumb),
   tracesSampleRate: environment === "production" ? 0.05 : 0,
   dataCollection: {
     userInfo: false,

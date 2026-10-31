@@ -4267,6 +4267,18 @@ export type Database = {
       }
     }
     Functions: {
+      app_get_invoice_manual_payment_settings: { Args: Record<PropertyKey, never>; Returns: Json }
+      app_save_invoice_manual_payment_settings: { Args: {p_enabled:boolean;p_paypal_url:string|null;p_instructions:string};Returns:Json }
+      app_get_invoice_manual_payment: { Args: {p_invoice_id:string};Returns:Json }
+      app_prepare_invoice_payment_receipt: { Args: {p_invoice_id:string;p_request_id:string;p_filename:string;p_mime_type:string;p_size_bytes:number;p_checksum_sha256:string};Returns:Json }
+      app_verify_invoice_payment_receipt: { Args: {p_receipt_id:string;p_uploader_profile_id:string;p_checksum_sha256:string};Returns:Json }
+      app_get_invoice_payment_receipt: { Args: {p_receipt_id:string};Returns:Json }
+      app_submit_invoice_manual_payment_claim: { Args: {p_request_id:string;p_invoice_id:string;p_receipt_id:string;p_method:string;p_reference:string|null;p_expected_balance_cents:number};Returns:Json }
+      app_review_invoice_manual_payment_claim: { Args: {p_request_id:string;p_claim_id:string;p_decision:string;p_paid_at:string|null;p_reference:string|null;p_reason:string|null};Returns:Json }
+      app_list_invoice_share_links: { Args: {p_invoice_id:string};Returns:Json }
+      app_create_invoice_share_link: { Args: {p_request_id:string;p_invoice_id:string;p_token_sha256:string};Returns:Json }
+      app_revoke_invoice_share_link: { Args: {p_link_id:string};Returns:Json }
+      app_get_public_invoice_share: { Args: {p_token:string};Returns:Json }
       app_get_runtime_white_label_configuration: {
         Args: never
         Returns: Json

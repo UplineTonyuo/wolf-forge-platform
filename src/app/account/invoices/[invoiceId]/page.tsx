@@ -8,6 +8,7 @@ import { InvoiceItemScope } from "../../../../components/account/billing/invoice
 import { PrintInvoiceButton } from "../../../../components/account/billing/print-invoice-button";
 import { AttentionPill } from "../../../../components/account/ui/attention-pill";
 import { InvoicePaymentSelector } from "../../../../components/invoices/invoice-payment-selector";
+import { InvoiceManualPaymentPanel } from "../../../../components/invoices/invoice-manual-payment";
 import { invoiceAttention } from "../../../../domain/client-portal/attention";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { composeClientPaymentRails } from "../../../../domain/payments/payment-rails";
@@ -31,13 +32,14 @@ export default async function ClientInvoiceDetailPage({
   const [{ invoiceId }, context] = await Promise.all([params, getClientContext()]);
 
   try {
-    const [detail, wallet, membership, offer, rows, workEnabled] = await Promise.all([
+    const [detail, wallet, membership, offer, rows, workEnabled, manual] = await Promise.all([
       context.services.invoices.getForClient(invoiceId),
       context.services.wallets.getForCompany(context.user.companyId),
       context.services.wfCard.getMembership(context.user.companyId),
       context.services.wfCard.getOffer(),
       context.services.invoices.listForClient(),
       context.services.invoices.workEnabled(),
+      context.services.invoices.getManualPayment(invoiceId).catch(() => null),
     ]);
 
     const signature = invoiceFundingVisibility(rows, workEnabled, wallet, membership?.status ?? null, financialIdentity(context.user));
@@ -209,6 +211,7 @@ export default async function ClientInvoiceDetailPage({
          * configuration through a `server-only` module, exactly as
          * /account/payment-method does it.
          */}
+        <div id="invoice-payment-options" />
         {workEnabled ? <InvoicePaymentSelector
           invoiceId={invoice.id}
           holderName={context.user.displayName ?? detail.clientName}
@@ -220,6 +223,8 @@ export default async function ClientInvoiceDetailPage({
           membershipPriceCents={offer.membershipPriceCents}
           membershipCurrency={offer.membershipCurrency}
           collectible={collectible}
+          manualAvailable={manual?.settings.enabled ?? false}
+          manualPending={manual?.claims.some((claim) => claim.status === "pending") ?? false}
           paymentRails={composeClientPaymentRails({
             wallet: resolveWalletFunding({
               membershipStatus,
@@ -229,6 +234,7 @@ export default async function ClientInvoiceDetailPage({
             availability: readExternalPaymentRailAvailability(),
           })}
         /> : null}
+        {manual ? <InvoiceManualPaymentPanel invoiceId={invoice.id} balanceCents={financials.balance_due_cents} currency={invoice.currency} context={manual} /> : workEnabled ? <p role="status" className="portal-note">Manual payment options could not be loaded. Reload this invoice to try again.</p> : null}
       </article></FinancialVisibilityBoundary>
     );
   } catch (error) {

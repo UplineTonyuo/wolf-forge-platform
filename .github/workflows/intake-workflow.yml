@@ -24,9 +24,11 @@ jobs:
     if: >-
       github.head_ref == 'codex/intake-publication-20261028' ||
       github.head_ref == 'codex/woad-qa-followups-20261030' ||
+      github.head_ref == 'codex/woad-invoice-manual-payments-20261031' ||
       (github.event_name == 'workflow_dispatch' &&
         (github.ref_name == 'codex/intake-publication-20261028' ||
-          github.ref_name == 'codex/woad-qa-followups-20261030'))
+          github.ref_name == 'codex/woad-qa-followups-20261030' ||
+          github.ref_name == 'codex/woad-invoice-manual-payments-20261031'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

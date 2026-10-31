@@ -187,9 +187,10 @@ export function PortalDialog({
       }
     }
 
-    document.addEventListener("keydown", onKeyDown, true);
+    // Child menus consume Escape before it dismisses their parent dialog.
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keydown", onKeyDown);
     };
   }, [render, focusables, onClose]);
 

@@ -13,6 +13,8 @@ export type ServerCostAction =
   | "billing.stripe_customer"
   | "intake.file_upload"
   | "intake.file_download"
+  | "invoice.receipt_upload"
+  | "invoice.receipt_download"
   | "ticket.file_download"
   | "team.voice.finalize";
 
