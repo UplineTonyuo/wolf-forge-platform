@@ -8936,8 +8936,8 @@ td {
  * collapsed at rest and revealed when the command bar is hovered, focused, or
  * holding an open notification panel. The notification bell lives outside
  * these rails so the unread badge stays visible without hover/focus (KI-059).
- * Reserve the rails' width so hover, focus and opening Inbox cannot move
- * Search, Notifications or Profile. Only the controls fade into their slots.
+ * Let Search give space to the rails as they reveal. Keep that space while
+ * a utility panel is open so its trigger cannot move beneath the pointer.
  *
  * This block is the single source of truth for the reveal. It replaces an
  * earlier version that also toggled `width: 0 -> auto` (not interpolable, so
@@ -8954,15 +8954,16 @@ td {
   gap: 8px;
 
   min-width: 0;
-  max-width: 200px;
+  max-width: 0;
 
   opacity: 0;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: none;
 
   transform: translateX(6px);
 
   transition:
+    max-width 220ms cubic-bezier(.2, .8, .2, 1),
     transform 220ms cubic-bezier(.2, .8, .2, 1),
     opacity 150ms ease;
 }
@@ -8998,6 +8999,7 @@ td {
  * longer a descendant of `.workspace-command-shortcuts`.
  */
 .workspace-command-bar:focus-within .workspace-command-shortcuts,
+.workspace-command-bar:has([aria-expanded="true"]) .workspace-command-shortcuts,
 .workspace-command-bar:has(.workspace-notification-trigger.is-open) .workspace-command-shortcuts {
   max-width: 200px;
 
