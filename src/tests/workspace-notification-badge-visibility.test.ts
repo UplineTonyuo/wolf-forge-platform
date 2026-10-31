@@ -55,7 +55,7 @@ describe("workspace notification badge visibility (KI-059)", () => {
     expect(stability).toMatch(
       /\.workspace-command-shortcuts\s*\{[\s\S]*?max-width:\s*200px;/,
     );
-    expect(stability).not.toMatch(/max-width:\s*0;/);
-    expect(stability).not.toMatch(/max-width\s+\d+ms/);
+    expect(stability).toMatch(/max-width:\s*0;/);
+    expect(stability).toMatch(/max-width\s+220ms/);
   });
 });
