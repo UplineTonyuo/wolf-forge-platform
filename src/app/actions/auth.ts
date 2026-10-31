@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { clientSupportExitPending, clientSupportRequested } from "../../lib/supabase/client-support";
+import { clearSignedOutClientSupport } from "../../lib/supabase/client-support-recovery";
 import { endClientSupportAction } from "./client-support";
 import {
   isCredentialStageFailure,
@@ -49,7 +50,7 @@ const SIGN_IN_FAILURE_EVENTS: Record<
 };
 
 export async function signInAction(_state: LoginState, formData: FormData): Promise<LoginState> {
-  if (await clientSupportRequested() || await clientSupportExitPending()) {
+  if ((await clientSupportRequested() || await clientSupportExitPending()) && !await clearSignedOutClientSupport()) {
     return { error: "Exit client support before signing into another account." };
   }
   // The host's Tenant (WL-2.22b), read before any Auth work so a request

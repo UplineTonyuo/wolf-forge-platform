@@ -7,6 +7,7 @@ import { z } from "zod";
 import { CLIENT_SUPPORT_COOKIE, CLIENT_SUPPORT_EXIT_COOKIE, CLIENT_SUPPORT_SECONDS, clientSupportStateSchema, clientSupportTokenSchema } from "../../domain/auth/client-support";
 import { hardenAuthCookieOptions } from "../../lib/supabase/auth-cookie-options";
 import { clientSupportExitPending, clientSupportRequested } from "../../lib/supabase/client-support";
+import { clearSignedOutClientSupport } from "../../lib/supabase/client-support-recovery";
 import { createNextServerSupabaseClient, getInternalContext } from "../../lib/supabase/next-server";
 
 export async function beginClientSupportAction(_previous: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
@@ -31,6 +32,7 @@ export async function beginClientSupportAction(_previous: { error: string | null
 }
 
 export async function endClientSupportAction(): Promise<never> {
+  if (await clearSignedOutClientSupport()) redirect("/login");
   const cookieStore = await cookies();
   const all = cookieStore.getAll();
   const token = all.find((cookie) => cookie.name === CLIENT_SUPPORT_COOKIE)?.value;
