@@ -1,0 +1,13 @@
+.shell { min-height: 100dvh; padding: 32px 16px; background: var(--wf-surface, #f7f8fb); }
+.page { width: min(100%, 1040px); margin: 0 auto; padding: clamp(20px, 4vw, 48px); border: 1px solid var(--wf-border, #e2e5ed); border-radius: 14px; background: #fff; overflow-wrap: anywhere; }
+.status { align-self: flex-end; border: 1px solid var(--wf-border, #e2e5ed); border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+.description { margin: 0; color: var(--wf-text-muted, #687087); font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+.payment { display: grid; gap: 12px; padding-top: 24px; border-top: 1px solid var(--wf-border, #e2e5ed); }
+.payment h2, .payment p { margin: 0; }
+.payment h2 { color: var(--wf-navy, #000d51); font-size: 18px; }
+.payment p { font-size: 13px; line-height: 1.6; }
+.instructions { white-space: pre-wrap; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.note { color: var(--wf-text-muted, #687087); }
+@media (max-width: 480px) { .shell { padding: 12px 8px; } .page { border-radius: 8px; padding: 20px 14px; } .actions > a { width: 100%; justify-content: center; } }
+@media print { .shell { padding: 0; background: #fff; } .page { width: 100%; padding: 0; border: 0; border-radius: 0; } .payment { display: none; } }

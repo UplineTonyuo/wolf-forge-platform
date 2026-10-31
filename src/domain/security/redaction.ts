@@ -29,6 +29,8 @@
  * Where a value must be dropped, it is dropped.
  */
 
+import { redactInvoiceSharePath } from "../observability/invoice-share-privacy";
+
 export const REDACTED = "[redacted]";
 export const REDACTED_EMAIL = "[email]";
 export const REDACTED_DIGITS = "[digits]";
@@ -153,7 +155,7 @@ export function isSensitiveKey(key: string): boolean {
 
 /** Scrubs secret- and PII-shaped substrings, then caps the length. */
 export function redactString(value: string): string {
-  let scrubbed = value;
+  let scrubbed = redactInvoiceSharePath(value);
   for (const [pattern, replacement] of SECRET_VALUE_PATTERNS) {
     scrubbed = scrubbed.replace(new RegExp(pattern, "g"), replacement);
   }

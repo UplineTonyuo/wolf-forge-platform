@@ -103,6 +103,8 @@ jobs:
         run: node scripts/qa/check-client-support-rest.mjs
       - name: real Storage Team voice upload and media inspection
         run: node node_modules/vitest/vitest.mjs run --config scripts/qa/team-voice-vitest.config.ts --reporter=verbose
+      - name: real manual invoice receipts, public links and concurrent settlement
+        run: node scripts/qa/check-invoice-manual-payments-rest.mjs
 
   dependencies:
     name: production dependency vulnerabilities

@@ -2,8 +2,8 @@ export type BoundedTextResult =
   | { ok: true; value: string }
   | { ok: false; status: 400 | 413 };
 
-/** Retains the signed text while refusing bytes beyond the route's limit. */
-export async function readBoundedText(request: Request, maxBytes: number, maxReadMs = 5_000): Promise<BoundedTextResult> {
+/** The shared stream limit applies before decoding text or accepting binary uploads. */
+export async function readBoundedBytes(request: Request, maxBytes: number, maxReadMs = 5_000): Promise<{ok:true;value:Uint8Array}|{ok:false;status:400|413}> {
   const rawLength = request.headers.get("content-length");
   const length = rawLength === null ? null : Number(rawLength);
   if (rawLength !== null && (!/^\d+$/.test(rawLength) || !Number.isSafeInteger(length))) {
@@ -42,7 +42,7 @@ export async function readBoundedText(request: Request, maxBytes: number, maxRea
       bytes.set(chunk, offset);
       offset += chunk.byteLength;
     }
-    return { ok: true, value: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
+    return { ok: true, value: bytes };
   } catch {
     return { ok: false, status: 400 };
   } finally {
@@ -50,4 +50,12 @@ export async function readBoundedText(request: Request, maxBytes: number, maxRea
     request.signal.removeEventListener("abort", interrupt);
     reader.releaseLock();
   }
+}
+
+/** Retains exact signed text; malformed UTF-8 is still refused. */
+export async function readBoundedText(request:Request,maxBytes:number,maxReadMs=5_000):Promise<BoundedTextResult> {
+  const result=await readBoundedBytes(request,maxBytes,maxReadMs);
+  if(!result.ok)return result;
+  try {return {ok:true,value:new TextDecoder("utf-8",{fatal:true}).decode(result.value)};}
+  catch {return {ok:false,status:400};}
 }
