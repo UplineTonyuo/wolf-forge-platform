@@ -1,4 +1,6 @@
 # gitleaks allowlist (D-101).
+# Human-approved 2026-10-31: fixed synthetic invoice-link privacy-test value, not a credential.
+0679fe73a3bb851350e1c3c184b43e5a4fd30fc9:src/tests/invoice-share-privacy.test.ts:generic-api-key:7
 #
 # Secret scanning FAILS CLOSED. The only entries permitted here are pinned
 # fingerprints for findings a human has verified are not credentials, each with
