@@ -214,6 +214,8 @@ async function main() {
   need(uuid.test(started?.id ?? ""), "Support begin returned no session identifier");
   const capability = `${started.id}.${secret}`;
   const supportApi = makeClient(publicKey, owner.token, capability);
+  const replyOrderIds = [];
+  const delegatedReplyStates = () => supportApi.rpc("app_list_my_order_response_states", { p_order_ids: replyOrderIds });
   const proof = () => supportApi.rpc("app_get_client_support_context").abortSignal(AbortSignal.timeout(2000));
   recoveryProof = proof;
   const assertProof = (value) => need(value?.id === started.id && value.administratorId === owner.id && value.clientId === client.id
@@ -223,6 +225,10 @@ async function main() {
   need(context.length === 1 && context[0].profile_id === client.id && context[0].company_id === client.company, "Support account context is not the selected client");
   const supportMembership = await ownMembership(supportApi);
   need(supportMembership.length === 1 && supportMembership[0].account_class === "client" && supportMembership[0].role_name === "client", "Support membership retained administrator authority");
+  need(JSON.stringify(await success(delegatedReplyStates(), "Delegated client reply metadata entry")) === "[]", "Empty delegated metadata differs");
+  await denied(owner.api.rpc("app_list_my_order_response_states", { p_order_ids: [] }), "Internal owner cannot call client metadata without delegation");
+  await denied(makeClient(publicKey, anotherOwner.data.session.access_token, capability).rpc("app_list_my_order_response_states", { p_order_ids: [] }), "Reply metadata rejects another Owner Auth session");
+  await denied(makeClient(publicKey, owner.token, capability, foreignTenant).rpc("app_list_my_order_response_states", { p_order_ids: [] }), "Reply metadata rejects foreign Tenant support selector");
   const profiles = await success(supportApi.from("profiles").select("id"), "Supported profile read");
   need(profiles.length === 1 && profiles[0].id === client.id, "Support profile read disclosed another identity");
   const companies = await success(supportApi.from("companies").select("id"), "Supported company read");
@@ -300,6 +306,7 @@ async function main() {
   await denied(supportApi.rpc("app_list_assigned_forms"), "Missing-hook Forms visibility assignments");
   await denied(supportApi.rpc("app_list_form_submissions", {}), "Missing-hook Forms visibility submission summaries");
   await denied(delegatedPdf(), "Missing-hook PDF receipt");
+  await denied(delegatedReplyStates(), "Missing-hook client reply metadata");
   const blockedRequest = randomUUID();
   await denied(supportApi.rpc("app_reply_to_ticket", { p_request_id: blockedRequest, p_ticket_id: ticket, p_body: "Synthetic missing-hook reply must never persist" }), "Missing-hook ordinary business mutation");
   need(await sql("select not exists(select 1 from public.ticket_messages where request_id=:'request'::uuid);", { request: blockedRequest }) === "t", "A missing-hook business mutation persisted");
@@ -336,6 +343,18 @@ async function main() {
     insert into public.orders(id,tenant_id,company_id,service_id,title)
       values(:'order'::uuid,'${tenant}',:'company'::uuid,:'service'::uuid,'Synthetic support project');
     commit;`, { service: pdfService, order: pdfOrder, company: client.company });
+  replyOrderIds.push(pdfOrder);
+  const assertReplyFlag = (rows, expected) => need(rows.length === 1 && rows[0].order_id === pdfOrder
+    && rows[0].unanswered === expected && Object.keys(rows[0]).sort().join(",") === "order_id,unanswered", "Client reply projection differs");
+  assertReplyFlag(await success(client.api.rpc("app_list_my_order_response_states", { p_order_ids: replyOrderIds }), "Normal client empty order metadata"), false);
+  assertReplyFlag(await success(delegatedReplyStates(), "Delegated empty order metadata"), false);
+  await noRows(other.api.rpc("app_list_my_order_response_states", { p_order_ids: replyOrderIds }), "Other client reply metadata exclusion");
+  await success(owner.api.rpc("app_send_order_message", { p_request_id: randomUUID(), p_order_id: pdfOrder, p_body: "Synthetic staff message awaiting client", p_internal_note: false }), "Public staff message on synthetic order");
+  assertReplyFlag(await success(delegatedReplyStates(), "Delegated client Unanswered flag"), true);
+  assertReplyFlag(await success(client.api.rpc("app_list_my_order_response_states", { p_order_ids: replyOrderIds }), "Normal client Unanswered flag"), true);
+  await success(supportApi.rpc("app_send_order_message", { p_request_id: randomUUID(), p_order_id: pdfOrder, p_body: "Synthetic client public response", p_internal_note: false }), "Delegated public order reply");
+  assertReplyFlag(await success(delegatedReplyStates(), "Answered after delegated public response"), false);
+  assertReplyFlag(await success(client.api.rpc("app_list_my_order_response_states", { p_order_ids: replyOrderIds }), "Normal client answered after delegated response"), false);
   const pdfForm = await success(owner.api.rpc("app_create_form", { p_request_id: randomUUID(), p_payload: {
     form_type: "intake", canonical_key: `support-pdf-${randomUUID()}`, definition: {
       name: "Synthetic project receipt", title: "Synthetic project receipt", visibility: "assigned", type_config: {},
@@ -363,6 +382,7 @@ async function main() {
   await sql(`insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
     values('${tenant}',:'client'::uuid,'projects.view',false);`, { client: client.id });
   need((await success(delegatedPdf(), "Supported PDF after Project access revocation")).project === null, "Supported PDF disclosed a denied project");
+  await denied(delegatedReplyStates(), "Revoked project permission rejects reply metadata");
   need(await sql(`with restored as (delete from public.profile_permission_overrides where tenant_id='${tenant}'
     and profile_id=:'client'::uuid and permission_key='projects.view' and allowed=false returning 1)
     select count(*)=1 from restored;`, { client: client.id }) === "t", "Synthetic Project permission override was not restored exactly");
@@ -499,6 +519,7 @@ async function main() {
   need(ended?.id === started.id && ended.active === false, "Support exit did not persist");
   await denied(proof(), "Exited support capability");
   await denied(delegatedPdf(), "Exited support PDF receipt");
+  await denied(delegatedReplyStates(), "Exited support client reply metadata");
   const finalOwner = await ownMembership(owner.api);
   need(finalOwner.length === 1 && finalOwner[0].role_name === "owner", "Support exit changed the original Owner session");
   need(await sessionSnapshot() === beforeSessions, "Support changed an existing client Auth session");
@@ -507,7 +528,7 @@ async function main() {
       and actor_class='internal' and resource_type='client_support' and outcome='succeeded')
     from public.security_audit_events where resource_id=:'support'::uuid;`,
   { support: started.id, owner: owner.id, client: client.id }) === "t", "Support start/exit real-administrator audits differ");
-  console.log("PASS real PostgREST support identity, Forms visibility/assignee isolation/revocation, encrypted credential roundtrip, legacy policy transaction races and nonblocking reads, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
+  console.log("PASS real PostgREST support identity, client reply metadata/parity/isolation, Forms visibility/assignee isolation/revocation, encrypted credential roundtrip, legacy policy transaction races and nonblocking reads, delegated reply/audit, missing-hook fail-closed behavior, restored hook/exit, and unchanged client Auth sessions (disposable CI only)");
 }
 
 try {

@@ -103,8 +103,8 @@ export const portalNavigationCategories: PortalNavigationCategory[] = [
   },
   {
     id: "services",
-    label: "Investments",
-    items: [{ id: "portal_store", label: "Investments", route: "/account/store" }],
+    label: "Services",
+    items: [{ id: "portal_store", label: "Services", route: "/account/store" }],
   },
   {
     id: "billing",

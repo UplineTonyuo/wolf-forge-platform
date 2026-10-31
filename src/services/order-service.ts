@@ -18,6 +18,9 @@ export type ProjectListResult = {
 
 export class OrderService {
   constructor(private readonly dependencies: ServiceDependencies<OrderRepository>) {}
+  async listClientResponseStates(ids: string[]) {
+    return this.dependencies.repository.listClientResponseStates(ids.map((id) => parseInput(uuidSchema, id)));
+  }
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   list(filter?: ListOrdersFilter) { return this.dependencies.repository.list(filter); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }

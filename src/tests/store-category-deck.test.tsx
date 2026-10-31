@@ -173,7 +173,7 @@ afterEach(() => {
   resetCartForTests();
 });
 
-describe("investment category deck", () => {
+describe("service category deck", () => {
   it("renders every real category as a reachable tile once the deck is open", () => {
     renderCatalog();
     openDeck();
@@ -183,7 +183,7 @@ describe("investment category deck", () => {
     expect(within(grid).getAllByRole("button")).toHaveLength(9);
 
     for (const name of [
-      "All investments",
+      "All services",
       "GBP Only SEO",
       "Local SEO",
       "Ecommerce SEO",
@@ -191,7 +191,7 @@ describe("investment category deck", () => {
       "Website Design",
       "Press Releases",
       "Backlink Service",
-      "Other investments",
+      "Other services",
     ]) {
       expect(within(grid).getByRole("button", { name: new RegExp(name) })).toBeInTheDocument();
     }
@@ -217,12 +217,12 @@ describe("investment category deck", () => {
     renderCatalog();
     openDeck();
 
-    expect(screen.getByRole("button", { name: /All investments/ })).toHaveTextContent("34 investments");
-    expect(screen.getByRole("button", { name: /Backlink Service/ })).toHaveTextContent("8 investments");
-    expect(screen.getByRole("button", { name: /GBP Only SEO/ })).toHaveTextContent("2 investments");
+    expect(screen.getByRole("button", { name: /All services/ })).toHaveTextContent("34 services");
+    expect(screen.getByRole("button", { name: /Backlink Service/ })).toHaveTextContent("8 services");
+    expect(screen.getByRole("button", { name: /GBP Only SEO/ })).toHaveTextContent("2 services");
 
     // The compact state repeats the real total while nothing is selected.
-    expect(screen.getByLabelText("All investments, 34 investments")).toBeInTheDocument();
+    expect(screen.getByLabelText("All services, 34 services")).toBeInTheDocument();
   });
 
   it("selecting a category filters the grid and hides the spotlight", () => {
@@ -265,7 +265,7 @@ describe("investment category deck", () => {
     openDeck();
     fireEvent.click(within(deckList()).getByRole("button", { name: /Backlink Service/ }));
 
-    expect(screen.getByLabelText("Backlink Service, 8 investments")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backlink Service, 8 services")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Change category/ })).toBeInTheDocument();
   });
 
@@ -278,7 +278,7 @@ describe("investment category deck", () => {
     fireEvent.click(within(deckList()).getByRole("button", { name: /Backlink Service/ }));
 
     expect(screen.getByRole("heading", { level: 1, name: "Backlink Service" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Backlink Service, 8 investments")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backlink Service, 8 services")).toBeInTheDocument();
     expect(window.location.search).toContain("folder=folder-backlinks");
     expect(deckToggle()).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("heading", { level: 3, name: "Authority Link Building" })).toBeInTheDocument();
@@ -291,9 +291,9 @@ describe("investment category deck", () => {
     expect(window.location.search).toContain("folder=folder-press");
 
     openDeck();
-    fireEvent.click(within(deckList()).getByRole("button", { name: /All investments/ }));
+    fireEvent.click(within(deckList()).getByRole("button", { name: /All services/ }));
     expect(window.location.search).not.toContain("folder=");
-    expect(screen.getByLabelText("All investments, 34 investments")).toBeInTheDocument();
+    expect(screen.getByLabelText("All services, 34 services")).toBeInTheDocument();
   });
 
   it("composes search with the selected category", () => {
@@ -301,7 +301,7 @@ describe("investment category deck", () => {
     openDeck();
     fireEvent.click(within(deckList()).getByRole("button", { name: /Press Releases/ }));
 
-    fireEvent.change(screen.getByLabelText("Filter investments by name"), {
+    fireEvent.change(screen.getByLabelText("Filter services by name"), {
       target: { value: "premium" },
     });
 
@@ -309,13 +309,13 @@ describe("investment category deck", () => {
     expect(screen.queryByRole("heading", { level: 3, name: "Standard Press Release Distribution" })).not.toBeInTheDocument();
   });
 
-  it("renders no duplicate investment in a filtered category", () => {
+  it("renders no duplicate service in a filtered category", () => {
     renderCatalog();
     openDeck();
     fireEvent.click(within(deckList()).getByRole("button", { name: /Backlink Service/ }));
 
     expect(screen.getAllByRole("heading", { level: 3, name: "Starter Backlink SEO Package" })).toHaveLength(1);
-    // One section, and every card is a distinct investment.
+    // One section, and every card is a distinct service.
     expect(screen.getByRole("heading", { level: 2, name: "Backlink Service" })).toBeInTheDocument();
   });
 

@@ -27,7 +27,7 @@ describe("client portal navigation registry", () => {
     expect(portalNavigationCategories.map((category) => category.label)).toEqual([
       "Overview",
       "Work",
-      "Investments",
+      "Services",
       "Billing",
       "Account",
     ]);
@@ -39,7 +39,7 @@ describe("client portal navigation registry", () => {
       "Orders",
       "Inbox",
       "Reporting",
-      "Investments",
+      "Services",
       "Invoices",
       "Subscriptions",
       "Payment method",
@@ -209,12 +209,12 @@ describe("service categories are not in the rail", () => {
     expect(items.every((item) => !("children" in item))).toBe(true);
   });
 
-  it("keeps exactly one Investments entry rather than one row per category", () => {
+  it("keeps exactly one Services entry rather than one row per category", () => {
     const services = portalNavigationFor(allPortalModules).find(
       (category) => category.id === "services",
     );
 
-    expect(services?.items.map((item) => item.label)).toEqual(["Investments"]);
+    expect(services?.items.map((item) => item.label)).toEqual(["Services"]);
   });
 
   it("still encodes the folder id in the Store route used by the Store page", () => {
@@ -246,7 +246,7 @@ describe("portal active-route resolution", () => {
     expect(portalTitleForPath("/account/onboarding")).toBe("Orders");
     expect(portalTitleForPath("/account/messages/abc")).toBe("Inbox");
     expect(portalTitleForPath("/account/payment-method")).toBe("Payment method");
-    expect(portalTitleForPath("/account/store/abc")).toBe("Investments");
+    expect(portalTitleForPath("/account/store/abc")).toBe("Services");
     expect(portalTitleForPath("/account/unknown")).toBe("Wolf Forge");
   });
 });

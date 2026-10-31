@@ -5937,6 +5937,10 @@ export type Database = {
         Args: { p_order_ids: string[] }
         Returns: { order_id: string; unanswered: boolean | null }[]
       }
+      app_list_my_order_response_states: {
+        Args: { p_order_ids: string[] }
+        Returns: { order_id: string; unanswered: boolean | null }[]
+      }
       app_list_my_client_projects: {
         Args: { p_limit?: number }
         Returns: {
