@@ -1,20 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { beginClientSupportAction, endClientSupportAction } from "../app/actions/client-support";
 import { CLIENT_SUPPORT_COOKIE, CLIENT_SUPPORT_EXIT_COOKIE } from "../domain/auth/client-support";
-const state = vi.hoisted(() => ({ cookies: [] as { name: string; value: string }[], set: vi.fn(), rpc: vi.fn(), internal: vi.fn(), server: vi.fn() }));
+const state = vi.hoisted(() => ({ cookies: [] as { name: string; value: string }[], set: vi.fn(), rpc: vi.fn(), internal: vi.fn(), server: vi.fn(), verified: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ getAll: () => state.cookies, set: state.set }) }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`REDIRECT:${path}`); } }));
-vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: state.internal, createNextServerSupabaseClient: state.server }));
+vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: state.internal, createNextServerSupabaseClient: state.server, getVerifiedSessionContext: state.verified }));
 const id = "b1740000-0000-4000-8000-000000000090";
 const target = "b1740000-0000-4000-8000-000000000002";
 const activeCookie = () => ({ name: CLIENT_SUPPORT_COOKIE, value: `${id}.${"a".repeat(64)}` });
 const result = (data: unknown, error: unknown = null) => ({ data, error });
 beforeEach(() => {
-  vi.clearAllMocks(); state.cookies = [];
+  vi.resetAllMocks(); state.cookies = [];
+  state.verified.mockResolvedValue({ actor: {} });
   state.server.mockResolvedValue({ rpc: state.rpc });
   state.internal.mockResolvedValue({ user: { role: "owner", clients: { privateManage: true } }, client: { rpc: state.rpc } });
 });
 describe("client support actions", () => {
+  it("returns signed-out exit recovery to login without requiring an authenticated RPC", async () => {
+    state.cookies = [{ name: CLIENT_SUPPORT_EXIT_COOKIE, value: id }];
+    state.verified.mockResolvedValue(null);
+    await expect(endClientSupportAction()).rejects.toThrow("REDIRECT:/login");
+    expect(state.rpc).not.toHaveBeenCalled();
+    expect(state.set).toHaveBeenCalledWith(CLIENT_SUPPORT_COOKIE, "", expect.objectContaining({ maxAge: 0, path: "/", httpOnly: true, sameSite: "strict" }));
+    expect(state.set).toHaveBeenCalledWith(CLIENT_SUPPORT_EXIT_COOKIE, "", expect.objectContaining({ maxAge: 0, path: "/", httpOnly: true, sameSite: "strict" }));
+  });
   it("creates a separate bounded HttpOnly capability while retaining original Auth", async () => {
     state.rpc.mockResolvedValue(result({ id, expiresAt: new Date(Date.now() + 900000).toISOString() }));
     const data = new FormData(); data.set("client_profile_id", target);
