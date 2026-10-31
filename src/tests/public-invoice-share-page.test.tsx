@@ -5,7 +5,7 @@ import type { PublicInvoiceShare } from "../domain/invoices/manual-payments";
 
 const { getPublicShare, createClient, notFound } = vi.hoisted(() => ({ getPublicShare: vi.fn(), createClient: vi.fn(), notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND"); }) }));
 vi.mock("../lib/supabase/next-server", () => ({ createNextServerSupabaseClient: createClient }));
-vi.mock("../repositories/invoice-repository", () => ({ InvoiceRepository: class { getPublicShare = getPublicShare; } }));
+vi.mock("../repositories/public-invoice-share-repository", () => ({ readPublicInvoiceShare: getPublicShare }));
 vi.mock("next/navigation", () => ({ notFound }));
 vi.mock("../components/account/billing/print-invoice-button", () => ({ PrintInvoiceButton: () => <button>Print or save as PDF</button> }));
 
@@ -26,7 +26,7 @@ describe("anonymous invoice projection page", () => {
   it("loads once through the existing publishable-key client without impersonation", async () => {
     const rendered = await html();
     expect(createClient).toHaveBeenCalledExactlyOnceWith({ support: false });
-    expect(getPublicShare).toHaveBeenCalledExactlyOnceWith(token);
+    expect(getPublicShare).toHaveBeenCalledExactlyOnceWith({}, token);
     expect(rendered).toContain("Invoice #WF-0010");
     expect(rendered).toContain("Synthetic Invoice Client");
     expect(rendered).toContain("Synthetic Service");

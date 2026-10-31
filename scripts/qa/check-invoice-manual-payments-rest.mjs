@@ -136,7 +136,7 @@ async function main() {
   await success(owner.api.rpc("app_save_invoice_manual_payment_settings", { p_enabled: true, p_paypal_url: null, p_instructions: "Synthetic CI instructions only; do not send money." }), "Enable synthetic instructions");
   async function invoice(withService = false) {
     const item = { service_id: withService ? service : null, name: "Synthetic manual invoice", description: "Synthetic service scope", quantity: 1, unit_price_cents: 1000, unit_discount_cents: 0, is_taxable: false };
-    const created = one(await success(owner.api.rpc("app_create_invoice", { p_request_id: randomUUID(), p_payload: { company_id: company, client_profile_id: client.id, currency: "USD", billing_reason: "manual", due_at: null, tax_total_cents: 0, items: [item] } }), "Create synthetic invoice"));
+    const created = one(await success(owner.api.rpc("app_create_invoice", { p_request_id: randomUUID(), p_payload: { company_id: company, client_profile_id: client.id, currency: "USD", billing_reason: "manual", due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), tax_total_cents: 0, items: [item] } }), "Create synthetic invoice"));
     await success(owner.api.rpc("app_issue_invoice", { p_invoice_id: created.id }), "Issue synthetic invoice");
     return created.id;
   }

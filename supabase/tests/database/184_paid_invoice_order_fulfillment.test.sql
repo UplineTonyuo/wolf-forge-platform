@@ -49,7 +49,7 @@ select v.label,(public.app_create_form(gen_random_uuid(),jsonb_build_object('for
 from(values('form-a','b6840000-0000-4000-8000-000000000050'),('form-b','b6840000-0000-4000-8000-000000000051'))v(label,field);
 select public.app_publish_form(gen_random_uuid(),id) from fulfillment_ids where label in('form-a','form-b');
 insert into fulfillment_ids select 'invoice',(public.app_create_invoice(gen_random_uuid(),jsonb_build_object(
- 'company_id','b6840000-0000-4000-8000-000000000020','client_profile_id','b6840000-0000-4000-8000-000000000002','currency','USD','billing_reason','manual','tax_total_cents',0,
+ 'company_id','b6840000-0000-4000-8000-000000000020','client_profile_id','b6840000-0000-4000-8000-000000000002','currency','USD','billing_reason','manual','due_at',now()+interval '7 days','tax_total_cents',0,
  'items',jsonb_build_array(
   jsonb_build_object('service_id','b6840000-0000-4000-8000-000000000030','name','Two units, one line','description','Frozen commercial description','quantity',2,'unit_price_cents',1000,'unit_discount_cents',0,'is_taxable',false),
   jsonb_build_object('service_id','b6840000-0000-4000-8000-000000000030','name','Same service, another line','quantity',1,'unit_price_cents',500,'unit_discount_cents',0,'is_taxable',false),
@@ -155,7 +155,7 @@ select ok(not exists(select 1 from public.form_assignments a join frozen_baselin
 set local role authenticated;
 select pg_temp.act(1);
 insert into fulfillment_ids select 'null-client-invoice',(public.app_create_invoice(gen_random_uuid(),jsonb_build_object(
- 'company_id','b6840000-0000-4000-8000-000000000020','client_profile_id',null,'currency','USD','billing_reason','manual','tax_total_cents',0,
+ 'company_id','b6840000-0000-4000-8000-000000000020','client_profile_id',null,'currency','USD','billing_reason','manual','due_at',now()+interval '7 days','tax_total_cents',0,
  'items',jsonb_build_array(jsonb_build_object('service_id','b6840000-0000-4000-8000-000000000031','name','Claimant intake recipient fallback','quantity',1,'unit_price_cents',1000,'unit_discount_cents',0,'is_taxable',false))))).id;
 select public.app_issue_invoice(id) from fulfillment_ids where label='null-client-invoice';
 select pg_temp.act(4);

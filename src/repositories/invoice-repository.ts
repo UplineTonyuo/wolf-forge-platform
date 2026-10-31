@@ -19,7 +19,7 @@ import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { UserMutationClient } from "./types";
 import {
   invoiceManualPaymentSchema, invoiceManualSettingsSchema, invoiceShareLinkSchema,
-  manualPaymentClaimSchema, manualPaymentReviewSchema, paymentReceiptSchema, publicInvoiceShareSchema,
+  manualPaymentClaimSchema, manualPaymentReviewSchema, paymentReceiptSchema,
   type InvoiceManualSettings, type ManualPaymentClaimInput, type ManualPaymentReviewInput, type PaymentReceiptInput,
 } from "../domain/invoices/manual-payments";
 import { z } from "zod";
@@ -103,9 +103,6 @@ export class InvoiceRepository {
   }
   async revokeShareLink(id:string) {
     return invoiceShareLinkSchema.parse(unwrapOne(await this.client.rpc("app_revoke_invoice_share_link",{p_link_id:id}),"Invoice link"));
-  }
-  async getPublicShare(token:string) {
-    return publicInvoiceShareSchema.parse(unwrapOne(await this.client.rpc("app_get_public_invoice_share",{p_token:token}),"Invoice"));
   }
   constructor(private readonly client: UserMutationClient) {}
 

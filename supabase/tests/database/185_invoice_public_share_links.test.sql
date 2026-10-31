@@ -48,7 +48,7 @@ create function pg_temp.hash(n integer) returns text language sql immutable as $
 create function pg_temp.make_invoice(p_company uuid,p_client uuid,p_issue boolean default true) returns jsonb language plpgsql as $$
 declare i public.invoices;
 begin
- i:=public.app_create_invoice(extensions.gen_random_uuid(),jsonb_build_object('company_id',p_company,'client_profile_id',p_client,'currency','USD','billing_reason','manual','due_at',null,'tax_total_cents',200,'items',jsonb_build_array(jsonb_build_object('service_id',null,'name','Shareable invoice line','description','Customer-visible description','quantity',2,'unit_price_cents',1200,'unit_discount_cents',100,'is_taxable',true))));
+ i:=public.app_create_invoice(extensions.gen_random_uuid(),jsonb_build_object('company_id',p_company,'client_profile_id',p_client,'currency','USD','billing_reason','manual','due_at',now()+interval '7 days','tax_total_cents',200,'items',jsonb_build_array(jsonb_build_object('service_id',null,'name','Shareable invoice line','description','Customer-visible description','quantity',2,'unit_price_cents',1200,'unit_discount_cents',100,'is_taxable',true))));
  if p_issue then i:=public.app_issue_invoice(i.id); end if;
  return to_jsonb(i);
 end;$$;

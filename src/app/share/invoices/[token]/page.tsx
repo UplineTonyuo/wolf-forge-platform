@@ -5,7 +5,7 @@ import { invoiceShareTokenSchema, type PublicInvoiceShare } from "../../../../do
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatCurrencyCents, formatDate } from "../../../../lib/format";
 import { createNextServerSupabaseClient } from "../../../../lib/supabase/next-server";
-import { InvoiceRepository } from "../../../../repositories/invoice-repository";
+import { readPublicInvoiceShare } from "../../../../repositories/public-invoice-share-repository";
 import styles from "./public-invoice.module.css";
 
 // Every request rechecks expiry, revocation, Tenant/module state and financials.
@@ -37,7 +37,7 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
     // Existing publishable-key SSR client; no verified actor or service key is
     // required for this capability projection. Do not forward impersonation.
     const client = await createNextServerSupabaseClient({ support: false });
-    share = await new InvoiceRepository(client).getPublicShare(parsed.data);
+    share = await readPublicInvoiceShare(client, parsed.data);
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "NOT_FOUND" || safe.code === "VALIDATION_ERROR" || safe.code === "PERMISSION_DENIED") notFound();

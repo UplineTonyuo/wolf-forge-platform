@@ -38,7 +38,6 @@ export class InvoiceService {
     return this.dependencies.repository.createShareLink(parseInput(uuidSchema,id),parseInput(uuidSchema,requestId),parseInput(invoiceShareTokenSchema,tokenHash));
   }
   revokeShareLink(id:unknown,actor:UserMutationActor) {requireVerifiedActor(actor);return this.dependencies.repository.revokeShareLink(parseInput(uuidSchema,id));}
-  getPublicShare(token:unknown) {return this.dependencies.repository.getPublicShare(parseInput(invoiceShareTokenSchema,token));}
 
   list() { return this.dependencies.repository.list(); }
   workEnabled() { return this.dependencies.repository.workEnabled(); }
