@@ -91,9 +91,9 @@ async function main() {
     need(url.origin === api.origin && !url.username && !url.password, "Request escaped owned local API");
     return fetch(input, { ...init, redirect: "error", signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000) });
   };
-  const make = (key, token, selectedTenant = tenant) => createClient(api.origin, key, {
+  const make = (key, token, selectedTenant = tenant, supportCapability) => createClient(api.origin, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { fetch: boundedFetch, headers: { "x-wf-tenant": selectedTenant, ...(token ? { Authorization: `Bearer ${token}` } : {}) } },
+    global: { fetch: boundedFetch, headers: { "x-wf-tenant": selectedTenant, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(supportCapability ? { "x-wf-client-support": supportCapability } : {}) } },
   });
   const trusted = make(serverKey), anonymous = make(publicKey);
   const accounts = [];
@@ -159,6 +159,59 @@ async function main() {
     await sql(`insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed) values(:'tenant'::uuid,:'profile'::uuid,:'permission',:'allowed'::boolean)
       on conflict(tenant_id,profile_id,permission_key) do update set allowed=excluded.allowed;`, { tenant, profile, permission, allowed: String(allowed) });
   }
+
+  step = "delegated client-support receipt/report compatibility";
+  const supportInvoice = await invoice();
+  const supportSecret = randomBytes(32).toString("hex");
+  const support = await success(owner.api.rpc("app_begin_client_support", { p_client_id:client.id, p_capability_hash:sha256(supportSecret) }), "Begin owned client support");
+  need(uuid.test(support?.id ?? ""), "Support session identifier missing");
+  const capability = support.id + "." + supportSecret;
+  const supported = make(publicKey,owner.token,tenant,capability);
+  let supportClaim;
+  try {
+    const proof = await success(supported.rpc("app_get_client_support_context"), "Bound support proof");
+    need(proof?.id===support.id && proof.administratorId===owner.id && proof.clientId===client.id && proof.tenantId===tenant && proof.companyId===company, "Support proof is not the bound Owner/client/Tenant");
+    const context = await success(supported.rpc("app_get_client_account_context"), "Delegated client identity");
+    need(context.length===1 && context[0].profile_id===client.id && context[0].company_id===company, "Delegation retained Owner authority");
+    await success(supported.rpc("app_get_invoice_manual_payment",{p_invoice_id:supportInvoice}), "Delegated manual invoice read");
+    const supportReceipt = one(await success(supported.rpc("app_prepare_invoice_payment_receipt",{p_invoice_id:supportInvoice,p_request_id:randomUUID(),p_filename:"delegated-manual-receipt.png",p_mime_type:"image/png",p_size_bytes:png.length,p_checksum_sha256:checksum}), "Delegated receipt reservation"));
+    await upload(supportReceipt);
+    await success(verify(supportReceipt), "Trusted verification of delegated client's owned receipt");
+    const receiptView = await success(supported.rpc("app_get_invoice_payment_receipt",{p_receipt_id:supportReceipt.id}), "Delegated receipt metadata");
+    need(receiptView.id===supportReceipt.id, "Delegated receipt differs from target client receipt");
+    const supportRequest=randomUUID();
+    const supportPayload={p_request_id:supportRequest,p_invoice_id:supportInvoice,p_receipt_id:supportReceipt.id,p_method:"paypal",p_reference:null,p_expected_balance_cents:1000};
+    const supportBefore = await sql("select jsonb_build_object('wallet',(select balance_cents from public.company_wallets where company_id=:'company'::uuid),'payments',(select count(*) from public.invoice_payments where invoice_id=:'invoice'::uuid),'orders',(select count(*) from public.orders where tenant_id=:'tenant'::uuid))::text;",{company,invoice:supportInvoice,tenant});
+    supportClaim=await success(supported.rpc("app_submit_invoice_manual_payment_claim",supportPayload), "Delegated client payment report");
+    need(supportClaim.status==="pending" && supportClaim.amount_cents===1000, "Delegated claim did not capture outstanding balance");
+    need(await sql("select client_profile_id=:'client'::uuid and tenant_id=:'tenant'::uuid and company_id=:'company'::uuid from private.invoice_manual_payment_claims where id=:'claim'::uuid;",{client:client.id,tenant,company,claim:supportClaim.id})==="t", "Delegated claim was attributed to Owner instead of target client");
+    need(await sql("select jsonb_build_object('wallet',(select balance_cents from public.company_wallets where company_id=:'company'::uuid),'payments',(select count(*) from public.invoice_payments where invoice_id=:'invoice'::uuid),'orders',(select count(*) from public.orders where tenant_id=:'tenant'::uuid))::text;",{company,invoice:supportInvoice,tenant})===supportBefore, "Delegated report changed money or Orders");
+    await denied(supported.rpc("app_review_invoice_manual_payment_claim",{p_request_id:randomUUID(),p_claim_id:supportClaim.id,p_decision:"approve",p_paid_at:new Date().toISOString(),p_reference:"SYNTHETIC-DELEGATED-DENIED",p_reason:null}), "Supported Owner cannot review as administrator");
+    await denied(supported.rpc("app_get_invoice_manual_payment_settings"), "Supported Owner cannot read settings as administrator");
+    await denied(supported.rpc("app_save_invoice_manual_payment_settings",{p_enabled:false,p_paypal_url:null,p_instructions:"Synthetic denied update"}), "Supported Owner cannot change collection settings");
+    await denied(supported.rpc("app_verify_invoice_payment_receipt",{p_receipt_id:supportReceipt.id,p_uploader_profile_id:client.id,p_checksum_sha256:checksum}), "Support cannot use trusted verification");
+    await denied(supported.rpc("app_list_invoice_share_links",{p_invoice_id:supportInvoice}), "Support cannot list share management metadata");
+    await denied(supported.rpc("app_create_invoice_share_link",{p_request_id:randomUUID(),p_invoice_id:supportInvoice,p_token_sha256:sha256(randomBytes(32))}), "Support cannot create sharing capabilities");
+    await denied(supported.rpc("app_revoke_invoice_share_link",{p_link_id:randomUUID()}), "Support cannot revoke sharing capabilities");
+    await denied(make(publicKey,owner.token,foreignTenant,capability).rpc("app_get_invoice_manual_payment",{p_invoice_id:supportInvoice}), "Support capability cannot change Tenant");
+    need((await supported.storage.from(bucket).download(supportReceipt.path)).error, "Delegation exposed raw private Storage");
+    await override(client.id,"invoices.view",false);
+    for(let pass=0;pass<2;pass++) {
+      await denied(supported.rpc("app_get_invoice_manual_payment",{p_invoice_id:supportInvoice}), "Delegated invoice permission revocation");
+      await denied(supported.rpc("app_get_invoice_payment_receipt",{p_receipt_id:supportReceipt.id}), "Delegated receipt permission revocation");
+      await denied(supported.rpc("app_submit_invoice_manual_payment_claim",supportPayload), "Delegated report replay after permission revocation");
+    }
+    await override(client.id,"invoices.view",true);
+    const replay=await success(supported.rpc("app_submit_invoice_manual_payment_claim",supportPayload), "Delegated report retry after current permission restore");
+    need(replay.id===supportClaim.id, "Delegated replay created a second claim");
+  } finally {
+    await success(owner.api.rpc("app_end_client_support",{p_support_id:support.id}), "Explicit owned support exit");
+  }
+  await denied(supported.rpc("app_get_invoice_manual_payment",{p_invoice_id:supportInvoice}), "Exited support capability cannot read invoice");
+  need((await success(owner.api.rpc("app_current_tenant_membership"), "Owner identity after support"))[0]?.role_name==="owner", "Support changed original Owner session");
+  await success(owner.api.rpc("app_review_invoice_manual_payment_claim",{p_request_id:randomUUID(),p_claim_id:supportClaim.id,p_decision:"reject",p_paid_at:null,p_reference:null,p_reason:"Synthetic delegated compatibility check complete"}), "Resolve delegated synthetic report");
+  await success(owner.api.rpc("app_void_invoice",{p_invoice_id:supportInvoice}), "Resolve delegated synthetic Invoice");
+
   step = "receipt authorization and live revocation checks";
   const firstReceipt = await prepare(mainInvoice); await upload(firstReceipt);
   need((await trusted.storage.from(bucket).upload(firstReceipt.path,png,{contentType:"image/png",upsert:false})).error,"Receipt object was overwritten");
@@ -314,7 +367,7 @@ async function main() {
     and not has_table_privilege('authenticated','private.invoice_payment_receipts','SELECT')
     and not has_table_privilege('anon','private.invoice_share_links','SELECT')
     and not has_function_privilege('authenticated','public.app_verify_invoice_payment_receipt(uuid,uuid,text)','EXECUTE');`) === "t","Raw data/trusted verification grants widened");
-  console.log("PASS disposable local Auth/receipt Storage authorization, live revocation, full manual claim/review, real concurrent reviewers and wallet race, exact-once Order/frozen intake, reference deduplication, and limited hashed/expiring/revoked public invoice capabilities");
+  console.log("PASS disposable local Auth/receipt Storage authorization, delegated client support receipt/report isolation, live revocation, full manual claim/review, real concurrent reviewers and wallet race, exact-once Order/frozen intake, reference deduplication, and limited hashed/expiring/revoked public invoice capabilities");
 }
 try { await main(); }
 catch { console.error(`FAIL invoice manual-payment REST integration during ${step}${sqlFailureState ? ` (SQLSTATE ${sqlFailureState})` : ""}; credential, command and response details withheld`); process.exitCode=1; }

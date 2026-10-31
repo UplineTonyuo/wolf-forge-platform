@@ -146,9 +146,10 @@ select ok(public.app_get_my_order_start(id) is null,'claimant colleague cannot a
 select pg_temp.act(1);
 select public.app_publish_form(gen_random_uuid(),id) from fulfillment_ids where label='form-a';
 select pg_temp.act(2);
+select ok(not has_column_privilege('authenticated','public.form_assignments','order_id','SELECT'),'client workflow keeps raw assignment Order linkage private');
 select public.app_submit_form(gen_random_uuid(),(public.app_get_assigned_form_schema(a.id)->'schema'->>'form_version_id')::uuid,jsonb_build_object('assignment_id',a.id),
- jsonb_build_array(jsonb_build_object('field_key',case when a.form_id=(select id from fulfillment_ids where label='form-a') then 'b6840000-0000-4000-8000-000000000050' else 'b6840000-0000-4000-8000-000000000051' end,'value','Synthetic manual brief')),'[]')
- from public.form_assignments a where order_id=(select id from fulfillment_ids where label='new-order');
+ jsonb_build_array(jsonb_build_object('field_key',case when (public.app_get_assigned_form_schema(a.id)#>>'{assignment,form_id}')::uuid=(select id from fulfillment_ids where label='form-a') then 'b6840000-0000-4000-8000-000000000050' else 'b6840000-0000-4000-8000-000000000051' end,'value','Synthetic manual brief')),'[]')
+ from jsonb_to_recordset(public.app_get_my_order_start((select id from fulfillment_ids where label='new-order'))->'forms') as a(id uuid);
 select is((public.app_request_my_order_start(id)->>'started')::boolean,true,'both frozen forms permit requested start') from fulfillment_ids where label='new-order';
 reset role;
 select ok(not exists(select 1 from public.form_assignments a join frozen_baseline b using(id) where a.form_version_id<>b.form_version_id),'republication does not change frozen requirements');

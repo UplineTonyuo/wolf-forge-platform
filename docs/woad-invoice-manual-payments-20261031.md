@@ -18,7 +18,7 @@ Email invoice opens the existing Gmail composer with private invoice/payment lin
 
 - Reservation/authorization and rate limits precede upload buffering; actual bytes, checksum, type and size are verified. Upload retry never overwrites a different object. Recheck current authority after Storage before verifying or releasing downloaded bytes.
 - Private receipt bucket has no direct anonymous/authenticated read/write policy. A narrow trusted server operation verifies a client-owned reservation; review/configuration are never delegated client-support operations.
-- Maximum 10 receipt reservations and 5 claim attempts per invoice; bounded upload/download counters. Max 3 active public links and 20 new links per Tenant/day. Public reads have per-link and Tenant budgets.
+- Maximum 10 receipt reservations and 5 claim attempts per invoice; bounded upload/download counters. Max 3 active public links and 20 new links per invoice/day. Public reads have per-link and Tenant budgets.
 - Approval rechecks current permission after waits, locks the invoice/claim, compares actual balance/currency and deduplicates new reconciled references. No impersonation, caller GUC or general project-create bypass is added.
 - Public pages use no-referrer, no-store and noindex headers; app/Sentry error, span and breadcrumb paths are scrubbed. Infrastructure access logs and already copied links remain outside application redaction.
 - A screenshot is evidence for human reconciliation, not proof of payment. A human can still misidentify an external transfer; no provider verification is claimed.

@@ -107,7 +107,7 @@ async function main() {
     return;
   }
   need(process.env.GITHUB_ACTIONS === "true" && process.env.CI === "true" && process.platform === "linux", "This destructive disposable fixture runs only on a GitHub Linux runner");
-  need(["codex/intake-publication-20261028", "codex/woad-qa-followups-20261030"].includes(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME), "Unapproved workflow branch");
+  need(["codex/intake-publication-20261028", "codex/woad-qa-followups-20261030", "codex/woad-invoice-manual-payments-20261031"].includes(process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME), "Unapproved workflow branch");
   need(!process.env.SUPABASE_ACCESS_TOKEN && !process.env.VERCEL && !process.env.LOCAL_UI_QA_BYPASS, "Hosted credentials or an auth bypass are forbidden");
   step = "reviewed-template deployment trace";
   const build = process.env.WOLF_FORGE_STUDIO_QA_BUILD === "1" ? ".next-studio-qa" : ".next";

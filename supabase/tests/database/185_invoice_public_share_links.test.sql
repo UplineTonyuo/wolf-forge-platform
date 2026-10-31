@@ -213,7 +213,7 @@ select throws_ok($$select public.app_get_public_invoice_share(pg_temp.token(4))$
 reset role;
 select pg_temp.clear_actor();
 update public.companies set archived_at=null where id='d0185000-0000-4000-8000-000000000001';
-update public.tenants set archived_at=now() where id='f0f0f0f0-0000-4000-8000-000000001851';
+update public.tenants set status='archived',archived_at=now() where id='f0f0f0f0-0000-4000-8000-000000001851';
 set local role anon;
 select throws_ok($$select public.app_get_public_invoice_share(pg_temp.token(4))$$,'P0002',null,'archived Tenant cannot keep serving a public invoice');
 reset role;
