@@ -34,6 +34,7 @@ import {
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
 import { shouldRingForUnread } from "../../domain/notifications/ring";
+import { notificationPollDelay, NOTIFICATION_POLL_TICK_MS } from "../../domain/notifications/polling";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { notificationVisibleWithModules } from "../../domain/notifications/visibility";
 import {
@@ -231,6 +232,13 @@ export function WorkspaceCommandBar({
     useRef<number[]>([]);
   const notificationLoadInFlightRef = useRef(false);
   const notificationRefreshPendingRef = useRef(false);
+  const notificationPollRef = useRef({ open: notificationsOpen, failures: 0, nextAt: 0 });
+
+  useEffect(() => {
+    const poll = notificationPollRef.current;
+    poll.open = notificationsOpen;
+    poll.nextAt = Date.now() + notificationPollDelay(poll.open, poll.failures);
+  }, [notificationsOpen]);
 
   const noteIncomingNotifications =
     useCallback(
@@ -357,6 +365,7 @@ export function WorkspaceCommandBar({
         isActive?: () => boolean,
         queueIfBusy = false,
       ) {
+        if (document.hidden || !navigator.onLine) return;
         if (
           isActive &&
           !isActive()
@@ -380,6 +389,7 @@ export function WorkspaceCommandBar({
         try {
           const result =
             await getWalletNotificationsAction();
+          notificationPollRef.current.failures = result.ok ? 0 : Math.min(notificationPollRef.current.failures + 1, 7);
 
           if (
             isActive &&
@@ -409,6 +419,7 @@ export function WorkspaceCommandBar({
           }
 
         } catch {
+          notificationPollRef.current.failures = Math.min(notificationPollRef.current.failures + 1, 7);
           if (!silent && (!isActive || isActive())) {
             setNotificationsError("Unable to load notifications.");
           }
@@ -417,6 +428,8 @@ export function WorkspaceCommandBar({
             setNotificationsLoading(false);
           }
           notificationLoadInFlightRef.current = false;
+          const poll = notificationPollRef.current;
+          poll.nextAt = Date.now() + notificationPollDelay(poll.open, poll.failures);
           const refreshPending = notificationRefreshPendingRef.current;
           notificationRefreshPendingRef.current = false;
           if (refreshPending && !document.hidden) {
@@ -506,8 +519,9 @@ export function WorkspaceCommandBar({
   }, []);
 
   useEffect(() => {
+    // The local tick checks the deadline; a closed bell fetches only once a minute.
     const refresh = () => {
-      if (!document.hidden) {
+      if (!document.hidden && navigator.onLine && Date.now() >= notificationPollRef.current.nextAt) {
         void loadNotifications(
           true,
         );
@@ -520,13 +534,14 @@ export function WorkspaceCommandBar({
     const interval =
       window.setInterval(
         refresh,
-        4000,
+        NOTIFICATION_POLL_TICK_MS,
       );
 
     window.addEventListener(
       "focus",
       refreshOnReturn,
     );
+    window.addEventListener("online", refreshOnReturn);
 
     document.addEventListener(
       "visibilitychange",
@@ -542,6 +557,7 @@ export function WorkspaceCommandBar({
         "focus",
         refreshOnReturn,
       );
+      window.removeEventListener("online", refreshOnReturn);
 
       document.removeEventListener(
         "visibilitychange",
