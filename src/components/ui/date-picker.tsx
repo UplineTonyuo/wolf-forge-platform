@@ -52,6 +52,9 @@ export function DatePicker({
   placement = "below",
   shortcuts = false,
   clearable = false,
+  disabled = false,
+  invalid = false,
+  describedBy,
 }: {
   name: string;
   label: string;
@@ -64,6 +67,9 @@ export function DatePicker({
   placement?: "above" | "below";
   shortcuts?: boolean;
   clearable?: boolean;
+  disabled?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   const calendarId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -231,6 +237,9 @@ export function DatePicker({
         ref={triggerRef}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
+        disabled={disabled}
+        data-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         aria-label={`${label}: ${value ? displayFormatter.format(parseDate(value) as Date) : placeholder}`}
         onClick={() => (render ? closeCalendar() : openCalendar())}
       >

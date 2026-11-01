@@ -12,6 +12,7 @@ export type NavigationItemId =
   | "services"
   | "forms"
   | "team"
+  | "team_goals"
   | "team_supervision"
   | "settings";
 
@@ -22,7 +23,7 @@ export type NavigationItem = {
 };
 
 export type NavigationCategory = {
-  id: "overview" | "activity" | "billing" | "marketing" | "setup";
+  id: "overview" | "activity" | "billing" | "marketing" | "team" | "setup";
   label: string;
   items: NavigationItem[];
 };
@@ -62,13 +63,20 @@ export const navigationCategories: NavigationCategory[] = [
     ],
   },
   {
+    id: "team",
+    label: "Team",
+    items: [
+      { id: "team", label: "Members", route: "/team" },
+      { id: "team_goals", label: "Goals", route: "/team/goals" },
+      { id: "team_supervision", label: "All Conversations", route: "/team/all-conversations" },
+    ],
+  },
+  {
     id: "setup",
     label: "Setup",
     items: [
       { id: "services", label: "Services", route: "/services" },
       { id: "forms", label: "Forms", route: "/forms" },
-      { id: "team", label: "Team", route: "/team" },
-      { id: "team_supervision", label: "All Conversations", route: "/team/all-conversations" },
       { id: "settings", label: "Settings", route: "/settings" },
     ],
   },
@@ -79,11 +87,12 @@ export const navigationCategories: NavigationCategory[] = [
 export function navigationForModules(
   modules: Record<string, boolean>,
   showWhiteLabel = false,
+  includeGoals = false,
 ): NavigationCategory[] {
   return navigationCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => item.id === "white_label" ? showWhiteLabel : modules[item.id] === true),
+      items: category.items.filter((item) => item.id === "white_label" ? showWhiteLabel : item.id === "team_goals" ? includeGoals : modules[item.id] === true),
     }))
     .filter((category) => category.items.length > 0);
 }
