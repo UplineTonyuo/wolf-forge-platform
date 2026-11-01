@@ -20,14 +20,14 @@ beforeEach(()=>{
 afterEach(()=>{cleanup();vi.resetAllMocks();vi.unstubAllGlobals();});
 
 describe("Goals UI regression fixes",()=>{
-  it("queries the chosen visibility before showing a paginated empty state",async()=>{
-    const privateGoal={...goal,visibility:"leadership" as const,title:"Leadership plan"};
-    actions.list.mockResolvedValue({ok:true,data:{items:[privateGoal],next_before:null}});
+  it("loads the next page from the shared team collection",async()=>{
+    const nextGoal={...goal,id:"a0000000-0000-4000-8000-000000000099",title:"Next team goal"};
+    actions.list.mockResolvedValue({ok:true,data:{items:[nextGoal],next_before:null}});
     render(<GoalListView initial={{items:[goal],next_before:goal.id}} role="owner" actorId={owner} members={members}/>);
-    fireEvent.click(screen.getByRole("button",{name:"Leadership only"}));
-    await waitFor(()=>expect(actions.list).toHaveBeenCalledWith(null,"leadership"));
-    expect(await screen.findByText("Leadership plan")).toBeTruthy();
-    expect(screen.queryByText("No goals in this view")).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Load more goals"}));
+    await waitFor(()=>expect(actions.list).toHaveBeenCalledWith(goal.id,null));
+    expect(await screen.findByText("Next team goal")).toBeTruthy();
+    expect(screen.getByText("Office goal")).toBeTruthy();
   });
 
   it("exposes a saving state while preserving authoritative milestone progress",async()=>{
@@ -56,13 +56,12 @@ describe("Goals UI regression fixes",()=>{
     expect(actions.save).not.toHaveBeenCalled();
   });
 
-  it("never silently reassigns a goal when privacy is toggled",async()=>{
+  it("keeps the selected assignee without a redundant visibility control",async()=>{
     render(<GoalEditor goal={goal} members={members} actorId={owner} onClose={()=>undefined}/>);
-    const visibility=await screen.findByLabelText("Goal visibility");
-    fireEvent.change(visibility,{target:{value:"leadership"}});
-    expect(screen.queryByText("Choose an Owner or Admin for a leadership goal.")).not.toBeNull();
-    fireEvent.change(visibility,{target:{value:"shared"}});
+    expect(await screen.findByLabelText("Goal owner")).toBeTruthy();
+    expect(screen.queryByLabelText("Goal visibility")).toBeNull();
     expect((screen.getByLabelText("Goal owner") as HTMLSelectElement).value).toBe(staff);
+    expect(screen.getByText(/1080 × 1080/)).toBeTruthy();
     expect(actions.save).not.toHaveBeenCalled();
   });
 
@@ -89,12 +88,13 @@ describe("Goals UI regression fixes",()=>{
     expect(document.activeElement).toBe(title);expect(actions.save).not.toHaveBeenCalled();
   });
 
-  it("does not call a failed filter result an empty list and offers retry",async()=>{
+  it("preserves the existing page after a failed load-more request",async()=>{
     actions.list.mockResolvedValue({ok:false,error:"Try again."});
-    render(<GoalListView initial={{items:[goal],next_before:null}} role="owner" actorId={owner} members={members}/>);
-    fireEvent.click(screen.getByRole("button",{name:"Leadership only"}));
+    render(<GoalListView initial={{items:[goal],next_before:goal.id}} role="owner" actorId={owner} members={members}/>);
+    fireEvent.click(screen.getByRole("button",{name:"Load more goals"}));
     expect(await screen.findByRole("alert")).toBeTruthy();
     expect(screen.queryByText("No goals in this view")).toBeNull();
-    expect(screen.queryByRole("button",{name:"Retry"})).not.toBeNull();
+    expect(screen.getByText("Office goal")).toBeTruthy();
+    expect(screen.getByRole("button",{name:"Load more goals"})).toBeTruthy();
   });
 });

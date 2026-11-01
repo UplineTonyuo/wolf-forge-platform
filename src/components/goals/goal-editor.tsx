@@ -4,6 +4,7 @@ import { Plus, Trash2, Upload, LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { saveGoalAction } from "../../app/actions/goals";
 import { GOAL_PHOTO_MAX_BYTES, goalInputSchema, type Goal, type GoalMember } from "../../domain/goals/schema";
+import { AccountAvatar } from "../ui/account-avatar";
 import { AnimatedSelect } from "../ui/animated-select";
 import { DatePicker } from "../ui/date-picker";
 import { SheetFrame } from "../ui/mobile-filter-sheet";
@@ -29,7 +30,7 @@ export function GoalEditor({ goal, members, actorId, onClose }: {
   const [description, setDescription] = useState(goal?.description ?? "");
   const [owner, setOwner] = useState(goal?.owner_profile_id ?? actorId);
   const [due, setDue] = useState(goal?.due_date ?? "");
-  const [visibility, setVisibility] = useState<"shared" | "leadership">(goal?.visibility ?? "shared");
+  const visibility = "shared" as const;
   const [milestones, setMilestones] = useState((goal?.milestones ?? []).map(item => ({ id: item.id, title: item.title, key: item.id })));
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -43,13 +44,13 @@ export function GoalEditor({ goal, members, actorId, onClose }: {
   const wasPrompt = useRef(false);
   const [baseline] = useState(() => JSON.stringify({
     title: goal?.title ?? "", description: goal?.description ?? "", owner: goal?.owner_profile_id ?? actorId,
-    due: goal?.due_date ?? "", visibility: goal?.visibility ?? "shared",
+    due: goal?.due_date ?? "", visibility,
     milestones: (goal?.milestones ?? []).map(item => ({ id: item.id, title: item.title })),
   }));
   const dirty = file !== null || baseline !== JSON.stringify({
     title, description, owner, due, visibility, milestones: milestones.map(({ id, title }) => ({ id, title })),
   });
-  const eligible = members.filter(member => visibility === "shared" || ["owner", "admin"].includes(member.role));
+  const eligible = members;
   const eligibleOwner = eligible.some(member => member.id === owner);
   const errorId = (key: string) => formId + "-error-" + key.replaceAll(".", "-");
   const fieldError = (key: string) => fields[key] ? <p className={styles.fieldError} id={errorId(key)} role="alert">{fields[key]}</p> : null;
@@ -101,8 +102,7 @@ export function GoalEditor({ goal, members, actorId, onClose }: {
         : key.startsWith("milestones.") ? "Enter a milestone name, up to 200 characters."
         : key === "description" ? "Use 4,000 characters or fewer." : "Use at most 50 milestones.";
     }
-    if (!eligibleOwner) invalid.owner_profile_id = visibility === "leadership"
-      ? "Choose an Owner or Admin for a leadership goal." : "Choose an active team member.";
+    if (!eligibleOwner) invalid.owner_profile_id = "Choose an active team member.";
     if (fields.photo) invalid.photo = fields.photo;
     if (Object.keys(invalid).length || !parsed.success) {
       setFields(invalid); setValidationAttempt(value => value + 1); return;
@@ -121,7 +121,7 @@ export function GoalEditor({ goal, members, actorId, onClose }: {
 
   return <SheetFrame open={open} onClose={requestClose}
     label={discardPrompt ? "Discard unsaved changes?" : goal ? "Edit goal" : "New goal"}
-    eyebrow="TEAM GOALS" closeLabel={discardPrompt ? "Close confirmation" : "Close goal editor"}
+    eyebrow="GOALS" closeLabel={discardPrompt ? "Close confirmation" : "Close goal editor"}
     footer={<div className={styles.actions}>{discardPrompt ? <>
       <button ref={keepRef} className="button-primary" type="button" onClick={() => setDiscardPrompt(false)}>Keep editing</button>
       <button className="button-secondary" type="button" onClick={() => setOpen(false)}>Discard changes</button>
@@ -147,31 +147,21 @@ export function GoalEditor({ goal, members, actorId, onClose }: {
           onChange={event => { setDescription(event.target.value); clearField("description"); }} />{fieldError("description")}
       </div>
       <div className={styles.formGrid}>
-        <div className={styles.field}><span>Visibility</span>
-          <AnimatedSelect name="visibility" label="Goal visibility" menuLabel="Goal visibility" value={visibility} disabled={pending}
-            options={[{ value: "shared", label: "Shared with team" }, { value: "leadership", label: "Owner/Admin only" }]}
-            onChange={value => {
-              const next = value as "shared" | "leadership"; setVisibility(next);
-              if (next === "leadership" && !members.some(member => member.id === owner && ["owner", "admin"].includes(member.role)))
-                setFields(current => ({ ...current, owner_profile_id: "Choose an Owner or Admin for a leadership goal." }));
-              else clearField("owner_profile_id");
-            }} />
-        </div>
         <div className={styles.field}><span>Responsible person</span>
           <AnimatedSelect name="owner" label="Goal owner" menuLabel="Goal owner" value={eligibleOwner ? owner : ""} disabled={pending}
             invalid={Boolean(fields.owner_profile_id)} describedBy={fields.owner_profile_id ? errorId("owner_profile_id") : undefined}
-            options={[{ value: "", label: "Choose a person", disabled: true }, ...eligible.map(member => ({ value: member.id, label: member.display_name }))]}
+            options={[{ value: "", label: "Choose a person", disabled: true }, ...eligible.map(member => ({ value: member.id, label: member.display_name, leading: <AccountAvatar avatarUrl={member.avatar_url} size={24} /> }))]}
             onChange={value => { setOwner(value); clearField("owner_profile_id"); }} required />{fieldError("owner_profile_id")}
         </div>
         <div className={styles.field}><span>Due date</span>
-          <DatePicker name="due" label="Goal due date" menuLabel="Choose goal due date" value={due} disabled={pending}
+          <DatePicker name="due" label="Goal due date" menuLabel="Choose goal due date" placement="inline" value={due} disabled={pending}
             invalid={Boolean(fields.due_date)} describedBy={fields.due_date ? errorId("due_date") : undefined}
             onChange={value => { setDue(value); clearField("due_date"); }} clearable />{fieldError("due_date")}
         </div>
       </div>
       <div>
         <label className={styles.upload}><Upload aria-hidden="true" />
-          <span>{file ? "Choose another photo" : goal?.photo_path ? "Replace goal photo" : "Upload goal photo"}<small>Optional · JPEG, PNG or WebP · up to 2 MB</small></span>
+          <span>{file ? "Choose another photo" : goal?.photo_path ? "Replace goal photo" : "Upload goal photo"}<small>Recommended: 1080 × 1080 px · JPEG, PNG or WebP · up to 2 MB</small></span>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" disabled={pending}
             aria-label="Goal photo" aria-invalid={Boolean(fields.photo) || undefined} aria-describedby={fields.photo ? errorId("photo") : undefined}
             onChange={event => choosePhoto(event.target.files?.[0] ?? null)} />
