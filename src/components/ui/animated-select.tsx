@@ -33,6 +33,8 @@ export function AnimatedSelect({
   required = false,
   menuLabel,
   compact = false,
+  invalid = false,
+  describedBy,
 }: {
   name: string;
   label: string;
@@ -45,6 +47,8 @@ export function AnimatedSelect({
   required?: boolean;
   menuLabel: string;
   compact?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -174,6 +178,8 @@ export function AnimatedSelect({
           isOpen && activeIndex >= 0 ? `${listboxId}-${activeIndex}` : undefined
         }
         aria-busy={loading || undefined}
+        data-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         disabled={isDisabled}
         onClick={() => (render ? closeMenu() : openMenu(true))}
       >

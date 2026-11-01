@@ -4267,6 +4267,13 @@ export type Database = {
       }
     }
     Functions: {
+      app_list_team_goals: { Args: { p_before?: string; p_visibility?: string }; Returns: Json }
+      app_get_team_goal: { Args: { p_goal_id: string }; Returns: Json }
+      app_team_goal_members: { Args: never; Returns: Json }
+      app_save_team_goal: { Args: { p_goal_id: string | null; p_input: Json; p_expected_updated_at?: string }; Returns: Json }
+      app_set_team_goal_milestone: { Args: { p_goal_id: string; p_milestone_id: string; p_completed: boolean }; Returns: Json }
+      app_team_goal_photo_context: { Args: { p_goal_id: string; p_write?: boolean }; Returns: Json }
+      app_set_team_goal_photo: { Args: { p_goal_id: string; p_path: string; p_mime: string; p_size: number; p_checksum: string; p_expected_updated_at: string }; Returns: Json }
       app_get_invoice_manual_payment_settings: { Args: Record<PropertyKey, never>; Returns: Json }
       app_save_invoice_manual_payment_settings: { Args: {p_enabled:boolean;p_paypal_url:string|null;p_instructions:string};Returns:Json }
       app_get_invoice_manual_payment: { Args: {p_invoice_id:string};Returns:Json }
