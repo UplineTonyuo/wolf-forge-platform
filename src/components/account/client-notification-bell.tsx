@@ -25,6 +25,7 @@ import {
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
 import { shouldRingForUnread } from "../../domain/notifications/ring";
+import { notificationPollDelay, NOTIFICATION_POLL_TICK_MS } from "../../domain/notifications/polling";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 import { notificationVisibleWithModules } from "../../domain/notifications/visibility";
 import {
@@ -146,6 +147,7 @@ export function ClientNotificationBell({
     useRef<number[]>([]);
   const loadInFlightRef = useRef(false);
   const refreshPendingRef = useRef(false);
+  const pollRef = useRef({ open: false, failures: 0, nextAt: 0 });
 
   /*
    * Inside the command bar the header panel manager owns which panel is open,
@@ -171,6 +173,12 @@ export function ClientNotificationBell({
         "notifications",
       )
     : localOpen;
+
+  useEffect(() => {
+    const poll = pollRef.current;
+    poll.open = open;
+    poll.nextAt = Date.now() + notificationPollDelay(poll.open, poll.failures);
+  }, [open]);
 
   const setOpen = (
     next: boolean,
@@ -338,6 +346,7 @@ export function ClientNotificationBell({
         isActive?: () => boolean,
         queueIfBusy = false,
       ) {
+        if (document.hidden || !navigator.onLine) return;
         if (
           isActive &&
           !isActive()
@@ -359,6 +368,7 @@ export function ClientNotificationBell({
         try {
           const result =
             await getClientNotificationsAction();
+          pollRef.current.failures = result.ok ? 0 : Math.min(pollRef.current.failures + 1, 7);
 
           if (
             isActive &&
@@ -386,6 +396,7 @@ export function ClientNotificationBell({
           }
 
         } catch {
+          pollRef.current.failures = Math.min(pollRef.current.failures + 1, 7);
           if (!silent && (!isActive || isActive())) {
             setError("Unable to load notifications.");
           }
@@ -394,6 +405,8 @@ export function ClientNotificationBell({
             setLoading(false);
           }
           loadInFlightRef.current = false;
+          const poll = pollRef.current;
+          poll.nextAt = Date.now() + notificationPollDelay(poll.open, poll.failures);
           const refreshPending = refreshPendingRef.current;
           refreshPendingRef.current = false;
           if (refreshPending && !document.hidden) {
@@ -463,8 +476,9 @@ export function ClientNotificationBell({
 
   useEffect(
     () => {
+      // The local tick checks the deadline; a closed bell fetches only once a minute.
       const refresh = () => {
-        if (!document.hidden) {
+        if (!document.hidden && navigator.onLine && Date.now() >= pollRef.current.nextAt) {
           void load(true);
         }
       };
@@ -475,13 +489,14 @@ export function ClientNotificationBell({
       const interval =
         window.setInterval(
           refresh,
-          4000,
+          NOTIFICATION_POLL_TICK_MS,
         );
 
       window.addEventListener(
         "focus",
         refreshOnReturn,
       );
+      window.addEventListener("online", refreshOnReturn);
 
       document.addEventListener(
         "visibilitychange",
@@ -497,6 +512,7 @@ export function ClientNotificationBell({
           "focus",
           refreshOnReturn,
         );
+        window.removeEventListener("online", refreshOnReturn);
 
         document.removeEventListener(
           "visibilitychange",
