@@ -64,7 +64,8 @@ export function DatePicker({
   required?: boolean;
   today?: string;
   menuLabel: string;
-  placement?: "above" | "below";
+  /** Inline calendars participate in scrollable dialogs instead of being clipped by them. */
+  placement?: "above" | "below" | "inline";
   shortcuts?: boolean;
   clearable?: boolean;
   disabled?: boolean;
@@ -92,8 +93,11 @@ export function DatePicker({
 
   // Keyboard entry point is the focused day grid; give it focus on open.
   useEffect(() => {
-    if (render) gridRef.current?.focus();
-  }, [render]);
+    if (render) {
+      gridRef.current?.focus();
+      if (placement === "inline") gridRef.current?.closest('[role="dialog"]')?.scrollIntoView({ block: "nearest" });
+    }
+  }, [render, placement]);
 
   const grid = useMemo(() => {
     const startOffset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
@@ -256,6 +260,7 @@ export function DatePicker({
         <div
           role="dialog"
           aria-label={menuLabel}
+          data-placement={placement}
           className={
             isOpen
               ? `${styles.calendar} ${placement === "above" ? styles.calendarAbove : ""} ${styles.calendarOpen}`

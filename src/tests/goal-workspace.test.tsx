@@ -9,10 +9,10 @@ vi.mock("../app/actions/goals",()=>({completeGoalMilestoneAction:actions.complet
 const goal:Goal={id:"a0000000-0000-4000-8000-000000000002",title:"New workspace",description:"Work comfortably",owner_profile_id:"a0000000-0000-4000-8000-000000000001",owner_name:"Synthetic owner",due_date:"2026-11-30",visibility:"shared",created_at:"2026-11-01T00:00:00Z",updated_at:"2026-11-01T00:00:00Z",photo_path:null,photo_mime:null,photo_size:null,photo_checksum:null,milestone_count:2,completed_count:0,milestones:[{id:"a0000000-0000-4000-8000-000000000003",title:"Choose desks",completed_at:null},{id:"a0000000-0000-4000-8000-000000000004",title:"Install internet",completed_at:null}]};
 afterEach(()=>{cleanup();vi.resetAllMocks();});
 describe("Goals workspace",()=>{
-  it("shows shared cards to staff without management or private goals",()=>{
+  it("shows all server-authorized team goals to staff without management controls",()=>{
     render(<GoalListView initial={{items:[goal,{...goal,id:"a0000000-0000-4000-8000-000000000005",title:"Private plan",visibility:"leadership"}],next_before:null}} role="staff" actorId={goal.owner_profile_id} members={[]}/>);
     expect(screen.getByText("New workspace")).toBeTruthy();
-    expect(screen.queryByText("Private plan")).toBeNull();expect(screen.queryByRole("button",{name:"New goal"})).toBeNull();
+    expect(screen.queryByText("Private plan")).not.toBeNull();expect(screen.queryByRole("button",{name:"New goal"})).toBeNull();
   });
   it("uses confirmed milestone results for progress",async()=>{
     actions.complete.mockResolvedValue({ok:true,goal:{...goal,completed_count:1,milestones:[{...goal.milestones[0],completed_at:"2026-11-01T01:00:00Z"},goal.milestones[1]]}});

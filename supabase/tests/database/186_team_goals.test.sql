@@ -35,27 +35,29 @@ select pg_temp.goal_act(1);
 set local role authenticated;
 insert into goal_vars values('shared',public.app_save_team_goal(null,(select value from goal_vars where name='input')));
 select is((select value->>'title' from goal_vars where name='shared'),'Office'::text,'Owner creates a goal');
+select ok((select value ? 'owner_avatar_url' from goal_vars where name='shared'),'goal exposes the existing owner avatar metadata');
+select ok((public.app_team_goal_members()->0) ? 'avatar_url','assignment roster exposes existing avatars');
 select is((select (value->>'milestone_count')::integer from goal_vars where name='shared'),2,'milestones persisted');
 select is(public.app_save_team_goal(null,(select value from goal_vars where name='input'))->>'id',(select value->>'id' from goal_vars where name='shared'),'same create key is idempotent');
 select throws_ok($q$select public.app_save_team_goal(null,(select value||'{"due_date":"infinity","request_id":"30000000-0000-4000-8000-000000001868"}'::jsonb from goal_vars where name='input'))$q$,'22023',null,'nonfinite dates are refused at the RPC boundary');
 select throws_ok($q$select public.app_save_team_goal(null,(select value||'{"due_date":"10000-01-01","request_id":"30000000-0000-4000-8000-000000001869"}'::jsonb from goal_vars where name='input'))$q$,'22023',null,'dates outside four-digit ISO years are refused');
 select throws_ok($q$select public.app_save_team_goal(null,(select value||'{"title":"Different"}'::jsonb from goal_vars where name='input'))$q$,'23505',null,'create key cannot silently change intent');
-insert into goal_vars values('private',public.app_save_team_goal(null,(select value||jsonb_build_object('visibility','leadership','owner_profile_id','20000000-0000-4000-8000-000000001861','request_id','30000000-0000-4000-8000-000000001862') from goal_vars where name='input')));
-select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Owner sees shared and private goals');
-select throws_ok($q$select public.app_save_team_goal(null,(select value||'{"visibility":"leadership","request_id":"30000000-0000-4000-8000-000000001863"}'::jsonb from goal_vars where name='input'))$q$,'22023',null,'private goals cannot be assigned to staff');
+insert into goal_vars values('other',public.app_save_team_goal(null,(select value||jsonb_build_object('visibility','shared','owner_profile_id','20000000-0000-4000-8000-000000001861','request_id','30000000-0000-4000-8000-000000001862') from goal_vars where name='input')));
+select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Owner sees all team goals');
+select throws_ok($q$select public.app_save_team_goal(null,(select value||'{"visibility":"leadership","request_id":"30000000-0000-4000-8000-000000001863"}'::jsonb from goal_vars where name='input'))$q$,'22023',null,'leadership-only goals cannot be created');
 select pg_temp.goal_act(2);
-select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Admin sees private goals');
+select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Admin sees all team goals');
 select pg_temp.goal_act(3);
-select is(jsonb_array_length(public.app_list_team_goals()->'items'),1,'Manager sees shared goals only');
+select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Manager sees all team goals');
 select throws_ok($q$select public.app_save_team_goal(null,(select value from goal_vars where name='input'))$q$,'42501',null,'Manager cannot create goals');
 select throws_ok($q$select public.app_team_goal_members()$q$,'42501',null,'Manager cannot query assignment roster');
-select throws_ok($q$select public.app_get_team_goal((select (value->>'id')::uuid from goal_vars where name='private'))$q$,'P0002',null,'private ID cannot bypass visibility');
+select is(public.app_get_team_goal((select (value->>'id')::uuid from goal_vars where name='other'))->>'visibility','shared'::text,'Manager reads another internal owner goal');
 select pg_temp.goal_act(4);
-select is(jsonb_array_length(public.app_list_team_goals()->'items'),1,'Staff sees shared goals');
+select is(jsonb_array_length(public.app_list_team_goals()->'items'),2,'Staff sees all team goals');
 select is(public.app_set_team_goal_milestone((select(value->>'id')::uuid from goal_vars where name='shared'),(select(value->'milestones'->0->>'id')::uuid from goal_vars where name='shared'),true)->>'completed_count','1'::text,'assigned staff completes a milestone');
 select is(public.app_set_team_goal_milestone((select(value->>'id')::uuid from goal_vars where name='shared'),(select(value->'milestones'->0->>'id')::uuid from goal_vars where name='shared'),true)->>'completed_count','1'::text,'duplicate completion does not increment progress');
 select throws_ok($q$select public.app_team_goal_photo_context((select(value->>'id')::uuid from goal_vars where name='shared'),true)$q$,'42501',null,'Staff cannot upload a cover');
-select throws_ok($q$select public.app_team_goal_photo_context((select(value->>'id')::uuid from goal_vars where name='private'),false)$q$,'P0002',null,'private photo metadata stays hidden');
+select lives_ok($q$select public.app_team_goal_photo_context((select(value->>'id')::uuid from goal_vars where name='other'),false)$q$,'Staff can read another owner goal photo context');
 select pg_temp.goal_act(3);
 select throws_ok($q$select public.app_set_team_goal_milestone((select(value->>'id')::uuid from goal_vars where name='shared'),(select(value->'milestones'->1->>'id')::uuid from goal_vars where name='shared'),true)$q$,'42501',null,'unassigned Manager cannot complete milestones');
 select pg_temp.goal_act(5);
@@ -66,7 +68,7 @@ select throws_ok($q$select public.app_get_team_goal((select(value->>'id')::uuid 
 select pg_temp.goal_act(1);
 select throws_ok($q$select public.app_save_team_goal((select(value->>'id')::uuid from goal_vars where name='shared'),(select value from goal_vars where name='input'),(select(value->>'updated_at')::timestamptz from goal_vars where name='shared'))$q$,'23505',null,'stale edit cannot overwrite progress');
 select is(public.app_get_team_goal((select(value->>'id')::uuid from goal_vars where name='shared'))->>'completed_count','1'::text,'stale edit preserved completion');
-select throws_ok($q$select public.app_set_team_goal_milestone((select(value->>'id')::uuid from goal_vars where name='shared'),(select(value->'milestones'->0->>'id')::uuid from goal_vars where name='private'),true)$q$,'P0002',null,'milestone must belong to the goal');
+select throws_ok($q$select public.app_set_team_goal_milestone((select(value->>'id')::uuid from goal_vars where name='shared'),(select(value->'milestones'->0->>'id')::uuid from goal_vars where name='other'),true)$q$,'P0002',null,'milestone must belong to the goal');
 select throws_ok($q$select public.app_set_team_goal_photo((select(value->>'id')::uuid from goal_vars where name='shared'),'other-tenant/photo.png','image/png',8,repeat('a',64),(public.app_get_team_goal((select(value->>'id')::uuid from goal_vars where name='shared'))->>'updated_at')::timestamptz)$q$,'22023',null,'photo path cannot reference another goal or Tenant');
 select throws_ok('select * from private.team_goals','42501',null,'authenticated cannot read the private table directly');
 -- Exercise the successful edit path with real persisted milestone IDs.
@@ -92,20 +94,20 @@ select throws_ok($q$select public.app_set_team_goal_photo(
  (select(value->>'id')::uuid from goal_vars where name='shared'),(select value#>>'{}' from goal_vars where name='path'),
  'image/png',8,repeat('a',64),(select(value->>'updated_at')::timestamptz from goal_vars where name='edited'))$q$,'23505',null,'stale photo replacement cannot overwrite a newer pointer');
 reset role;
--- Newer shared goals must not hide older leadership goals behind an unfiltered cursor.
+-- Pagination remains bounded across the shared team collection.
 insert into private.team_goals(tenant_id,title,owner_profile_id,visibility,created_by,updated_by,request_id,request_hash)
 select 'f0f0f0f0-0000-4000-8000-000000001861','Shared page fixture '||n,'20000000-0000-4000-8000-000000001861',
  'shared','20000000-0000-4000-8000-000000001861','20000000-0000-4000-8000-000000001861',extensions.gen_random_uuid(),'fixture' from generate_series(1,51)n;
 select pg_temp.goal_act(1);
 set local role authenticated;
-select is(jsonb_array_length(public.app_list_team_goals(null,'leadership')->'items'),1,'leadership filter runs before pagination');
+select is(jsonb_array_length(public.app_list_team_goals(null,'leadership')->'items'),0,'legacy leadership filter has no private collection');
 select is(jsonb_array_length(public.app_list_team_goals(null,'shared')->'items'),50,'filtered page stays bounded');
 insert into goal_vars values('shared_page',public.app_list_team_goals(null,'shared'));
-select is(jsonb_array_length(public.app_list_team_goals((select(value->>'next_before')::uuid from goal_vars where name='shared_page'),'shared')->'items'),2,'filtered cursor reaches the remaining shared goals');
+select is(jsonb_array_length(public.app_list_team_goals((select(value->>'next_before')::uuid from goal_vars where name='shared_page'),'shared')->'items'),3,'filtered cursor reaches the remaining shared goals');
 select throws_ok($q$select public.app_list_team_goals(null,'invalid')$q$,'22023',null,'unknown visibility filters are refused');
 select throws_ok($q$select public.app_list_team_goals((select(value->>'next_before')::uuid from goal_vars where name='shared_page'),'leadership')$q$,'22023',null,'cursor cannot silently switch visibility');
 select pg_temp.goal_act(4);
-select is(jsonb_array_length(public.app_list_team_goals(null,'leadership')->'items'),0,'forged leadership filter never reveals private goals to staff');
+select is(jsonb_array_length(public.app_list_team_goals(null,'leadership')->'items'),0,'legacy leadership filter stays empty for staff');
 reset role;
 update public.tenant_memberships set archived_at=now() where profile_id='20000000-0000-4000-8000-000000001864';
 select pg_temp.goal_act(4);
