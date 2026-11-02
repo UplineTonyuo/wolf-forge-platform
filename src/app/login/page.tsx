@@ -1,28 +1,14 @@
 import type { Metadata } from "next";
-import { LoginForm } from "../../components/forms/login-form";
-import { IDENTITY_UNAVAILABLE_MESSAGE } from "../../lib/supabase/identity-lookup";
+import { Suspense } from "react";
+import { LoginQueryForm } from "./login-query-form";
 import { PwaInstallButton } from "../../components/pwa/pwa-provider";
+import { LoginForm } from "../../components/forms/login-form";
 
 export const metadata: Metadata = {
   title: "Wolf Forge Access",
 };
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ next?: string; reason?: string }>;
-}) {
-  const params = await searchParams;
-
-  const initialError =
-    params.reason === "identity-unavailable"
-      ? IDENTITY_UNAVAILABLE_MESSAGE
-      : params.reason === "staff-only"
-        ? "This area is for Wolf Forge team members."
-        : params.reason === "client-only"
-          ? "This area is for active Wolf Forge client accounts."
-          : null;
-
+export default function LoginPage() {
   return (
     <main className="login-page wf-cinematic-login">
       <div className="wf-cinematic-grid" aria-hidden="true" />
@@ -89,10 +75,9 @@ export default async function LoginPage({
             </p>
           </div>
 
-          <LoginForm
-            next={params.next}
-            initialError={initialError}
-          />
+          <Suspense fallback={<LoginForm />}>
+            <LoginQueryForm />
+          </Suspense>
           <PwaInstallButton variant="login" />
         </section>
       </section>

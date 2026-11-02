@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   Tags,
+  Target,
   TicketCheck,
   TrendingUp,
   UsersRound,
@@ -54,6 +55,7 @@ export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true
   services: Wrench,
   forms: FormInput,
   team: ShieldCheck,
+  team_goals: Target,
   team_supervision: MessagesSquare,
   settings: Settings,
   white_label: Palette,
@@ -130,7 +132,9 @@ export function InternalShell({
   const workspaceName = unavailable ? "Workspace branding unavailable" : branding?.name ?? "Wolf Forge";
   const ticketRoute = pathname === "/tickets" || pathname.startsWith("/tickets/");
   const router = useRouter();
-  const navigationCategories = navigationForModules(user.modules, showWhiteLabel);
+  // This shell receives a verified internal member. Goals has its own database
+  // boundary; exposing it does not grant access to Members or supervision.
+  const navigationCategories = navigationForModules(user.modules, showWhiteLabel, true);
   const mobileDrawerRef = useRef<HTMLDialogElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
 

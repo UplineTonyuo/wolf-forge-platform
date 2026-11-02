@@ -1,4 +1,5 @@
 "use client";
+import { useBodyScrollLock } from "../ui/use-body-scroll-lock";
 
 import {
   ArrowRight,
@@ -101,12 +102,6 @@ export function WorkspaceQuickAction({
       return;
     }
 
-    const previousOverflow =
-      document.body.style.overflow;
-
-    document.body.style.overflow =
-      "hidden";
-
     const onKeyDown = (
       event: KeyboardEvent,
     ) => {
@@ -123,15 +118,14 @@ export function WorkspaceQuickAction({
     );
 
     return () => {
-      document.body.style.overflow =
-        previousOverflow;
-
       document.removeEventListener(
         "keydown",
         onKeyDown,
       );
     };
   }, [open]);
+
+  useBodyScrollLock(open);
 
   /* Closing always resets the face, so nothing half-filled waits behind the next open. */
   const closePanel = () => {

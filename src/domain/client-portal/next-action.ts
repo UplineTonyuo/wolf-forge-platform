@@ -98,11 +98,11 @@ function eyebrowOf(item: ClientAttentionItem, urgent: boolean): string {
     case "subscriptions":
       return "Subscription";
     case "projects":
-      return "Project";
+      return "Order";
     case "messages":
       return "Message";
     case "onboarding":
-      return "Onboarding";
+      return "Forms";
     default:
       return "Action";
   }
@@ -230,7 +230,7 @@ export function composeAttentionChips(summary: ClientPortalSummary): AttentionCh
     chips.push({
       id: "projects",
       tone: "in_progress",
-      label: `${openProjects} ${openProjects === 1 ? "project" : "projects"} active`,
+      label: `${openProjects} ${openProjects === 1 ? "order" : "orders"} active`,
     });
   }
 

@@ -106,7 +106,7 @@ function StoreSkeleton() {
 }
 
 function OnboardingSkeleton() {
-  return <div className="portal-page"><Heading title="Onboarding" />
+  return <div className="portal-page"><Heading title="Orders" />
     <div className={styles.inline} data-skeleton-block="onboarding-progress"><Bar width={160} height={18} /><Bar width={120} /></div>
     {[0, 1].map((group) => <Section key={group} description><div className="portal-onboarding-list" data-skeleton-block="assigned-forms">
       {[0, 1].map((index) => <div className="portal-onboarding-row" key={index}>
@@ -201,7 +201,7 @@ function RouteSkeleton({ section, detail, title }: { section: string; detail: bo
   switch (section) {
     case "dashboard": return <DashboardSkeleton />;
     case "store": return <StoreSkeleton />;
-    case "projects": return <div className="portal-page"><Heading title="Projects" /><Section><ProjectRows count={4} /></Section></div>;
+    case "projects": return <div className="portal-page"><Heading title="Orders" /><Section><ProjectRows count={4} /></Section></div>;
     case "onboarding": return <OnboardingSkeleton />;
     case "messages": return <div className="portal-page"><Heading title="Inbox" action /><MessageRows /></div>;
     case "reporting": return <ReportingSkeleton />;

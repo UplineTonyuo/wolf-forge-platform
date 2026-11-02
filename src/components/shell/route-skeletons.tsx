@@ -4,6 +4,7 @@ import supervisionRows from "../team-supervision/supervised-conversation-list.mo
 import supervision from "../team-supervision/supervised-transcript.module.css";
 import tickets from "../tickets/tickets.module.css";
 import project from "../projects/project-detail.module.css";
+import goals from "../goals/goals.module.css";
 
 /*
  * Destination-shaped loading skeletons for the internal shell. A sidebar click
@@ -32,6 +33,8 @@ export type InternalSkeletonVariant =
   | "services"
   | "forms"
   | "team"
+  | "goals"
+  | "goalDetail"
   | "conversations"
   | "settings"
   | "section"
@@ -52,6 +55,7 @@ const EXACT: Record<string, InternalSkeletonVariant> = {
   "/services": "services",
   "/forms": "forms",
   "/team": "team",
+  "/team/goals": "goals",
   "/team/all-conversations": "conversations",
   "/settings": "settings",
 };
@@ -65,6 +69,7 @@ export function getInternalSkeletonVariant(pathname: string): InternalSkeletonVa
   if (EXACT[path]) return EXACT[path];
   if (/^\/clients\/[^/]+$/.test(path) && path !== "/clients/new") return "clientDetail";
   if (/^\/orders\/(?!new(?:\/|$))[^/]+(?:\/|$)/.test(path)) return "projectDetail";
+  if (path.startsWith("/team/goals/")) return "goalDetail";
   if (path.startsWith("/settings/")) return "settings";
   return "generic";
 }
@@ -524,6 +529,49 @@ function FormsSkeleton() {
   );
 }
 
+function GoalsSkeleton() {
+  return (
+    <Frame className={goals.page} variant="goals">
+      <Header actions={[[140, 40], [105, 40]]} />
+      <Toolbar left={[[80, 38], [120, 38], [110, 38]]} />
+      <div className={goals.cards}>
+        {Array.from({ length: 3 }, (_, index) => (
+          <div className={goals.card} key={index}>
+            <div className={goals.cover}><Bar w="100%" h="100%" r={0} /></div>
+            <div className={goals.cardBody}>
+              <Bar w="35%" h={10} />
+              <Bar w="80%" h={20} className="route-skeleton-gap" />
+              <Bar w="65%" h={11} className="route-skeleton-gap" />
+              <Bar w="100%" h={6} className="route-skeleton-gap" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Frame>
+  );
+}
+
+function GoalDetailSkeleton() {
+  return (
+    <Frame className={goals.page} variant="goalDetail">
+      <Bar w={100} h={12} className="route-skeleton-gap" />
+      <Header actions={[[110, 40], [100, 40]]} />
+      <div className={goals.detailGrid}>
+        <div className={goals.detailMain}>
+          <div className={goals.coverLarge}><Bar w="100%" h="100%" /></div>
+          <Bar w={140} h={20} className="route-skeleton-gap" />
+          <Rows count={3} height={54} side={false} />
+        </div>
+        <div className={goals.overview}>
+          <Bar w="65%" h={18} />
+          <Bar w="100%" h={6} className="route-skeleton-gap" />
+          <Fields count={3} />
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
 function TeamSkeleton() {
   return (
     <Frame className="route-skeleton-team" variant="team">
@@ -647,6 +695,8 @@ const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
   services: ServicesSkeleton,
   forms: FormsSkeleton,
   team: TeamSkeleton,
+  goals: GoalsSkeleton,
+  goalDetail: GoalDetailSkeleton,
   conversations: ConversationsSkeleton,
   settings: SettingsSkeleton,
   section: SectionSkeleton,

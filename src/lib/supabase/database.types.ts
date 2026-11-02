@@ -4267,6 +4267,25 @@ export type Database = {
       }
     }
     Functions: {
+      app_list_team_goals: { Args: { p_before?: string; p_visibility?: string }; Returns: Json }
+      app_get_team_goal: { Args: { p_goal_id: string }; Returns: Json }
+      app_team_goal_members: { Args: never; Returns: Json }
+      app_save_team_goal: { Args: { p_goal_id: string | null; p_input: Json; p_expected_updated_at?: string }; Returns: Json }
+      app_set_team_goal_milestone: { Args: { p_goal_id: string; p_milestone_id: string; p_completed: boolean }; Returns: Json }
+      app_team_goal_photo_context: { Args: { p_goal_id: string; p_write?: boolean }; Returns: Json }
+      app_set_team_goal_photo: { Args: { p_goal_id: string; p_path: string; p_mime: string; p_size: number; p_checksum: string; p_expected_updated_at: string }; Returns: Json }
+      app_get_invoice_manual_payment_settings: { Args: Record<PropertyKey, never>; Returns: Json }
+      app_save_invoice_manual_payment_settings: { Args: {p_enabled:boolean;p_paypal_url:string|null;p_instructions:string};Returns:Json }
+      app_get_invoice_manual_payment: { Args: {p_invoice_id:string};Returns:Json }
+      app_prepare_invoice_payment_receipt: { Args: {p_invoice_id:string;p_request_id:string;p_filename:string;p_mime_type:string;p_size_bytes:number;p_checksum_sha256:string};Returns:Json }
+      app_verify_invoice_payment_receipt: { Args: {p_receipt_id:string;p_uploader_profile_id:string;p_checksum_sha256:string};Returns:Json }
+      app_get_invoice_payment_receipt: { Args: {p_receipt_id:string};Returns:Json }
+      app_submit_invoice_manual_payment_claim: { Args: {p_request_id:string;p_invoice_id:string;p_receipt_id:string;p_method:string;p_reference:string|null;p_expected_balance_cents:number};Returns:Json }
+      app_review_invoice_manual_payment_claim: { Args: {p_request_id:string;p_claim_id:string;p_decision:string;p_paid_at:string|null;p_reference:string|null;p_reason:string|null};Returns:Json }
+      app_list_invoice_share_links: { Args: {p_invoice_id:string};Returns:Json }
+      app_create_invoice_share_link: { Args: {p_request_id:string;p_invoice_id:string;p_token_sha256:string};Returns:Json }
+      app_revoke_invoice_share_link: { Args: {p_link_id:string};Returns:Json }
+      app_get_public_invoice_share: { Args: {p_token:string};Returns:Json }
       app_get_runtime_white_label_configuration: {
         Args: never
         Returns: Json
@@ -5565,6 +5584,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_get_primary_contact_summary: {
+        Args: { p_company_id: string }
+        Returns: { name: string; email: string | null; phone: string | null; job_title: string | null }[]
+      }
       app_get_form_submission_pdf: { Args: { p_submission_id: string; p_include_project?: boolean }; Returns: Json }
       app_get_form_submission: {
         Args: { p_submission_id: string }
@@ -5928,6 +5951,14 @@ export type Database = {
           status: string
           updated_at: string
         }[]
+      }
+      app_list_order_response_states: {
+        Args: { p_order_ids: string[] }
+        Returns: { order_id: string; unanswered: boolean | null }[]
+      }
+      app_list_my_order_response_states: {
+        Args: { p_order_ids: string[] }
+        Returns: { order_id: string; unanswered: boolean | null }[]
       }
       app_list_my_client_projects: {
         Args: { p_limit?: number }

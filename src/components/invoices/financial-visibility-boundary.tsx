@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { financialAuthority, financialRecordIds } from "../../domain/invoices/visibility";
 import { loadFinancialVisibilityAction } from "../../app/actions/financial-visibility";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function FinancialVisibilityBoundary({ scope, signature, invoiceId, children }: {
   scope: "internal" | "internal-work" | "client" | "client-detail" | "wallet" | "store" | "dashboard";
@@ -41,7 +42,7 @@ export function FinancialVisibilityBoundary({ scope, signature, invoiceId, child
       }
     };
     void check();
-    const interval = window.setInterval(() => void check(), 15_000);
+    const interval = window.setInterval(() => void check(), ACCESS_REFRESH_INTERVAL_MS);
     const resume = () => void check();
     window.addEventListener("focus", resume);
     document.addEventListener("visibilitychange", resume);

@@ -93,7 +93,11 @@ const taskFacts: ProjectTaskFact[] = [
   { order_id: "10000000-0000-4000-8000-000000000001", status: "in_progress", due_at: null },
 ];
 
-const rows = composeProjectRows(orders, taskFacts, now);
+const rows = composeProjectRows(orders, taskFacts, now, [
+  { order_id: orders[0]!.id, unanswered: true },
+  { order_id: orders[1]!.id, unanswered: false },
+  { order_id: orders[2]!.id, unanswered: true },
+]);
 
 describe("Projects read model", () => {
   it("resolves the authoritative client, service and assignee for every project", () => {
@@ -133,16 +137,9 @@ describe("Projects attention rule", () => {
     expect(projectNeedsAttention("complete", none)).toBe(false);
   });
 
-  it("uses one predicate for the banner count and the attention filter", () => {
+  it("preserves the operational attention rule separately from public replies", () => {
     expect(countProjectsNeedingAttention(rows)).toBe(2);
-
-    const viaFilter = applyProjectScopeFilters(rows, {
-      ...emptyProjectFilterCriteria,
-      attentionOnly: true,
-    });
-
-    expect(viaFilter).toHaveLength(countProjectsNeedingAttention(rows));
-    expect(viaFilter.every((row) => row.needsAttention)).toBe(true);
+    expect(rows.filter((row) => row.needsAttention).map((row) => row.id)).toEqual([orders[1]!.id, orders[2]!.id]);
   });
 
   it("applies the same overdue rule on the detail task view", () => {
@@ -192,7 +189,7 @@ describe("Projects counts and filtering", () => {
   });
 
   it("keeps counts and rows in agreement while other filters are active", () => {
-    const criteria = { ...emptyProjectFilterCriteria, attentionOnly: true };
+    const criteria = { ...emptyProjectFilterCriteria, unansweredOnly: true };
     const counts = countProjectsByStatus(rows, criteria);
 
     expect(counts.all).toBe(2);

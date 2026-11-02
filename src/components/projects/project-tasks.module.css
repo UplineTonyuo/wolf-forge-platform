@@ -1,4 +1,8 @@
 .tasks { display: grid; gap: 16px; }
+.empty { margin: 0; color: var(--wf-text-muted); line-height: 1.5; }
+.titleField { display: grid; flex: 1 1 240px; gap: 6px; min-width: 0; color: var(--wf-navy); font-size: 13px; font-weight: 600; }
+.titleField input { width: 100%; font-weight: 400; }
+.tasks .create { align-items: flex-end; }
 .row { display: grid; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--wf-border); }
 .identity { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .identity small { color: var(--wf-text-muted); }

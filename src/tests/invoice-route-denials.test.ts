@@ -9,7 +9,7 @@ vi.mock("../components/invoices/financial-visibility-boundary", () => ({ Financi
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({
   user: { invoices: { manage: true } },
   services: {
-    invoices: { get: mocks.get, list: async () => [], workEnabled: async () => true },
+    invoices: { get: mocks.get, list: async () => [], workEnabled: async () => true, getManualPayment: async () => ({settings:{enabled:false,paypal_url:null,instructions:""},claims:[],can_report:false,can_review:false}) },
     companies: { listActive: async () => [] },
     catalog: { listActive: async () => [], listFolders: async () => [] },
   },

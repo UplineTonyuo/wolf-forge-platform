@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useBodyScrollLock } from "../ui/use-body-scroll-lock";
 import {
   applyOptimisticTeamReactionToggle,
   formatTeamRelativeTime,
@@ -213,6 +214,7 @@ export function TeamMessagesDrawer({
 }) {
   const mounted = useClientMounted();
   const { render, phase } = useExitTransition(open, 200);
+  useBodyScrollLock(render);
   const { statusFor } = useTeamPresence();
 
   const [pane, setPane] = useState<Pane>(canUseTeamMessages ? "messages" : "tickets");
@@ -1005,7 +1007,9 @@ export function TeamMessagesDrawer({
   /* Remember where focus came from, so it can be handed back on close. */
   useEffect(() => {
     if (!open) return;
-    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    if (!restoreFocusRef.current || !drawerRef.current?.contains(document.activeElement)) {
+      restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    }
   }, [open]);
 
   /* Escape closes the drawer; Tab stays inside it. */
@@ -1045,20 +1049,10 @@ export function TeamMessagesDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose, pickerOpen, render]);
 
-  /* The page behind a modal surface must not scroll under it. */
-  useEffect(() => {
-    if (!render) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, [render]);
-
   /* Focus returns to the trigger only once the outro has finished. */
   useEffect(() => {
     if (render) return;
-    restoreFocusRef.current?.focus();
+    restoreFocusRef.current?.focus({ preventScroll: true });
     restoreFocusRef.current = null;
   }, [render]);
 

@@ -45,7 +45,7 @@ function relationRow(id: string, overrides: Partial<ProjectRelationRow> = {}): P
 }
 
 describe("OrderService project read model", () => {
-  it("resolves projects and their tasks in two batched queries, never one per row", async () => {
+  it("resolves orders, tasks and reply metadata in bounded batches, never one per row", async () => {
     const repository = {
       listWithRelations: vi.fn().mockResolvedValue({
         rows: [relationRow(orderId), relationRow("10000000-0000-4000-8000-000000000002")],
@@ -54,6 +54,7 @@ describe("OrderService project read model", () => {
       listTaskFacts: vi.fn().mockResolvedValue([
         { order_id: orderId, status: "todo", due_at: null },
       ]),
+      listResponseStates: vi.fn().mockResolvedValue([]),
     };
 
     const service = new OrderService({ repository: repository as never });
@@ -75,6 +76,7 @@ describe("OrderService project read model", () => {
     const repository = {
       listWithRelations: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
+      listResponseStates: vi.fn().mockResolvedValue([]),
     };
 
     const service = new OrderService({ repository: repository as never });
@@ -98,6 +100,7 @@ describe("OrderService project read model", () => {
     const repository = {
       listWithRelations: vi.fn().mockResolvedValue({ rows: [relationRow(orderId)], totalCount: 9000 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
+      listResponseStates: vi.fn().mockResolvedValue([]),
     };
 
     const service = new OrderService({ repository: repository as never });

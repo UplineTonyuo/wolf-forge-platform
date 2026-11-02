@@ -38,7 +38,7 @@ export function ProjectsHeaderActions({
         />
 
         <span>
-          New Project
+          New Order
         </span>
       </Link>
     </div>

@@ -35,6 +35,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   Reflect.deleteProperty(document, "hidden");
+  Reflect.deleteProperty(navigator, "onLine");
 });
 
 const bells = [
@@ -51,6 +52,112 @@ const bells = [
 ];
 
 for (const bell of bells) {
+  it(`${bell.name} closed bell keeps an hour of quiet polling to 61 reads including mount`, async () => {
+    bell.action.mockResolvedValue({ ok: true, notifications: [] });
+    bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_540_001); });
+    expect(bell.action).toHaveBeenCalledTimes(61);
+  });
+
+  it(`${bell.name} opening refreshes immediately, stays live, and closing slows polling`, async () => {
+    bell.action.mockResolvedValue({ ok: true, notifications: [] });
+    const view = bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { fireEvent.click(view.getByRole("button", { name: "Notifications" })); });
+    expect(bell.action).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(4_000); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    await act(async () => { fireEvent.click(view.getByRole("button", { name: "Notifications" })); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(bell.action).toHaveBeenCalledTimes(4);
+  });
+
+  it(`${bell.name} backs off fast failures and resets the quiet delay after recovery`, async () => {
+    bell.action.mockResolvedValueOnce({ ok: false, error: "Unavailable", notifications: [] })
+      .mockRejectedValueOnce(new Error("Network unavailable"))
+      .mockResolvedValue({ ok: true, notifications: [] });
+    bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(119_999); });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(bell.action).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(239_999); });
+    expect(bell.action).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(bell.action).toHaveBeenCalledTimes(4);
+  });
+
+  it(`${bell.name} does no reads offline and refreshes on reconnect`, async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    bell.action.mockResolvedValue({ ok: true, notifications: [] });
+    bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(180_000); });
+    expect(bell.action).not.toHaveBeenCalled();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+  });
+
+  it(`${bell.name} caps repeated failures at one scheduled retry every five minutes`, async () => {
+    bell.action.mockResolvedValue({ ok: false, error: "Unavailable", notifications: [] });
+    bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(360_000); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(299_999); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(bell.action).toHaveBeenCalledTimes(4);
+    await act(async () => { await vi.advanceTimersByTimeAsync(300_000); });
+    expect(bell.action).toHaveBeenCalledTimes(5);
+  });
+
+  it(`${bell.name} open bell backs off failures without delaying an explicit retry`, async () => {
+    const result = { ok: true, notifications: [] };
+    bell.action.mockResolvedValueOnce(result)
+      .mockResolvedValue({ ok: false, error: "Unavailable", notifications: [] });
+    const view = bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    await act(async () => { fireEvent.click(view.getByRole("button", { name: "Notifications" })); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(7_999); });
+    expect(bell.action).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(bell.action).toHaveBeenCalledTimes(3);
+    bell.action.mockResolvedValue(result);
+    await act(async () => { fireEvent.click(view.getByRole("button", { name: "Notifications" })); });
+    await act(async () => { fireEvent.click(view.getByRole("button", { name: "Notifications" })); });
+    expect(bell.action).toHaveBeenCalledTimes(4);
+    await act(async () => { await vi.advanceTimersByTimeAsync(4_000); });
+    expect(bell.action).toHaveBeenCalledTimes(5);
+  });
+
+  it(`${bell.name} pauses in a hidden document and removes its listeners on unmount`, async () => {
+    Object.defineProperty(document, "hidden", { configurable: true, value: true });
+    bell.action.mockResolvedValue({ ok: true, notifications: [] });
+    const view = bell.renderBell();
+    await act(async () => { await vi.advanceTimersByTimeAsync(180_000); });
+    expect(bell.action).not.toHaveBeenCalled();
+    Object.defineProperty(document, "hidden", { configurable: true, value: false });
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+    view.unmount();
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      window.dispatchEvent(new Event("focus"));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(180_000);
+    });
+    expect(bell.action).toHaveBeenCalledTimes(1);
+  });
+
   it(`${bell.name} bell invalidates Ticket cache on domain denial and ignores Ticket rows from a pre-denial response`, async () => {
     const base = { companyId: null, body: "Cached history", reason: null, createdAt: "2026-10-10T12:00:00Z", href: "/account", kind: "credit", audience: "client", readAt: null };
     const response = { ok: true, notifications: [
@@ -130,7 +237,7 @@ for (const bell of bells) {
     await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
     expect(bell.action).toHaveBeenCalledTimes(2);
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(4_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     expect(bell.action).toHaveBeenCalledTimes(3);
   });
 

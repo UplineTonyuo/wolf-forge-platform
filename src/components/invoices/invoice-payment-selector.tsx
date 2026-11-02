@@ -36,6 +36,8 @@ type Props = {
   collectible: boolean;
   /** Composed server-side; the external rails carry their real availability. */
   paymentRails: ClientPaymentRail[];
+  manualAvailable?: boolean;
+  manualPending?: boolean;
 };
 
 function requestId() {
@@ -201,6 +203,8 @@ export function InvoicePaymentSelector({
   membershipCurrency,
   collectible,
   paymentRails,
+  manualAvailable = false,
+  manualPending = false,
 }: Props) {
   const router = useRouter();
   const [membershipOpen, setMembershipOpen] = useState(false);
@@ -237,6 +241,8 @@ export function InvoicePaymentSelector({
       setResult({ kind: "error", message: payment.error });
     });
   }
+
+  if (manualPending) return null;
 
   return (
     <section className="invoice-payment-selector" aria-labelledby="payment-method-heading">
@@ -292,8 +298,7 @@ export function InvoicePaymentSelector({
             <p>Unlock member-only offers, coupon eligibility, and future Wolf Forge benefits.</p>
           )}
 
-          <span className={styles.breakdownLabel}>Payment breakdown</span>
-          <PaymentBreakdown plan={plan} />
+          {manualAvailable ? <p className={styles.blockerNote}>Pay the full invoice with your available balance, or use manual payment below. No partial wallet payment has been deducted.</p> : <><span className={styles.breakdownLabel}>Payment breakdown</span><PaymentBreakdown plan={plan} /></>}
 
           {/*
             * Why the balance contributed nothing, when it did not. Stated in
@@ -332,7 +337,7 @@ export function InvoicePaymentSelector({
             * The invoice is settled or not open: no breakdown action belongs
             * here, and the totals above already state the position.
             */}
-          {collectible && plan.remainingCents > 0 ? (
+          {collectible && plan.remainingCents > 0 && !manualAvailable ? (
             <RemainderRails
               rails={externalRails}
               remainingCents={plan.remainingCents}

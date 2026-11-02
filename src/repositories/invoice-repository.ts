@@ -17,6 +17,12 @@ import type {
 } from "../lib/supabase/database-rows";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { UserMutationClient } from "./types";
+import {
+  invoiceManualPaymentSchema, invoiceManualSettingsSchema, invoiceShareLinkSchema,
+  manualPaymentClaimSchema, manualPaymentReviewSchema, paymentReceiptSchema,
+  type InvoiceManualSettings, type ManualPaymentClaimInput, type ManualPaymentReviewInput, type PaymentReceiptInput,
+} from "../domain/invoices/manual-payments";
+import { z } from "zod";
 
 export type InvoiceSummary = {
   invoice: InvoiceRow;
@@ -68,6 +74,36 @@ function latestSettledAt(payments: InvoicePaymentRow[], invoiceId: string) {
 }
 
 export class InvoiceRepository {
+  async getManualPayment(id:string) {
+    return invoiceManualPaymentSchema.parse(unwrapOne(await this.client.rpc("app_get_invoice_manual_payment",{p_invoice_id:id}),"Manual invoice payment"));
+  }
+  async getManualPaymentSettings() {
+    return invoiceManualSettingsSchema.parse(unwrapOne(await this.client.rpc("app_get_invoice_manual_payment_settings"),"Manual payment settings"));
+  }
+  async saveManualPaymentSettings(input:InvoiceManualSettings) {
+    return invoiceManualSettingsSchema.parse(unwrapOne(await this.client.rpc("app_save_invoice_manual_payment_settings",{p_enabled:input.enabled,p_paypal_url:input.paypal_url,p_instructions:input.instructions}),"Manual payment settings"));
+  }
+  async preparePaymentReceipt(id:string,input:PaymentReceiptInput) {
+    return paymentReceiptSchema.parse(unwrapOne(await this.client.rpc("app_prepare_invoice_payment_receipt",{p_invoice_id:id,p_request_id:input.request_id,p_filename:input.filename,p_mime_type:input.mime_type,p_size_bytes:input.size_bytes,p_checksum_sha256:input.checksum_sha256}),"Payment receipt"));
+  }
+  async getPaymentReceipt(id:string) {
+    return paymentReceiptSchema.parse(unwrapOne(await this.client.rpc("app_get_invoice_payment_receipt",{p_receipt_id:id}),"Payment receipt"));
+  }
+  async submitManualPaymentClaim(id:string,input:ManualPaymentClaimInput) {
+    return manualPaymentClaimSchema.parse(unwrapOne(await this.client.rpc("app_submit_invoice_manual_payment_claim",{p_request_id:input.request_id,p_invoice_id:id,p_receipt_id:input.receipt_id,p_method:input.method,p_reference:input.reference,p_expected_balance_cents:input.expected_balance_cents}),"Payment report"));
+  }
+  async reviewManualPaymentClaim(id:string,input:ManualPaymentReviewInput) {
+    return manualPaymentReviewSchema.parse(unwrapOne(await this.client.rpc("app_review_invoice_manual_payment_claim",{p_request_id:input.request_id,p_claim_id:id,p_decision:input.decision,p_paid_at:input.paid_at,p_reference:input.reference,p_reason:input.reason}),"Payment review"));
+  }
+  async listShareLinks(id:string) {
+    return z.array(invoiceShareLinkSchema).max(100).parse(unwrapOne(await this.client.rpc("app_list_invoice_share_links",{p_invoice_id:id}),"Invoice links"));
+  }
+  async createShareLink(id:string,requestId:string,tokenHash:string) {
+    return invoiceShareLinkSchema.parse(unwrapOne(await this.client.rpc("app_create_invoice_share_link",{p_invoice_id:id,p_request_id:requestId,p_token_sha256:tokenHash}),"Invoice link"));
+  }
+  async revokeShareLink(id:string) {
+    return invoiceShareLinkSchema.parse(unwrapOne(await this.client.rpc("app_revoke_invoice_share_link",{p_link_id:id}),"Invoice link"));
+  }
   constructor(private readonly client: UserMutationClient) {}
 
   async workEnabled(): Promise<boolean> {

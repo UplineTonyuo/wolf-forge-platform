@@ -244,8 +244,8 @@ export function ClientSearch({
           ref={inputRef}
           type="search"
           value={value}
-          placeholder="Search projects, messages, services..."
-          aria-label="Search projects, messages and services"
+          placeholder="Search orders, messages, services..."
+          aria-label="Search orders, messages and services"
           role="combobox"
           aria-expanded={showPanel}
           aria-controls="client-search-results"

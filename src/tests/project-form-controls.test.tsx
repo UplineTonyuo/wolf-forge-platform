@@ -116,27 +116,27 @@ describe("Create Project custom controls", () => {
     const due = dayInCurrentMonth();
 
     fireEvent.click(screen.getByRole("button", { name: "Due date: Select a date" }));
-    const dueCalendar = await screen.findByRole("dialog", { name: "Project due date" });
+    const dueCalendar = await screen.findByRole("dialog", { name: "Order due date" });
     fireEvent.click(within(dueCalendar).getByRole("button", { name: due.label }));
     expect(container.querySelector('input[name="due_at"]')).toHaveValue(due.iso);
     await waitFor(() => expect(dueCalendar).not.toBeInTheDocument());
 
     const start = dayInCurrentMonth();
     fireEvent.click(screen.getByRole("button", { name: "Start date: Select a date" }));
-    const startCalendar = await screen.findByRole("dialog", { name: "Project start date" });
+    const startCalendar = await screen.findByRole("dialog", { name: "Order start date" });
     fireEvent.click(within(startCalendar).getByRole("button", { name: start.label }));
     expect(container.querySelector('input[name="started_at"]')).toHaveValue(start.iso);
     await waitFor(() => expect(startCalendar).not.toBeInTheDocument());
 
     /* Clear is offered and empties the value, preserving the optional field. */
     fireEvent.click(screen.getByRole("button", { name: /^Due date:/ }));
-    const dueClearCalendar = await screen.findByRole("dialog", { name: "Project due date" });
+    const dueClearCalendar = await screen.findByRole("dialog", { name: "Order due date" });
     fireEvent.click(within(dueClearCalendar).getByRole("button", { name: "Clear" }));
     expect(container.querySelector('input[name="due_at"]')).toHaveValue("");
     await waitFor(() => expect(dueClearCalendar).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /^Start date:/ }));
-    const startClearCalendar = await screen.findByRole("dialog", { name: "Project start date" });
+    const startClearCalendar = await screen.findByRole("dialog", { name: "Order start date" });
     fireEvent.click(within(startClearCalendar).getByRole("button", { name: "Clear" }));
     expect(container.querySelector('input[name="started_at"]')).toHaveValue("");
   });

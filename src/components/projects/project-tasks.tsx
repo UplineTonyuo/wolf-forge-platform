@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import { manageProjectTaskAction, type ProjectTaskCommand } from "../../app/actions/project-tasks";
@@ -22,14 +22,24 @@ export function ProjectTasks({ orderId, tasks, people, capabilities }: {
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [requestId, setRequestId] = useState(randomUuid);
+  const inFlight = useRef(false);
   function run(command: ProjectTaskCommand) {
+    if (inFlight.current) return;
+    if (command.kind === "create" || command.kind === "rename") {
+      command = { ...command, title: command.title.trim() };
+      if (!command.title) { setError("Enter a task title."); return; }
+    }
+    inFlight.current = true;
     setError(null);
     startTransition(async () => {
-      const result = await manageProjectTaskAction(orderId, command);
-      if (!result.ok) { setError(result.error); return; }
-      if (command.kind === "create") { setTitle(""); setRequestId(randomUuid()); }
-      setEditing(null);
-      router.refresh();
+      try {
+        const result = await manageProjectTaskAction(orderId, command);
+        if (!result.ok) { setError(result.error); return; }
+        if (command.kind === "create") { setTitle(""); setRequestId(randomUuid()); }
+        setEditing(null);
+        router.refresh();
+      } catch { setError("Task save could not be confirmed. Retry to check the same request safely."); }
+      finally { inFlight.current = false; }
     });
   }
   return <div className={styles.tasks}>
@@ -46,9 +56,9 @@ export function ProjectTasks({ orderId, tasks, people, capabilities }: {
           <button type="button" aria-label={`Rename ${task.title}`} onClick={() => setEditing(task.id)} disabled={pending}><Pencil aria-hidden="true" /></button>
         </div> : null}
       </div>
-    </div>) : <p>No tasks yet.</p>}
+    </div>) : <p className={styles.empty}>No tasks yet. Add the first delivery step below. Clients see progress counts only.</p>}
     {capabilities.edit ? <form className={styles.create} onSubmit={(event) => { event.preventDefault(); run({ kind: "create", title, requestId }); }}>
-      <input aria-label="New task title" value={title} onChange={(event) => setTitle(event.currentTarget.value)} placeholder="Add a task" required maxLength={500} disabled={pending} />
+      <label className={styles.titleField}>Task title<input aria-label="New task title" value={title} onChange={(event) => setTitle(event.currentTarget.value)} placeholder="e.g. Review delivery" required maxLength={500} disabled={pending} /></label>
       <button type="submit" disabled={pending || !title.trim()}><Plus aria-hidden="true" />Add task</button>
     </form> : null}
     {pending ? <p role="status">Saving task…</p> : null}

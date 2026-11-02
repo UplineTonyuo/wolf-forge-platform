@@ -35,7 +35,7 @@ import styles from "./store-catalog.module.css";
  */
 
 /**
- * The cart row for an investment, built from exactly what the card already
+ * The cart row for an service, built from exactly what the card already
  * shows, so the two can never disagree about price or cadence.
  */
 function toCartItem(service: StoreServiceView, categoryName: string | null): CartItem {
@@ -197,7 +197,7 @@ function Spotlight({ service, categoryName }: { service: StoreServiceView; categ
             <AddToCartButton size="lg" item={toCartItem(service, categoryName)} />
           </span>
           <Link className={styles.spotlightCta} href={`/account/store/${service.id}`}>
-            Explore this investment
+            Explore this service
             <ArrowRight aria-hidden={true} />
           </Link>
         </div>
@@ -253,7 +253,7 @@ export function StoreCatalogView({
     const entries: Category[] = [
       {
         id: null,
-        name: "All investments",
+        name: "All services",
         description: null,
         count: catalog.serviceCount,
       },
@@ -268,7 +268,7 @@ export function StoreCatalogView({
     if (catalog.ungrouped.length > 0) {
       entries.push({
         id: ungroupedId,
-        name: "Other investments",
+        name: "Other services",
         description: null,
         count: catalog.ungrouped.length,
       });
@@ -314,7 +314,7 @@ export function StoreCatalogView({
       if (catalog.ungrouped.length > 0) {
         grouped.push({
           key: ungroupedId,
-          name: "Other investments",
+          name: "Other services",
           description: null,
           services: catalog.ungrouped,
         });
@@ -377,8 +377,8 @@ export function StoreCatalogView({
     const timer = window.setTimeout(() => {
       setAnnouncement(
         searching
-          ? `${resultCount} ${resultCount === 1 ? "investment matches" : "investments match"} ${query.trim()}.`
-          : `Showing ${resultCount} ${resultCount === 1 ? "investment" : "investments"}.`,
+          ? `${resultCount} ${resultCount === 1 ? "service matches" : "services match"} ${query.trim()}.`
+          : `Showing ${resultCount} ${resultCount === 1 ? "service" : "services"}.`,
       );
     }, 400);
 
@@ -395,9 +395,9 @@ export function StoreCatalogView({
   const heading = folderId === null ? "Store" : active.name;
   const supporting =
     folderId === null
-      ? "Every investment Wolf Forge offers, organised the way we deliver it. Browse now, add what fits, and talk to us when you are ready."
+      ? "Every service Wolf Forge offers, organised the way we deliver it. Browse now, add what fits, and talk to us when you are ready."
       : (active.description ??
-        `${active.count} ${active.count === 1 ? "investment" : "investments"} in this category.`);
+        `${active.count} ${active.count === 1 ? "service" : "services"} in this category.`);
 
   if (catalog.serviceCount === 0) {
     return (
@@ -430,7 +430,7 @@ export function StoreCatalogView({
 
         <dl className={styles.index}>
           <div>
-            <dt>Investments</dt>
+            <dt>Services</dt>
             <dd>{catalog.serviceCount}</dd>
           </div>
           <div>
@@ -444,7 +444,7 @@ export function StoreCatalogView({
         <div className={styles.controlRow}>
           <span
             className={styles.activeChip}
-            aria-label={`${active.name}, ${active.count} ${active.count === 1 ? "investment" : "investments"}`}
+            aria-label={`${active.name}, ${active.count} ${active.count === 1 ? "service" : "services"}`}
           >
             <span className={styles.activeChipIcon} aria-hidden={true}>
               <StoreFolderIcon name={active.name} />
@@ -483,8 +483,8 @@ export function StoreCatalogView({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search investments..."
-            aria-label="Filter investments by name"
+            placeholder="Search services..."
+            aria-label="Filter services by name"
           />
           {query ? (
             <button
@@ -543,7 +543,7 @@ export function StoreCatalogView({
                     <span className={styles.tileCopy}>
                       <strong>{category.name}</strong>
                       <span className={styles.tileCount}>
-                        {category.count} {category.count === 1 ? "investment" : "investments"}
+                        {category.count} {category.count === 1 ? "service" : "services"}
                       </span>
                     </span>
                     {category.id === folderId ? (
@@ -586,7 +586,7 @@ export function StoreCatalogView({
               <header className={styles.sectionHead}>
                 <h2 id={`store-section-${sectionIndex}`}>{section.name}</h2>
                 <span className={styles.sectionCount}>
-                  {section.services.length} {section.services.length === 1 ? "investment" : "investments"}
+                  {section.services.length} {section.services.length === 1 ? "service" : "services"}
                 </span>
               </header>
 

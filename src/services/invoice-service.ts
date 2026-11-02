@@ -8,9 +8,36 @@ import {
 import { parseInput, uuidSchema } from "../domain/shared";
 import { InvoiceRepository } from "../repositories/invoice-repository";
 import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
+import { invoiceManualSettingsInputSchema,invoiceShareTokenSchema,paymentReceiptInputSchema,reviewManualPaymentClaimSchema,submitManualPaymentClaimSchema } from "../domain/invoices/manual-payments";
 
 export class InvoiceService {
   constructor(private readonly dependencies: ServiceDependencies<InvoiceRepository>) {}
+
+  getManualPayment(id:unknown) {return this.dependencies.repository.getManualPayment(parseInput(uuidSchema,id));}
+  getManualPaymentSettings() {return this.dependencies.repository.getManualPaymentSettings();}
+  saveManualPaymentSettings(input:unknown,actor:UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.saveManualPaymentSettings(parseInput(invoiceManualSettingsInputSchema,input));
+  }
+  preparePaymentReceipt(id:unknown,input:unknown,actor:UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.preparePaymentReceipt(parseInput(uuidSchema,id),parseInput(paymentReceiptInputSchema,input));
+  }
+  getPaymentReceipt(id:unknown) {return this.dependencies.repository.getPaymentReceipt(parseInput(uuidSchema,id));}
+  submitManualPaymentClaim(id:unknown,input:unknown,actor:UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.submitManualPaymentClaim(parseInput(uuidSchema,id),parseInput(submitManualPaymentClaimSchema,input));
+  }
+  reviewManualPaymentClaim(id:unknown,input:unknown,actor:UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.reviewManualPaymentClaim(parseInput(uuidSchema,id),parseInput(reviewManualPaymentClaimSchema,input));
+  }
+  listShareLinks(id:unknown) {return this.dependencies.repository.listShareLinks(parseInput(uuidSchema,id));}
+  createShareLink(id:unknown,requestId:unknown,tokenHash:unknown,actor:UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.createShareLink(parseInput(uuidSchema,id),parseInput(uuidSchema,requestId),parseInput(invoiceShareTokenSchema,tokenHash));
+  }
+  revokeShareLink(id:unknown,actor:UserMutationActor) {requireVerifiedActor(actor);return this.dependencies.repository.revokeShareLink(parseInput(uuidSchema,id));}
 
   list() { return this.dependencies.repository.list(); }
   workEnabled() { return this.dependencies.repository.workEnabled(); }
