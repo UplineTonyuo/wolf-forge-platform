@@ -175,10 +175,10 @@ export function InternalShell({
 
     event.preventDefault();
     // Exact: from /team/all-conversations a Team click must still navigate.
-    if (route === pathname) return;
+    if (route === pathname && !pendingRoute) return;
 
     startTransition(() => {
-      setPendingRoute(route);
+      setPendingRoute(route === pathname ? null : route);
       router.push(route);
     });
   }

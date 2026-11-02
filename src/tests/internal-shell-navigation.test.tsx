@@ -57,7 +57,7 @@ function Page({ pathname, ready }: { pathname: string; ready: Promise<void> }) {
   </> : null}</>;
 }
 
-function Router({ initial }: { initial: string }) {
+function Router({ initial, role = "owner" }: { initial: string; role?: InternalUser["role"] }) {
   const [state, setState] = useState({ pathname: initial, ready: loaded as Promise<void> });
   useEffect(() => {
     nav.push = (route) => {
@@ -67,15 +67,15 @@ function Router({ initial }: { initial: string }) {
   }, []);
   return (
     <NextLinkRouter><nav.path.Provider value={state.pathname}>
-      <InternalShell user={user}>
+      <InternalShell user={{ ...user, role }}>
         <Page pathname={state.pathname} ready={state.ready} />
       </InternalShell>
     </nav.path.Provider></NextLinkRouter>
   );
 }
 
-function start(initial: string) {
-  const { container } = render(<Router initial={initial} />);
+function start(initial: string, role?: InternalUser["role"]) {
+  const { container } = render(<Router initial={initial} role={role} />);
   const main = container.querySelector("main")!;
   return {
     main,
@@ -185,6 +185,23 @@ describe("Sidebar navigation renders the destination skeleton", () => {
     await shell.commit("/reporting");
     expect(shell.skeleton()).toEqual([]);
     expect(shell.visibleText()).toBe("Page /reporting");
+  });
+
+  it.each(["owner", "admin", "manager", "staff"] as const)("lets %s cancel a pending destination by returning to the current sidebar page", async (role) => {
+    const shell = start("/dashboard", role);
+    await shell.click("/orders");
+    expect(shell.skeleton()).toEqual(["projects"]);
+
+    await shell.click("/dashboard");
+    expect(payloads.has("/dashboard")).toBe(true);
+    await shell.commit("/dashboard");
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.active()).toBe("/dashboard");
+    expect(shell.visibleText()).toBe("Page /dashboard");
+
+    await shell.commit("/orders");
+    expect(shell.skeleton()).toEqual([]);
+    expect(shell.visibleText()).toBe("Page /dashboard");
   });
 
   it("leaves modified clicks and the current route to the browser", async () => {
