@@ -112,6 +112,7 @@ describe("Global search: Ticket results", () => {
     expect(screen.getByText("GMB SERVICE · QA Local Sample Client")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("option"));
+    expect(push).toHaveBeenCalledWith(ticket.href);
     await waitFor(() => expect(push).toHaveBeenCalledWith(ticket.href));
     expect(ticket.href).toBe(`/tickets/${ticket.id}`);
   });

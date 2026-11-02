@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import { ArrowLeft, ClipboardCheck, LayoutList, LoaderCircle, Save } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getWhiteLabelDraftAction, listWhiteLabelDraftsAction, saveWhiteLabelDraftAction } from "../../app/actions/white-label";
 import {
   draftModuleKeys,
@@ -68,7 +69,7 @@ export function WhiteLabelDraftEditor({
   const allowPop = useRef(false);
   const pendingHistoryDelta = useRef<number | null>(null);
   const [reviewing, setReviewing] = useState(false);
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const keepEditingButton = useRef<HTMLButtonElement>(null);
   const departureLink = useRef<HTMLElement | null>(null);
@@ -150,7 +151,7 @@ export function WhiteLabelDraftEditor({
     const delta = pendingHistoryDelta.current;
     pendingHistoryDelta.current = null;
     if (delta !== null) { allowPop.current = true; setPendingHref(null); window.history.go(delta); }
-    else if (pendingHref) router.push(pendingHref);
+    else if (pendingHref) push(pendingHref);
   }
   useEffect(() => { if (pendingHref) keepEditingButton.current?.focus(); }, [pendingHref]);
   const busy = status.kind === "loading" || status.kind === "saving";

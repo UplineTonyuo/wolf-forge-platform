@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import { ArrowLeft, ArrowRight, LoaderCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import {
   createServiceReportDraftAction,
@@ -24,7 +25,7 @@ function choiceKey(choice: ReportServiceChoice): string {
 
 /** Client → actual subscribed Service → guided saved draft. */
 export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const fieldId = useId();
   const [step, setStep] = useState<"client" | "service">("client");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
@@ -84,7 +85,7 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
     });
 
     if (result.ok) {
-      router.push(`/reporting/${result.reportId}`);
+      push(`/reporting/${result.reportId}`);
       return;
     }
 

@@ -6,6 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientAccountShell } from "../components/account/client-account-shell";
 import Loading from "../app/account/loading";
 import type { ClientUser } from "../lib/supabase/next-server";
+import { RouteTransitionLink } from "../components/shell/route-transition";
+import { interceptNextLinkNavigation, NextLinkRouter } from "./fixtures/next-link-router";
+
+vi.mock("next/link", async () => (await import("./fixtures/next-link-router")).appLinkModule);
 
 const nav = vi.hoisted(() => ({ path: null as unknown as Context<string>, push: (() => {}) as (route: string) => void, redirect: null as string | null }));
 vi.mock("next/navigation", async () => {
@@ -32,14 +36,16 @@ const user: ClientUser = {
 const loaded = Object.assign(Promise.resolve(), { status: "fulfilled" as const, value: undefined });
 let payloads: Map<string, () => void>;
 let pushes: string[];
+let inPageHref: string | null;
+let restoreNextLink: () => void;
 
 function Page({ pathname, ready }: { pathname: string; ready: Promise<void> }) {
   use(ready);
-  return <><h1>Page {pathname}</h1><input aria-label="Unsent draft" defaultValue="" /></>;
+  return <><h1>Page {pathname}</h1><input aria-label="Unsent draft" defaultValue="" />{inPageHref ? <RouteTransitionLink href={inPageHref} prefetch={false}>Open project</RouteTransitionLink> : null}</>;
 }
 
-function Router() {
-  const [state, setState] = useState({ pathname: "/account", ready: loaded as Promise<void> });
+function Router({ initial = "/account" }: { initial?: string }) {
+  const [state, setState] = useState({ pathname: initial, ready: loaded as Promise<void> });
   useEffect(() => {
     nav.push = (route) => {
       pushes.push(route);
@@ -47,21 +53,25 @@ function Router() {
       startTransition(() => setState({ pathname: nav.redirect ?? route, ready }));
     };
   }, []);
-  return <nav.path.Provider value={state.pathname}>
+  return <NextLinkRouter><nav.path.Provider value={state.pathname}>
     <ClientAccountShell user={user} serviceCatalog={{ folders: [], services: [] }}>
       <Page key={state.pathname} pathname={state.pathname} ready={state.ready} />
     </ClientAccountShell>
-  </nav.path.Provider>;
+  </nav.path.Provider></NextLinkRouter>;
 }
 
-function click(route: string, options = {}) {
-  return act(async () => { fireEvent.click(document.querySelector(`.portal-nav a[href='${route}']`)!, options); });
+function click(route: string, options: Record<string, unknown> = {}) {
+  return act(async () => {
+    const link = document.querySelector(`.portal-nav a[href='${route}']`)!;
+    if (options.button === 1) fireEvent(link, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    else fireEvent.click(link, options);
+  });
 }
 function commit(route: string) { return act(async () => { payloads.get(route)!(); }); }
 function active() { return document.querySelector(".portal-nav a[aria-current='page']")?.getAttribute("href"); }
 
-beforeEach(() => { payloads = new Map(); pushes = []; nav.redirect = null; });
-afterEach(cleanup);
+beforeEach(() => { payloads = new Map(); pushes = []; nav.redirect = null; inPageHref = null; restoreNextLink = interceptNextLinkNavigation((href) => nav.push(href)); });
+afterEach(() => { cleanup(); restoreNextLink(); });
 
 describe("client navigation loading", () => {
   it("shows the destination immediately, retains the hidden editor, and replaces the skeleton on commit", async () => {
@@ -70,6 +80,7 @@ describe("client navigation loading", () => {
     fireEvent.change(editor, { target: { value: "UNSENT QA draft" } });
     await click("/account/projects");
     expect(screen.getByRole("status", { name: "Loading Orders" })).toBeVisible();
+    expect(screen.getByRole("status").closest('[aria-busy="true"]')).toBeNull();
     expect(editor).not.toBeVisible();
     expect(editor).toHaveValue("UNSENT QA draft");
     expect(active()).toBe("/account/projects");
@@ -78,7 +89,7 @@ describe("client navigation loading", () => {
     await commit("/account/projects");
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByRole("heading", { name: "Page /account/projects" })).toBeVisible();
-    expect(document.querySelector(".portal-main-inner")).toHaveAttribute("aria-busy", "false");
+    expect(document.querySelector(".portal-main-inner > [aria-busy]")).toHaveAttribute("aria-busy", "false");
   });
 
   it("follows the last destination on rapid section changes", async () => {
@@ -131,4 +142,18 @@ describe("client navigation loading", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
+});
+
+
+it.each(["/account/projects/example", "/account/onboarding/required-intake", "/account/messages/thread"])("shows the actual drill-down destination %s and clears on commit", async (href) => {
+  inPageHref = href;
+  render(<Router initial="/account/projects" />);
+  const editor = screen.getByRole("textbox", { name: "Unsent draft" });
+  await act(async () => { fireEvent.click(screen.getByRole("link", { name: "Open project" })); });
+  expect(screen.getAllByRole("status")).toHaveLength(1);
+  expect(editor).not.toBeVisible();
+  expect(screen.getByText("Workspace controls")).toBeVisible();
+  await commit(inPageHref);
+  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.getByRole("heading", { name: `Page ${href}` })).toBeVisible();
 });

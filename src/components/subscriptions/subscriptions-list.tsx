@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Search } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { SubscriptionSummary } from "../../domain/subscriptions/schema";
 import { formatCurrencyCents, formatDate } from "../../lib/format";

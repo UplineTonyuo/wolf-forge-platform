@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import {
   FilePlus2,
   MailPlus,
@@ -536,7 +538,7 @@ function NewTicketModal({
   clientName: string;
   onClose: () => void;
 }) {
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [priority, setPriority] = useState("normal");
@@ -569,7 +571,7 @@ function NewTicketModal({
       }
 
       onClose();
-      router.push(`/tickets/${result.ticketId}?created=1`);
+      push(`/tickets/${result.ticketId}?created=1`);
     });
   };
 

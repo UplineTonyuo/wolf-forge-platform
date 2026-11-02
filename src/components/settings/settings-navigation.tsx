@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { usePathname } from "next/navigation";
 import styles from "./settings-foundation.module.css";
 
@@ -34,6 +34,8 @@ export function SettingsNavigation() {
           <Link
             key={item.id}
             href={item.route}
+            feedback="inline"
+            loadingLabel={`Loading ${item.label}`}
             className={styles.navigationLink}
             aria-current={current ? "page" : undefined}
           >

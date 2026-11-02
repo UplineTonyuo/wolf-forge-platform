@@ -7,7 +7,7 @@ import {
   Minus,
   TriangleAlert,
 } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {

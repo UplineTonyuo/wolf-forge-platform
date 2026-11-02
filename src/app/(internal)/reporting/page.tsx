@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../../components/shell/route-transition";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { ReportingList } from "../../../components/reporting/reporting-list";

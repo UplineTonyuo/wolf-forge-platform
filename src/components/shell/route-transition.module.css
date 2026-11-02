@@ -1,0 +1,16 @@
+.hint {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0;
+  vertical-align: middle;
+}
+.hint[data-pending] { opacity: 1; animation: turn .8s linear infinite; }
+@keyframes turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .hint[data-pending] { animation: none; }
+}

@@ -8886,8 +8886,8 @@ td {
 /* WF ROUTE VACUUM TRANSITIONS START */
 
 /*
- * Route content stage. A sidebar click swaps it to InternalPageSkeleton until
- * the destination commits (internal-shell.tsx); it is never hidden. The
+ * Route content stage. Navigation shows the destination skeleton while the
+ * current page stays mounted and hidden until commit or cancellation. The
  * transform hint stays: fixed descendants anchor here (D-197).
  */
 
@@ -8906,6 +8906,14 @@ td {
   will-change:
     transform,
     opacity;
+}
+
+.workspace-route-content { display: contents; }
+.workspace-route-content[hidden] { display: none; }
+
+.internal-page-skeleton.route-skeleton-section {
+  min-height: 280px;
+  background: transparent;
 }
 
 

@@ -1,5 +1,5 @@
 import { ArrowRight, Check } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../shell/route-transition";
 import type { ClientOnboarding, OnboardingItem } from "../../../domain/client-portal/onboarding";
 import { AttentionPill } from "../ui/attention-pill";
 

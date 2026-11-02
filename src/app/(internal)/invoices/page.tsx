@@ -2,7 +2,7 @@ import { FinancialVisibilityBoundary } from "../../../components/invoices/financ
 import { invoiceVisibility, financialAuthority, financialIdentity } from "../../../domain/invoices/visibility";
 import { Eye, Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../../components/shell/route-transition";
 import { InvoiceStatusBadge } from "../../../components/invoices/invoice-status-badge";
 import { InvoicesFilter } from "../../../components/invoices/invoices-filter";
 import styles from "../../../components/invoices/invoice-admin.module.css";

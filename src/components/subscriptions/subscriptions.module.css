@@ -1,5 +1,7 @@
 .listRoot,
 .detailRoot { animation: subscription-enter 190ms ease both; }
+.back { display:inline-flex; align-items:center; gap:7px; min-height:36px; margin-bottom:12px; color:var(--wf-navy); text-decoration:none; font-size:12px; }
+.back:hover { text-decoration:underline; }
 
 .listTools { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .searchField { width: min(100%, 360px); min-height: 40px; display: flex; align-items: center; gap: 9px; padding: 0 12px; border: 1px solid var(--wf-border); border-radius: 5px; background: #fff; color: var(--wf-text-muted); }

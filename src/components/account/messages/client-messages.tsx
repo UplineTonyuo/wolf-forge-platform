@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, LoaderCircle, MessagesSquare, Plus, Send } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../shell/route-transition";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createClientTicketAction } from "../../../app/actions/tickets";
 import { ticketAttention } from "../../../domain/client-portal/attention";

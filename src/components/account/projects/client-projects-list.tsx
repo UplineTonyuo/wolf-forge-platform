@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../shell/route-transition";
 import { projectAttention } from "../../../domain/client-portal/attention";
 import { clientProjectIsOpen, type ClientProjectView } from "../../../domain/orders/client-projections";
 import type { OrderStatus } from "../../../domain/orders/schema";

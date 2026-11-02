@@ -23,6 +23,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import {
   archiveProjectAction,
   assignProjectAction,
@@ -111,6 +113,7 @@ export function ProjectDetailActions({
   capabilities: ProjectCapabilities;
 }) {
   const router = useRouter();
+  const push = useRouteTransitionPush();
 
   const [
     mounted,
@@ -391,7 +394,7 @@ export function ProjectDetailActions({
       setClosing(false);
       setView("menu");
 
-      router.push("/orders");
+      push("/orders");
     } catch {
       setError(
         "The project could not be archived.",

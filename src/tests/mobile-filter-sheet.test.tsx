@@ -4,6 +4,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatePicker } from "../components/ui/date-picker";
+import { RouteTransitionProvider } from "../components/shell/route-transition";
 
 const push = vi.fn();
 let params = new URLSearchParams();
@@ -241,6 +242,25 @@ describe("MobileFilterSheet", () => {
 });
 
 describe("CouponsFilter", () => {
+  it("starts destination feedback before mobile Apply dispatches the new collection", () => {
+    const events: string[] = [];
+    const begin = vi.fn((url: URL) => events.push(url.pathname + url.search));
+    push.mockImplementation(() => events.push("push"));
+    render(<RouteTransitionProvider begin={begin}><CouponsFilter initialView="active" /></RouteTransitionProvider>);
+    openTrigger();
+    fireEvent.click(screen.getByRole("button", { name: "Archived" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(events).toEqual(["/coupons?view=archived", "push"]);
+  });
+  it("also starts loading feedback when mobile Clear returns to Active", () => {
+    params = new URLSearchParams("view=archived");
+    const begin = vi.fn();
+    render(<RouteTransitionProvider begin={begin}><CouponsFilter initialView="archived" /></RouteTransitionProvider>);
+    openTrigger();
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(begin.mock.calls[0]?.[0].pathname).toBe("/coupons");
+    expect(begin.mock.calls[0]?.[0].search).toBe("");
+  });
   it("offers only the two canonical views -- there is no All", () => {
     render(<CouponsFilter initialView="active" />);
     openTrigger();
