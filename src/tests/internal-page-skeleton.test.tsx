@@ -7,6 +7,8 @@ import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import InternalLoading from "../app/(internal)/loading";
 import { RouteSkeleton, SectionSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
+import settingsStyles from "../components/settings/settings-foundation.module.css";
+import profileStyles from "../components/settings/settings-workspace.module.css";
 
 const nav = vi.hoisted(() => ({ pathname: "/orders" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
@@ -74,8 +76,8 @@ describe("Internal route loading boundary", () => {
     cleanup();
 
     const settings = render(<RouteSkeleton pathname="/settings/general" />).container;
-    expect(settings.querySelector(".settings-page-layout .route-skeleton-nav")).toBeTruthy();
-    expect(settings.querySelectorAll(".route-skeleton-fields > div").length).toBeGreaterThan(2);
+    expect(settings.querySelector(`.settings-page-layout .${settingsStyles.navigation}`)).toBeTruthy();
+    expect(settings.querySelectorAll(`.${profileStyles.fields} > div`).length).toBeGreaterThan(2);
     expect(settings.querySelector(".route-skeleton-table, table")).toBeNull();
   });
 
