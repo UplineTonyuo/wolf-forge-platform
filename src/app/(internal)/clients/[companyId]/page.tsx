@@ -5,17 +5,15 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
-  FolderKanban,
-  History,
   Mail,
   Phone,
-  ReceiptText,
   UserRound,
   CreditCard,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { RouteTransitionLink } from "../../../../components/shell/route-transition";
+import { ClientDetailSections } from "../../../../components/clients/client-detail-sections";
 import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
@@ -40,18 +38,6 @@ type ClientTab =
   | "invoices"
   | "activities"
   | "history";
-
-const tabs: Array<{
-  id: ClientTab;
-  label: string;
-  icon: typeof UserRound;
-}> = [
-  { id: "details", label: "Details", icon: UserRound },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "invoices", label: "Invoices", icon: ReceiptText },
-  { id: "activities", label: "Activities", icon: Activity },
-  { id: "history", label: "History", icon: History },
-];
 
 function normalizeTab(value: string | undefined): ClientTab {
   if (
@@ -298,38 +284,7 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
-        <nav
-          className="client-detail-tabs"
-          aria-label="Client sections"
-        >
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const href =
-              tab.id === "details"
-                ? `/clients/${companyId}`
-                : `/clients/${companyId}?tab=${tab.id}`;
-
-            return (
-              <RouteTransitionLink
-                key={tab.id}
-                href={href}
-                feedback="inline"
-                loadingLabel={`Loading ${tab.label}`}
-                scroll={false}
-                aria-current={activeTab === tab.id ? "page" : undefined}
-                className={
-                  activeTab === tab.id
-                    ? "client-detail-tab is-active"
-                    : "client-detail-tab"
-                }
-              >
-                <Icon aria-hidden="true" />
-                {tab.label}
-              </RouteTransitionLink>
-            );
-          })}
-        </nav>
-
+        <ClientDetailSections companyId={companyId} activeTab={activeTab}>
         {activeTab === "details" ? (
           <div className="client-detail-content">
             <section className="client-information-panel">
@@ -624,6 +579,7 @@ export default async function ClientDetailPage({
             )}
           </section>
         ) : null}
+        </ClientDetailSections>
       </PageFrame>
     );
   } catch (error) {
