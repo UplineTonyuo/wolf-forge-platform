@@ -26,7 +26,7 @@ async function commit(href: string) { await act(async () => { payloads.get(href)
 it.each(["details", "projects", "invoices", "activities", "history"] as const)("loads only the %s body and retains the client frame and draft", async tab => {
   const initial = tab === "details" ? "projects" : "details";
   const { container } = render(<Router initial={initial} />);
-  const label = tab[0].toUpperCase() + tab.slice(1);
+  const label = tab.charAt(0).toUpperCase() + tab.slice(1);
   const draft = screen.getByRole("textbox");
   await click(label);
   expect(screen.getByRole("heading", { name: "Stable client name" })).toBeVisible();

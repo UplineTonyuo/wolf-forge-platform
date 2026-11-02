@@ -860,7 +860,7 @@ const SKELETONS: Record<Exclude<InternalSkeletonVariant, "projectDetail" | "invo
 export function RouteSkeleton({ pathname }: { pathname: string }) {
   const variant = getInternalSkeletonVariant(pathname);
   if (variant === "settings") {
-    const section = pathname.split(/[?#]/)[0].split("/")[2] as SettingsSection;
+    const section = (pathname.split(/[?#]/)[0] ?? "").split("/")[2] as SettingsSection;
     return <SettingsSkeleton section={Object.hasOwn(SETTINGS_SECTION_LABELS, section) ? section : "general"} />;
   }
   if (variant === "clientDetail") {
