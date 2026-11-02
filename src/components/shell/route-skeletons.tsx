@@ -334,7 +334,13 @@ export function ProjectHistorySkeleton() {
 function ProjectDetailSkeleton({ section = "details" }: { section?: ProjectSection } = {}) {
   return <Frame variant="projectDetail" className={`page-frame ${project.orderFrame}`}>
     <Header />
-    <div className={project.subnav}><div className={project.subnavLeft}><Shapes sizes={[[75, 36], [75, 36], [75, 36]]} /></div></div>
+    <div className={project.subnav}>
+      <div className={project.subnavLeft}>
+        <Bar w={86} h={36} r={6} />
+        <div className={project.tabs}><Shapes sizes={[[70, 32], [55, 32], [70, 32]]} /></div>
+      </div>
+      <div className={project.headerControls}><Shapes sizes={[[100, 36], [130, 36], [98, 36]]} /></div>
+    </div>
     <div className={project.layout}><div className={project.main}><ProjectBody section={section} /></div><aside className={project.rail}><div className={project.railCard}><Rows count={6} side={false} /></div></aside></div>
   </Frame>;
 }
@@ -712,10 +718,14 @@ function TicketDetailSkeleton() {
 
 function ReportDetailSkeleton() {
   return <Frame variant="reportDetail"><Header />
-    <div className={report.wizard}>
-      <div className={report.wizardHeader}><div className={report.wizardIdentity}><Bar w={180} h={28} /><Bar w={150} h={28} /></div><Bar w={120} h={20} /></div>
-      <div className={report.wizardStage}><div className={report.wizardStep}><Bar w="45%" h={24} /><Fields count={3} /></div></div>
-      <div className={report.wizardActions}><Shapes sizes={[[100, 40], [120, 40]]} /></div>
+    {/* Mode is unknown before the authorized record arrives. Reserve report content without suggesting editable controls. */}
+    <div className={report.builder}>
+      <div className={report.identity}><Bar w={180} h={18} /><Bar w={120} h={12} /></div>
+      <div className="route-skeleton-stack">
+        {Array.from({ length: 3 }, (_, i) => <section className="route-skeleton-panel route-skeleton-stack" key={i}>
+          <Bar w="40%" h={20} /><Bar w="85%" /><Bar w="70%" /><Bar w="60%" />
+        </section>)}
+      </div>
     </div>
   </Frame>;
 }
@@ -733,11 +743,26 @@ function InvoiceDetailSkeleton() {
   </Frame>;
 }
 
-function InvoiceEditorSkeleton() {
+function InvoiceEditorSkeleton({ editing = false }: { editing?: boolean } = {}) {
   return <Frame variant="invoiceEditor"><Header />
     <div className={invoice.form}>
-      <section className={invoice.formSection}><div className={invoice.sectionHeading}><Bar w={90} h={20} /><Bar w={200} className="route-skeleton-gap" /></div><Fields count={4} className={invoice.basicFields} fieldClassName={invoice.field} /></section>
-      <section className={invoice.formSection}><div className={invoice.sectionHeading}><Bar w={90} h={20} /></div><div className="route-skeleton-stack"><Bar w="100%" h={40} /><Table columns={[3, 1, 1, 1]} rows={2} /><Panel height={140} /></div></section>
+      <section className={invoice.formSection}><div className={invoice.sectionHeading}><Bar w={90} h={20} /><Bar w={200} className="route-skeleton-gap" /></div><Fields count={editing ? 5 : 4} className={invoice.basicFields} fieldClassName={invoice.field} /></section>
+      <section className={invoice.formSection}>
+        <div className={invoice.sectionHeading}><Bar w={90} h={20} /></div>
+        <div className={invoice.itemEditor}>
+          <article className={invoice.itemRow}>
+            <header><Bar w={70} /><Bar w={126} h={32} r={6} /></header>
+            <div className={invoice.itemFields}>
+              <div className={invoice.serviceField}><Bar w={90} /><Bar w="100%" h={40} /></div>
+              <div className={`${invoice.field} ${invoice.descriptionField}`}><Bar w={90} /><Bar w="100%" h={76} /></div>
+              {Array.from({ length: 3 }, (_, i) => <div className={invoice.field} key={i}><Bar w="65%" /><Bar w="100%" h={40} /></div>)}
+              {editing ? <div className={invoice.taxable}><Bar w={18} h={18} /><Bar w={65} /></div> : null}
+            </div>
+          </article>
+          <Bar w={105} h={40} r={6} />
+          <div className={invoice.preview}>{Array.from({ length: editing ? 4 : 3 }, (_, i) => <div key={i}><Bar w={80} /><Bar w={70} h={14} /></div>)}</div>
+        </div>
+      </section>
       <div className={invoice.formActions}><Shapes sizes={[[85, 40], [120, 40]]} /></div>
     </div>
   </Frame>;
@@ -783,17 +808,15 @@ function GenericSkeleton() {
   );
 }
 
-const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
+const SKELETONS: Record<Exclude<InternalSkeletonVariant, "projectDetail" | "invoiceEditor">, () => ReactNode> = {
   ticketDetail: TicketDetailSkeleton,
   reportDetail: ReportDetailSkeleton,
   invoiceDetail: InvoiceDetailSkeleton,
-  invoiceEditor: InvoiceEditorSkeleton,
   subscriptionDetail: SubscriptionDetailSkeleton,
   couponEditor: CouponEditorSkeleton,
   serviceEditor: ServiceEditorSkeleton,
   dashboard: DashboardSkeleton,
   projects: ProjectsSkeleton,
-  projectDetail: ProjectDetailSkeleton,
   tickets: TicketsSkeleton,
   reporting: ReportingSkeleton,
   clients: ClientsSkeleton,
@@ -816,6 +839,9 @@ const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
 
 export function RouteSkeleton({ pathname }: { pathname: string }) {
   const variant = getInternalSkeletonVariant(pathname);
+  if (variant === "invoiceEditor") {
+    return <InvoiceEditorSkeleton editing={Boolean(pathname.split(/[?#]/)[0]?.replace(/\/+$/, "").endsWith("/edit"))} />;
+  }
   if (variant === "projectDetail") {
     const path = pathname.split(/[?#]/)[0]?.replace(/\/+$/, "");
     return <ProjectDetailSkeleton section={path?.endsWith("/files") ? "files" : path?.endsWith("/history") ? "history" : "details"} />;

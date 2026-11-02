@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link, { useLinkStatus } from "next/link";
-import { createContext, startTransition, useContext, type ComponentProps, type MouseEvent, type ReactNode } from "react";
+import { createContext, startTransition, useContext, type ComponentProps, type ReactNode } from "react";
 import styles from "./route-transition.module.css";
 
 /*
@@ -45,14 +45,6 @@ export function RouteTransitionLink({ href, feedback = "page", loadingLabel = "L
 
 export function RouteTransitionProvider({ begin, children }: { begin: (url: URL) => void; children: ReactNode }) {
   return <RouteTransitionContext.Provider value={begin}>{children}</RouteTransitionContext.Provider>;
-}
-
-export function navigationUrlForClick(event: MouseEvent<HTMLElement>): URL | null {
-  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return null;
-  const target = event.target instanceof Element ? event.target : event.target instanceof Node ? event.target.parentElement : null;
-  const anchor = target?.closest<HTMLAnchorElement>("a[href]");
-  if (!anchor || anchor.hasAttribute("download") || (anchor.target && anchor.target !== "_self") || target?.closest('[data-route-skeleton="off"]')) return null;
-  return new URL(anchor.href, window.location.href);
 }
 
 function persistentFrame(pathname: string): string | null {

@@ -26,4 +26,14 @@ Ruling: use the shared SheetFrame's desktop-centered/mobile-sheet behavior rathe
 
 Remaining: full app build withheld at 3.57 GiB available versus existing 5.5 GiB guard. No authenticated Next/RSC browser navigation, real account/avatar, browser Back/error acceptance or database tests were claimed. Canonical notes remain read-only; verified steward proposal/evidence live in outputs/navigation-fixes-20261103.
 
+## Self-audit follow-up — 2026-11-03
+
+Audit A1–A3 are addressed locally: Invoice New/Edit reserve the real item-entry card and totals layout; Reports reserve neutral content while their authorized read-only/guided/advanced mode is unknown; initial Orders reserve Back, three sections and the header-control region.
+
+Four added regression cases failed before the fixes and pass afterward. Fresh validation: 143 focused tests, scoped lint, full incremental TypeScript at1280MiB and28rendered layout/width checks pass. Evidence: outputs/navigation-audit-fixes-20261103. Earlier broad-suite results above remain historical, not a new full-suite run.
+
+Cleanup: removed the unused navigationUrlForClick helper and its tests after a complete source reference search, plus unreachable entries in the skeleton map. Actual Link handling, modified-click, cancellation and retained-draft tests remain. No untracked files or duplicate source copies were added.
+
+Full app build remains held: fresh2.95GiB available versus5.5GiB guard. Authenticated browser acceptance is still pending. No push, deployment, Docker, database, permission or notification-polling changes.
+
 Historical research: outputs/woad-skeleton-research-20261030. Preserved pre-existing return-navigation patch passed 29 tests and was checkpointed at 22f7e2e; current main was reconciled at 9c72641.
