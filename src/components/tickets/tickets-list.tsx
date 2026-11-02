@@ -5,7 +5,7 @@ import { useRouteTransitionPush } from "../shell/route-transition";
 import { createInternalTicketAction } from "../../app/actions/tickets";
 
 import { Bold, Filter, Heading1, Italic, Link2, Plus, Redo2, Search, TicketIcon, Undo2, X } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { TicketSummary } from "../../domain/tickets/schema";

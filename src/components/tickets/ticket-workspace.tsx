@@ -1,5 +1,5 @@
 import { ArrowLeft, TicketIcon } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import type { TicketCapabilities, TicketDetail, TicketSummary } from "../../domain/tickets/schema";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
 import { ticketStatusLabels } from "../../lib/tickets/presentation";

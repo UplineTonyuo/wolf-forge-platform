@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import type { InternalReportView } from "../../domain/reporting/projections";
 import { EmptyState } from "../ui/list-states";
 import styles from "./reporting.module.css";

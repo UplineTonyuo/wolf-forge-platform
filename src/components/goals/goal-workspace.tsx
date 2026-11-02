@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { ArrowLeft, CalendarDays, Check, ImagePlus, LoaderCircle, Plus, Printer, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { completeGoalMilestoneAction, listGoalsAction } from "../../app/actions/goals";

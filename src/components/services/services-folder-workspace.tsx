@@ -11,7 +11,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { createPortal } from "react-dom";
 import { MobilePickerSheet } from "../ui/mobile-filter-sheet";
 import { folderIconFor } from "./service-icons";

@@ -216,6 +216,29 @@ describe("Sidebar navigation renders the destination skeleton", () => {
 
 
 describe("in-page navigation", () => {
+  it.each([
+    ["/orders/one", "projectDetail"], ["/tickets/one", "ticketDetail"],
+    ["/reporting/one", "reportDetail"], ["/invoices/one", "invoiceDetail"],
+    ["/invoices/one/edit", "invoiceEditor"], ["/invoices/new", "invoiceEditor"],
+    ["/subscriptions/one", "subscriptionDetail"], ["/coupons/new", "couponEditor"],
+    ["/coupons/one", "couponEditor"], ["/services/new?folder=one", "serviceEditor"],
+  ])("shows %s immediately with %s", async (href, variant) => {
+    inPageHref = href;
+    const shell = start("/dashboard");
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual([variant]);
+    await shell.commit(href);
+    expect(shell.skeleton()).toEqual([]);
+  });
+  it("shows Coupon status loading without losing its active sidebar", async () => {
+    inPageHref = "/coupons?view=archived";
+    const shell = start("/coupons");
+    await shell.inPageClick();
+    expect(shell.skeleton()).toEqual(["coupons"]);
+    expect(shell.active()).toBe("/coupons");
+    await shell.commit(inPageHref);
+    expect(shell.skeleton()).toEqual([]);
+  });
   it("shows the destination on tap and clears only when it commits", async () => {
     inPageHref = "/forms/example";
     const shell = start("/forms");

@@ -5,6 +5,10 @@ import supervision from "../team-supervision/supervised-transcript.module.css";
 import tickets from "../tickets/tickets.module.css";
 import project from "../projects/project-detail.module.css";
 import goals from "../goals/goals.module.css";
+import invoice from "../invoices/invoice-admin.module.css";
+import coupon from "../coupons/coupon-admin.module.css";
+import subscription from "../subscriptions/subscriptions.module.css";
+import report from "../reporting/reporting.module.css";
 
 /*
  * Destination-shaped loading skeletons for the internal shell. A sidebar click
@@ -21,6 +25,13 @@ export type InternalSkeletonVariant =
   | "dashboard"
   | "projects"
   | "projectDetail"
+  | "ticketDetail"
+  | "reportDetail"
+  | "invoiceDetail"
+  | "invoiceEditor"
+  | "subscriptionDetail"
+  | "couponEditor"
+  | "serviceEditor"
   | "tickets"
   | "reporting"
   | "clients"
@@ -67,6 +78,13 @@ const EXACT: Record<string, InternalSkeletonVariant> = {
 export function getInternalSkeletonVariant(pathname: string): InternalSkeletonVariant {
   const path = (pathname.split(/[?#]/)[0] ?? "").replace(/\/+$/, "") || "/";
   if (EXACT[path]) return EXACT[path];
+  if (/^\/tickets\/[^/]+$/.test(path)) return "ticketDetail";
+  if (/^\/reporting\/[^/]+$/.test(path) && path !== "/reporting/new") return "reportDetail";
+  if (/^\/invoices\/(?:new|[^/]+\/edit)$/.test(path)) return "invoiceEditor";
+  if (/^\/invoices\/[^/]+$/.test(path)) return "invoiceDetail";
+  if (/^\/subscriptions\/[^/]+$/.test(path) && path !== "/subscriptions/new") return "subscriptionDetail";
+  if (/^\/coupons\/[^/]+$/.test(path)) return "couponEditor";
+  if (/^\/services\/[^/]+$/.test(path)) return "serviceEditor";
   if (/^\/clients\/[^/]+$/.test(path) && path !== "/clients/new") return "clientDetail";
   if (/^\/orders\/(?!new(?:\/|$))[^/]+(?:\/|$)/.test(path)) return "projectDetail";
   if (path.startsWith("/team/goals/")) return "goalDetail";
@@ -228,17 +246,21 @@ function Split({ columns, children }: { columns: string; children: ReactNode }) 
   );
 }
 
-function Fields({ count }: { count: number }) {
+function Fields({ count, className = "route-skeleton-fields", fieldClassName }: { count: number; className?: string; fieldClassName?: string }) {
   return (
-    <div className="route-skeleton-fields">
+    <div className={className}>
       {Array.from({ length: count }, (_, field) => (
-        <div key={field}>
+        <div key={field} className={fieldClassName}>
           <Bar w={110} h={9} />
           <Bar w="100%" h={40} r={6} />
         </div>
       ))}
     </div>
   );
+}
+
+function FactRows({ count }: { count: number }) {
+  return Array.from({ length: count }, (_, i) => <div key={i}><dt><Bar w={90} h={9} /></dt><dd><Bar w="65%" h={14} /></dd></div>);
 }
 
 /* ---------- destination compositions ---------- */
@@ -669,6 +691,88 @@ function SettingsSkeleton() {
   );
 }
 
+function TicketDetailSkeleton() {
+  return <Frame variant="ticketDetail" className={`page-frame ${tickets.ticketDetailPage}`}>
+    <Header />
+    <div className={tickets.ticketWorkspace}>
+      <aside className={tickets.ticketWorkspaceList} data-skeleton-block="ticket-queue">{Array.from({ length: 6 }, (_, i) => <div className={tickets.ticketWorkspaceListItem} key={i}>
+        <Bar w={16} h={16} /><span className={tickets.ticketWorkspaceListBody}><Bar w="75%" h={12} /><Bar w="50%" h={10} className="route-skeleton-gap" /><Bar w={70} h={18} className="route-skeleton-gap" /></span>
+      </div>)}</aside>
+      <div className={tickets.ticketWorkspaceManagement} data-skeleton-block="ticket-management">
+        <div className={tickets.inspectorSections}>
+          <section><Bar w={110} h={14} /><dl className={tickets.ticketMeta}>{Array.from({ length: 4 }, (_, i) => <div key={i}><dt><Bar w={90} h={9} /></dt><dd><Bar w="45%" h={13} /></dd></div>)}</dl></section>
+          <section><Bar w={100} h={14} /><Fields count={3} /></section>
+          <section><Bar w={130} h={14} /><Bar w="100%" h={100} className="route-skeleton-gap" /></section>
+          <section><Bar w={120} h={40} /></section>
+        </div>
+      </div>
+    </div>
+  </Frame>;
+}
+
+function ReportDetailSkeleton() {
+  return <Frame variant="reportDetail"><Header />
+    <div className={report.wizard}>
+      <div className={report.wizardHeader}><div className={report.wizardIdentity}><Bar w={180} h={28} /><Bar w={150} h={28} /></div><Bar w={120} h={20} /></div>
+      <div className={report.wizardStage}><div className={report.wizardStep}><Bar w="45%" h={24} /><Fields count={3} /></div></div>
+      <div className={report.wizardActions}><Shapes sizes={[[100, 40], [120, 40]]} /></div>
+    </div>
+  </Frame>;
+}
+
+function InvoiceDetailSkeleton() {
+  return <Frame variant="invoiceDetail" className={`page-frame ${invoice.detailPage}`}>
+    <Header actions={[[120, 40], [40, 40]]} />
+    <div className={invoice.metadata}>{Array.from({ length: 6 }, (_, i) => <div key={i}><Bar w="40%" h={9} /><Bar w="65%" h={14} className="route-skeleton-gap" /></div>)}</div>
+    <div className={invoice.detailGrid}>
+      <section className={invoice.detailSection}><Bar w={110} h={20} /><div className={invoice.lineItems}><Rows count={2} height={66} /></div></section>
+      <section className={invoice.detailSection}><Bar w={150} h={20} /><Rows count={6} height={36} /></section>
+    </div>
+    <Split columns="repeat(2, minmax(0, 1fr))"><Panel height={160} /><Panel height={160} /></Split>
+    <Panel height={150} />
+  </Frame>;
+}
+
+function InvoiceEditorSkeleton() {
+  return <Frame variant="invoiceEditor"><Header />
+    <div className={invoice.form}>
+      <section className={invoice.formSection}><div className={invoice.sectionHeading}><Bar w={90} h={20} /><Bar w={200} className="route-skeleton-gap" /></div><Fields count={4} className={invoice.basicFields} fieldClassName={invoice.field} /></section>
+      <section className={invoice.formSection}><div className={invoice.sectionHeading}><Bar w={90} h={20} /></div><div className="route-skeleton-stack"><Bar w="100%" h={40} /><Table columns={[3, 1, 1, 1]} rows={2} /><Panel height={140} /></div></section>
+      <div className={invoice.formActions}><Shapes sizes={[[85, 40], [120, 40]]} /></div>
+    </div>
+  </Frame>;
+}
+
+function SubscriptionDetailSkeleton() {
+  return <Frame variant="subscriptionDetail" className={`page-frame ${subscription.detailPage}`}>
+    <Bar w={150} h={18} /><Header actions={[[70, 28], [40, 40]]} />
+    <div className={subscription.detailRoot}><Toolbar left={[[80, 38], [80, 38], [80, 38], [80, 38]]} />
+      <section className={subscription.overview}><Bar w={180} h={20} /><dl><FactRows count={8} /></dl></section>
+      <section className={subscription.planSection}><header><Bar w={140} h={20} /></header><div className={subscription.planBody}><Bar w="60%" h={24} /><dl className={subscription.planFacts}><FactRows count={4} /></dl><Rows count={2} height={64} /></div></section>
+    </div>
+  </Frame>;
+}
+
+function CouponEditorSkeleton() {
+  return <Frame variant="couponEditor"><Header />
+    <div className={coupon.form}>
+      <section className={coupon.formSection}><div className={coupon.sectionHeading}><Bar w={100} h={20} /></div><Fields count={2} className={coupon.fields} fieldClassName={coupon.field} /></section>
+      <section className={coupon.formSection}><div className={coupon.sectionHeading}><Bar w={130} h={20} /></div><div className="route-skeleton-stack"><Toolbar left={[[100, 38], [100, 38]]} /><Panel height={150} /></div></section>
+      <section className={coupon.formSection}><div className={coupon.sectionHeading}><Bar w={150} h={20} /></div><Rows count={5} height={52} side={false} /></section>
+      <div className={coupon.formActions}><Shapes sizes={[[85, 40], [120, 40]]} /></div>
+    </div>
+  </Frame>;
+}
+
+function ServiceEditorSkeleton() {
+  return <Frame variant="serviceEditor"><Header />
+    <div className="service-editor-form">{[3, 2, 3].map((count, index) => <section className="service-form-section" key={index}>
+      <div className="service-form-section-heading"><Bar w={140} h={20} /><Bar w="80%" className="route-skeleton-gap" /></div>
+      <div className="service-form-fields">{Array.from({ length: count }, (_, i) => <div className={`service-field${i === 0 ? " service-field-wide" : ""}`} key={i}><Bar w={110} /><Bar w="100%" h={index === 0 && i === 0 ? 100 : 42} /></div>)}</div>
+    </section>)}</div>
+  </Frame>;
+}
+
 function GenericSkeleton() {
   return (
     <Frame variant="generic">
@@ -680,6 +784,13 @@ function GenericSkeleton() {
 }
 
 const SKELETONS: Record<InternalSkeletonVariant, () => ReactNode> = {
+  ticketDetail: TicketDetailSkeleton,
+  reportDetail: ReportDetailSkeleton,
+  invoiceDetail: InvoiceDetailSkeleton,
+  invoiceEditor: InvoiceEditorSkeleton,
+  subscriptionDetail: SubscriptionDetailSkeleton,
+  couponEditor: CouponEditorSkeleton,
+  serviceEditor: ServiceEditorSkeleton,
   dashboard: DashboardSkeleton,
   projects: ProjectsSkeleton,
   projectDetail: ProjectDetailSkeleton,

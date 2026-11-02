@@ -1,6 +1,6 @@
 import { Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../../components/shell/route-transition";
 import { ArchiveCouponButton } from "../../../components/coupons/archive-coupon-button";
 import { CouponsFilter } from "../../../components/coupons/coupons-filter";
 import adminList from "../../../components/ui/admin-list.module.css";

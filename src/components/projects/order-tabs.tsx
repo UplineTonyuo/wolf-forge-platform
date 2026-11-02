@@ -3,11 +3,14 @@
 import { History, Info, Paperclip } from "lucide-react";
 import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { usePathname } from "next/navigation";
+import { startTransition } from "react";
+import { useOrderSectionTransition, type OrderSection } from "./order-section-transition";
 import styles from "./project-detail.module.css";
 
 /** Details / Files / History are real routes sharing this Order's layout — not anchors. */
 export function OrderTabs({ orderId }: { orderId: string }) {
   const pathname = usePathname();
+  const transition = useOrderSectionTransition();
 
   const items = [
     { href: `/orders/${orderId}`, label: "Details", icon: Info },
@@ -25,8 +28,9 @@ export function OrderTabs({ orderId }: { orderId: string }) {
           <Link
             key={item.href}
             href={item.href}
-            feedback="inline"
-            loadingLabel={`Loading ${item.label}`}
+            scroll={false}
+            onNavigate={() => startTransition(() => transition?.begin(active ? null : item.label.toLowerCase() as OrderSection))}
+            aria-busy={transition?.section === item.label.toLowerCase() || undefined}
             className={active ? styles.tabActive : styles.tab}
             aria-current={active ? "page" : undefined}
           >

@@ -41,7 +41,7 @@ describe("Internal route loading boundary", () => {
     expect(getInternalSkeletonVariant("/settings")).toBe("settings");
     expect(getInternalSkeletonVariant("/settings/general")).toBe("settings");
     // Detail pages never borrow a list skeleton.
-    expect(getInternalSkeletonVariant("/tickets/abc")).toBe("generic");
+    expect(getInternalSkeletonVariant("/tickets/abc")).toBe("ticketDetail");
     expect(getInternalSkeletonVariant("/teams")).toBe("generic");
     expect(getInternalSkeletonVariant("/unknown")).toBe("generic");
   });

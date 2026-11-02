@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { OrderHeaderControls } from "../../../../components/projects/order-header-controls";
 import { OrderTabs } from "../../../../components/projects/order-tabs";
+import { OrderSectionContent, OrderSectionProvider } from "../../../../components/projects/order-section-transition";
 import { ProjectBackToOrders } from "../../../../components/projects/project-back-to-orders";
 import { RailDetailsToggle } from "../../../../components/projects/order-details-rail-toggle";
 import styles from "../../../../components/projects/project-detail.module.css";
@@ -61,7 +62,7 @@ export default async function OrderDetailLayout({
     }));
 
     return (
-      <PageFrame
+      <OrderSectionProvider><PageFrame
         className={styles.orderFrame}
         title={project.title}
         description={`Project #${project.order_number} ${String.fromCharCode(183)} ${project.companies?.name ?? "Unavailable client"}`}
@@ -89,7 +90,7 @@ export default async function OrderDetailLayout({
         ) : null}
 
         <div className={styles.layout}>
-          <div className={styles.main}>{children}</div>
+          <div className={styles.main}><OrderSectionContent>{children}</OrderSectionContent></div>
 
           <aside className={styles.rail} aria-label="Order details" tabIndex={0}>
             <div className={styles.railCard}>
@@ -232,7 +233,7 @@ export default async function OrderDetailLayout({
             </div>
           </aside>
         </div>
-      </PageFrame>
+      </PageFrame></OrderSectionProvider>
     );
   } catch (error) {
     const safe = toClientSafeError(error);

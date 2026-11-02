@@ -1,7 +1,7 @@
 "use client";
 
 import { LoaderCircle, MoreHorizontal, Printer, X } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {

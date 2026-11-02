@@ -24,6 +24,8 @@ describe("coveredRoute", () => {
     ["/settings/general", "/settings-other", "/settings-other"],
     ["/forms", "/forms/a", "/forms/a"],
     ["/invoices", "/invoices?status=paid", null],
+    ["/coupons", "/coupons?view=archived", "/coupons"],
+    ["/coupons", "/coupons", null],
     ["/clients", "/clients#history", null],
     ["/dashboard", "https://other.example/orders", null],
   ])("%s -> %s returns %s", (current, destination, expected) => {

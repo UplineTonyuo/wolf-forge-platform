@@ -15,6 +15,18 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(cleanup);
 
 describe("ServicesRootActions create folder", () => {
+  it("uses the shared body-level dialog and returns focus without a duplicate Actions menu", async () => {
+    const { container } = render(<ServicesRootActions />);
+    const trigger = screen.getByRole("button", { name: "New Folder" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole("dialog");
+    expect(container.contains(dialog)).toBe(false);
+    expect(screen.queryByText("Actions")).toBeNull();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(trigger).toHaveFocus();
+  });
   it("disables the submit button while the mutation is in flight, so a fast second click cannot double-submit", async () => {
     let resolveCreate!: (value: actions.CatalogFormState) => void;
     vi.mocked(actions.createServiceFolderAction).mockReturnValue(

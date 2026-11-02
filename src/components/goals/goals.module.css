@@ -18,3 +18,6 @@
 .editor[hidden]{display:none}.fieldError{color:var(--wf-danger);font-size:12px;line-height:1.5;margin:2px 0 0}.field [aria-invalid=true],.field [data-invalid=true]{border-color:var(--wf-danger)}.photoPreview{display:flex;gap:14px;align-items:center;margin-top:12px}.photoPreview img{width:96px;height:96px;object-fit:contain;border-radius:7px}.photoPreview>div{display:grid;gap:8px;min-width:0}.photoPreview span{font-size:12px;overflow-wrap:anywhere}.photoPreview button{justify-self:start}.saving{display:inline-flex;align-items:center;gap:5px;margin-left:auto;white-space:nowrap;color:var(--wf-navy);font-size:11px}.saving svg{width:14px;height:14px;margin:0}.loading{min-height:240px;display:flex;align-items:center;justify-content:center;gap:9px;color:var(--wf-text-muted);font-size:13px}.loading svg{width:18px;height:18px}.error button{margin-left:12px}@media(max-width:767px){.photoPreview img{width:80px;height:80px}}
 
 .person{display:inline-flex;align-items:center;gap:8px;min-width:0}
+/* Metadata icons must not resize the avatar's nested fallback SVG or change its grid display. */
+.meta .person > span{display:grid;flex:0 0 auto}
+.meta .person > span > svg{width:100%;height:100%}

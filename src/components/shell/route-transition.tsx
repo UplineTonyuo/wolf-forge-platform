@@ -62,7 +62,11 @@ function persistentFrame(pathname: string): string | null {
 }
 
 export function coveredRoute(url: URL, pathname: string, inShell: (path: string) => boolean): string | null {
-  if (url.origin !== window.location.origin || url.pathname === pathname || !inShell(url.pathname)) return null;
+  if (url.origin !== window.location.origin || !inShell(url.pathname)) return null;
+  // Coupon status tabs load a different server-resolved collection on the same path.
+  if (url.pathname === pathname) {
+    return pathname === "/coupons" && url.search !== window.location.search ? url.pathname : null;
+  }
   const frame = persistentFrame(pathname);
   return frame && frame === persistentFrame(url.pathname) ? null : url.pathname;
 }
