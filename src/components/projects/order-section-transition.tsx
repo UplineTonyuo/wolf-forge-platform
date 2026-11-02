@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useOptimistic, type ReactNode } from "react";
 import { ProjectDetailsSkeleton, ProjectFilesSkeleton, ProjectHistorySkeleton } from "../shell/route-skeletons";
+import styles from "./project-detail.module.css";
 
 export type OrderSection = "details" | "files" | "history";
 const PendingSection = createContext<{ section: OrderSection | null; begin: (section: OrderSection | null) => void } | null>(null);
@@ -19,6 +20,6 @@ export function OrderSectionContent({ children }: { children: ReactNode }) {
   const Skeleton = pending === "files" ? ProjectFilesSkeleton : pending === "history" ? ProjectHistorySkeleton : ProjectDetailsSkeleton;
   return <>
     {pending ? <Skeleton /> : null}
-    <div hidden={Boolean(pending)} aria-busy={Boolean(pending)}>{children}</div>
+    <div className={styles.sectionContent} hidden={Boolean(pending)} aria-busy={Boolean(pending)}>{children}</div>
   </>;
 }

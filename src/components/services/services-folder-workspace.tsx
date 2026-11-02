@@ -403,12 +403,14 @@ function ServiceDetailModal({
             href={`/orders/new?serviceId=${encodeURIComponent(
               service.id,
             )}`}
+            onNavigate={onClosed}
           >
             Create project
           </Link>
           <Link
             href={`/services/${service.id}`}
             className={styles.dialogEdit}
+            onNavigate={onClosed}
           >
             <Pencil aria-hidden="true" />
             Edit service

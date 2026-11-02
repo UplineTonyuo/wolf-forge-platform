@@ -37,3 +37,9 @@ Cleanup: removed the unused navigationUrlForClick helper and its tests after a c
 Full app build remains held: fresh2.95GiB available versus5.5GiB guard. Authenticated browser acceptance is still pending. No push, deployment, Docker, database, permission or notification-polling changes.
 
 Historical research: outputs/woad-skeleton-research-20261030. Preserved pre-existing return-navigation patch passed 29 tests and was checkpointed at 22f7e2e; current main was reconciled at 9c72641.
+
+## Authorized release review — 2026-11-03
+
+The user authorized the GitHub/WOAD release. Pre-merge review found two regressions: the retained Order body wrapper removed the existing 22px grid gaps, and Service detail portals stayed open over destination loading. The visible body wrapper now uses display:contents; accepted modal-link navigation closes the portal immediately, while modified clicks preserve it.
+
+Verification: two modal regression cases failed before the fix; all three cases pass afterward. Four focused files pass26tests, including pending Order draft retention and Link behavior. Actual OrderSectionContent and production CSS render with22px gaps at320/360/390/430/768/1280/1440; before-fix renders reproduced zero gaps. Synthetic fixture only, no backend, no external requests. Evidence: outputs/navigation-release-20261103. Existing full CI is rerun on the final candidate; no local Docker or production data changes.
