@@ -48,7 +48,7 @@ def save(name: str, value) -> None:
 
 
 def run_graphify(*args: str) -> None:
-    subprocess.run([sys.executable, '-B', '-m', 'graphify', *args], cwd=ROOT, check=True,
+    subprocess.run([sys.executable, '-I', '-B', '-m', 'graphify', *args], cwd=ROOT, check=True,
                    env={**os.environ, 'GRAPHIFY_NO_AUTO_REFRESH': '1', 'GRAPHIFY_OUT': str(OUT)})
 
 
