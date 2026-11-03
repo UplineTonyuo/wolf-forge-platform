@@ -52,6 +52,10 @@ begin
     if p_action='setup' then
       if c.token_attempts>=8 or c.provider_state not in ('none','claimed','ready') then
         raise exception 'Call unavailable' using errcode='42501'; end if;
+      -- Reject an already exhausted join window before any provider lookup claim.
+      if exists(select 1 from private.rate_limit_counters where scope='ticket-call-token' and subject=auth.uid()::text
+        and window_start=to_timestamp(floor(extract(epoch from stamp)/60)*60) and hits>=6) then
+        raise exception 'rate limit exceeded' using errcode='WF429'; end if;
       perform private.consume_rate_limit('ticket-call-provider-actor',auth.uid()::text,interval '1 minute',12);
       if c.provider_state='none' then
         claim:=extensions.gen_random_uuid();
@@ -68,4 +72,3 @@ begin
   select * into c from private.ticket_calls where id=p_call_id;
   return private.ticket_call_projection(c);
 end $$;
-

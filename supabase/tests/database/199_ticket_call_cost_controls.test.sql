@@ -49,15 +49,22 @@ set local role authenticated;
 select throws_ok($q$select pg_temp.command('setup')$q$,'WF429','rate limit exceeded','uncertain-create lookup retries are throttled');
 reset role;
 select is((select token_attempts from private.ticket_calls where id=pg_temp.call_id()),0,'refused setup cannot spend token attempts');
+delete from private.rate_limit_counters where scope='ticket-call-provider-actor';
+insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+ select 'ticket-call-token','20000000-0000-4000-8000-000000001704',b,b+interval '2 minutes',6
+ from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b;
+set local role authenticated;
+select throws_ok($q$select pg_temp.command('setup')$q$,'WF429','rate limit exceeded','exhausted join window rejects uncertain-room lookups before provider work');
+reset role;
 -- Matching retries consume coarse request budgets without creating new records.
 delete from private.rate_limit_counters where scope in ('ticket-call-request','ticket-call-command');
 select pg_temp.actor(); set local role authenticated;
-select lives_ok($q$do $b$begin for i in 1..60 loop perform pg_temp.invite(); end loop; end$b$q$,'60 matching invitation receipts remain usable');
+select lives_ok($q$do $b$begin for i in 1..60 loop perform pg_temp.invite(); end loop; end$b$$q$,'60 matching invitation receipts remain usable');
 select throws_ok($q$select pg_temp.invite()$q$,'WF429','rate limit exceeded','matching invitation retry is throttled');
 reset role;
 select is((select count(*) from private.ticket_calls where not legacy),1::bigint,'matching retries preserve one call record');
 select pg_temp.actor('1704'); set local role authenticated;
-select lives_ok($q$do $b$begin for i in 1..120 loop perform pg_temp.command('accept'); end loop; end$b$q$,'matching accepted command remains idempotent within allowance');
+select lives_ok($q$do $b$begin for i in 1..120 loop perform pg_temp.command('accept'); end loop; end$b$$q$,'matching accepted command remains idempotent within allowance');
 select throws_ok($q$select pg_temp.command('accept')$q$,'WF429','rate limit exceeded','matching accepted command retry is throttled');
 reset role;
 update private.ticket_call_settings set enabled=false;
