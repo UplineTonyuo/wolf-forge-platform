@@ -29,6 +29,7 @@ JOBS = {'static lint boundary', 'TypeScript compile boundary', 'compiled app and
 PROGRAM_FILES = ('scripts/graphify/refresh-after-merge.py', 'scripts/graphify/build-local.py',
                  'scripts/graphify/stage-export.py',
                  'scripts/graphify/export-universe.py', 'scripts/graphify/universe.html',
+                 'scripts/graphify/serve-universe.py',
                  'docs/agents/graphify-trial.md')
 
 

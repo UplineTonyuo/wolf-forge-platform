@@ -28,6 +28,16 @@
 
 ## Verification ledger
 
+## Live updates extension
+
+- [x] Add publication-cache and HTTP-boundary regressions; watch the missing host fail before implementation.
+- [x] Implement the fixed-route loopback host and 30-second version shell without changing the offline renderer.
+- [x] Verify unchanged polling preserves the frame, partial publication does not advance it, and a complete synthetic publication reloads it automatically in a browser.
+- [ ] Review source, commit/backup the updated PR, freeze seven runtime files, register/read back the separate viewer task and verify the real URL.
+- [ ] Update the existing handoff notes and confirm canonical graph/exports remain unchanged.
+
+Live extension validation:55 focused tests pass, including six new publication/HTTP contracts. Real browser polling retained A and its search during a pending publication and switched to B on the next30-second check without browser reload. Focused independent review found failed frame delivery could discard the visible graph; this was reproduced before the fix. Replacement loading now occurs in a hidden candidate frame and swaps only after matching version/source/ready attributes; a controlled503 retains A and its search with an accurate retry status. Installer waiting eligibility also requires a pre-existing checkpoint/config; actual publication gates are unchanged. Existing c06ce05 frozen program/config backed up with all6file hashes verified before rollout.
+
 2026-11-04: 49/49 focused tests passed; existing 40-test baseline was green. New export/snapshot/HTML tests were watched fail before implementation. Real pinned Graphify clustering in an owned synthetic detached repository verified rejection restores the previous HTML and marks it stale, then a successful build replaces it and clears the marker; zero model tokens. Native browser checks cover 21 flows/viewport cases, including all 89 public.profiles results, source/connection focus, camera controls, empty/no-match/hidden states, hostile labels and seven sizes from320 to1440px. No browser console errors. Direct file-protocol testing was blocked by browser policy; no workaround was attempted. The HTTP preview and absence of external renderer references were verified.
 
 Independent source review found two P2 issues: preservation across upstream clustering and inaccessible results beyond40. Both were reproduced and fixed; the preservation regression and full suite passed, and browser pagination reached all89 matches. One P3 remains deferred: after two-finger pinch, lift both fingers before beginning another drag; touch-device acceptance was not performed. No new model-backed session or deployed application verification is claimed. The canonical vault preview is staged only; installed-program update and normal verified-merge publication are separate rollout steps.
