@@ -4,7 +4,7 @@
 
 **Architecture:** Keep database authority and existing claims, quotas, receipts and provider reconciliation. Add early shared admission, bounded durable ingress and expiring database stream leases. No new dependencies or provider calls.
 
-**Authorization:** Owner explicitly requested these six repairs, focused regressions and separate logical local commits. Implement inline; no new worktree. Storage/connection values remain pending the concrete proposal in chat. Vault is read-only; steward proposals go under `../../outputs/call-cost-controls-20261104/`.
+**Authorization:** Owner explicitly requested these six repairs, focused regressions and separate logical local commits. Implement inline; no new worktree. Storage/connection values were proposed in chat before implementation and used as defaults after independent work; no owner reply or additional approval is inferred. Vault is read-only; steward proposals go under `../../outputs/call-cost-controls-20261104/`.
 
 ## Steps
 
@@ -25,3 +25,15 @@ Initial setup and uncertain-create reconciliation; exact retry after lost respon
 ## Evidence limits
 
 SQL acceptance is a separate pending gate. Mocked RPCs and source review do not prove RLS/concurrency. Existing CI/audits are historical. No money-saved/spending-cap claim; Daily hard-stop limitation remains separate. No Docker, production/Studio mutation, paid resources, pilot expansion, notifications, real calls, computer control, push, merge or deployment.
+
+## Source and local verification checkpoint
+
+All six source repairs and focused SQL regressions are prepared in separate logical local commits. The unchecked execution steps above remain an acceptance checklist, not missing source work. The guarded harness now includes transactional baseline SQL reproductions for all six findings and physical-session races for the last actor/account history slot, retained-device slot, same-session tab, profile slot across sessions, disconnect/renewal, and refusal before a held account lock. Optional real transport acceptance tests three tabs, fourth-tab 429, renewal and release through the compiled app and isolated Realtime backend. These SQL/transport paths have not run.
+
+Values: new history 30/profile/day, 300/profile/rolling 30 days, 120/account/day and 1,200/account/rolling 30 days; retained devices 20/profile including disabled/expired (10 active unchanged); streams 3/session and 6/profile, 90-second lease, 30-second renewal and 240-second maximum lifetime. History limits provide headroom above 6 admitted calls/day while bounding refused-record ingress. Retained devices allow one active allowance plus rotation headroom without deleting receipts. Stream values support three tabs on each of two sessions. Existing excess history/devices are not purged.
+
+Fresh local evidence: 146 tests/27 files pass with one worker and 768 MiB heap; media RED had three failures before correction; lease contract/lifecycle RED had eleven failures before correction, then fourteen route tests pass. TypeScript passes at 1,024 MiB; scoped ESLint passes; zero tracked secret findings/2,315 files; both harnesses pass node syntax checks; one transport acceptance-helper unit test passes. Full build held below the existing 5.5 GiB available-RAM guard. No new dependency or grant to private tables.
+
+Independent read-only review found/fixed fixture counter upsert and SQL NULL parsing errors; exact dollar delimiters and final diff were reread. Successful matching replays are throttled before shared work. Failed RPC transactions still roll back limiter charges; no universal durable request-limiter claim. Already exhausted fresh history gets a cheap authorized preflight plus an authoritative under-lock recheck.
+
+Actions usage API returned 404; remaining allowance is unverified. No CI dispatch or push occurred. Concrete exact-commit validation and proposed canonical-memory/Security content are outside the vault in the output directory. Isolated SQL/RLS/races and compiled-app transport remain pending approval/allowance verification; browser/media QA remains with the owner.

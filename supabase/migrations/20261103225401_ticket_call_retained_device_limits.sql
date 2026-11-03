@@ -37,4 +37,3 @@ begin
       updated_at=now(),expires_at=now()+interval '90 days';
   return true;
 end $$;
-

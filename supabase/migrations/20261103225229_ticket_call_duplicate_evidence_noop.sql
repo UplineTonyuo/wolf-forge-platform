@@ -64,4 +64,3 @@ begin
   insert into private.ticket_call_events(call_id,event) values(c.id,case when p_complete then 'usage_reconciled' else 'provider_evidence' end);
   return old_digest is null;
 end $$;
-
