@@ -1,6 +1,10 @@
 "use client";
 
 import { VoiceAudioPlayer } from "../audio/voice-audio-player";
+import type { CallHistoryEntry } from "../../domain/tickets/calls";
+import { TicketCallHistoryEntry } from "./ticket-call-history-entry";
+import { useBodyScrollLock } from "../ui/use-body-scroll-lock";
+import { lockModalSiblings } from "../ui/modal-inert";
 
 import {
   useEffect,
@@ -457,23 +461,15 @@ function ImageLightbox({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  useBodyScrollLock(true);
 
   useEffect(() => {
     closeRef.current?.focus();
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const inertedSiblings: Element[] = [];
-    for (const child of Array.from(document.body.children)) {
-      if (child.contains(cardRef.current) || child === cardRef.current) continue;
-      if (!child.hasAttribute("inert")) {
-        child.setAttribute("inert", "");
-        inertedSiblings.push(child);
-      }
-    }
+    const releaseInert = cardRef.current ? lockModalSiblings(cardRef.current) : () => {};
 
     function onKeyDown(event: KeyboardEvent) {
+      if (document.querySelector('.portal-overlay[data-layer="call"]')) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
@@ -502,8 +498,7 @@ function ImageLightbox({
 
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      for (const sibling of inertedSiblings) sibling.removeAttribute("inert");
+      releaseInert();
     };
   }, [onClose]);
 
@@ -539,6 +534,9 @@ export function TicketConversation({
   clientView = false,
   heading = "Conversation",
   headerActions,
+  callControls,
+  callHistory = [],
+  historyControls,
   hideInternalNotes = false,
   orderChat = false,
   viewerProfileId,
@@ -554,6 +552,9 @@ export function TicketConversation({
   clientView?: boolean;
   heading?: ReactNode;
   headerActions?: ReactNode;
+  callControls?: ReactNode;
+  callHistory?: CallHistoryEntry[];
+  historyControls?: ReactNode;
   hideInternalNotes?: boolean;
   orderChat?: boolean;
   viewerProfileId?: string;
@@ -594,6 +595,11 @@ export function TicketConversation({
       ),
     );
 
+  const threadEntries = [
+    ...visibleMessages.map(message => ({ kind: "message" as const, message, at: message.created_at, id: message.id })),
+    ...callHistory.map(call => ({ kind: "call" as const, call, at: call.requestedAt, id: call.id })),
+  ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id));
+
   return (
     <section
       className={
@@ -617,18 +623,19 @@ export function TicketConversation({
           </div>
         </div>
 
-        {headerActions && !clientView ? (
+        {callControls || (headerActions && !clientView) ? (
           <div
             className={
               styles.conversationHeaderActions
             }
           >
-            {headerActions}
+            {callControls}{!clientView ? headerActions : null}
           </div>
         ) : null}
       </header>
 
-      {visibleMessages.length ===
+      {historyControls}
+      {threadEntries.length ===
       0 ? (
         <div
           className={
@@ -646,8 +653,10 @@ export function TicketConversation({
             styles.thread
           }
         >
-          {visibleMessages.map(
-            (message, index) => {
+          {threadEntries.map(
+            (entry, index) => {
+              if (entry.kind === "call") return <TicketCallHistoryEntry key={`call:${entry.id}`} call={entry.call} timeZone={timeZone} />;
+              const message = entry.message;
               const internalNote =
                 message.message_kind ===
                 "internal_note";
@@ -696,7 +705,8 @@ export function TicketConversation({
               const renderedSide = viewerProfileId || clientView
                 ? ownMessage === clientView ? "client" : "internal"
                 : authorSide;
-              const previous = visibleMessages[index - 1];
+              const previousEntry = threadEntries[index - 1];
+              const previous = previousEntry?.kind === "message" ? previousEntry.message : undefined;
               const grouped = Boolean(previous && message.author_profile_id &&
                 previous.author_profile_id === message.author_profile_id &&
                 previous.author_type === message.author_type &&

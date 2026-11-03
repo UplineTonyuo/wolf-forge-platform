@@ -430,9 +430,8 @@ describe("Ticket Inbox dialog: viewport centring, phases, and a bounded success 
   it("revalidation is on a bounded timer, never on a transition event that could be missed", () => {
     expect(action).toContain("refreshTimerRef.current = window.setTimeout(");
     expect(action).toContain("}, EXIT_MS);");
-    // The acknowledgement is held by a phase guard, not by the timer: a prop
-    // that turns true mid-sequence must not close it early.
-    expect(action).toContain(`if (inboxAddedAt && phase !== "success") {`);
+    // Refreshing personal-save props during acknowledgement is covered by the
+    // rendered management-page regression, independent of the guard's spelling.
     expect(action).toContain("SUCCESS_HOLD_MS = 900");
     expect(action).not.toContain("transitionend");
     expect(action).not.toContain("onanimationend");

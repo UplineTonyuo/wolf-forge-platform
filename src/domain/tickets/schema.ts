@@ -142,8 +142,12 @@ export type TicketSummary = {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
-  /** Durable Inbox conversation membership; null means the Ticket is managed from /tickets only. */
+  /** Authorized Inbox visibility: legacy shared timestamp or this viewer's explicit save. */
   inbox_added_at: string | null;
+  /** Only this viewer's deliberate save; legacy visibility never implies call eligibility. */
+  personal_inbox_added_at?: string | null;
+  /** Latest public human message is from the client; independent of read state. */
+  unanswered?: boolean | null;
 };
 
 export type ClientTicketSummary = Pick<
@@ -191,7 +195,7 @@ export type TicketDetailMessage = {
 export type TicketDetailTicket = Pick<
   TicketRow,
   "id" | "public_ref" | "subject" | "status" | "priority" | "requester_name" | "created_at" | "updated_at" | "resolved_at" | "closed_at" | "archived_at"
-> & Partial<Pick<TicketRow, "company_id" | "client_profile_id" | "assigned_to_profile_id" | "created_by_profile_id" | "source_form_submission_id" | "source_form_version_id" | "requester_email" | "inbox_added_at">>;
+> & Partial<Pick<TicketRow, "company_id" | "client_profile_id" | "assigned_to_profile_id" | "created_by_profile_id" | "source_form_submission_id" | "source_form_version_id" | "requester_email" | "inbox_added_at">> & { personal_inbox_added_at?: string | null };
 
 export type TicketDetail = {
   ticket: TicketDetailTicket;

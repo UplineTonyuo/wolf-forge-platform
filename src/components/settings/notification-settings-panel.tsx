@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { updateMyNotificationSoundAction } from "../../app/actions/profile";
 import { initialProfileActionState } from "../../domain/profile/schema";
 import styles from "./settings-foundation.module.css";
+import { CallNotifications } from "../calls/call-notifications";
 
 export function NotificationSettingsPanel({ soundEnabled }: { soundEnabled: boolean }) {
   const [state, submit, pending] = useActionState(
@@ -44,6 +45,7 @@ export function NotificationSettingsPanel({ soundEnabled }: { soundEnabled: bool
         </ul>
       </section>
 
+      <section className={styles.surfaceSection} aria-label="Call notifications"><h2>Call notifications</h2><CallNotifications /></section>
       <div className={styles.formFooter}>
         <span role={state.error ? "alert" : "status"}>
           {state.error ?? (state.savedAt ? "Notification preference saved." : "Only the sound preference is saved today.")}

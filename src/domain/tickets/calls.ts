@@ -15,10 +15,20 @@ export const ticketCall = z.object({
 });
 export type TicketCall = z.infer<typeof ticketCall>;
 
+export const callPerson = z.object({
+  name: z.string().min(1).max(200), avatarUrl: z.string().max(2048).nullable(),
+  role: z.string().min(1).max(100).optional(),
+}).strict();
+export const callCandidate = callPerson.extend({ profileId: id });
+export type CallCandidate = z.infer<typeof callCandidate>;
+export const callHistoryEntry = ticketCall.extend({ caller: callPerson, callee: callPerson.nullable() });
+export type CallHistoryEntry = z.infer<typeof callHistoryEntry>;
+
 export const callAvailability = z.object({
   enabled: z.boolean(), profileId: id, accountClass: z.enum(["internal", "client"]),
   call: ticketCall.nullable(), ticketId: id.nullable(),
-  peer: z.object({ name: z.string().min(1).max(200), avatarUrl: z.string().max(2048).nullable() }).strict().nullable(),
+  peer: callPerson.nullable(),
+  candidates: z.array(callCandidate).max(100).optional(),
 }).strict().refine(value => !value.call ||
   ((value.profileId === value.call.callerId || value.profileId === value.call.calleeId) && value.ticketId === value.call.ticketId));
 export type CallAvailability = z.infer<typeof callAvailability>;
@@ -26,6 +36,7 @@ export type CallAvailability = z.infer<typeof callAvailability>;
 export const callRequest = z.object({
   action: z.literal("request"), ticket_id: id, request_id: id, device_id: id,
   mode: z.enum(["audio", "video"]),
+  recipient_id: id.optional(),
 }).strict();
 export const callCommand = z.object({
   action: z.enum(["status", "accept", "decline", "cancel", "end"]), call_id: id,

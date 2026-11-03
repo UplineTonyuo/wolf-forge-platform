@@ -7,6 +7,15 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      database_only:
+        description: Recheck SQL and secrets after a test-only database correction
+        type: boolean
+        default: false
+      call_acceptance:
+        description: Run real call Realtime/SSE acceptance against a disposable runner-local stack
+        type: boolean
+        default: false
   schedule:
     # Recheck unchanged dependencies and repository history every week.
     - cron: "0 22 * * 0"
@@ -20,6 +29,7 @@ concurrency:
 
 jobs:
   typecheck:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -35,6 +45,7 @@ jobs:
       - run: npx next typegen && npm run typecheck
 
   lint:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
     name: static lint boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -48,9 +59,10 @@ jobs:
       - run: npm run lint
 
   build:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
     name: compiled app and PDF font trace
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       NODE_OPTIONS: --max-old-space-size=3072
       NEXT_TELEMETRY_DISABLED: "1"
@@ -68,8 +80,20 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: node scripts/qa/assert-pdf-font-trace.mjs
+      - run: node --test scripts/qa/check-ticket-call-transport.test.mjs
+      - name: start disposable call transport backend
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.call_acceptance }}
+        id: call_backend
+        run: npx supabase start --yes
+      - name: real Auth, private Realtime and compiled-app SSE acceptance
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.call_acceptance }}
+        run: env -u SUPABASE_URL -u SUPABASE_PUBLISHABLE_KEY node scripts/qa/check-ticket-call-transport.mjs
+      - name: remove only the runner-local call stack
+        if: ${{ always() && steps.call_backend.outcome != 'skipped' && github.event_name == 'workflow_dispatch' && inputs.call_acceptance }}
+        run: npx supabase stop --no-backup
 
   tests:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
     name: JavaScript and TypeScript tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -118,6 +142,7 @@ jobs:
         run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
     name: production dependency vulnerabilities
     runs-on: ubuntu-latest
     timeout-minutes: 10

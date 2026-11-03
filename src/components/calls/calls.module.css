@@ -4,3 +4,22 @@
 .devices [role="listbox"]{top:auto;bottom:calc(100% + 6px);max-height:180px;overflow-y:auto;transform-origin:bottom left}
 .screen .note{color:#d0d7ed}
 .level{position:absolute;bottom:16px;left:calc(50% - 50px);width:100px;height:4px;border-radius:2px;background:#ffffff26;overflow:hidden}.level>span{display:block;height:100%;background:#e4bd50;transform-origin:left}
+.controlsBar{margin:0;flex-wrap:nowrap;flex-shrink:0}
+.controlsBar>button{width:44px;height:44px;min-width:44px;padding:0;justify-content:center;cursor:pointer}
+.controlsBar>button:hover:not(:disabled){background:var(--wf-surface,#f3f5fa);border-color:var(--wf-navy)}
+.controlsBar>button:focus-visible{outline:2px solid var(--wf-navy);outline-offset:2px}
+.controlsBar>p{position:absolute;top:100%;right:0;max-width:min(300px,calc(100vw - 32px));padding:8px;background:white;border:1px solid var(--wf-border);border-radius:8px;z-index:1;font-size:12px}
+.screen[data-incoming] .stage{aspect-ratio:auto;min-height:0;background:transparent;border:0}
+.screen[data-incoming] .person{padding:16px 4px}
+.screen[data-incoming] .controls>button{flex:1;min-height:48px}
+.recipients{min-width:0;border:0;padding:0;margin:0}
+.recipients legend{font-size:18px;font-weight:600}
+.recipients>p{font-size:13px;line-height:1.5;color:#d0d7ed;margin:8px 0 16px}
+.recipient{display:flex;gap:12px;align-items:center;min-height:68px;margin:8px 0;padding:10px 12px;border:1px solid #ffffff36;border-radius:10px;cursor:pointer}
+.recipient:has(:checked){border-color:#e4bd50;background:#1b2755}
+.recipient:focus-within{outline:2px solid #e4bd50;outline-offset:2px}
+.recipient input{accent-color:#e4bd50;flex-shrink:0;width:18px;height:18px}
+.recipient .portrait{width:40px;height:40px;flex:0 0 40px;font-size:16px}
+.recipient>span:last-child{min-width:0;display:grid;gap:4px;overflow-wrap:anywhere}
+.recipient strong{font-size:14px}.recipient small{color:#d0d7ed;font-size:12px}
+.notice>p{flex-basis:100%;margin:0;line-height:1.5}

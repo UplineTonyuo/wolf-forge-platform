@@ -12,7 +12,7 @@ create function pg_temp.call_id() returns uuid language sql security definer as 
 $$;
 select pg_temp.actor('1701'); set local role authenticated;
 select lives_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701',
-  '71000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000001','audio')$q$,'request accepted');
+  '71000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001704')$q$,'request accepted');
 reset role;
 select pg_temp.actor('1704'); set local role authenticated;
 select lives_ok($q$select public.app_ticket_call_command('accept',pg_temp.call_id(),'72000000-0000-4000-8000-000000000002')$q$,'callee accepts');

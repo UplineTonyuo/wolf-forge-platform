@@ -6239,6 +6239,8 @@ export type Database = {
           company_name: string
           created_at: string
           inbox_added_at: string
+          personal_inbox_added_at: string | null
+          unanswered: boolean | null
           last_message_at: string
           message_count: number
           priority: string

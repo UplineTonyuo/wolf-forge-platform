@@ -4,6 +4,8 @@ import { z } from "zod";
 import { CallController } from "./call-controller";
 import { CallMedia,emptyMedia } from "./call-media";
 import { CallScreen } from "./call-screen";
+import { connectCallSignals } from "./call-signals";
+import { startCallRingtone } from "./call-ringtone";
 import styles from "./calls.module.css";
 const Context=createContext<CallController|null>(null);
 export const useInboxCalls=()=>useContext(Context);
@@ -14,6 +16,7 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
  const state=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
  const [mediaState,setMediaState]=useState(emptyMedia);const [media]=useState(()=>new CallMedia(setMediaState));
  const [now,setNow]=useState(0);const audio=useRef<HTMLAudioElement>(null);const [playBlocked,setPlayBlocked]=useState(false);
+ const [ringBlocked,setRingBlocked]=useState(false);const resumeRing=useRef(()=>{});
  const call=state.call;const callId=call?.id,callState=call?.state,expiresAt=call?.expiresAt,acceptedAt=call?.acceptedAt;
  const ringDeadline=call?.ringDeadline;const incoming=callState==="ringing"&&call?.calleeId===profileId;
  const callMode=call?.mode,callerId=call?.callerId,calleeId=call?.calleeId;
@@ -22,6 +25,7 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
   controller.setRelease(()=>media.stop());
   const query=new URLSearchParams(window.location.search).get("call");
   void controller.refresh(query&&z.uuid().safeParse(query).success?{call_id:query}:{});
+  const stopSignals=connectCallSignals(async()=>{await controller.refresh();window.dispatchEvent(new Event("wolf-forge-call-history"));});
   const versions=new Map<string,number>(),pending=new Map<string,number>();
   const message=(event:MessageEvent)=>{const value=hint.safeParse(event.data);if(!value.success)return;
    const {id,version}=value.data;if(Math.max(versions.get(id)??0,pending.get(id)??0)>=version)return;pending.set(id,version);
@@ -34,7 +38,7 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
   const recover=()=>{if(document.visibilityState==="visible"&&navigator.onLine)void controller.refresh();};
   document.addEventListener("visibilitychange",recover);window.addEventListener("online",recover);
   const leave=()=>{void controller.end();};window.addEventListener("pagehide",leave);
-  return()=>{navigator.serviceWorker?.removeEventListener("message",message);document.removeEventListener("visibilitychange",recover);window.removeEventListener("online",recover);window.removeEventListener("pagehide",leave);void controller.end();media.stop();};
+  return()=>{stopSignals();navigator.serviceWorker?.removeEventListener("message",message);document.removeEventListener("visibilitychange",recover);window.removeEventListener("online",recover);window.removeEventListener("pagehide",leave);void controller.end();media.stop();};
  },[controller,media]);
  useEffect(()=>{
   const delay=controller.pollDelay();if(delay===null)return;
@@ -47,12 +51,9 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
   tick();const timer=setInterval(tick,1000);return()=>clearInterval(timer);
  },[controller,callId,expiresAt,acceptedAt,callState,ringDeadline]);
  useEffect(()=>{
-  if(!incoming||!notificationSoundEnabled||!navigator.userActivation?.hasBeenActive)return;
-  const Audio=window.AudioContext;if(!Audio)return;const context=new Audio();
-  const ring=()=>{if(document.visibilityState!=="visible"||!ringDeadline||Date.now()>=Date.parse(ringDeadline)||context.state!=="running")return;
-   const oscillator=context.createOscillator(),gain=context.createGain();oscillator.frequency.value=440;gain.gain.setValueAtTime(.04,context.currentTime);gain.gain.exponentialRampToValueAtTime(.001,context.currentTime+.28);oscillator.connect(gain);gain.connect(context.destination);oscillator.start();oscillator.stop(context.currentTime+.3);
-  };
-  void context.resume().then(ring).catch(()=>{});const timer=setInterval(ring,3000);return()=>{clearInterval(timer);void context.close().catch(()=>{});};
+  if(!incoming||!notificationSoundEnabled||!ringDeadline)return;
+  const ringtone=startCallRingtone(Date.parse(ringDeadline),setRingBlocked);resumeRing.current=ringtone.resume;
+  return()=>{resumeRing.current=()=>{};ringtone.stop();};
  },[incoming,ringDeadline,notificationSoundEnabled]);
  useEffect(()=>{
   if(!callId||!callMode||!callerId||!ready||!state.canJoin)return;
@@ -74,6 +75,6 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
  },[mediaState.remoteAudio]);
  return <Context.Provider value={controller}>{children}<audio ref={audio} autoPlay aria-label="Call audio"/>
   {playBlocked&&state.minimized&&call?.state!=="ended"?<button className={styles.audioPrompt} type="button" onClick={()=>void audio.current?.play().then(()=>setPlayBlocked(false)).catch(()=>controller.error("Audio playback is blocked by this browser."))}>Tap to hear the call</button>:null}
-  <CallScreen state={state} controller={controller} media={media} mediaState={mediaState} now={now} playBlocked={playBlocked} onPlay={()=>void audio.current?.play().then(()=>setPlayBlocked(false)).catch(()=>controller.error("Audio playback is blocked by this browser."))}/>
+  <CallScreen state={state} controller={controller} media={media} mediaState={mediaState} now={now} ringBlocked={incoming&&notificationSoundEnabled&&ringBlocked} onRing={()=>resumeRing.current()} playBlocked={playBlocked} onPlay={()=>void audio.current?.play().then(()=>setPlayBlocked(false)).catch(()=>controller.error("Audio playback is blocked by this browser."))}/>
  </Context.Provider>;
 }

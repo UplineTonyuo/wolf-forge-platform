@@ -8,12 +8,12 @@ import { addTicketToInboxAction } from "../../app/actions/tickets";
 import styles from "./tickets.module.css";
 
 /**
- * The one control that decides whether this Ticket's canonical conversation
- * also appears in Inbox -> Tickets.
+ * Explicitly save this Ticket for the viewer, independently of legacy shared
+ * Inbox visibility. Only a deliberate personal save can confer call eligibility.
  *
  * Nothing is copied, moved or migrated by it. The Ticket, its messages, its
  * attachments and its reactions are the same rows before and after; the only
- * thing that changes is `tickets.inbox_added_at`. "View in Inbox" then
+ * thing that changes is this account's private Inbox membership. "View in Inbox" then
  * deep-links the Inbox drawer at this exact Ticket through the URL contract
  * the drawer already honours (`?inbox=tickets&ticket=<id>`, see
  * useTeamMessagesChat) -- there is no second conversation system behind this
@@ -52,10 +52,12 @@ type Phase = "idle" | "submitting" | "success";
 export function TicketInboxAction({
   ticketId,
   inboxAddedAt,
+  personalInboxAddedAt,
   canManage,
 }: {
   ticketId: string;
   inboxAddedAt: string | null;
+  personalInboxAddedAt?: string | null;
   /** tickets.edit. Read-only staff still see the state, just not the button. */
   canManage: boolean;
 }) {
@@ -109,7 +111,7 @@ export function TicketInboxAction({
     }, EXIT_MS);
   }
 
-  if (inboxAddedAt && phase !== "success") {
+  if (inboxAddedAt && (personalInboxAddedAt || !canManage) && phase !== "success") {
     return (
       <div className={styles.inboxAction}>
         <Link
@@ -120,7 +122,8 @@ export function TicketInboxAction({
           View in Inbox
         </Link>
         <p className={styles.inboxActionNote}>
-          Conversation available in Inbox &rarr; Tickets. This Ticket&rsquo;s messages, attachments
+          {personalInboxAddedAt ? "Saved to your Inbox. " : "Visible in the team Inbox. You have not saved this Ticket personally. "}
+          This Ticket&rsquo;s messages, attachments
           and internal notes are unchanged either way.
         </p>
       </div>
@@ -168,10 +171,18 @@ export function TicketInboxAction({
         onClick={open}
       >
         <Inbox aria-hidden="true" />
-        Add to Ticket conversation
+        {inboxAddedAt ? "Save to my Inbox" : "Add to Ticket conversation"}
       </button>
+      {inboxAddedAt ? (
+        <Link href={`/tickets/${ticketId}?inbox=tickets&ticket=${ticketId}`} className="button-secondary">
+          <Inbox aria-hidden="true" />
+          View in Inbox
+        </Link>
+      ) : null}
       <p className={styles.inboxActionNote}>
-        Makes this Ticket&rsquo;s existing conversation available in Inbox &rarr; Tickets.
+        {inboxAddedAt
+          ? "Already visible in Inbox → Tickets. Save it personally to be considered for client calls while eligible."
+          : "Saves this Ticket’s existing conversation to your Inbox → Tickets."}
       </p>
 
       <dialog
@@ -218,7 +229,7 @@ export function TicketInboxAction({
                 </header>
                 <div className={styles.dialogBody}>
                   <p>
-                    This makes the Ticket available in Inbox &rarr; Tickets for conversation.
+                    This saves the Ticket to your own Inbox &rarr; Tickets for conversation and makes you a call candidate while you remain eligible.
                     Nothing is copied: the same messages, attachments and reactions are read in
                     both places.
                   </p>

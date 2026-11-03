@@ -34,8 +34,11 @@ select is((select count(*) from private.push_subscriptions where endpoint='https
 select pg_temp.actor(); set local role authenticated;
 select throws_ok($q$select public.app_set_my_call_push_subscription('https://fcm.googleapis.com/call-device-test',
  'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',true)$q$,'42501','Subscription unavailable','other profile cannot claim endpoint');
+select is(public.app_browser_push_endpoint_state('https://fcm.googleapis.com/call-device-test','https://wolf-forge-platform-callstest-wolf-forge.vercel.app'),'foreign','setup can identify a stale foreign endpoint without exposing its owner');
+select throws_ok($q$select public.app_set_my_push_subscription('https://fcm.googleapis.com/call-device-test',
+ 'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',true)$q$,'42501','subscription is not available','ordinary enrollment cannot claim a foreign calls-only endpoint');
 select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701',
- '71000000-0000-4000-8000-000000001951','72000000-0000-4000-8000-000000001951','video')->>'state','ringing','explicit call admitted');
+ '71000000-0000-4000-8000-000000001951','72000000-0000-4000-8000-000000001951','video','20000000-0000-4000-8000-000000001704')->>'state','ringing','explicit call admitted');
 select is(public.app_ticket_call_current('e1700000-0000-4000-8000-000000001701')->'call'->>'mode','video','caller sees frozen mode');
 select ok(not(public.app_ticket_call_current()?'token'),'current projection contains no media token');
 reset role;
@@ -47,6 +50,12 @@ select pg_temp.actor('1704'); set local role authenticated;
 select is(public.app_ticket_call_current()->'call'->>'id',pg_temp.current_call_id()::text,'selected callee sees incoming invitation');
 select is(public.app_my_call_push_status('https://fcm.googleapis.com/call-device-test')->'call'->>'id',pg_temp.current_call_id()::text,'worker gets only opaque current hint');
 reset role;
+delete from private.ticket_inbox_memberships where ticket_id='e1700000-0000-4000-8000-000000001701' and profile_id='20000000-0000-4000-8000-000000001704';
+set local role authenticated;
+select is(public.app_my_call_push_status('https://fcm.googleapis.com/call-device-test')->'call','null'::jsonb,'removed personal save suppresses worker hint immediately');
+reset role;
+select ok(not private.call_push_delivery_visible((select id from private.ticket_call_push_deliveries where call_id=pg_temp.current_call_id())),'removed personal save suppresses unclaimed delivery before sweep');
+insert into private.ticket_inbox_memberships(ticket_id,profile_id) values('e1700000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001704');
 set local role service_role;
 select is(jsonb_array_length(public.app_claim_ticket_call_push_deliveries()),1,'worker claims one delivery');
 select is(jsonb_array_length(public.app_claim_ticket_call_push_deliveries()),0,'second worker cannot resend in-flight attempt');

@@ -35,3 +35,52 @@ it("late successful acceptance cannot restore media after failed hang-up",async(
  accept(Response.json({ok:true,data:call({state:"accepted",acceptedAt:new Date().toISOString()})}));await pending;
  expect(controller.snapshot().canJoin).toBe(false);expect(controller.snapshot().error).toContain("retry End call");controller.dispose();
 });
+
+it.each(["declined","missed","answered"] as const)("can redial after %s, with or without closing the ended screen",async outcome=>{
+ for(const closeEnded of [true,false])for(const clearEnded of [false,true]){
+  const requests:string[]=[];const invitations=new Map<string,TicketCall>();let latest:TicketCall|null=null;
+  const send=vi.fn(async(_path:RequestInfo|URL,init?:RequestInit)=>{
+   if(init?.method==="POST"){
+    const body=JSON.parse(init.body as string);requests.push(body.request_id);
+    if(!invitations.has(body.request_id))invitations.set(body.request_id,call({id:invitations.size?old:id,callerId:id,calleeId:peer}));
+    latest=invitations.get(body.request_id)!;return Response.json({ok:true,data:latest});
+   }
+   return Response.json(availability(latest?.state==="ended"&&!String(_path).includes("call_id=")?null:latest));
+  });
+  const controller=new CallController(id,send);
+  try{
+   await controller.request(id,"audio",{},peer);
+   latest={...latest!,state:"ended",outcome,version:2};invitations.set(requests[0]!,latest);
+   await controller.refresh({call_id:id});if(clearEnded)await controller.refresh();if(closeEnded)controller.close();
+   await controller.request(id,"audio",{},peer);
+   expect(new Set(requests).size).toBe(2);expect(controller.snapshot().call?.id).toBe(old);expect(controller.snapshot().call?.state).toBe("ringing");
+  }finally{controller.dispose();}
+ }
+});
+
+it.each([false,true])("preserves an uncertain invitation retry after a completed call: %s",async previousEnded=>{
+ const requests:string[]=[];let latest:TicketCall|null=null;let loseResponse=true;
+ const invitations=new Map<string,TicketCall>();
+ const send=vi.fn(async(_path:RequestInfo|URL,init?:RequestInit)=>{
+  if(init?.method==="POST"){
+   const body=JSON.parse(init.body as string);requests.push(body.request_id);
+   if(!invitations.has(body.request_id))invitations.set(body.request_id,call({id:invitations.size?old:id,callerId:id,calleeId:peer}));
+   latest=invitations.get(body.request_id)!;
+   if(loseResponse&&(!previousEnded||requests.length===2)){loseResponse=false;throw new Error("Response lost after server acceptance");}
+   return Response.json({ok:true,data:latest});
+  }
+  return Response.json(availability(latest));
+ });
+ const controller=new CallController(id,send);
+ try{
+  if(previousEnded){
+   await controller.request(id,"audio",{},peer);
+   latest={...latest!,state:"ended",outcome:"declined",version:2};invitations.set(requests[0]!,latest);
+   await controller.refresh({call_id:id});
+  }
+  await controller.request(id,"audio",{},peer);controller.close();
+  await controller.request(id,"audio",{},peer);
+  expect(requests.at(-1)).toBe(requests.at(-2));expect(invitations.size).toBe(previousEnded?2:1);
+  expect(controller.snapshot().call?.state).toBe("ringing");
+ }finally{controller.dispose();}
+});

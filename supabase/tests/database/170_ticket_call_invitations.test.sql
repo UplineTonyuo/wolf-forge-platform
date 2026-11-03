@@ -9,9 +9,9 @@ begin
     'role','authenticated','session_id','33000000-0000-4000-8000-00000000'||n)::text,true);
   perform set_config('request.headers','{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001701"}',true);
 end $$;
-create function pg_temp.request(n text default '0001',t text default '1701') returns jsonb language sql as $$
+create function pg_temp.request(n text default '0001',t text default '1701',recipient text default '1704') returns jsonb language sql as $$
   select public.app_request_ticket_call(('e1700000-0000-4000-8000-00000000'||t)::uuid,
-    ('71000000-0000-4000-8000-00000000'||n)::uuid,'72000000-0000-4000-8000-000000000001','audio');
+    ('71000000-0000-4000-8000-00000000'||n)::uuid,'72000000-0000-4000-8000-000000000001','audio',case when recipient='none' then null when t='1702' then '20000000-0000-4000-8000-000000001705'::uuid else ('20000000-0000-4000-8000-00000000'||recipient)::uuid end);
 $$;
 create function pg_temp.call_id() returns uuid language sql security definer as $$
   select id from private.ticket_calls where request_id='71000000-0000-4000-8000-000000000001';
@@ -20,7 +20,7 @@ select ok(not has_table_privilege('authenticated','private.ticket_call_settings'
 select ok(not has_function_privilege('authenticated','private.finish_ticket_call(uuid,text,text,timestamptz)','execute'),'trusted termination is not public');
 select pg_temp.actor(); set local role authenticated;
 select is(pg_temp.request()->>'state','ringing','owner client requests own open Ticket');
-select is(pg_temp.request()->>'calleeId','20000000-0000-4000-8000-000000001704','assigned admin is the one selected callee');
+select is(pg_temp.request()->>'calleeId','20000000-0000-4000-8000-000000001704','explicitly selected saved admin is the one callee');
 select is(pg_temp.request()->>'state','ringing','same request replays without another log');
 reset role;
 select is((select count(*) from private.ticket_calls where not legacy),1::bigint,'one attempt on replay');
@@ -59,12 +59,12 @@ select pg_temp.actor('1701'); set local role authenticated;
 select throws_ok($q$select pg_temp.request('0007')$q$,'42501','Call unavailable','client cannot start a call on own closed Ticket');
 reset role;
 select pg_temp.actor('1702'); set local role authenticated;
-select is(pg_temp.request('0004','1704')->>'outcome','refused','unassigned with empty setting is logged refused');
-select is(pg_temp.request('0004','1704')->>'message','Please send a message instead','exact fallback refusal copy');
+select throws_ok($q$select pg_temp.request('0004','1704','none')$q$,'42501','Call unavailable','unassigned Ticket still requires an explicit selected recipient');
+select is(jsonb_array_length(public.app_ticket_call_history('e1700000-0000-4000-8000-000000001704')),0,'invalid selection creates no fabricated call history');
 reset role;
 update private.ticket_call_settings set fallback_team_profile_id='20000000-0000-4000-8000-000000001704';
 set local role authenticated;
-select is(pg_temp.request('0005','1704')->>'calleeId','20000000-0000-4000-8000-000000001704','explicit non-owner team member is valid fallback');
+select is(pg_temp.request('0005','1704')->>'calleeId','20000000-0000-4000-8000-000000001704','explicit non-owner saved team member remains the selected recipient');
 reset role;
 update private.ticket_calls set ring_deadline=clock_timestamp()-interval '1 second' where request_id='71000000-0000-4000-8000-000000000005';
 select is(private.process_ticket_call_deadlines(),1,'server job finalizes without a browser');

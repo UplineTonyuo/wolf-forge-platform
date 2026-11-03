@@ -3,6 +3,7 @@ import { useEffect,useRef,useState } from "react";
 import { Mic,MicOff,Video,VideoOff,Phone,PhoneOff,Minimize2,Headphones } from "lucide-react";
 import { PortalDialog } from "../account/ui/portal-dialog";
 import { AnimatedSelect } from "../ui/animated-select";
+import { AccountAvatar } from "../ui/account-avatar";
 import type { CallController,CallState } from "./call-controller";
 import type { CallMedia,MediaState } from "./call-media";
 import styles from "./calls.module.css";
@@ -13,11 +14,9 @@ export function VideoTrack({track,local=false}:{track:MediaStreamTrack|null;loca
  return <video ref={ref} autoPlay playsInline muted className={local?styles.localVideo:styles.video} aria-label={local?"Your camera":"Participant camera"}/>;
 }
 export function Portrait({name,url}:{name:string;url?:string|null}){
- const [failed,setFailed]=useState(false);
- return <span className={styles.portrait}>{url&&!failed?/* eslint-disable-next-line @next/next/no-img-element -- Authorized participant avatar; never fetched by the server. */
- <img src={url} alt="" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>:name.trim().split(/\s+/).slice(0,2).map(p=>p[0]).join("")}</span>;
+ return <AccountAvatar name={name} avatarUrl={url} size={100} onNavy className={styles.portrait} fallback={<span aria-hidden="true">{name.trim().split(/\s+/).slice(0,2).map(p=>p[0]).join("")}</span>}/>;
 }
-export function CallScreen({state,controller,media,mediaState,now,playBlocked=false,onPlay}:{state:CallState;controller:CallController;media:CallMedia;mediaState:MediaState;now:number;playBlocked?:boolean;onPlay?:()=>void}){
+export function CallScreen({state,controller,media,mediaState,now,playBlocked=false,onPlay,ringBlocked=false,onRing}:{state:CallState;controller:CallController;media:CallMedia;mediaState:MediaState;now:number;playBlocked?:boolean;onPlay?:()=>void;ringBlocked?:boolean;onRing?:()=>void}){
  const [devices,setDevices]=useState<MediaDeviceInfo[]>([]);const [selected,setSelected]=useState<Record<string,string>>({});
  const call=state.call;if(!call)return null;
  const incoming=call.state==="ringing"&&call.calleeId===controller.profileId;
@@ -32,17 +31,18 @@ export function CallScreen({state,controller,media,mediaState,now,playBlocked=fa
  const elapsed=now&&mediaState.connectedAt?Math.max(0,Math.floor((now-mediaState.connectedAt)/1000)):null;
  const deviceMenu=async()=>{try{setDevices(await navigator.mediaDevices.enumerateDevices());}catch{controller.error("Device list unavailable. Check your browser permissions.");}};
  return <>
-  {state.minimized&&!ended?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{clock}</strong></button>:null}
-  <PortalDialog open={!state.minimized} onClose={controller.close} title={call.mode==="audio"?"Voice call":"Video call"} description="Wolf Forge · Private conversation" size="wide" closeOnBackdrop={false} showClose={ended}
-   headerAction={!ended?<button type="button" className={styles.minimize} aria-label="Minimize call" onClick={()=>controller.minimize()}><Minimize2 aria-hidden="true"/></button>:undefined}>
-   <div className={styles.screen}>
+  {state.minimized&&!ended&&!incoming?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{clock}</strong></button>:null}
+  <PortalDialog open={incoming||!state.minimized} onClose={incoming?()=>{void controller.command("decline");}:controller.close} title={call.mode==="audio"?"Voice call":"Video call"} description={incoming?"Incoming call · Escape to decline":"Wolf Forge · Private conversation"} size={incoming?"default":"wide"} layer="call" closeOnBackdrop={false} showClose={ended}
+   headerAction={!ended&&!incoming?<button type="button" className={styles.minimize} aria-label="Minimize call" onClick={()=>controller.minimize()}><Minimize2 aria-hidden="true"/></button>:undefined}>
+   <div className={styles.screen} data-incoming={incoming||undefined}>
     <div className={styles.status}><span className={connected?styles.live:styles.dot}/><span role="status">{status}</span>{elapsed!==null?<span>{Math.floor(elapsed/60)}:{String(elapsed%60).padStart(2,"0")} elapsed</span>:null}{!ended?<span className={styles.clock}>{clock} {incoming?"to answer":"left"}</span>:null}</div>
     <div className={styles.stage} data-video={!!mediaState.remoteVideo}>
-     {call.mode==="video"&&mediaState.remoteVideo?<VideoTrack track={mediaState.remoteVideo}/>:<div className={styles.person}><Portrait key={`${name}:${state.peer?.avatarUrl}`} name={name} url={state.peer?.avatarUrl}/><h2>{name}</h2><p>{call.mode==="audio"?"Voice only · Camera stays off":!ended?"Camera will appear when connected":""}</p></div>}
+     {call.mode==="video"&&mediaState.remoteVideo?<VideoTrack track={mediaState.remoteVideo}/>:<div className={styles.person}><Portrait key={`${name}:${state.peer?.avatarUrl}`} name={name} url={state.peer?.avatarUrl}/><h2>{name}</h2>{state.peer?.role?<p>{state.peer.role}</p>:null}<p>{call.mode==="audio"?"Voice only · Camera stays off":!ended?"Camera will appear when connected":""}</p></div>}
      {call.mode==="video"&&mediaState.localVideo?<div className={styles.preview}><VideoTrack track={mediaState.localVideo} local/><span>You</span></div>:null}
      {connected&&call.mode==="audio"?<span className={styles.level} role="img" aria-label="Microphone activity"><span style={{transform:`scaleX(${mediaState.micOn?mediaState.audioLevel:0})`}}/></span>:null}
     </div>
     {state.error||mediaState.error?<p className={styles.error} role="alert">{state.error||mediaState.error}</p>:null}
+    {incoming&&ringBlocked?<p className={styles.note}>Your browser paused the ringtone. <button type="button" onClick={onRing}>Play ringtone</button></p>:null}
     <div className={styles.controls}>
      {playBlocked&&!ended?<button type="button" onClick={onPlay}>Tap to hear the call</button>:null}
      {incoming?<><button type="button" className={styles.answer} disabled={state.busy} onClick={()=>void controller.command("accept")}><Phone aria-hidden="true"/>Answer</button><button type="button" className={styles.end} disabled={state.busy} onClick={()=>void controller.command("decline")}><PhoneOff aria-hidden="true"/>Decline</button></>:ended?<button type="button" onClick={controller.close}>Close</button>:<>
@@ -54,8 +54,14 @@ export function CallScreen({state,controller,media,mediaState,now,playBlocked=fa
     </div>
     {!ended&&mediaState.state==="connected"?<details className={styles.devices} onToggle={event=>{if(event.currentTarget.open)void deviceMenu();}}><summary><Headphones aria-hidden="true"/>Device settings</summary><div>
      {(["audioinput","videoinput","audiooutput"] as const).filter(kind=>kind!=="videoinput"||call.mode==="video").map(kind=>{
-      const label=kind==="audioinput"?"Microphone":kind==="videoinput"?"Camera":"Speaker";const choices=devices.filter(d=>d.kind===kind);
-      return choices.length?<AnimatedSelect key={kind} name={`call-${kind}`} label={label} menuLabel={`Choose ${label.toLowerCase()}`} value={selected[kind]??""} options={[{value:"",label:`System ${label.toLowerCase()}`},...choices.map((d,i)=>({value:d.deviceId,label:d.label||`${label} ${i+1}`}))]} onChange={id=>{void media.device(kind,id).then(ok=>{if(ok)setSelected(v=>({...v,[kind]:id}));});}}/>:null;
+      const output=kind==="audiooutput";
+      if(output&&(typeof HTMLMediaElement==="undefined"||!("setSinkId" in HTMLMediaElement.prototype)))return null;
+      const label=kind==="audioinput"?"Microphone":kind==="videoinput"?"Camera":"Speaker";
+      const choices=devices.filter(d=>d.kind===kind&&(!output||!!d.deviceId));
+      const options=choices.map((d,i)=>({value:d.deviceId,label:output&&d.deviceId==="default"?"System speaker":d.label||`${label} ${i+1}`}));
+      if(!output)options.unshift({value:"",label:`System ${label.toLowerCase()}`});
+      const defaultId=output&&choices.some(d=>d.deviceId==="default")?"default":"";
+      return choices.length?<AnimatedSelect key={kind} name={`call-${kind}`} label={label} menuLabel={`Choose ${label.toLowerCase()}`} value={selected[kind]??defaultId} options={options} onChange={id=>{void media.device(kind,id).then(ok=>{if(ok)setSelected(v=>({...v,[kind]:id}));});}}/>:null;
      })}
     </div></details>:null}
    </div>

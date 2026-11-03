@@ -7,4 +7,5 @@ it("resolves only bounded UUID call entries and safe authenticated client return
  expect(safeAccountNextPath(`/calls/${id}?next=https://bad.example`)).toBe("/account");
  expect(safeAccountNextPath(`//bad.example/calls/${id}`)).toBe("/account");
  expect(callConversationPath("client",id,id)).toBe(`/account/messages/${id}?call=${id}`);
+ expect(callConversationPath("internal",id,id)).toBe(`/tickets/${id}?inbox=tickets&ticket=${id}&call=${id}`);
 });

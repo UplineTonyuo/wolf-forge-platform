@@ -6,7 +6,7 @@ export class CallController{
  private state:CallState={call:null,peer:null,busy:false,error:"",minimized:false,canJoin:false,joinAttempt:0};
  private listeners=new Set<()=>void>(); private disposed=false; private reading=false; private stopping=false;
  private readDone:Promise<void>=Promise.resolve();
- private sequence=0; private requestKey:{ticket:string;mode:string;id:string}|null=null;
+ private sequence=0; private requestKey:{ticket:string;mode:string;recipient?:string;id:string}|null=null;
  private terminal=new Set<string>(); readonly deviceId=randomUuid(); onRelease=()=>{};
  private preferences:CallDevicePreferences={};
  getPreferences(){return this.preferences;}
@@ -30,6 +30,7 @@ export class CallController{
   if(call && this.terminal.has(call.id) && call.state!=="ended")return;
   if(call?.state==="ended"){this.terminal.add(call.id);this.onRelease();}
   if(this.state.call && !call && this.state.call.state!=="ended"){this.onRelease();this.patch({call:{...this.state.call,state:"ended"},canJoin:false});return;}
+  if(previous?.state==="ended"&&!call)this.requestKey=null;
   this.patch({call,...(peer===undefined?(call?.id!==previous?.id?{peer:null}:{}):{peer}),...(call?.state==="ended"?{canJoin:false}:{})});
  }
  async refresh(query:{ticket_id?:string;call_id?:string}={}):Promise<CallAvailability|null>{
@@ -47,12 +48,14 @@ export class CallController{
   finally{this.reading=false;readFinished();}
  }
  async prepare(ticket:string){const value=callAvailability.parse(await this.api(`/api/ticket-calls?action=prepare&ticket_id=${encodeURIComponent(ticket)}`));if(value.profileId!==this.profileId)throw new Error("Account changed");return value;}
- async request(ticket:string,mode:"audio"|"video",preferences:CallDevicePreferences={}){
+ async request(ticket:string,mode:"audio"|"video",preferences:CallDevicePreferences={},recipient?:string){
   if(this.disposed || this.state.busy || (this.state.call && this.state.call.state!=="ended"))return;
+  // Clear the completed attempt once; a lost response to the new attempt must retain its key.
+  if(this.state.call?.state==="ended"){this.requestKey=null;this.patch({call:null,peer:null});}
   this.preferences=preferences;this.stopping=false;this.sequence++;this.patch({busy:true,error:"",minimized:false});
-  if(this.requestKey?.ticket!==ticket || this.requestKey.mode!==mode)this.requestKey={ticket,mode,id:randomUuid()};
+  if(this.requestKey?.ticket!==ticket || this.requestKey.mode!==mode || this.requestKey.recipient!==recipient)this.requestKey={ticket,mode,recipient,id:randomUuid()};
   try{
-   const call=ticketCall.parse(await this.api("/api/ticket-calls",{action:"request",ticket_id:ticket,mode,request_id:this.requestKey.id,device_id:this.deviceId}));
+   const call=ticketCall.parse(await this.api("/api/ticket-calls",{action:"request",ticket_id:ticket,mode,request_id:this.requestKey.id,device_id:this.deviceId,...(recipient?{recipient_id:recipient}:{})}));
    if(this.disposed || this.stopping){await this.api("/api/ticket-calls",{action:"cancel",call_id:call.id},true);return;}
    this.adopt(call);this.patch({canJoin:call.state!=="ended"});await this.refresh({call_id:call.id});
   }catch(error){this.patch({error:error instanceof Error?error.message:"Call unavailable."});}
@@ -78,7 +81,7 @@ export class CallController{
  }
  allowJoin(){this.patch({canJoin:true,error:"",joinAttempt:this.state.joinAttempt+1});}
  minimize=(value=true)=>this.patch({minimized:value});
- close=()=>{if(!this.state.call || this.state.call.state==="ended")this.patch({call:null,error:"",peer:null});else this.minimize();};
+ close=()=>{if(!this.state.call || this.state.call.state==="ended"){if(this.state.call?.state==="ended")this.requestKey=null;this.patch({call:null,error:"",peer:null});}else this.minimize();};
  error=(message:string)=>this.patch({error:message});
  connectionFailed(message:string){this.onRelease();this.patch({canJoin:false,error:message});}
  async confirmPresence(){const call=this.state.call;if(!call||!["accepted","connecting"].includes(call.state)||!this.state.canJoin)return;

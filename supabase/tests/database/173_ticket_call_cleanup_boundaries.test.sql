@@ -12,7 +12,7 @@ create function pg_temp.call_id() returns uuid language sql security definer as 
 $$;
 select pg_temp.actor('1701'); set local role authenticated;
 select lives_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701',
-  '71000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000001','video')$q$,'synthetic invitation admitted');
+  '71000000-0000-4000-8000-000000000001','72000000-0000-4000-8000-000000000001','video','20000000-0000-4000-8000-000000001704')$q$,'synthetic invitation admitted');
 reset role;
 select pg_temp.actor('1702'); set local role authenticated;
 select throws_ok($q$select public.app_ticket_call_command('status',pg_temp.call_id())$q$,
@@ -47,7 +47,7 @@ update private.ticket_call_environment set enabled=true;
 update public.tenant_memberships set archived_at=null where profile_id='20000000-0000-4000-8000-000000001701';
 set local role authenticated;
 select lives_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701',
-  '71000000-0000-4000-8000-000000000002','72000000-0000-4000-8000-000000000001','audio')$q$,'next fixture invitation admitted');
+  '71000000-0000-4000-8000-000000000002','72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001704')$q$,'next fixture invitation admitted');
 reset role;
 select pg_temp.actor('1704'); set local role authenticated;
 select lives_ok($q$select public.app_ticket_call_command('accept',pg_temp.call_id(),'72000000-0000-4000-8000-000000000002')$q$,'next recipient accepts');
@@ -61,7 +61,7 @@ select is((select connected_seconds from private.ticket_calls),0::numeric,'no-me
 delete from private.ticket_calls;
 select pg_temp.actor('1701'); set local role authenticated;
 select lives_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701',
-  '71000000-0000-4000-8000-000000000003','72000000-0000-4000-8000-000000000001','audio')$q$,'revocation fixture admitted');
+  '71000000-0000-4000-8000-000000000003','72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001704')$q$,'revocation fixture admitted');
 reset role;
 update auth.sessions set not_after=clock_timestamp()-interval '1 second'
   where user_id='20000000-0000-4000-8000-000000001701';

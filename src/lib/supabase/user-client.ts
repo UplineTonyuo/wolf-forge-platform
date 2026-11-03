@@ -92,3 +92,16 @@ export async function verifyActor(client: UserScopedClient): Promise<VerifiedAct
 export function assertVerifiedActor(actor: VerifiedActor): void {
   if (!verifiedActors.has(actor)) throw new Error("A server-verified actor is required.");
 }
+
+/** Authenticate a server-side event bridge without returning its bearer token. */
+export async function authenticateUserRealtime(client: UserScopedClient): Promise<number> {
+  const token = accessTokens.get(client);
+  if (!token) throw new Error("Missing verified session.");
+  const claims = JSON.parse(Buffer.from(token.split(".")[1]!, "base64url").toString("utf8")) as { exp?: number };
+  const ttl = Math.min(240_000, (claims.exp ?? 0) * 1000 - Date.now() - 5000);
+  if (ttl < 10_000) throw new Error("Session renewal required.");
+  // This client has no browser Auth session; otherwise heartbeat falls back to the public key.
+  client.realtime.accessToken = async () => token;
+  await client.realtime.setAuth(token);
+  return ttl;
+}

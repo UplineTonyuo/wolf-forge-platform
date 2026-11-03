@@ -13656,6 +13656,22 @@ td {
 
 .portal-overlay-panel[data-size="wide"] { width: min(640px, 100%); }
 
+/* Calls interrupt the Inbox (11900) and its menus (12200), including on mobile. */
+.portal-overlay[data-layer="call"] {
+  z-index: 32000;
+  width: 100vw; height: 100dvh; max-width: none; max-height: none;
+  margin: 0; border: 0; background: transparent;
+}
+.portal-overlay[data-layer="call"]::backdrop { background: transparent; }
+.portal-overlay[data-layer="call"] .portal-overlay-backdrop {
+  background: rgba(0, 13, 81, .55);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+}
+.portal-overlay[data-layer="call"] .portal-overlay-panel {
+  max-height: min(760px, calc(100dvh - 32px));
+}
+
 .portal-overlay[data-phase="open"] .portal-overlay-panel {
   animation: portal-panel-in var(--portal-pop-in) var(--portal-pop-ease) both;
 }

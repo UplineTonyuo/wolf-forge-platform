@@ -1,8 +1,8 @@
 "use client";
-import { useEffect,useState } from "react";
+import { useEffect,useRef,useState } from "react";
 import { Bell,BellOff } from "lucide-react";
 import styles from "./calls.module.css";
-const keyBytes=(value:string)=>Uint8Array.from(atob(value.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+import { ensureBrowserPushSubscription } from "../../lib/notifications/browser-push-subscription";
 async function request(body?:unknown){
  const response=await fetch("/api/ticket-call-push",{method:body?"POST":"GET",credentials:"same-origin",cache:"no-store",redirect:"error",
   ...(body?{headers:{"content-type":"application/json"},body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(12000)});
@@ -10,6 +10,7 @@ async function request(body?:unknown){
 }
 export function CallNotifications(){
  const [config,setConfig]=useState<{publicKey:string}|null>(null);const [active,setActive]=useState(false);const [busy,setBusy]=useState(false);const [message,setMessage]=useState("");
+ const inFlight=useRef(false);
  useEffect(()=>{
   let stopped=false;if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))return;
   void (async()=>{try{
@@ -20,19 +21,20 @@ export function CallNotifications(){
   return()=>{stopped=true;};
  },[]);
  async function toggle(){
-  if(!config||busy)return;setBusy(true);setMessage("");let created:PushSubscription|null=null;
+  if(!config||inFlight.current)return;inFlight.current=true;setBusy(true);setMessage("");
   try{
-   if(!active&&await Notification.requestPermission()!=="granted"){setMessage("Allow notifications in your browser to receive incoming calls outside this conversation.");return;}
-   const registration=await navigator.serviceWorker.register("/push-sw.js",{scope:"/",updateViaCache:"none"});
-   await navigator.serviceWorker.ready;let subscription=await registration.pushManager.getSubscription();
-   if(!subscription&&!active){subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(config.publicKey)});created=subscription;}
+   if(!active){
+    const permission=Notification.permission==="default"?await Notification.requestPermission():Notification.permission;
+    if(permission!=="granted"){setMessage("Browser call notifications are blocked. Change this site's notification permission in browser settings, then try again. In-app call cards remain available.");return;}
+   }
+   const subscription=active?await (await navigator.serviceWorker.getRegistration("/"))?.pushManager.getSubscription():await ensureBrowserPushSubscription(config.publicKey);
    if(!subscription)throw new Error("Device unavailable");
    // Never unsubscribe an existing endpoint: ordinary message alerts may share it.
    await request({action:"set",endpoint:subscription.endpoint,enabled:!active});setActive(!active);
-   setMessage(active?"Call alerts are off on this device.":"Call alerts are enabled on this device. Browser and system settings control delivery.");
-  }catch{if(created)await created.unsubscribe().catch(()=>false);setMessage("Call alerts could not be changed. Check permissions and try again.");}
-  finally{setBusy(false);}
+   setMessage(active?"Browser call notifications are off on this device.":"This device is registered. Browser call delivery also requires workspace push configuration and browser/system permission.");
+  }catch{setMessage("Call notifications could not be changed. Check this site's browser notification settings and try again.");}
+  finally{inFlight.current=false;setBusy(false);}
  }
- if(!config)return <span className={styles.note}>Incoming alerts need a supported, configured device.</span>;
- return <span className={styles.notice}><button type="button" disabled={busy} aria-busy={busy} onClick={()=>void toggle()}>{active?<BellOff aria-hidden="true"/>:<Bell aria-hidden="true"/>}{busy?"Updating…":active?"Turn off call alerts":"Enable call alerts"}</button>{message?<span role="status">{message}</span>:null}</span>;
+ if(!config)return <p className={styles.note}>In-app call cards are automatic. Browser call notifications need a supported, configured device.</p>;
+ return <div className={styles.notice}><p>In-app call cards are automatic. Browser notifications are optional and require permission and workspace delivery configuration.</p><button type="button" className="button-secondary" disabled={busy} aria-busy={busy} onClick={()=>void toggle()}>{active?<BellOff aria-hidden="true"/>:<Bell aria-hidden="true"/>}{busy?"Updating…":active?"Turn off browser call notifications":"Set up browser call notifications"}</button>{message?<span role="status">{message}</span>:null}</div>;
 }

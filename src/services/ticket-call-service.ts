@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { callAvailability, callMutation, callRead, callOwnerSummary, ticketCall } from "../domain/tickets/calls";
+import { callAvailability, callHistoryEntry, callMutation, callRead, callOwnerSummary, ticketCall } from "../domain/tickets/calls";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { UserScopedClient } from "../lib/supabase/user-client";
 
@@ -18,6 +18,7 @@ export async function mutateTicketCall(client: UserScopedClient, value: unknown)
   if (input.action === "request") {
     return ticketCall.parse(await callRpc(rpc, "app_request_ticket_call", {
       p_ticket_id: input.ticket_id, p_request_id: input.request_id, p_device_id: input.device_id, p_mode: input.mode,
+      p_recipient_id: input.recipient_id ?? null,
     }));
   }
   if (input.action === "settings") {
@@ -42,7 +43,7 @@ export async function readTicketCalls(client: UserScopedClient, value: unknown) 
     return callAvailability.parse(await callRpc(rpc,"app_ticket_call_prepare",{p_ticket_id:input.ticket_id}));
   }
   return input.action === "history"
-    ? z.array(ticketCall).max(50).parse(await callRpc(rpc, "app_ticket_call_history", {
+    ? z.array(callHistoryEntry).max(50).parse(await callRpc(rpc, "app_ticket_call_history", {
       p_ticket_id: input.ticket_id, p_before: input.before, p_before_id: input.before_id,
     }))
     : callOwnerSummary.parse(await callRpc(rpc, "app_ticket_call_owner_summary", { p_month: input.month }));

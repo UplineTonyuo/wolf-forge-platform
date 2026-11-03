@@ -19,7 +19,7 @@ begin
 end $$;
 select pg_temp.actor('1701'); set local role authenticated;
 select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701','71000000-0000-4000-8000-000000000001',
-  '72000000-0000-4000-8000-000000000001','audio')->>'state','ringing','affordable reserved usage admitted');
+  '72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001704')->>'state','ringing','affordable reserved usage admitted');
 reset role;
 select is((select count(*) from private.ticket_call_budget_alerts),2::bigint,'new reservation records 90 percent threshold');
 select public.app_reconcile_ticket_call_account('wolfforge',date_trunc('month',now())::date,36000,now());
@@ -27,20 +27,20 @@ select public.app_reconcile_ticket_call_account('wolfforge',date_trunc('month',n
 select is((select count(*) from private.ticket_call_budget_alerts),3::bigint,'100 percent alert deduplicates across snapshots');
 select pg_temp.actor('1702'); set local role authenticated;
 select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001704','71000000-0000-4000-8000-000000000002',
-  '72000000-0000-4000-8000-000000000001','audio')->>'outcome','refused','unmapped account use blocks another otherwise eligible call');
+  '72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001703')->>'outcome','refused','unmapped account use blocks another otherwise eligible call');
 reset role;
 select is((select count(*) from private.ticket_call_reservations),1::bigint,'quota refusal creates no reservation');
 update private.ticket_call_account_usage set verified_at=now()-interval '2 hours';
 set local role authenticated;
 select throws_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001704','71000000-0000-4000-8000-000000000003',
-  '72000000-0000-4000-8000-000000000001','audio')$q$,'42501','Calls disabled','stale provider reconciliation fails closed');
+  '72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001703')$q$,'42501','Calls disabled','stale provider reconciliation fails closed');
 reset role;
 update private.ticket_call_account_usage set verified_at=now();
 update public.tenant_memberships set archived_at=now() where tenant_id='f0f0f0f0-0000-4000-8000-000000001701'
   and profile_id='20000000-0000-4000-8000-000000001703';
 set local role authenticated;
-select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001704','71000000-0000-4000-8000-000000000004',
-  '72000000-0000-4000-8000-000000000001','audio')->>'message','Please send a message instead','invalid configured fallback is refused without auto-pick');
+select throws_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001704','71000000-0000-4000-8000-000000000004',
+  '72000000-0000-4000-8000-000000000001','audio','20000000-0000-4000-8000-000000001703')$q$,'42501','Call unavailable','revoked selected recipient is refused without auto-pick');
 reset role;
 select * from finish();
 rollback;

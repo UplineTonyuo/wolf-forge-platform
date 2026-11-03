@@ -20,7 +20,7 @@ reset role;
 select is((select count(*) from private.ticket_calls),0::bigint,'excluded caller creates no call or invitation');
 select set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000001701","role":"authenticated","session_id":"33000000-0000-4000-8000-000000001701"}',true);
 set local role authenticated;
-select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701','71000000-0000-4000-8000-000000001972','72000000-0000-4000-8000-000000001972','video')->>'state','ringing','both allowed parties can create the invitation');
+select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701','71000000-0000-4000-8000-000000001972','72000000-0000-4000-8000-000000001972','video','20000000-0000-4000-8000-000000001704')->>'state','ringing','both allowed parties can create the invitation');
 reset role;
 update private.ticket_call_environment set pilot_profile_ids=array['20000000-0000-4000-8000-000000001701']::uuid[];
 select is(private.process_ticket_call_deadlines(),1,'withdrawing a participant terminates an existing invitation');
