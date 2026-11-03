@@ -46,9 +46,9 @@ The graph is a code-navigation aid. Dynamic Supabase RPC calls, framework dispat
 
 ## Obsidian preview and approval
 
-Agents query the local graph; Obsidian receives only `GRAPH_REPORT.md`, `README.md` and `graph.html` when strictly below 10,000,000 bytes. The destination is exactly `02 Projects/Wolf Forge Platform/Code Graph/` under `WOLF_FORGE_OBSIDIAN_VAULT_PATH` (process first, then Windows User environment). Existing AI Memory, Security and Obsidian configuration are read-only.
+Agents query the local graph; Obsidian receives only `GRAPH_REPORT.md`, `README.md` and `graph.html` when strictly below 10,000,000 bytes. The destination is exactly `02 Projects/Wolf Forge Platform/Code Graph/` under `WOLF_FORGE_OBSIDIAN_VAULT_PATH` (process first, then Windows User environment). Existing AI Memory, Security and Obsidian configuration are read-only during investigations. The owner-approved scheduled publisher below has one narrow additional permission: append factual merge evidence to the existing `03 Implementation Log.md`.
 
-The staging command writes `graphify-out/trial/external-files.diff`, `external-files.json` and `vault-preview/` locally. Review the exact diff and obtain an explicit yes before copying. A general refresh request does not approve vault content. After that approval, from the same graph root:
+The staging command writes `graphify-out/trial/external-files.diff`, `external-files.json` and `vault-preview/` locally. Manual copies require review of the exact diff and an explicit yes. A general refresh request does not approve vault content. The scheduled publisher has separate recurring approval only for its four allowlisted files and factual template. After approval of a manual copy, from the same graph root:
 
 ```powershell
 & $graphPython -B (Join-Path $setupRoot 'scripts/graphify/stage-export.py') --copy
@@ -63,8 +63,39 @@ Copy refuses changed staged or destination hashes and re-reads copied bytes. Unr
 & $graphPython -B -m unittest discover -s (Join-Path $setupRoot 'scripts/graphify') -p test_setup.py -v
 ```
 
-Tests use synthetic temporary files, including a temporary vault, and never write the configured vault. At trial review on November 13, retain the setup only if source-verified answers improve actual investigation work. No scheduler, automatic cleanup or subscription is enabled.
+Tests use synthetic temporary files, including a temporary vault, and never write the configured vault. At trial review on November 13, retain the setup only if source-verified answers improve actual investigation work. Scheduler installation is a separate owner-authorized step described below; no paid subscription is required.
 
 Build/export scripts refuse optimized Python (`-O` or `PYTHONOPTIMIZE`) before doing work, so their assertion-based safety checks cannot silently disappear.
 
 Official reference: [Graphify 0.9.90](https://pypi.org/project/graphifyy/0.9.90/). The vendored skill is preserved as supplied; the scoped trial rules above take precedence.
+
+## Owner-approved verified-merge automation — 2026-11-04
+
+The owner selected “Graph exports + factual merge log” and approved construction of the Windows setup. This grants recurring publication only to the three existing Code Graph exports and append-only factual entries in the existing canonical `AI Memory/03 Implementation Log.md`. It does not grant automatic curated memory, Decisions, Security, IDs, Raw, `.ai-memory`, Obsidian settings or deployed-control changes. The November 13 Claude skill review remains; this ordinary structural maintenance task continues until disabled.
+
+From a clean, reviewed, committed setup checkout, using the existing dedicated detached `$graphRoot`:
+
+```powershell
+& ./scripts/graphify/manage-automation.ps1 -Mode Install -GraphRoot $graphRoot
+& ./scripts/graphify/manage-automation.ps1 -Mode Status -GraphRoot $graphRoot
+# Disable without deleting anything:
+Disable-ScheduledTask -TaskName 'Wolf Forge - Verified Merge Graph Refresh'
+# Remove the recurring task; keep runtime evidence, graphs and the environment:
+& ./scripts/graphify/manage-automation.ps1 -Mode Remove -GraphRoot $graphRoot
+```
+
+No execution-policy override, elevation, install or new credential is required. The existing Git Credential Manager credential stays in memory; requests go only to GitHub's fixed API and are read-only. No AI provider, model, embedding or cloud graph service is called. Windows runs the task as the current interactive user every five minutes and at sign-in, with no wake-from-sleep. Unchanged polls do not fetch or rebuild. Offline machines catch up after returning online; there is no claim of real-time refresh.
+
+The exact main SHA must match a merged PR targeting main. Its latest push-to-main `security.yml` run and all seven expected jobs must have completed successfully without skips; its latest Vercel status must be successful. PR-head CI alone, older successful attempts, direct pushes, missing checks and pending/failed/cancelled runs cannot authorize a snapshot. Recheck evidence and source/main after building. During offline catch-up, publish the latest verified snapshot once and list covered merged PRs. CI evidence applies to the published SHA, not every intermediate commit. A history rewrite or more than 100 offline commits requires manual review.
+
+Installed code and its fingerprints live under the dedicated checkout's ignored `graphify-out/automation/program/`; machine bindings, checkpoint, one status file and publication receipts live in `graphify-out/automation/`. Future source merges do not change the installed program. Python entrypoints run isolated (`-I`), so checkout modules cannot shadow the installed Graphify package. Reject incoming trees tracking any reserved `graphify-out/` paths; switch with `--no-overwrite-ignore` and verify the installed manifest again before execution. Review and rerun Install to update the program. The installer refuses dirty source, missing/mixed export provenance, conflicting checkpoints and unfinished publications. It seeds the checkpoint from the already approved export set without adding another historical merge entry.
+
+The task owns updates to the dedicated graph checkout while enabled. Before a manual build, source refresh, environment change or program update, disable the task and wait for any running instance to finish. Keep ordinary development in lane worktrees. Queries remain scoped and must verify current source/HEAD; do not assume a graph answer represents a later checkout.
+
+Publication requires all three fresh exports, including non-stale HTML below 10,000,000 bytes. Preserve the last complete set when generation cannot produce them. Destination hashes protect owner-edited exports. An exclusive Windows file handle protects each destination during writes; the implementation log retains every pre-existing byte and receives only SHA, numeric PR links, verification links, counts, timestamp and a unique merge marker. No PR body/title is interpreted or copied into memory.
+
+One durable pending journal stores only generated-file before/after bytes and the factual entry/prefix hash, not a copy of memory history. After an interruption, reconcile exact saved hashes, the append marker and any provable partial write before retrying. Conflicting changes require review; never blindly overwrite or roll back another writer. Each write is flushed and read back before checkpoint advancement. Only the most recent 20 completed JSON receipts are retained; pending payloads are removed after verified completion. Unchanged checks overwrite one small status file instead of creating history copies.
+
+Status and failures are visible through Status above and Windows Task Scheduler's Last Run Result. Pending checks stay quiet; failures preserve the previous publication and need inspection. GitHub REST is pinned to the supported `2022-11-28` schema, with a full PR lookup for actual merge-SHA evidence; a missing/changed API field fails closed rather than weakening verification. No Codex thread, model-backed notification or recurring AI session is created. Do not claim the task is installed merely because these files exist: inspect its saved action, identity, five-minute trigger, no-wake setting and an actual successful invocation.
+
+Run all focused checks with `-m unittest discover -s scripts/graphify -p 'test_*.py' -v`. Tests use temporary vaults and synthetic GitHub responses; live verification uses `refresh-after-merge.py --config <runtime>/config.json --check-only` and writes no vault content.

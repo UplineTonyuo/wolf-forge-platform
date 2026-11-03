@@ -52,30 +52,23 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(list(self.root.iterdir()), [])
 
     def test_cli_disables_auto_refresh_even_if_parent_enables_it(self):
-        package = self.root / 'graphify'
-        package.mkdir()
-        (package / '__init__.py').write_text('')
-        (package / '__main__.py').write_text(
-            'import os\nfrom pathlib import Path\n'
-            'if os.environ.get("GRAPHIFY_NO_AUTO_REFRESH") != "1":\n'
-            '    Path("unwanted-skill-refresh").touch()\n'
-        )
-        with patch.dict(os.environ, {'PYTHONPATH': str(self.root), 'GRAPHIFY_NO_AUTO_REFRESH': '0'}):
-            build = self.load('build-local.py')
-            build['run_graphify']('query', 'synthetic')
-        self.assertFalse((self.root / 'unwanted-skill-refresh').exists())
+        self.assertEqual(self.probe_cli({'GRAPHIFY_NO_AUTO_REFRESH': '0'})['refresh'], '1')
 
     def test_cli_output_override_stays_in_source_checkout(self):
-        package = self.root / 'graphify'
-        package.mkdir()
-        (package / '__init__.py').write_text('')
-        (package / '__main__.py').write_text(
-            'import os\nfrom pathlib import Path\n'
-            'Path("chosen-output.txt").write_text(os.environ.get("GRAPHIFY_OUT", ""))\n'
-        )
-        with patch.dict(os.environ, {'PYTHONPATH': str(self.root), 'GRAPHIFY_OUT': str(self.root / 'elsewhere')}):
+        self.assertEqual(self.probe_cli({'GRAPHIFY_OUT': str(self.root / 'elsewhere')})['out'], str(self.root / 'graphify-out'))
+
+    def probe_cli(self, parent_environment):
+        # Substitute only the upstream module body; execute the real child with wrapper flags/env.
+        real_run = subprocess.run
+        observed = {}
+        def probe(args, **kwargs):
+            command = args[:args.index('-m')] + ['-c', 'import json,os;print(json.dumps(dict(refresh=os.environ.get("GRAPHIFY_NO_AUTO_REFRESH"),out=os.environ.get("GRAPHIFY_OUT"))))']
+            result = real_run(command, **kwargs, capture_output=True, text=True)
+            observed.update(json.loads(result.stdout))
+            return result
+        with patch.dict(os.environ, parent_environment), patch('subprocess.run', side_effect=probe):
             self.load('build-local.py')['run_graphify']('query', 'synthetic')
-        self.assertEqual((self.root / 'chosen-output.txt').read_text(), str(self.root / 'graphify-out'))
+        return observed
 
     def test_output_is_pinned_before_first_parser_import(self):
         subprocess.run(['git', 'init', '--quiet', str(self.root)], check=True)
@@ -112,12 +105,30 @@ class SetupTests(unittest.TestCase):
         self.addCleanup(self.env.stop)
         return export
 
+    def test_cli_refuses_checkout_module_shadowing(self):
+        (self.root / 'graphify.py').write_text('from pathlib import Path\nPath("shadow-executed").touch()\n')
+        real_run = subprocess.run
+        def quiet_run(*args, **kwargs):
+            return real_run(*args, **kwargs, capture_output=True)
+        with patch('subprocess.run', side_effect=quiet_run):
+            self.load('build-local.py')['run_graphify']('--help')
+        self.assertFalse((self.root / 'shadow-executed').exists(), 'checkout code executed instead of pinned Graphify')
+
     def test_preview_has_three_files_and_does_not_write_vault(self):
         export = self.export()
         export['preview']()
         self.assertEqual(list(self.vault.iterdir()), [])
         rows = json.loads((self.root / 'graphify-out/trial/external-files.json').read_text())
         self.assertEqual({Path(r['target']).name for r in rows}, {'GRAPH_REPORT.md', 'README.md', 'graph.html'})
+
+    def test_preview_replaces_unscoped_upstream_rebuild_instruction(self):
+        export = self.export()
+        report = self.root / 'graphify-out/GRAPH_REPORT.md'
+        report.write_text(report.read_text() + '\nRun `graphify update .` to refresh the graph.\n', encoding='utf-8')
+        export['preview']()
+        staged = (self.root / 'graphify-out/trial/vault-preview/GRAPH_REPORT.md').read_text(encoding='utf-8')
+        self.assertNotIn('graphify update .', staged)
+        self.assertIn('README.md', staged)
 
     def test_stale_html_is_omitted_from_preview(self):
         export = self.export()

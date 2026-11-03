@@ -6,6 +6,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import runpy
 import subprocess
 import sys
@@ -40,7 +41,9 @@ def digest(path):
 def preview():
     meta = json.loads((TRIAL / 'build-metadata.json').read_text(encoding='utf-8'))
     STAGE.mkdir(parents=True, exist_ok=True)
-    report = (OUT / 'GRAPH_REPORT.md').read_bytes()
+    report_text = (OUT / 'GRAPH_REPORT.md').read_text(encoding='utf-8')
+    report_text = re.sub(r'^.*Run `graphify update \.`.*$', '- Refresh using the scoped instructions in `README.md`.', report_text, flags=re.M)
+    report = report_text.encode('utf-8')
     assert meta['source_commit'] in report.decode('utf-8')
     (STAGE / 'GRAPH_REPORT.md').write_bytes(report)
     header = f"> Source commit: {meta['source_commit']} | Build date: {meta['build_date']} | Graphify {meta['version']}"
