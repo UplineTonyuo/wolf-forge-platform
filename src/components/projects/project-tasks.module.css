@@ -1,0 +1,16 @@
+.tasks { display: grid; gap: 16px; }
+.empty { margin: 0; color: var(--wf-text-muted); line-height: 1.5; }
+.titleField { display: grid; flex: 1 1 240px; gap: 6px; min-width: 0; color: var(--wf-navy); font-size: 13px; font-weight: 600; }
+.titleField input { width: 100%; font-weight: 400; }
+.tasks .create { align-items: flex-end; }
+.row { display: grid; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--wf-border); }
+.identity { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.identity small { color: var(--wf-text-muted); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.controls > div { min-width: 0; max-width: 100%; }
+.buttons, .create, .rename { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.buttons button, .create button, .rename button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 8px 12px; background: var(--wf-surface, #fff); border: 1px solid var(--wf-border); border-radius: 6px; color: var(--wf-navy); font: inherit; cursor: pointer; }
+.tasks button:disabled { opacity: .5; cursor: default; }
+.tasks button:focus-visible, .tasks input:focus-visible { outline: 2px solid var(--wf-gold); outline-offset: 2px; }
+.tasks svg { width: 16px; height: 16px; }
+.tasks input { flex: 1 1 180px; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--wf-border); border-radius: 6px; font: inherit; }

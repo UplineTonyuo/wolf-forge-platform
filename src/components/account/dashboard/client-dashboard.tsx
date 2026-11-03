@@ -52,7 +52,7 @@ function WelcomeState({
         <h1>{firstName ? `Welcome, ${firstName}` : "Welcome to Wolf Forge"}</h1>
         <p>
           Your workspace for {companyName} is ready. When work begins, your projects, updates,
-          onboarding and billing all appear here.
+          forms and billing all appear here.
         </p>
       </section>
 
@@ -96,8 +96,8 @@ export function ClientDashboard({
     if (onboarding && onboarding.outstanding.length > 0) {
       actions.push({
         id: "onboarding",
-        label: "Complete onboarding",
-        href: "/account/onboarding",
+        label: "Complete required forms",
+        href: "/account/projects#forms",
         detail: `${onboarding.outstanding.length} ${onboarding.outstanding.length === 1 ? "item" : "items"} to complete`,
       });
     }
@@ -132,7 +132,7 @@ export function ClientDashboard({
   const contextLine = attention.length > 0
     ? `${attention.length} ${attention.length === 1 ? "thing needs" : "things need"} your attention today.`
     : activeProjects.length > 0
-      ? `Wolf Forge is working on ${activeProjects.length} ${activeProjects.length === 1 ? "project" : "projects"} for you. Nothing is waiting on you.`
+      ? `Wolf Forge is working on ${activeProjects.length} ${activeProjects.length === 1 ? "order" : "orders"} for you. Nothing is waiting on you.`
       : "Nothing is waiting on you right now.";
 
   /*

@@ -321,7 +321,7 @@ describe("attention chips", () => {
     expect(chips.map((chip) => chip.label)).toEqual([
       "1 overdue",
       "1 reply waiting",
-      "2 projects active",
+      "2 orders active",
     ]);
   });
 
@@ -406,7 +406,7 @@ describe("dashboard rendering", () => {
       "/account/invoices",
       "/account/projects",
       "/account/messages",
-      "/account/onboarding",
+      "/account/projects#forms",
     ]);
   });
 

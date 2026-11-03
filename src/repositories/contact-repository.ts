@@ -7,6 +7,11 @@ import type { UserMutationClient } from "./types";
 export class ContactRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  async getPrimarySummary(companyId: string) {
+    const rows = unwrapMany(await this.client.rpc("app_get_primary_contact_summary", { p_company_id: companyId }));
+    return rows[0] ?? null;
+  }
+
   async create(input: CreateContactInput): Promise<ClientContactRow> {
     return unwrapOne(
       await this.client.rpc("app_create_contact", {
@@ -38,7 +43,8 @@ export class ContactRepository {
         .eq("company_id", companyId)
         .is("archived_at", null)
         .order("is_primary", { ascending: false })
-        .order("name"),
+        .order("name")
+        .order("id"),
     );
   }
 

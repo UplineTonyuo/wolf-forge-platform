@@ -7,6 +7,8 @@ import reports from "./reporting/client-reporting.module.css";
 import payments from "./billing/payment-rails.module.css";
 import security from "../settings/settings-workspace.module.css";
 import styles from "./client-route-skeleton.module.css";
+import forms from "../forms/forms.module.css";
+import tickets from "../tickets/tickets.module.css";
 
 function Bar({ width = "100%", height = 10 }: { width?: CSSProperties["width"]; height?: number }) {
   return <span className={`internal-page-skeleton-bar ${styles.bar}`} style={{ width, height }} />;
@@ -104,7 +106,7 @@ function StoreSkeleton() {
 }
 
 function OnboardingSkeleton() {
-  return <div className="portal-page"><Heading title="Onboarding" />
+  return <div className="portal-page"><Heading title="Orders" />
     <div className={styles.inline} data-skeleton-block="onboarding-progress"><Bar width={160} height={18} /><Bar width={120} /></div>
     {[0, 1].map((group) => <Section key={group} description><div className="portal-onboarding-list" data-skeleton-block="assigned-forms">
       {[0, 1].map((index) => <div className="portal-onboarding-row" key={index}>
@@ -126,10 +128,6 @@ function PaymentSkeleton() {
     <Section description><div className={payments.rails} data-skeleton-block="payment-rails">{[0, 1].map((index) => <div className={styles.paymentRail} key={index}><Bar width={40} height={32} /><Copy /><Bar width={80} height={23} /></div>)}</div></Section>
     <Section description><div className={styles.copy} data-skeleton-block="wallet-history"><Bar width="75%" /><Bar width="60%" /></div></Section>
   </div></div>;
-}
-
-function Fields({ count = 3 }: { count?: number }) {
-  return <div className="portal-form">{Array.from({ length: count }, (_, index) => <div className={styles.field} key={index}><Bar width={115} /><Bar height={42} /></div>)}</div>;
 }
 
 function ProfileSkeleton() {
@@ -158,20 +156,26 @@ function ProfileSkeleton() {
 }
 
 function ConversationSkeleton() {
-  return <div className={styles.conversation} data-skeleton-block="conversation"><div className={styles.messageBubble}><Copy /></div><div className={`${styles.messageBubble} ${styles.outgoing}`}><Copy /></div><div className={styles.messageBubble}><Copy /></div><div className={styles.composer}><Bar height={36} /><div className={styles.editor}><Bar width="60%" /></div><div className={styles.cardFoot}><Bar width={80} height={38} /><span className={styles.action}><Bar /></span></div></div></div>;
+  return <div className={styles.conversation} data-skeleton-block="conversation"><div className={styles.messageBubble}><Copy /></div><div className={`${styles.messageBubble} ${styles.outgoing}`}><Copy /></div><div className={styles.messageBubble}><Copy /></div><div className={styles.composer} data-skeleton-block="composer"><Bar height={36} /><div className={styles.editor}><Bar width="60%" /></div><div className={styles.cardFoot}><Bar width={80} height={38} /><span className={styles.action}><Bar /></span></div></div></div>;
 }
 
 function DetailSkeleton({ section, title }: { section: string; title: string }) {
   let content: ReactNode;
   switch (section) {
     case "onboarding":
-      content = <><div className="portal-card"><Copy /></div><div className={`${styles.intake} portal-card`} data-skeleton-block="intake-form"><Bar width="70%" height={25} /><Fields count={4} /><span className={styles.action}><Bar /></span></div></>;
-      break;
+      return <div className={forms.clientFormPage}>
+        <Bar width={115} height={14} />
+        <div className={forms.clientAssignmentContext}><Copy /><Bar width="45%" /></div>
+        <div className={forms.renderer} data-skeleton-block="assignment-content">
+          <div className={forms.rendererHeader}><Bar width="70%" height={25} /></div>
+          <div className={styles.assignmentContent}><Copy /><Bar height={90} /><Copy /></div>
+        </div>
+      </div>;
     case "messages":
-      content = <div className={styles.conversationLayout}><ConversationSkeleton /><aside className="portal-card"><Copy /><Copy /></aside></div>;
+      content = <div className={tickets.clientDetailGrid}><div className={tickets.detailMain}><ConversationSkeleton /></div><aside className={tickets.clientSummary}><Copy /><Copy /></aside></div>;
       break;
     case "projects":
-      content = <><Section><div className="portal-card" data-skeleton-block="project-progress"><Bar width="35%" /><Bar height={6} /></div></Section><Section><div className={styles.facts}>{[0, 1, 2, 3].map((index) => <Copy key={index} />)}</div></Section><ConversationSkeleton /></>;
+      content = <><Section><div className="portal-card" data-skeleton-block="project-progress"><Bar width="35%" /><Bar height={6} /></div></Section><Section><div className="portal-fact-grid">{[0, 1, 2, 3, 4, 5].map((index) => <Copy key={index} />)}</div></Section><ConversationSkeleton /></>;
       break;
     case "store":
       content = <div className={styles.serviceDetail} data-skeleton-block="service-detail"><div className={styles.copy}><Bar height={38} /><Copy /><Copy /><Copy /></div><div className="portal-card"><Bar width="65%" height={35} /><Bar height={44} /><Copy /></div></div>;
@@ -197,7 +201,7 @@ function RouteSkeleton({ section, detail, title }: { section: string; detail: bo
   switch (section) {
     case "dashboard": return <DashboardSkeleton />;
     case "store": return <StoreSkeleton />;
-    case "projects": return <div className="portal-page"><Heading title="Projects" /><Section><ProjectRows count={4} /></Section></div>;
+    case "projects": return <div className="portal-page"><Heading title="Orders" /><Section><ProjectRows count={4} /></Section></div>;
     case "onboarding": return <OnboardingSkeleton />;
     case "messages": return <div className="portal-page"><Heading title="Inbox" action /><MessageRows /></div>;
     case "reporting": return <ReportingSkeleton />;

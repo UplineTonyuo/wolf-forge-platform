@@ -42,8 +42,8 @@ select is(
 
 select is(
   (select count(*) from private.security_audit_event_codes),
-  10::bigint,
-  'exactly ten codes are selected as auditable'
+  15::bigint,
+  'exactly fifteen codes are selected as auditable'
 );
 
 select is(
@@ -51,6 +51,9 @@ select is(
     where event_code in (
       'auth.password.changed',
       'auth.login.unassigned',
+      'authorization.client_support.started',
+      'authorization.client_support.action',
+      'authorization.client_support.ended',
       'authorization.context.denied',
       'authorization.team_supervision.read',
       'authorization.white_label.draft_saved',
@@ -58,9 +61,11 @@ select is(
       'integration.gmail.connected',
       'integration.gmail.disconnected',
       'integration.gmail.reauthorization_required',
-      'integration.gmail.disconnect_failed'
+      'integration.gmail.disconnect_failed',
+      'integration.intake_secret.captured',
+      'integration.intake_secret.revealed'
     )),
-  10::bigint,
+  15::bigint,
   'the seeded vocabulary matches SECURITY_AUDIT_EVENT_CODES exactly'
 );
 

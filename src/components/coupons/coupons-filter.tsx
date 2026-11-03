@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useRouteTransitionPush } from "../shell/route-transition";
 import { FilterOptionGroup, MobileFilterSheet } from "../ui/mobile-filter-sheet";
 
 /** The two views the Coupons index has always had. There is no third. */
@@ -28,7 +29,7 @@ export function CouponsFilter({
   initialView: CouponView;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const searchParams = useSearchParams();
 
   const viewParam = searchParams.get("view");
@@ -48,7 +49,7 @@ export function CouponsFilter({
 
     const query = next.toString();
 
-    router.push(query ? `${pathname}?${query}` : pathname);
+    push(query ? `${pathname}?${query}` : pathname);
   }
 
   return (

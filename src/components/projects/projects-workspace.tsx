@@ -11,7 +11,7 @@ import {
   TriangleAlert,
   UserRound,
 } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -32,7 +32,7 @@ import {
 } from "../../domain/orders/bulk";
 import {
   countProjectsByStatus,
-  countProjectsNeedingAttention,
+  countUnansweredOrders,
   filterProjectRows,
   projectInitials,
   projectStatusLabels,
@@ -84,9 +84,9 @@ type DialogState = {
 };
 
 const dialogTitles: Record<DialogKind, string> = {
-  status: "Change project status",
-  assign: "Assign projects",
-  archive: "Archive projects",
+  status: "Change order status",
+  assign: "Assign orders",
+  archive: "Archive orders",
 };
 
 export function ProjectsWorkspace({
@@ -97,6 +97,7 @@ export function ProjectsWorkspace({
   serviceFolders,
   clients,
   capabilities,
+  viewerId,
 }: {
   rows: ProjectListRow[];
   complete: boolean;
@@ -105,6 +106,7 @@ export function ProjectsWorkspace({
   serviceFolders: ServiceFolderRow[];
   clients: ProjectOption[];
   capabilities: ProjectCapabilities;
+  viewerId?: string;
 }) {
   const router = useRouter();
 
@@ -117,7 +119,7 @@ export function ProjectsWorkspace({
   const [personFilter, setPersonFilter] = useState("all");
   const [serviceFilter, setServiceFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("all");
-  const [attentionOnly, setAttentionOnly] = useState(false);
+  const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ProjectBulkResult | null>(null);
@@ -125,6 +127,8 @@ export function ProjectsWorkspace({
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogChoiceRef = useRef<HTMLSelectElement>(null);
   const dialogConfirmRef = useRef<HTMLButtonElement>(null);
+  const unknownResponseCount = rows.filter((row) => row.unanswered === null).length;
+  const responseStatesAvailable = rows.length === 0 || unknownResponseCount < rows.length;
 
   /* One criteria object feeds counts, filtering and the attention view, so the
      tab totals and the rendered rows can never disagree. */
@@ -135,9 +139,9 @@ export function ProjectsWorkspace({
       assigneeId: personFilter,
       serviceId: serviceFilter,
       companyId: clientFilter,
-      attentionOnly,
+      unansweredOnly: unansweredOnly && responseStatesAvailable,
     }),
-    [attentionOnly, clientFilter, personFilter, search, serviceFilter],
+    [unansweredOnly, responseStatesAvailable, clientFilter, personFilter, search, serviceFilter],
   );
 
   const counts = useMemo(() => countProjectsByStatus(rows, scopeCriteria), [rows, scopeCriteria]);
@@ -147,7 +151,7 @@ export function ProjectsWorkspace({
     [activeTab, rows, scopeCriteria],
   );
 
-  const attentionCount = useMemo(() => countProjectsNeedingAttention(rows), [rows]);
+  const unansweredCount = useMemo(() => countUnansweredOrders(rows), [rows]);
 
   const allVisibleSelected =
     filteredProjects.length > 0 && filteredProjects.every((project) => selected.has(project.id));
@@ -157,12 +161,15 @@ export function ProjectsWorkspace({
     Number(serviceFilter !== "all") +
     Number(clientFilter !== "all") +
     Number(activeTab !== "all") +
-    Number(attentionOnly) +
+    Number(scopeCriteria.unansweredOnly) +
     Number(search.trim().length > 0);
 
   const personOptions: SimpleFilterOption[] = useMemo(
-    () => people.map((person) => ({ id: person.id, label: person.name, avatarUrl: person.avatarUrl ?? null })),
-    [people],
+    () => [
+      ...(viewerId ? [{ id: viewerId, label: "Assigned to me" }] : []),
+      ...people.filter((person) => person.id !== viewerId).map((person) => ({ id: person.id, label: person.name, avatarUrl: person.avatarUrl ?? null })),
+    ],
+    [people, viewerId],
   );
 
   const clientOptions: SimpleFilterOption[] = useMemo(
@@ -180,6 +187,7 @@ export function ProjectsWorkspace({
       ? "Everyone"
       : personFilter === "unassigned"
         ? "Unassigned"
+        : personFilter === viewerId ? "Assigned to me"
         : (people.find((person) => person.id === personFilter)?.name ?? "Everyone");
 
   const selectedClientName =
@@ -286,7 +294,7 @@ export function ProjectsWorkspace({
     setServiceFilter("all");
     setClientFilter("all");
     setActiveTab("all");
-    setAttentionOnly(false);
+    setUnansweredOnly(false);
   }
 
   function toggleAllVisible() {
@@ -332,30 +340,36 @@ export function ProjectsWorkspace({
         <div className={styles.truncationNotice} role="alert">
           <TriangleAlert size={14} aria-hidden="true" />
           <span>
-            This view is showing only part of your projects, so the tab counts below are incomplete. Narrow the
+            This view is showing only part of your orders, so the tab counts below are incomplete. Narrow the
             filters or contact an administrator.
           </span>
         </div>
       ) : null}
 
-      <div className={styles.attentionStrip}>
+      {unknownResponseCount > 0 ? (
+        <p className={styles.notice} role="status">
+          Unanswered status is unavailable for {unknownResponseCount === rows.length ? "these orders" : "some orders"}. Those orders remain visible in All.
+        </p>
+      ) : null}
+
+      {responseStatesAvailable ? <div className={styles.attentionStrip}>
         <div>
           <BellRing size={15} aria-hidden="true" />
-          <strong>{attentionCount}</strong>
-          <span>{attentionCount === 1 ? "project needs attention." : "projects need attention."}</span>
+          <strong>{unansweredCount}</strong>
+          <span>{unansweredCount === 1 ? "unanswered order." : "unanswered orders."}</span>
         </div>
 
         <button
           type="button"
-          aria-pressed={attentionOnly}
+          aria-pressed={scopeCriteria.unansweredOnly}
           onClick={() => {
-            setAttentionOnly((current) => !current);
+            setUnansweredOnly((current) => !current);
             setActiveTab("all");
           }}
         >
-          {attentionOnly ? "Show all" : "View"}
+          {scopeCriteria.unansweredOnly ? "Show all" : "View"}
         </button>
-      </div>
+      </div> : null}
 
       {result ? (
         <div className={styles.resultPanel} role="status" aria-live="polite">
@@ -455,9 +469,9 @@ export function ProjectsWorkspace({
         <input
           type="search"
           value={search}
-          placeholder="Title, project number or client"
+          placeholder="Title, order number or client"
           autoComplete="off"
-          aria-label="Search projects"
+          aria-label="Search orders"
           onChange={(event) => setSearch(event.target.value)}
         />
       </div>
@@ -470,7 +484,7 @@ export function ProjectsWorkspace({
               id="project-search"
               type="search"
               value={search}
-              placeholder="Title, project number or client"
+              placeholder="Title, order number or client"
               autoComplete="off"
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -533,12 +547,13 @@ export function ProjectsWorkspace({
 
           <button
             type="button"
-            className={attentionOnly ? styles.attentionFilterActive : styles.attentionFilter}
-            aria-pressed={attentionOnly}
-            onClick={() => setAttentionOnly((current) => !current)}
+            className={scopeCriteria.unansweredOnly ? styles.attentionFilterActive : styles.attentionFilter}
+            aria-pressed={scopeCriteria.unansweredOnly}
+            disabled={!responseStatesAvailable}
+            onClick={() => setUnansweredOnly((current) => !current)}
           >
             <ListFilter size={14} aria-hidden="true" />
-            Needs attention
+            Unanswered
           </button>
 
           <button type="button" className={styles.clearFilters} onClick={clearAllFilters}>
@@ -550,7 +565,7 @@ export function ProjectsWorkspace({
       <ProjectsFilterSheet
         open={filterOpen && mobileFilters}
         onClose={() => setFilterOpen(false)}
-        people={people}
+        people={viewerId ? [{ id: viewerId, name: "Assigned to me" }, ...people.filter((person) => person.id !== viewerId)] : people}
         clients={clients}
         serviceFolders={serviceFolders}
         services={services}
@@ -562,8 +577,9 @@ export function ProjectsWorkspace({
         onServiceFilterChange={setServiceFilter}
         statusFilter={activeTab}
         onStatusFilterChange={setActiveTab}
-        attentionOnly={attentionOnly}
-        onAttentionOnlyChange={setAttentionOnly}
+        unansweredOnly={scopeCriteria.unansweredOnly}
+        responseStatesAvailable={responseStatesAvailable}
+        onUnansweredOnlyChange={setUnansweredOnly}
         onClear={clearAllFilters}
         activeFilterCount={activeFilterCount}
       />
@@ -573,7 +589,7 @@ export function ProjectsWorkspace({
           <button
             type="button"
             className={allVisibleSelected ? styles.checkboxActive : styles.checkbox}
-            aria-label="Select all visible projects"
+            aria-label="Select all visible orders"
             aria-pressed={allVisibleSelected}
             disabled={filteredProjects.length === 0}
             onClick={toggleAllVisible}
@@ -581,7 +597,7 @@ export function ProjectsWorkspace({
             {allVisibleSelected ? <Check size={12} strokeWidth={3} aria-hidden="true" /> : null}
           </button>
 
-          <span>Client / Project</span>
+          <span>Client / Order</span>
           <span>People</span>
           <span>Status</span>
           <span>Created</span>
@@ -600,7 +616,7 @@ export function ProjectsWorkspace({
                 <button
                   type="button"
                   className={checked ? styles.checkboxActive : styles.checkbox}
-                  aria-label={`Select ${clientName} project ${project.title}`}
+                  aria-label={`Select ${clientName} order ${project.title}`}
                   aria-pressed={checked}
                   onClick={() => toggleProject(project.id)}
                 >
@@ -608,7 +624,10 @@ export function ProjectsWorkspace({
                 </button>
 
                 <Link className={styles.projectIdentity} href={`/orders/${project.id}`}>
-                  <strong>{clientName}</strong>
+                  <strong className={styles.clientName}>
+                    <span className={styles.clientLabel}>{clientName}</span>
+                    {project.unanswered === true ? <span className={styles.unansweredBadge}>Unanswered</span> : null}
+                  </strong>
                   <span>{project.title}</span>
                   <small>{project.serviceName ?? "Unavailable service"}</small>
                 </Link>
@@ -645,10 +664,10 @@ export function ProjectsWorkspace({
 
           {filteredProjects.length === 0 ? (
             <div className={styles.emptyState}>
-              <strong>{rows.length === 0 ? "No projects yet" : "No projects match this view"}</strong>
+              <strong>{rows.length === 0 ? "No orders yet" : "No orders match this view"}</strong>
               <span>
                 {rows.length === 0
-                  ? "Projects you create will appear here."
+                  ? "Orders you create will appear here."
                   : "Change the status or filters to see more."}
               </span>
             </div>
@@ -657,7 +676,7 @@ export function ProjectsWorkspace({
 
         <div className={styles.tableFooter}>
           <span>
-            {filteredProjects.length} {filteredProjects.length === 1 ? "project" : "projects"}
+            {filteredProjects.length} {filteredProjects.length === 1 ? "order" : "orders"}
           </span>
           <span>{selected.size} selected</span>
         </div>
@@ -677,8 +696,8 @@ export function ProjectsWorkspace({
 
             <p>
               {dialog.ids.length === 1
-                ? "This applies to 1 project."
-                : `This applies to ${dialog.ids.length} projects, one at a time. Some may succeed while others fail.`}
+                ? "This applies to 1 order."
+                : `This applies to ${dialog.ids.length} orders, one at a time. Some may succeed while others fail.`}
             </p>
 
             {dialog.kind === "status" ? (
@@ -709,7 +728,7 @@ export function ProjectsWorkspace({
             ) : null}
 
             {dialog.kind === "archive" ? (
-              <p>Archived projects leave the active list. They are never deleted.</p>
+              <p>Archived orders leave the active list. They are never deleted.</p>
             ) : null}
 
             <div className={styles.dialogActions}>

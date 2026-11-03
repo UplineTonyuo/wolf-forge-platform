@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouteTransitionPush } from "../shell/route-transition";
+
 import {
   ArrowDown,
   ArrowLeft,
@@ -15,7 +17,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { PortalDialog } from "../account/ui/portal-dialog";
@@ -109,7 +110,7 @@ export function ReportBuilder({
   /** Presentation only — every send RPC re-derives and re-enforces this independently. */
   sendStatus?: ReportSendStatus | null;
 }) {
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const fieldId = useId();
 
   const readOnly = initial.status === "sent";
@@ -266,7 +267,7 @@ export function ReportBuilder({
 
   async function discard() {
     const result = await discardReportDraftAction({ reportId: initial.report_id });
-    if (result.ok) router.push("/reporting");
+    if (result.ok) push("/reporting");
     else setSave({ kind: "error", message: result.error });
   }
 

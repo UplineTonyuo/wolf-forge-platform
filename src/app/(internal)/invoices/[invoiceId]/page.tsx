@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InvoiceDetailActions } from "../../../../components/invoices/invoice-detail-actions";
+import { InvoiceManualPaymentReview } from "../../../../components/invoices/invoice-manual-payment";
 import styles from "../../../../components/invoices/invoice-admin.module.css";
 import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-status-badge";
 import { PageFrame } from "../../../../components/ui/page-frame";
@@ -45,7 +46,7 @@ export default async function InvoiceDetailPage({
 }) {
   const [{ invoiceId }, query, context] = await Promise.all([params, searchParams, getInternalContext()]);
   try {
-    const [detail, rows, workEnabled] = await Promise.all([context.services.invoices.get(invoiceId), context.services.invoices.list(), context.services.invoices.workEnabled()]);
+    const [detail, rows, workEnabled, manual] = await Promise.all([context.services.invoices.get(invoiceId), context.services.invoices.list(), context.services.invoices.workEnabled(), context.services.invoices.getManualPayment(invoiceId).catch(() => null)]);
     const signature = invoiceVisibility(rows, workEnabled, context.user.invoices, financialIdentity(context.user));
     const closedByRefund = ["partially_refunded", "refunded"].includes(detail.financials.presentation_state);
     const refundable = Math.max(detail.financials.gross_paid_cents - detail.financials.successful_refunds_cents, 0);
@@ -54,12 +55,13 @@ export default async function InvoiceDetailPage({
         className={styles.detailPage}
         title={invoiceLabel(detail.invoice.invoice_number)}
         description={<><span>{detail.clientName}</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></>}
-        action={workEnabled ? <InvoiceDetailActions invoiceId={detail.invoice.id} status={detail.invoice.status} currency={detail.invoice.currency} totalCents={detail.invoice.total_cents} grossPaidCents={detail.financials.gross_paid_cents} refundedCents={detail.financials.successful_refunds_cents} balanceDueCents={detail.financials.balance_due_cents} hasPendingPayment={detail.payments.some((payment) => payment.status === "pending")} capabilities={context.user.invoices} /> : undefined}
+        action={workEnabled ? <InvoiceDetailActions invoiceId={detail.invoice.id} invoiceLabel={invoiceLabel(detail.invoice.invoice_number)} status={detail.invoice.status} currency={detail.invoice.currency} totalCents={detail.invoice.total_cents} grossPaidCents={detail.financials.gross_paid_cents} refundedCents={detail.financials.successful_refunds_cents} balanceDueCents={detail.financials.balance_due_cents} hasPendingPayment={detail.payments.some((payment) => payment.status === "pending")} manualPending={manual?.claims.some((claim) => claim.status === "pending")} capabilities={context.user.invoices} /> : undefined}
       >
         <div className={styles.pageEnter}>
           {!workEnabled ? <p role="status">Invoices is disabled. This issued financial history is read-only.</p> : null}
           {query.created ? <SuccessToast title="Invoice draft created." /> : null}
           {query.saved ? <SuccessToast title="Invoice changes saved." /> : null}
+          {manual ? <InvoiceManualPaymentReview context={manual} /> : workEnabled ? <p role="status">Manual payment reports could not be loaded. Reload before recording a payment.</p> : null}
           <section className={styles.metadata} aria-label="Invoice information">
             <div><span>Status</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></div>
             <div><span>Created</span><strong>{formatDate(detail.invoice.created_at)}</strong></div>

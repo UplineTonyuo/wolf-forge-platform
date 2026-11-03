@@ -55,6 +55,11 @@ import { normalizeCorrelationId } from "./correlation-id";
  *   integration.gmail.disconnect_failed  possible live-but-invisible grant
  */
 export const SECURITY_AUDIT_EVENT_CODES = [
+  "integration.intake_secret.captured",
+  "integration.intake_secret.revealed",
+  "authorization.client_support.started",
+  "authorization.client_support.action",
+  "authorization.client_support.ended",
   "auth.password.changed",
   "auth.login.unassigned",
   "authorization.context.denied",

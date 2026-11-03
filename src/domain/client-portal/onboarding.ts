@@ -1,4 +1,5 @@
 import { formatDate } from "../../lib/format";
+import { assignedFormTitle } from "../forms/assignment-title";
 import type { FormAssignmentSummary } from "../forms/schema";
 import { onboardingAttention, type AttentionState } from "./attention";
 
@@ -70,11 +71,11 @@ function toItem(assignment: FormAssignmentSummary): OnboardingItem {
     ? assignment.order_title
     : assignment.form_type === "onboarding"
       ? "Account setup"
-      : "Project intake";
+      : "Order intake";
 
   return {
     assignmentId: assignment.assignment_id,
-    title: assignment.title,
+    title: assignedFormTitle(assignment),
     context,
     attention,
     required: assignment.required,
@@ -108,7 +109,7 @@ export function composeClientOnboarding(
   if (project.length > 0) {
     groups.push({
       id: "project",
-      label: "Project information",
+      label: "Order information",
       description: "Details tied to specific work already underway.",
       items: project,
     });

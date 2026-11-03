@@ -5,20 +5,18 @@ import {
 } from "lucide-react";
 
 import {
-  useRouter,
-} from "next/navigation";
-
-import {
   useRef,
   useState,
 } from "react";
+
+import { useRouteTransitionPush } from "../shell/route-transition";
 
 import styles from "./project-back-to-orders.module.css";
 
 
 export function ProjectBackToOrders() {
-  const router =
-    useRouter();
+  const push =
+    useRouteTransitionPush();
 
   const [
     leaving,
@@ -38,7 +36,7 @@ export function ProjectBackToOrders() {
 
     timerRef.current =
       setTimeout(() => {
-        router.push("/orders");
+        push("/orders");
       }, 145);
   }
 

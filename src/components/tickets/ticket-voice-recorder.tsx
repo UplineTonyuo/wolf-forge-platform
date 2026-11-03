@@ -1,14 +1,15 @@
 "use client";
 
-import { Mic, Square, X } from "lucide-react";
+import { Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TICKET_ATTACHMENT_MAX_BYTES, TICKET_AUDIO_MAX_DURATION_MS } from "../../lib/tickets/ticket-attachment-file";
 import styles from "./ticket-voice-recorder.module.css";
+import { VoiceRecordingStrip } from "../audio/voice-recording-strip";
 
 export function TicketVoiceRecorder({ ticketId, disabled, onPickAttachment, onRecordingChange }: {
   ticketId: string;
   disabled: boolean;
-  onPickAttachment: (file: File) => void;
+  onPickAttachment: (file: File, durationMs: number) => void;
   onRecordingChange: (recording: boolean) => void;
 }) {
   const [enabled, setEnabled] = useState(false);
@@ -108,7 +109,7 @@ export function TicketVoiceRecorder({ ticketId, disabled, onPickAttachment, onRe
       recorderRef.current = recorder;
       const chunks: Blob[] = [];
       let size = 0;
-      const started = Date.now();
+      const started = performance.now();
       discardRef.current = false;
       recorder.ondataavailable = (event) => {
         if (!aliveRef.current || generation !== generationRef.current) return;
@@ -128,7 +129,7 @@ export function TicketVoiceRecorder({ ticketId, disabled, onPickAttachment, onRe
         if (discardRef.current || !size || size > TICKET_ATTACHMENT_MAX_BYTES) return;
         const type = recorder.mimeType.split(";")[0];
         const extension = type === "audio/ogg" ? "ogg" : "webm";
-        pickRef.current(new File(chunks, `voice-${Date.now()}.${extension}`, { type }));
+        pickRef.current(new File(chunks, `voice-${Date.now()}.${extension}`, { type }), Math.min(TICKET_AUDIO_MAX_DURATION_MS, Math.max(1, Math.round(performance.now() - started))));
       };
       const deviceLost = () => {
         if (!aliveRef.current || generation !== generationRef.current) return;
@@ -144,7 +145,7 @@ export function TicketVoiceRecorder({ ticketId, disabled, onPickAttachment, onRe
       setRecording(true);
       recorder.start(1000);
       timerRef.current = setInterval(() => {
-        const duration = Date.now() - started;
+        const duration = performance.now() - started;
         if (aliveRef.current) setElapsed(Math.min(duration, TICKET_AUDIO_MAX_DURATION_MS));
         if (duration >= TICKET_AUDIO_MAX_DURATION_MS && recorder.state === "recording") recorder.stop();
       }, 250);
@@ -165,11 +166,8 @@ export function TicketVoiceRecorder({ ticketId, disabled, onPickAttachment, onRe
 
   if (!enabled) return null;
   return <div className={styles.recorder} data-recording={recording || requesting || undefined}>
-    {recording ? <>
-      <span role="status">Recording {Math.floor(elapsed / 60_000)}:{String(Math.floor(elapsed / 1000) % 60).padStart(2, "0")} / 5:00</span>
-      <button type="button" onClick={() => { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); }} aria-label="Stop recording"><Square aria-hidden="true" /> Stop</button>
-      <button type="button" onClick={cancel} aria-label="Discard recording"><X aria-hidden="true" /></button>
-    </> : requesting ? <>
+    {recording ? <VoiceRecordingStrip elapsedMs={elapsed} limitMs={TICKET_AUDIO_MAX_DURATION_MS}
+      onStop={() => { if (recorderRef.current?.state === "recording") recorderRef.current.stop(); }} onCancel={cancel} /> : requesting ? <>
       <span role="status">Waiting for microphone…</span>
       <button type="button" onClick={cancel}>Cancel recording</button>
     </> : <button type="button" onClick={() => void start()} disabled={disabled} aria-label="Record voice message" title="Record voice message"><Mic aria-hidden="true" /></button>}

@@ -42,26 +42,26 @@ describe("bounded signature drawings", () => {
   it("caps total points across strokes, not just each stroke", () => {
     expect(readSignatureStrokes(Array.from({ length: 32 }, () => Array.from({ length: 25 }, (_, i) => [i, i])))).toBeNull();
   });
-  it("draws, confirms consent, then clears the signature without losing the full name", () => {
+  it("draws and confirms consent without asking for a full name", () => {
     render(<Controlled />);
-    fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Synthetic signer" } });
+    expect(screen.queryByRole("textbox", { name: "Full name" })).toBeNull();
+    expect((screen.getByRole("checkbox") as HTMLInputElement).disabled).toBe(true);
     const element = pad(); draw(element);
     const consent = screen.getByRole("checkbox");
     expect((consent as HTMLInputElement).disabled).toBe(false);
     fireEvent.click(consent);
-    expect(screen.getByText("Signature captured. Confirm your consent below.").textContent).toContain("captured");
+    expect(screen.getByText("Signature and consent recorded.")).toBeTruthy();
     expect(screen.getByTestId("signature-value").textContent).toContain('"consent":true');
     fireEvent.click(screen.getByRole("button", { name: "Clear signature" }));
-    expect(screen.getByTestId("signature-value").textContent).toBe('{"name":"Synthetic signer","consent":false,"drawing":[]}');
+    expect(screen.getByTestId("signature-value").textContent).toBe('{"consent":false,"drawing":[]}');
     expect(element.querySelector("polyline")).toBeNull();
   });
-  it("requires renewed consent whenever the signer edits their name or drawing", () => {
+  it("preserves a restored legacy name and requires renewed consent when the drawing changes", () => {
     render(<Controlled initial={{ name: "Signer", consent: true, drawing }} />);
     const element = pad(); draw(element);
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Changed signer" } });
-    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByTestId("signature-value").textContent).toContain('"name":"Signer"');
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
   it("ignores secondary pointers and discards cancelled strokes", () => {
     render(<Controlled initial={{ name: "Signer", consent: true, drawing }} />);

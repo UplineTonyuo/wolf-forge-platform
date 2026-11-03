@@ -6,7 +6,7 @@ import { toClientSafeError } from "../../../lib/errors/application-error";
 import { getInternalContext } from "../../../lib/supabase/next-server";
 
 export const metadata: Metadata = {
-  title: "Projects",
+  title: "Orders",
 };
 
 export default async function ProjectsPage() {
@@ -27,7 +27,7 @@ export default async function ProjectsPage() {
 
     return (
       <PageFrame
-        title="Projects"
+        title="Orders"
         description="Manage client delivery work across Wolf Forge services."
       >
         <ProjectsWorkspace
@@ -38,12 +38,13 @@ export default async function ProjectsPage() {
           serviceFolders={serviceFolders}
           clients={clients.map((client) => ({ id: client.id, name: client.name }))}
           capabilities={context.user.projects}
+          viewerId={context.user.id}
         />
       </PageFrame>
     );
   } catch (error) {
     return (
-      <PageFrame title="Projects">
+      <PageFrame title="Orders">
         <DataError message={toClientSafeError(error).message} />
       </PageFrame>
     );

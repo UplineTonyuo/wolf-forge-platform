@@ -1,6 +1,9 @@
 ﻿"use server";
 
 import { redirect } from "next/navigation";
+import { clientSupportExitPending, clientSupportRequested } from "../../lib/supabase/client-support";
+import { clearSignedOutClientSupport } from "../../lib/supabase/client-support-recovery";
+import { endClientSupportAction } from "./client-support";
 import {
   isCredentialStageFailure,
   resolveSignInSurface,
@@ -47,6 +50,9 @@ const SIGN_IN_FAILURE_EVENTS: Record<
 };
 
 export async function signInAction(_state: LoginState, formData: FormData): Promise<LoginState> {
+  if ((await clientSupportRequested() || await clientSupportExitPending()) && !await clearSignedOutClientSupport()) {
+    return { error: "Exit client support before signing into another account." };
+  }
   // The host's Tenant (WL-2.22b), read before any Auth work so a request
   // without one fails closed instead of leaving a half-made session behind.
   const tenantSelector = await requestTenantSelector();
@@ -230,7 +236,8 @@ export async function signInAction(_state: LoginState, formData: FormData): Prom
   redirect(safeAccountNextPath(formData.get("next")));
 }
 
-export async function signOutAction() {
+export async function signOutAction(): Promise<void> {
+  if (await clientSupportRequested() || await clientSupportExitPending()) return endClientSupportAction();
   const supabase = await createNextServerSupabaseClient();
 
   /*

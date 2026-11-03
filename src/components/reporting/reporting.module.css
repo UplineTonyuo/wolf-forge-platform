@@ -26,6 +26,26 @@
   list-style: none;
 }
 
+.loadingHeading { height: calc(23px * 1.18); }
+.loadingDescription {
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  min-height: 21px;
+  margin-top: 7px;
+}
+.loadingDescription > span + span { display: none; }
+@media (min-width: 1024px) {
+  .loadingDescription { margin-top: 5px; }
+}
+@media (max-width: 767px) {
+  .loadingDescription { min-height: 19.5px; }
+}
+@media (max-width: 420px) {
+  .loadingDescription { min-height: 39px; }
+  .loadingDescription > span + span { display: block; }
+}
+
 .row {
   position: relative;
   display: grid;

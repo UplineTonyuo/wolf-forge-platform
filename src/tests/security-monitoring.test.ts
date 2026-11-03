@@ -777,7 +777,12 @@ describe("login failure classification (KI-029 observability)", () => {
 
     expect(source.match(/return signInFailure\(/g)?.length).toBeGreaterThanOrEqual(1);
     const bareErrorReturns = source.match(/return \{\s*error:[^}]*\}/g) ?? [];
-    expect(bareErrorReturns).toEqual(["return { error: IDENTITY_UNAVAILABLE_MESSAGE }"]);
+    expect(bareErrorReturns).toEqual([
+      'return { error: "Exit client support before signing into another account." }',
+      "return { error: IDENTITY_UNAVAILABLE_MESSAGE }",
+    ]);
+    expect(source.indexOf("await clientSupportRequested()")).toBeLessThan(source.indexOf('formData.get("email")'));
+    expect(source.indexOf("await clientSupportExitPending()")).toBeLessThan(source.indexOf('formData.get("email")'));
     expect(source).toMatch(/if \(error\.kind === "unavailable"\)\s*\{\s*await recordIdentityUnavailable\(error\);\s*return \{ error: IDENTITY_UNAVAILABLE_MESSAGE \};\s*\}/);
     /* No provider wording reaches the response or the log. */
     expect(source).not.toMatch(/error\.message/);

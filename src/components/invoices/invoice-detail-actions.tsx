@@ -1,7 +1,7 @@
 "use client";
 
-import { LoaderCircle, MoreHorizontal, X } from "lucide-react";
-import Link from "next/link";
+import { LoaderCircle, MoreHorizontal, Printer, X } from "lucide-react";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useId, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import { centsToMoneyInput, parseMoneyToCents } from "../../lib/invoices/form-da
 import { formatCurrencyCents } from "../../lib/format";
 import styles from "./invoice-admin.module.css";
 import { AnimatedSelect } from "../ui/animated-select";
+import { InvoiceEmailAction, InvoiceShareButton } from "./invoice-sharing";
 
 type ModalKind = "issue" | "payment" | "refund" | "void";
 
@@ -28,6 +29,8 @@ export function InvoiceDetailActions({
   balanceDueCents,
   hasPendingPayment,
   capabilities,
+  manualPending = false,
+  invoiceLabel = "Invoice",
 }: {
   invoiceId: string;
   status: InvoiceStatus;
@@ -38,6 +41,8 @@ export function InvoiceDetailActions({
   balanceDueCents: number;
   hasPendingPayment: boolean;
   capabilities: InvoiceCapabilities;
+  manualPending?: boolean;
+  invoiceLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const dialogTitleId = useId();
@@ -99,9 +104,9 @@ export function InvoiceDetailActions({
   }
 
   const canIssue = status === "draft" && capabilities.manage;
-  const canPay = ["unpaid", "payment_pending"].includes(status) && balanceDueCents > 0 && capabilities.markPaid;
+  const canPay = ["unpaid", "payment_pending"].includes(status) && balanceDueCents > 0 && capabilities.markPaid && !manualPending;
   const canRefund = status === "paid" && refundable > 0 && capabilities.refund;
-  const canVoid = ["unpaid", "payment_pending"].includes(status) && grossPaidCents === 0 && !hasPendingPayment && capabilities.void;
+  const canVoid = ["unpaid", "payment_pending"].includes(status) && grossPaidCents === 0 && !hasPendingPayment && !manualPending && capabilities.void;
   const primary = canIssue ? <button className="button-primary" type="button" onClick={() => open("issue")}>Issue Invoice</button>
     : canPay ? <button className="button-primary" type="button" onClick={() => open("payment")}>Record Payment</button>
       : canRefund ? <button className="button-primary" type="button" onClick={() => open("refund")}>Refund</button> : null;
@@ -111,7 +116,8 @@ export function InvoiceDetailActions({
     <>
       <div className={styles.detailActions}>
         {primary}
-        {canEdit || canVoid ? <details><summary className="button-secondary" aria-label="Invoice actions"><MoreHorizontal aria-hidden="true" /></summary><div>{canEdit ? <Link href={`/invoices/${invoiceId}/edit`}>Edit</Link> : null}{canVoid ? <button type="button" onClick={() => open("void")}>Void invoice</button> : null}</div></details> : null}
+        {capabilities.manage && status !== "draft" ? <InvoiceShareButton invoiceId={invoiceId} canCreate={status !== "void"} /> : null}
+        <details><summary className="button-secondary" aria-label="Invoice actions"><MoreHorizontal aria-hidden="true" /></summary><div>{canEdit ? <Link href={`/invoices/${invoiceId}/edit`}>Edit</Link> : null}{capabilities.manage && status !== "draft" ? <InvoiceEmailAction invoiceId={invoiceId} invoiceLabel={invoiceLabel} /> : null}<button type="button" onClick={() => window.print()}><Printer size={15} aria-hidden="true" />Print or save as PDF</button>{canVoid ? <button type="button" onClick={() => open("void")}>Void invoice</button> : null}</div></details>
       </div>
       <dialog className={styles.dialog} ref={dialogRef} aria-labelledby={dialogTitleId} onCancel={(event) => { if (pending) event.preventDefault(); }}>
         <form onSubmit={submit}>

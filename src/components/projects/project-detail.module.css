@@ -118,6 +118,11 @@ a.tab:hover {
   min-width: 0;
 }
 
+/* Retain drafts without replacing the parent's grid items or their spacing. */
+.sectionContent:not([hidden]) {
+  display: contents;
+}
+
 .rail {
   position: sticky;
   top: 28px;

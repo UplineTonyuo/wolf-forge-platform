@@ -1,15 +1,30 @@
 # gitleaks allowlist (D-101).
+# Human-approved 2026-10-31: fixed synthetic invoice-link privacy-test value, not a credential.
+0679fe73a3bb851350e1c3c184b43e5a4fd30fc9:src/tests/invoice-share-privacy.test.ts:generic-api-key:7
 #
 # Secret scanning FAILS CLOSED. The only entries permitted here are pinned
 # fingerprints for findings a human has verified are not credentials, each with
 # a stated reason. Do NOT add a path glob, a rule-wide disable, or an entry
 # without a reason — those turn the scanner off rather than triaging it.
 #
+# Previously human-reviewed WordPress field UUID and synthetic legacy-intake-177 slug.
+# The remote backup commit has byte-identical files to reviewed commit 4e3d9d6.
+88c9d251b03993af21f1813ac478ceb9ec7e32f7:supabase/migrations/20261029145058_legacy_intake_secret_collection_policy.sql:generic-api-key:50
+88c9d251b03993af21f1813ac478ceb9ec7e32f7:supabase/tests/database/177_legacy_intake_secret_collection_policy.test.sql:generic-api-key:95
+#
 # Fingerprint format: <commit>:<file>:<rule-id>:<line>
+# Human-reviewed 2026-10-29: existing WordPress form field UUID, not a credential.
+4e3d9d6e67b15d163624d7b2468ef2024e613d55:supabase/migrations/20261029145058_legacy_intake_secret_collection_policy.sql:generic-api-key:50
+# Human-reviewed 2026-10-29: synthetic legacy-intake-177 form URL slug, not a credential.
+4e3d9d6e67b15d163624d7b2468ef2024e613d55:supabase/tests/database/177_legacy_intake_secret_collection_policy.test.sql:generic-api-key:95
 #
 # ---------------------------------------------------------------------------
 # Verified false positives
 # ---------------------------------------------------------------------------
+# Human reviewed 2026-10-29: these two SQL fixture canonical form URL names
+# (encrypted-secret-176-a / encrypted-secret-176-b) are not credentials.
+af60c72502c7aea5dab914e55227a7bbcc0f577f:supabase/tests/database/176_encrypted_assigned_intake_credentials.test.sql:generic-api-key:102
+af60c72502c7aea5dab914e55227a7bbcc0f577f:supabase/tests/database/176_encrypted_assigned_intake_credentials.test.sql:generic-api-key:146
 #
 # Both entries below are hand-written FAKE key SHAPES inside a unit test that
 # exists precisely to prove a Stripe key never escapes into an error message or

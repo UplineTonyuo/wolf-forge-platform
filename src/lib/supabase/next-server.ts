@@ -52,6 +52,9 @@ import { WhiteLabelService } from "../../services/white-label-service";
 import { ProfileService } from "../../services/profile-service";
 import { IntegrationService } from "../../services/integration-service";
 import { AuthAdminAdapter } from "./auth-admin";
+import { clientSupportCookie, clientSupportRequested } from "./client-support";
+import { CLIENT_SUPPORT_HEADER, clientSupportProofSchema } from "../../domain/auth/client-support";
+import { clientSupportFetch } from "./client-support-fetch";
 import { ActivityService } from "../../services/activity-service";
 import { CatalogService } from "../../services/catalog-service";
 import { CompanyService } from "../../services/company-service";
@@ -121,6 +124,7 @@ export type ClientAdministrationCapabilities = {
   edit: boolean;
   archive: boolean;
   privateManage: boolean;
+  contactRead: boolean;
 };
 
 export type ServiceAdministrationCapabilities = {
@@ -197,14 +201,18 @@ export async function requestTenantSelector(): Promise<TenantSelector> {
   return toTenantSelector((await headers()).get(TENANT_SELECTOR_HEADER) ?? "");
 }
 
-export async function createNextServerSupabaseClient() {
+export async function createNextServerSupabaseClient(options: { support?: boolean } = {}) {
   const environment = readLocalFrontendEnvironment();
   const cookieStore = await cookies();
+  const supportToken = options.support === false ? undefined : await clientSupportCookie();
 
-  return createServerClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
+  const client = createServerClient<Database>(environment.SUPABASE_URL, environment.SUPABASE_PUBLISHABLE_KEY, {
     // The public Form RPCs check a signed-in actor against the current Tenant,
     // so this client sends the host's Tenant too, never the Wolf Forge default.
-    global: { headers: { [TENANT_SELECTOR_HEADER]: await requestTenantSelector() } },
+    global: {
+      headers: { [TENANT_SELECTOR_HEADER]: await requestTenantSelector(), ...(supportToken ? { [CLIENT_SUPPORT_HEADER]: supportToken } : {}) },
+      ...(supportToken ? { fetch: clientSupportFetch(environment.SUPABASE_URL) } : {}),
+    },
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (cookiesToSet) => {
@@ -221,6 +229,20 @@ export async function createNextServerSupabaseClient() {
       },
     },
   });
+  if (supportToken) {
+    const result = await client.rpc("app_get_client_support_context");
+    if (result.error || !clientSupportProofSchema.safeParse(result.data).success) throw new IdentityLookupError("unauthorized", "membership");
+  }
+  return client;
+}
+
+async function clientPageSupabaseClient() {
+  try {
+    return await createNextServerSupabaseClient();
+  } catch (error) {
+    if (await clientSupportRequested()) redirect("/client-support/exit");
+    throw error;
+  }
 }
 
 /**
@@ -347,6 +369,7 @@ export async function resolveInternalUser(
       edit: granted.has("clients.edit"),
       archive: granted.has("clients.archive"),
       privateManage: granted.has("client_private.manage"),
+      contactRead: granted.has("clients.contact_read"),
     },
     services: {
       view: granted.has("services.view"),
@@ -458,6 +481,7 @@ async function pageIdentity<T>(
   try {
     return await read();
   } catch (error) {
+    if (surface !== "internal" && await clientSupportRequested()) redirect("/client-support/exit");
     if (!(error instanceof IdentityLookupError)) throw error;
     if (error.kind === "unavailable") {
       await recordIdentityUnavailable(error);
@@ -478,7 +502,7 @@ async function verifyContextActor(client: UserScopedClient): Promise<VerifiedAct
 }
 
 export const getInternalContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
+  const supabase = await createNextServerSupabaseClient({ support: false });
   const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "internal");
   if (error || !data.session) {
     await recordContextRefusal({
@@ -592,12 +616,12 @@ export const getInternalContext = cache(async () => {
 });
 
 /** Verified identity only; each protected operation must still authorize its own resource. */
-export const getVerifiedSessionContext = cache(async (): Promise<{
+export const getVerifiedSessionContext = cache(async (useSupport = true): Promise<{
   actor: VerifiedActor;
   client: UserScopedClient;
 } | null> => {
   try {
-    const supabase = await createNextServerSupabaseClient();
+    const supabase = await createNextServerSupabaseClient({ support: useSupport });
     const { data, error } = await identityLookup(() => supabase.auth.getSession(), "session");
     if (error || !data.session) return null;
 
@@ -605,6 +629,7 @@ export const getVerifiedSessionContext = cache(async (): Promise<{
       readLocalFrontendEnvironment(),
       data.session.access_token,
       await requestTenantSelector(),
+      useSupport ? await clientSupportCookie() : undefined,
     );
     const actor = await verifyActor(client);
     return { actor, client };
@@ -636,7 +661,7 @@ export const getVerifiedSessionContext = cache(async (): Promise<{
  * to a login page it cannot render.
  */
 export const getTeamActorContext = cache(async () => {
-  const context = await getVerifiedSessionContext();
+  const context = await getVerifiedSessionContext(false);
   if (!context) return null;
   const { actor, client } = context;
 
@@ -695,7 +720,7 @@ export const getTicketActorContext = cache(async () => {
  * throw an availability failure for the shared route response mapper.
  */
 export const getInternalActorContext = cache(async () => {
-  const context = await getVerifiedSessionContext();
+  const context = await getVerifiedSessionContext(false);
   if (!context) return null;
   const { actor, client } = context;
 
@@ -741,7 +766,7 @@ export async function getAccountProvisioningService() {
  * the only authority for these calls is auth.uid(), and it always has been.
  */
 export const getSelfServiceContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
+  const supabase = await clientPageSupabaseClient();
   const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "self_service");
   if (error || !data.session) {
     await recordContextRefusal({
@@ -753,7 +778,7 @@ export const getSelfServiceContext = cache(async () => {
   }
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector(), await clientSupportCookie());
   const actor = await pageIdentity(() => verifyContextActor(client), "self_service");
   if (!actor) {
     await recordContextRefusal({
@@ -774,7 +799,7 @@ export const getSelfServiceContext = cache(async () => {
 });
 
 export const getClientContext = cache(async () => {
-  const supabase = await createNextServerSupabaseClient();
+  const supabase = await clientPageSupabaseClient();
   const { data, error } = await pageIdentity(() => identityLookup(() => supabase.auth.getSession(), "session"), "client");
   if (error || !data.session) {
     await recordContextRefusal({
@@ -786,7 +811,7 @@ export const getClientContext = cache(async () => {
   }
 
   const environment = readLocalFrontendEnvironment();
-  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector());
+  const client = createUserSupabaseClient(environment, data.session.access_token, await requestTenantSelector(), await clientSupportCookie());
   const actor = await pageIdentity(() => verifyContextActor(client), "client");
   if (!actor) {
     await recordContextRefusal({

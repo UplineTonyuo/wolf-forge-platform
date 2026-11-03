@@ -21,20 +21,19 @@
 .walletCard { display: flex; flex-direction: column; justify-content: space-between; gap: 30px; aspect-ratio: 1.6; padding: 24px; border-radius: 14px; background: var(--wf-navy); }
 .paymentRail { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 18px; padding: 18px; border-bottom: 1px solid var(--wf-border); }
 .avatar { width: 72px; flex-shrink: 0; border-radius: 50%; overflow: hidden; }
-.conversationLayout { display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: start; gap: 24px; }
+.assignmentContent { display: grid; gap: 24px; padding: 24px var(--form-gutter); min-width: 0; }
 .conversation { display: flex; flex-direction: column; gap: 24px; min-width: 0; padding: 24px; border: 1px solid var(--wf-border); border-radius: 10px; }
 .messageBubble { width: 70%; padding: 18px; border: 1px solid var(--wf-border); border-radius: 12px; }
 .outgoing { align-self: flex-end; background: var(--wf-navy-wash); }
 .composer { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
 .editor { min-height: 100px; padding: 16px; border: 1px solid var(--wf-border); border-radius: 8px; }
-.intake { width: min(720px, 100%); align-self: center; gap: 32px; }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 24px; }
 .serviceDetail { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 40px; }
 .reportDocument { width: min(920px, 100%); align-self: center; gap: 28px; }
 .chart { height: 220px; border: 1px solid var(--wf-border); border-radius: 8px; background: repeating-linear-gradient(to top, var(--wf-navy-wash) 0 1px, transparent 1px 44px); }
 
 @media (max-width: 900px) {
-  .conversationLayout, .serviceDetail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .serviceDetail { grid-template-columns: minmax(0, 1fr); gap: 24px; }
 }
 
 @media (max-width: 620px) {

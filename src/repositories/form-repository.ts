@@ -11,7 +11,10 @@ import type {
   FormSubmissionSummary,
   SubmitFormInput,
   UpdateFormDraftInput,
+  IntakeSecretCaptureInput,
 } from "../domain/forms/schema";
+import { intakeSecretFieldsSchema, intakeSecretListSchema, intakeSecretReferenceSchema } from "../domain/forms/schema";
+import { ValidationError } from "../lib/errors/application-error";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { Database, Json } from "../lib/supabase/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -255,6 +258,7 @@ export class FormRepository {
   }
 
   async submit(input: SubmitFormInput): Promise<FormSubmissionRow> {
+    if (input.context.assignment_id) await this.assertAssignedValues(input.context.assignment_id, input.values);
     return unwrapOne(
       await this.client.rpc("app_submit_form", {
         p_request_id: input.request_id,
@@ -265,6 +269,42 @@ export class FormRepository {
       }),
       "Form submission",
     ) as FormSubmissionRow;
+  }
+
+  async assertAssignedValues(assignmentId: string, values: SubmitFormInput["values"]): Promise<void> {
+    const result = await this.client.rpc("app_get_form_assignment_history", { p_assignment_id: assignmentId });
+    if (result.error) throw mapDatabaseError(result.error, "Assigned Form");
+    const metadata = result.data && typeof result.data === "object" && !Array.isArray(result.data) ? result.data.secret_fields : undefined;
+    const fields = intakeSecretFieldsSchema.safeParse(metadata);
+    if (!fields.success) throw new ValidationError("Form fields are unavailable.");
+    for (const field of fields.data) {
+      const answer = values.find((value) => value.field_key === field.field_key);
+      if (answer && (field.collection_mode !== "encrypted"
+        || !intakeSecretReferenceSchema.safeParse(answer.value).success)) {
+        throw new ValidationError("Passwords must be saved through encrypted collection.");
+      }
+    }
+  }
+
+  async captureIntakeSecret(input: IntakeSecretCaptureInput) {
+    const result = await this.client.rpc("app_capture_intake_secret", {
+      p_request_id: input.request_id, p_assignment_id: input.assignment_id,
+      p_field_key: input.field_key, p_secret: input.secret,
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Saved password");
+    return intakeSecretReferenceSchema.parse(result.data);
+  }
+
+  async listIntakeSecretReferences(submissionId: string) {
+    const result = await this.client.rpc("app_list_intake_secret_references", { p_submission_id: submissionId });
+    if (result.error) throw mapDatabaseError(result.error, "Saved passwords");
+    return intakeSecretListSchema.parse(result.data);
+  }
+
+  async revealIntakeSecret(credentialId: string): Promise<string> {
+    const result = await this.client.rpc("app_reveal_intake_secret", { p_credential_id: credentialId });
+    if (result.error || typeof result.data !== "string") throw mapDatabaseError(result.error, "Saved password");
+    return result.data;
   }
 
   async correct(
@@ -293,7 +333,8 @@ export class FormRepository {
     const result = await this.client.rpc("app_list_assigned_forms");
     if (result.error) throw mapDatabaseError(result.error, "Form assignments");
     const workEnabled = await this.workEnabled();
-    return ((result.data ?? []) as unknown as FormAssignmentSummary[]).map((assignment) => ({ ...assignment, work_enabled: workEnabled }));
+    const assignments = await this.withServiceLabels((result.data ?? []) as unknown as FormAssignmentSummary[]);
+    return assignments.map((assignment) => ({ ...assignment, work_enabled: workEnabled }));
   }
 
   async workEnabled(): Promise<boolean> {
@@ -305,7 +346,8 @@ export class FormRepository {
   async getAssignmentHistory(id: string): Promise<FormAssignmentSummary> {
     const result = await this.client.rpc("app_get_form_assignment_history", { p_assignment_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Form assignment history");
-    return result.data as unknown as FormAssignmentSummary;
+    const [assignment] = await this.withServiceLabels([result.data as unknown as FormAssignmentSummary]);
+    return assignment!;
   }
 
   async listOnboardingCandidates(companyId?: string) {
@@ -320,7 +362,24 @@ export class FormRepository {
   async getAssignedForm(id: string): Promise<AssignedFormDetail> {
     const result = await this.client.rpc("app_get_assigned_form_schema", { p_assignment_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Assigned Form");
-    return result.data as unknown as AssignedFormDetail;
+    const detail = result.data as unknown as AssignedFormDetail;
+    const [assignment] = await this.withServiceLabels([detail.assignment]);
+    return { ...detail, assignment: assignment! };
+  }
+
+  private async withServiceLabels(assignments: FormAssignmentSummary[]): Promise<FormAssignmentSummary[]> {
+    const ids = [...new Set(assignments.filter((assignment) => assignment.form_type === "intake")
+      .map((assignment) => assignment.assignment_id))];
+    const labels = new Map<string, string>();
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const batch = ids.slice(offset, offset + 100);
+      const result = await this.client.rpc("app_get_assigned_form_service_labels", { p_assignment_ids: batch });
+      if (result.error) throw mapDatabaseError(result.error, "Form service labels");
+      for (const row of result.data ?? []) {
+        if (batch.includes(row.assignment_id) && row.service_name.trim()) labels.set(row.assignment_id, row.service_name);
+      }
+    }
+    return assignments.map((assignment) => ({ ...assignment, service_name: labels.get(assignment.assignment_id) ?? null }));
   }
 
   async listSubmissions(formId?: string, orderId?: string): Promise<FormSubmissionSummary[]> {

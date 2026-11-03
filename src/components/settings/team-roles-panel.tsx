@@ -257,11 +257,13 @@ export function TeamRolesPanel({
 
   const dialogRef = useRef<HTMLDialogElement>(null);
   const permissionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const focusRoleOnEntry = useRef(false);
 
   useEffect(() => {
-    if (view !== "roles") return;
-    permissionHeadingRef.current?.focus({ preventScroll: true });
-    permissionHeadingRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    if (view === "roles" && focusRoleOnEntry.current) {
+      focusRoleOnEntry.current = false;
+      permissionHeadingRef.current?.focus({ preventScroll: true });
+    }
   }, [view]);
 
   useEffect(() => {
@@ -319,6 +321,7 @@ export function TeamRolesPanel({
   const ownerCount = presetsByKey.get("owner")?.member_count ?? 0;
 
   function openRole(presetKey: string) {
+    focusRoleOnEntry.current = view !== "roles";
     setSelectedPreset(presetKey);
     setView("roles");
     setNotice(null);

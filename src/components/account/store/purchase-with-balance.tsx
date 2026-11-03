@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouteTransitionPush } from "../../shell/route-transition";
+
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   purchaseServiceWithBalanceAction,
@@ -47,6 +49,7 @@ export function PurchaseWithBalance({
   offer: StorePurchaseOffer;
 }) {
   const router = useRouter();
+  const push = useRouteTransitionPush();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,14 +81,17 @@ export function PurchaseWithBalance({
    * replacing so the client can come back to the Store, and it refreshes first
    * because the balance and the projects list both changed server-side.
    */
+  const navigateAfterOutro = useEffectEvent((href: string) => {
+    router.refresh();
+    push(href);
+  });
   useEffect(() => {
     if (!done?.ok) return;
     const timer = window.setTimeout(() => {
-      router.refresh();
-      router.push(done.destinationHref);
+      navigateAfterOutro(done.destinationHref);
     }, outroMs);
     return () => window.clearTimeout(timer);
-  }, [done, router]);
+  }, [done]);
 
   if (!offer.purchasable) {
     return (
@@ -157,7 +163,7 @@ export function PurchaseWithBalance({
   return (
     <>
       <button type="button" className={styles.purchase} onClick={openConfirm}>
-        <span>Purchase with Wolf Forge Balance</span>
+        <span>Purchase</span>
         <ArrowRight aria-hidden={true} />
       </button>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { loadCouponAccessAction } from "../../app/actions/coupons";
+import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
 export function CouponAccessBoundary({ children }: { children: ReactNode }) {
   const [unavailable, setUnavailable] = useState(false);
@@ -21,7 +22,7 @@ export function CouponAccessBoundary({ children }: { children: ReactNode }) {
       }
     };
     void check();
-    const timer = window.setInterval(() => void check(), 15_000);
+    const timer = window.setInterval(() => void check(), ACCESS_REFRESH_INTERVAL_MS);
     const resume = () => void check();
     window.addEventListener("focus", resume);
     document.addEventListener("visibilitychange", resume);

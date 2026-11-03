@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouteTransitionPush } from "../../shell/route-transition";
+
 import { ArrowLeft, FolderKanban, MessagesSquare, Search, ShoppingCart } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clientSearchAction } from "../../../app/actions/client-search";
 import {
@@ -91,7 +92,7 @@ export function ClientSearch({
   onMobileOpenChange?: (open: boolean) => void;
 } = {}) {
   const panels = useHeaderPanels();
-  const router = useRouter();
+  const push = useRouteTransitionPush();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [value, setValue] = useState("");
@@ -173,9 +174,9 @@ export function ClientSearch({
       setValue("");
       setResults([]);
       setStatus("idle");
-      router.push(result.href);
+      push(result.href);
     },
-    [panels, router],
+    [panels, push],
   );
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -243,8 +244,8 @@ export function ClientSearch({
           ref={inputRef}
           type="search"
           value={value}
-          placeholder="Search projects, messages, services..."
-          aria-label="Search projects, messages and services"
+          placeholder="Search orders, messages, services..."
+          aria-label="Search orders, messages and services"
           role="combobox"
           aria-expanded={showPanel}
           aria-controls="client-search-results"

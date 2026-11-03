@@ -54,6 +54,9 @@ export interface SecurityEventDefinition {
  * prefix map in `securityEventPrefix` is what the test asserts against.
  */
 export const SECURITY_EVENTS = {
+  "authorization.client_support.started": { category: "authorization", severity: "info" },
+  "authorization.client_support.action": { category: "authorization", severity: "info" },
+  "authorization.client_support.ended": { category: "authorization", severity: "info" },
   /* ---------------------------------------------------------------- auth -- */
 
   "auth.login.succeeded": { category: "authentication", severity: "info" },
@@ -156,6 +159,9 @@ export const SECURITY_EVENTS = {
   "economic.payment.failed": { category: "economic", severity: "error" },
 
   /* ------------------------------------------------------- integration --- */
+
+  "integration.intake_secret.captured": { category: "integration", severity: "info" },
+  "integration.intake_secret.revealed": { category: "integration", severity: "info" },
 
   "integration.gmail.connect_started": { category: "integration", severity: "info" },
   "integration.gmail.authorization_ready": { category: "integration", severity: "info" },

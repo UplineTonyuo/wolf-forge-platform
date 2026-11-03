@@ -10,7 +10,7 @@ function readSource(relativePath: string) {
 
 /**
  * KI-059: the unread-notification signal must not live inside the collapsible
- * utility rail. Collapse uses max-width:0 / opacity:0 / pointer-events:none, so
+ * utility rail. Hidden utilities use opacity:0 / pointer-events:none, so
  * a child-only CSS exemption cannot keep the badge visible at rest.
  */
 describe("workspace notification badge visibility (KI-059)", () => {
@@ -21,7 +21,7 @@ describe("workspace notification badge visibility (KI-059)", () => {
 
     const shortcutsBlocks = [
       ...source.matchAll(
-        /className="workspace-command-shortcuts">([\s\S]*?)<\/div>/g,
+        /className="workspace-command-shortcuts(?: [^"]*)?">([\s\S]*?)<\/div>/g,
       ),
     ].map((match) => match[1] ?? "");
 
@@ -53,7 +53,9 @@ describe("workspace notification badge visibility (KI-059)", () => {
       ".workspace-command-bar > .workspace-notification-trigger",
     );
     expect(stability).toMatch(
-      /\.workspace-command-shortcuts\s*\{[\s\S]*?max-width:\s*0;/,
+      /\.workspace-command-shortcuts\s*\{[\s\S]*?max-width:\s*200px;/,
     );
+    expect(stability).toMatch(/max-width:\s*0;/);
+    expect(stability).toMatch(/max-width\s+220ms/);
   });
 });

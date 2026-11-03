@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouteTransitionPush } from "./route-transition";
+
 import {
   ArrowUpRight,
   Building2,
@@ -10,10 +12,6 @@ import {
   TicketIcon,
   X,
 } from "lucide-react";
-
-import {
-  useRouter,
-} from "next/navigation";
 
 import {
   type KeyboardEvent,
@@ -178,8 +176,7 @@ function HighlightedTitle({
 
 export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true }: { ticketsAvailable?: boolean; projectsAvailable?: boolean } = {}) {
 
-  const router =
-    useRouter();
+  const push = useRouteTransitionPush();
 
   const rootRef =
     useRef<HTMLDivElement>(
@@ -485,14 +482,11 @@ export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true
 
     setLeaving(true);
     setOpen(false);
+    push(result.href);
 
 
     navigationTimerRef.current =
       setTimeout(() => {
-
-        router.push(
-          result.href,
-        );
 
         setLeaving(false);
         setQuery("");

@@ -1,0 +1,76 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import Link, { useLinkStatus } from "next/link";
+import { createContext, startTransition, useContext, type ComponentProps, type ReactNode } from "react";
+import styles from "./route-transition.module.css";
+
+/*
+ * Nested loading boundaries cannot paint before their prefetch arrives, and
+ * router.push never prefetches. Share the shell's optimistic route with in-page
+ * links and buttons so both gaps show the destination immediately. Keep the
+ * update inside the navigation transition so commit or cancellation clears it.
+ */
+const RouteTransitionContext = createContext<((url: URL) => void) | null>(null);
+
+function LinkPending({ label }: { label: string }) {
+  const { pending } = useLinkStatus();
+  return <>
+    <span className={styles.hint} data-pending={pending || undefined} aria-hidden="true" aria-busy={pending} />
+    {pending ? <span className="sr-only" role="status">{label}</span> : null}
+  </>;
+}
+
+type RouteTransitionLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
+  href: string;
+  feedback?: "page" | "inline";
+  loadingLabel?: string;
+  "data-route-skeleton"?: "off";
+};
+
+export function RouteTransitionLink({ href, feedback = "page", loadingLabel = "Loading section", onNavigate, children, ...props }: RouteTransitionLinkProps) {
+  const begin = useContext(RouteTransitionContext);
+  return <Link {...props} href={href} onNavigate={(event) => {
+    let canceled = false;
+    onNavigate?.({ preventDefault() { canceled = true; event.preventDefault(); } });
+    // Next calls onNavigate only after accepting an unmodified, non-download Link click.
+    if (!canceled && feedback === "page" && props["data-route-skeleton"] !== "off") {
+      startTransition(() => begin?.(new URL(href, window.location.href)));
+    }
+  }}>
+    {children}
+    {feedback === "inline" ? <LinkPending label={loadingLabel} /> : null}
+  </Link>;
+}
+
+export function RouteTransitionProvider({ begin, children }: { begin: (url: URL) => void; children: ReactNode }) {
+  return <RouteTransitionContext.Provider value={begin}>{children}</RouteTransitionContext.Provider>;
+}
+
+function persistentFrame(pathname: string): string | null {
+  if (/^\/settings(?:\/|$)/.test(pathname)) return "/settings";
+  const order = pathname.match(/^\/orders\/([^/]+)(?:\/|$)/)?.[1];
+  return order && order !== "new" ? `/orders/${order}` : null;
+}
+
+export function coveredRoute(url: URL, pathname: string, inShell: (path: string) => boolean): string | null {
+  if (url.origin !== window.location.origin || !inShell(url.pathname)) return null;
+  // Coupon status tabs load a different server-resolved collection on the same path.
+  if (url.pathname === pathname) {
+    return pathname === "/coupons" && url.search !== window.location.search ? url.pathname : null;
+  }
+  const frame = persistentFrame(pathname);
+  return frame && frame === persistentFrame(url.pathname) ? null : url.pathname;
+}
+
+export function useRouteTransitionPush() {
+  const router = useRouter();
+  const begin = useContext(RouteTransitionContext);
+  if (!begin) return router.push;
+  return (href: string, options?: Parameters<typeof router.push>[1]) => {
+    startTransition(() => {
+      begin(new URL(href, window.location.href));
+      router.push(href, options);
+    });
+  };
+}

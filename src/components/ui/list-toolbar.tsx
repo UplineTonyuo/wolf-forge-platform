@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../shell/route-transition";
 import type { ReactNode } from "react";
 import styles from "./admin-list.module.css";
 

@@ -507,7 +507,7 @@ describe("renderer and safety", () => {
       { stable_field_key: "file", sort_order: 2, field_type: "file", label: "Upload", placeholder: null, help_html: null, default_value: null, required: false, settings: {}, options: [], services: [] },
       { stable_field_key: "html", sort_order: 3, field_type: "html", label: "HTML", placeholder: null, help_html: null, default_value: null, required: false, settings: { html: "<p>Safe</p><script>alert(1)</script>" }, options: [], services: [] },
     ])} />);
-    expect(screen.getByText(/Secure secret collection is unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/Password collection is disabled for this field/)).toBeInTheDocument();
     expect(screen.getByText(/Images and PDFs up to 4 MB/)).toBeInTheDocument();
     expect(screen.getByText("Safe")).toBeInTheDocument();
     expect(document.querySelector("script")).toBeNull();

@@ -11,14 +11,14 @@ export function ClientContactEmail({ contactId, name, email, available }: {
   const [open, setOpen] = useState(false);
   return <><button type="button" className="client-email-link" onClick={() => setOpen(true)} aria-label={`Email ${name}`}>
     <Mail size={16} aria-hidden="true" />{email}
-  </button>{open ? <EmailComposer contactId={contactId} name={name} email={email} available={available} onClose={() => setOpen(false)} /> : null}</>;
+  </button>{open ? <ClientEmailComposer contactId={contactId} name={name} email={email} available={available} onClose={() => setOpen(false)} /> : null}</>;
 }
 
-function EmailComposer({ contactId, name, email, available, onClose }: {
-  contactId: string; name: string; email: string; available: boolean; onClose: () => void;
+export function ClientEmailComposer({ contactId, name, email, available, onClose,initialSubject="",initialBody="" }: {
+  contactId: string; name: string; email: string; available: boolean; onClose: () => void;initialSubject?:string;initialBody?:string;
 }) {
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState(initialSubject);
+  const [body, setBody] = useState(initialBody);
   const [requestId] = useState(() => crypto.randomUUID());
   const [pending, startTransition] = useTransition();
   const [locked, setLocked] = useState(false);

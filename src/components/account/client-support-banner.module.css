@@ -1,0 +1,46 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  min-width: 0;
+  margin-bottom: .75rem;
+}
+
+.identity {
+  min-width: 0;
+  color: var(--wf-text-muted);
+  font-size: .8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.identity strong {
+  color: var(--wf-navy);
+  font-weight: 600;
+}
+
+.toolbar form {
+  max-width: 100%;
+}
+
+.toolbar .backButton {
+  min-height: 44px;
+  max-width: 100%;
+  padding: .5rem .75rem;
+  font-size: .8125rem;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.backButton svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

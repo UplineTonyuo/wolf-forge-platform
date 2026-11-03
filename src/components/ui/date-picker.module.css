@@ -77,6 +77,14 @@
   transform: translateY(0) scale(1);
 }
 
+.calendar[data-placement="inline"] {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: min(100%, 320px);
+  margin-top: 6px;
+}
+
 .calendarClosing {
   opacity: 0;
   transform: translateY(2px) scale(0.985);

@@ -29,7 +29,12 @@ export default function RootError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    // A capability-bearing URL must not travel in an Error/cause/stack.
+    if (window.location.pathname.startsWith("/share/invoices/")) {
+      console.error("Public invoice page failed.");
+    } else {
+      console.error(error);
+    }
   }, [error]);
 
   return (

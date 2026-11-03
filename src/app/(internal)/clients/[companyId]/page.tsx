@@ -5,19 +5,20 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
-  FolderKanban,
-  History,
   Mail,
   Phone,
-  ReceiptText,
   UserRound,
   CreditCard,
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
+import { RouteTransitionLink } from "../../../../components/shell/route-transition";
+import { ClientDetailSections } from "../../../../components/clients/client-detail-sections";
 import { notFound } from "next/navigation";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
+import { ClientSignIn } from "../../../../components/clients/client-sign-in";
+import clientSignInStyles from "../../../../components/clients/client-sign-in.module.css";
 import { ClientStatusControl } from "../../../../components/clients/client-status-control";
 import { ClientBalanceControl } from "../../../../components/clients/client-balance-control";
 import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
@@ -37,18 +38,6 @@ type ClientTab =
   | "invoices"
   | "activities"
   | "history";
-
-const tabs: Array<{
-  id: ClientTab;
-  label: string;
-  icon: typeof UserRound;
-}> = [
-  { id: "details", label: "Details", icon: UserRound },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "invoices", label: "Invoices", icon: ReceiptText },
-  { id: "activities", label: "Activities", icon: Activity },
-  { id: "history", label: "History", icon: History },
-];
 
 function normalizeTab(value: string | undefined): ClientTab {
   if (
@@ -118,7 +107,7 @@ export default async function ClientDetailPage({
   const context = await getInternalContext();
 
   try {
-    const [client, contacts, projects, wallet, wfCardMembership] = await Promise.all([
+    const [client, contacts, projects, wallet, wfCardMembership, contactSummary] = await Promise.all([
       context.services.companies.get(companyId),
       context.user.clients.privateManage
         ? context.services.contacts.listForCompany(companyId)
@@ -131,6 +120,9 @@ export default async function ClientDetailPage({
       // all, and that is simply "not active" rather than an error.
       context.user.invoices.manage
         ? context.services.wfCard.getMembership(companyId).catch(() => null)
+        : Promise.resolve(null),
+      context.user.clients.contactRead
+        ? context.services.contacts.getPrimarySummary(companyId)
         : Promise.resolve(null),
     ]);
 
@@ -221,6 +213,8 @@ export default async function ClientDetailPage({
       <PageFrame
         title={client.name}
         action={
+          <div className={clientSignInStyles.toolbar}>
+          {['owner', 'admin'].includes(context.user.role) && context.user.clients.privateManage ? <ClientSignIn accounts={contacts.filter((contact) => contact.profile_id).map((contact) => ({ id: contact.profile_id!, label: contact.name }))} /> : null}
           <ClientDetailActions
             companyId={client.id}
             clientName={client.name}
@@ -247,6 +241,7 @@ export default async function ClientDetailPage({
             eligibleProfiles={eligibleProfiles}
             welcomeEmailProfileId={welcomeEmailProfileId}
           />
+          </div>
         }
       >
         {query.created === "1" ? (
@@ -289,34 +284,7 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
-        <nav
-          className="client-detail-tabs"
-          aria-label="Client sections"
-        >
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const href =
-              tab.id === "details"
-                ? `/clients/${companyId}`
-                : `/clients/${companyId}?tab=${tab.id}`;
-
-            return (
-              <Link
-                key={tab.id}
-                href={href}
-                className={
-                  activeTab === tab.id
-                    ? "client-detail-tab is-active"
-                    : "client-detail-tab"
-                }
-              >
-                <Icon aria-hidden="true" />
-                {tab.label}
-              </Link>
-            );
-          })}
-        </nav>
-
+        <ClientDetailSections companyId={companyId} activeTab={activeTab}>
         {activeTab === "details" ? (
           <div className="client-detail-content">
             <section className="client-information-panel">
@@ -350,7 +318,7 @@ export default async function ClientDetailPage({
                     Primary contact
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.name ?? "Not set" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.name || "Not set" : "Restricted"}
                   </dd>
                 </div>
 
@@ -360,8 +328,10 @@ export default async function ClientDetailPage({
                     Email
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.email
-                      ? <ClientContactEmail contactId={primaryContact.id} name={primaryContact.name} email={primaryContact.email} available={emailAvailable} />
+                    {context.user.clients.contactRead ? contactSummary?.email
+                      ? context.user.clients.privateManage && primaryContact
+                        ? <ClientContactEmail contactId={primaryContact.id} name={contactSummary.name} email={contactSummary.email} available={emailAvailable} />
+                        : contactSummary.email
                       : "Not available" : "Restricted"}
                   </dd>
                 </div>
@@ -372,7 +342,7 @@ export default async function ClientDetailPage({
                     Phone
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.phone ?? "Not available" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.phone || "Not available" : "Restricted"}
                   </dd>
                 </div>
 
@@ -382,7 +352,7 @@ export default async function ClientDetailPage({
                     Job title
                   </dt>
                   <dd>
-                    {context.user.clients.privateManage ? primaryContact?.job_title ?? "Not available" : "Restricted"}
+                    {context.user.clients.contactRead ? contactSummary?.job_title || "Not available" : "Restricted"}
                   </dd>
                 </div>
 
@@ -433,7 +403,7 @@ export default async function ClientDetailPage({
                   {openProjects
                     .slice(0, 5)
                     .map((project) => (
-                      <Link
+                      <RouteTransitionLink
                         key={project.id}
                         href={`/orders/${project.id}`}
                         className="client-project-summary-row"
@@ -448,7 +418,7 @@ export default async function ClientDetailPage({
                         <StatusBadge
                           status={project.status}
                         />
-                      </Link>
+                      </RouteTransitionLink>
                     ))}
                 </div>
               ) : (
@@ -474,7 +444,7 @@ export default async function ClientDetailPage({
             {projects.length ? (
               <div className="client-project-summary">
                 {projects.map((project) => (
-                  <Link
+                  <RouteTransitionLink
                     key={project.id}
                     href={`/orders/${project.id}`}
                     className="client-project-summary-row"
@@ -489,7 +459,7 @@ export default async function ClientDetailPage({
                     <StatusBadge
                       status={project.status}
                     />
-                  </Link>
+                  </RouteTransitionLink>
                 ))}
               </div>
             ) : (
@@ -587,15 +557,18 @@ export default async function ClientDetailPage({
                 {historyEvents.length >
                 visibleHistoryEvents.length ? (
                   <div className="client-history-more">
-                    <Link
+                    <RouteTransitionLink
                       className="button-secondary"
+                      feedback="inline"
+                      loadingLabel="Loading older history"
+                      scroll={false}
                       href={`/clients/${companyId}?tab=history&historyLimit=${Math.min(
                         historyLimit + 20,
                         100,
                       )}`}
                     >
                       Show older
-                    </Link>
+                    </RouteTransitionLink>
                   </div>
                 ) : null}
               </div>
@@ -606,6 +579,7 @@ export default async function ClientDetailPage({
             )}
           </section>
         ) : null}
+        </ClientDetailSections>
       </PageFrame>
     );
   } catch (error) {

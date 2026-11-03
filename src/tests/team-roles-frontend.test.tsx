@@ -113,6 +113,15 @@ function renderPanel(overrides: Partial<Parameters<typeof TeamRolesPanel>[0]> = 
 }
 
 describe("Team directory", () => {
+  it("keeps the viewport when switching Roles and permissions", () => {
+    renderPanel();
+    vi.mocked(HTMLElement.prototype.scrollIntoView).mockClear();
+    const tab = screen.getByRole("button", { name: /Roles & permissions/i });
+    tab.focus();
+    fireEvent.click(tab);
+    expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(tab).toHaveFocus();
+  });
   it("renders the members the backend returned, not a fixture list", () => {
     renderPanel();
 
@@ -238,21 +247,18 @@ describe("Role change protection", () => {
 });
 
 describe("Roles and permissions tab", () => {
-  it("brings the selected role into view on entry without jumping on later preset changes", () => {
+  it("focuses an explicitly selected role without scrolling on entry or later preset changes", () => {
     renderPanel();
     expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /^Manager.*View permissions/u }));
 
     expect(screen.getByRole("heading", { name: "Manager", level: 2 })).toHaveFocus();
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledExactlyOnceWith({
-      block: "start",
-      behavior: "instant",
-    });
+    expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /^Staff.*8 of/u }));
     expect(screen.getByRole("heading", { name: "Staff", level: 2 })).toBeInTheDocument();
-    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(HTMLElement.prototype.scrollIntoView).not.toHaveBeenCalled();
     expect(setMemberPresetAction).not.toHaveBeenCalled();
     expect(setReportSendAnytimeAction).not.toHaveBeenCalled();
   });

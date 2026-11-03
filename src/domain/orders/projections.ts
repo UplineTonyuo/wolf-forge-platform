@@ -46,6 +46,8 @@ export type ProjectTaskCounts = {
   overdue: number;
 };
 
+export type OrderResponseState = { order_id: string; unanswered: boolean | null };
+
 export type ProjectListRow = {
   id: string;
   orderNumber: number;
@@ -65,6 +67,8 @@ export type ProjectListRow = {
   assigneeName: string | null;
   tasks: ProjectTaskCounts;
   needsAttention: boolean;
+  /** Null means the caller could not obtain authoritative conversation metadata. */
+  unanswered: boolean | null;
 };
 
 export type ProjectTab = OrderStatus | "all";
@@ -86,7 +90,7 @@ export type ProjectFilterCriteria = {
   assigneeId: string;
   serviceId: string;
   companyId: string;
-  attentionOnly: boolean;
+  unansweredOnly: boolean;
 };
 
 export const emptyProjectFilterCriteria: ProjectFilterCriteria = {
@@ -95,16 +99,12 @@ export const emptyProjectFilterCriteria: ProjectFilterCriteria = {
   assigneeId: "all",
   serviceId: "all",
   companyId: "all",
-  attentionOnly: false,
+  unansweredOnly: false,
 };
 
 /**
- * The single Project attention rule. The banner count, the "View" filter and
- * any attention affordance all read the boolean produced here, so the three can
- * never disagree.
- *
- * A Project needs attention when it is waiting on the client, needs an update,
- * or carries at least one still-open task whose due date has passed.
+ * Operational/task attention stays independent of the Orders public-reply flag.
+ * Waiting on the client, pending updates and overdue work do not mean Unanswered.
  */
 export function projectNeedsAttention(status: OrderStatus, tasks: ProjectTaskCounts): boolean {
   return status === "waiting_reply" || status === "pending_update" || tasks.overdue > 0;
@@ -135,9 +135,11 @@ export function composeProjectRows(
   orders: ProjectRelationRow[],
   taskFacts: ProjectTaskFact[],
   now: Date = new Date(),
+  responseStates: OrderResponseState[] = [],
 ): ProjectListRow[] {
   const timestamp = now.getTime();
   const factsByOrder = new Map<string, ProjectTaskFact[]>();
+  const responsesByOrder = new Map(responseStates.map((state) => [state.order_id, state.unanswered]));
 
   for (const fact of taskFacts) {
     const existing = factsByOrder.get(fact.order_id);
@@ -167,6 +169,7 @@ export function composeProjectRows(
       assigneeName: displayName(order.profiles),
       tasks,
       needsAttention: projectNeedsAttention(order.status, tasks),
+      unanswered: responsesByOrder.get(order.id) ?? null,
     };
   });
 }
@@ -255,7 +258,7 @@ export function applyProjectScopeFilters(
   criteria: ProjectFilterCriteria,
 ): ProjectListRow[] {
   return rows.filter((row) => {
-    if (criteria.attentionOnly && !row.needsAttention) return false;
+    if (criteria.unansweredOnly && row.unanswered !== true) return false;
 
     if (criteria.assigneeId === "unassigned") {
       if (row.assigneeId !== null) return false;
@@ -307,6 +310,10 @@ export function countProjectsByStatus(
 
 export function countProjectsNeedingAttention(rows: ProjectListRow[]): number {
   return rows.reduce((total, row) => (row.needsAttention ? total + 1 : total), 0);
+}
+
+export function countUnansweredOrders(rows: ProjectListRow[]): number {
+  return rows.reduce((total, row) => total + Number(row.unanswered === true), 0);
 }
 
 export function projectInitials(name: string | null): string {

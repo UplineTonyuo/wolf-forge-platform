@@ -162,3 +162,10 @@
   .toggle { transition-duration: 1ms; }
   .toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 }
+
+@media print {
+  .toggle { display: none; }
+  .panel, .panel[hidden] { display: flex; padding: 0; border: 0; background: transparent; animation: none; }
+  .summary, .item, .note { font-size: 9pt; line-height: 1.45; }
+  .mark { color: #000d51; }
+}

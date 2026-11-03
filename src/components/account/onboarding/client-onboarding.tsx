@@ -1,5 +1,5 @@
 import { ArrowRight, Check } from "lucide-react";
-import Link from "next/link";
+import { RouteTransitionLink as Link } from "../../shell/route-transition";
 import type { ClientOnboarding, OnboardingItem } from "../../../domain/client-portal/onboarding";
 import { AttentionPill } from "../ui/attention-pill";
 
@@ -46,13 +46,13 @@ function OnboardingRow({ item }: { item: OnboardingItem }) {
   );
 }
 
-export function ClientOnboardingView({ onboarding }: { onboarding: ClientOnboarding }) {
+export function ClientOnboardingView({ onboarding, embedded = false }: { onboarding: ClientOnboarding; embedded?: boolean }) {
   const { progress, groups, outstanding } = onboarding;
 
   return (
-    <div className="portal-page">
+    <section id={embedded ? "forms" : undefined} className={embedded ? "portal-section" : "portal-page"} aria-label="Assigned forms">
       <header className="portal-page-head">
-        <h1>Onboarding</h1>
+        {embedded ? <h2>Forms and responses</h2> : <h1>Forms</h1>}
         <p>
           Complete these items so Wolf Forge can begin or continue your work. Everything you send
           stays attached to your account.
@@ -106,6 +106,6 @@ export function ClientOnboardingView({ onboarding }: { onboarding: ClientOnboard
           ))}
         </>
       )}
-    </div>
+    </section>
   );
 }

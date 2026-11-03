@@ -6,7 +6,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import InternalLoading from "../app/(internal)/loading";
-import { RouteSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
+import { RouteSkeleton, SectionSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
+import settingsStyles from "../components/settings/settings-foundation.module.css";
+import profileStyles from "../components/settings/settings-workspace.module.css";
 
 const nav = vi.hoisted(() => ({ pathname: "/orders" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
@@ -17,6 +19,13 @@ afterEach(() => {
 });
 
 describe("Internal route loading boundary", () => {
+  it("renders a content-only section with one status, no text and no focusable controls", () => {
+    const { container } = render(<SectionSkeleton />);
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(container.textContent).toBe("");
+    expect(container.querySelector(".route-skeleton-section [aria-hidden='true']")).toBeTruthy();
+    expect(container.querySelector(".settings-page-layout, a[href], button, input, [tabindex]")).toBeNull();
+  });
   it("no longer ships a rule that hides the route stage", () => {
     const css = readFileSync(resolve(import.meta.dirname, "../app/globals.css"), "utf8");
     expect(css).not.toMatch(/is-vacuuming|is-entering/u);
@@ -34,7 +43,7 @@ describe("Internal route loading boundary", () => {
     expect(getInternalSkeletonVariant("/settings")).toBe("settings");
     expect(getInternalSkeletonVariant("/settings/general")).toBe("settings");
     // Detail pages never borrow a list skeleton.
-    expect(getInternalSkeletonVariant("/tickets/abc")).toBe("generic");
+    expect(getInternalSkeletonVariant("/tickets/abc")).toBe("ticketDetail");
     expect(getInternalSkeletonVariant("/teams")).toBe("generic");
     expect(getInternalSkeletonVariant("/unknown")).toBe("generic");
   });
@@ -67,8 +76,8 @@ describe("Internal route loading boundary", () => {
     cleanup();
 
     const settings = render(<RouteSkeleton pathname="/settings/general" />).container;
-    expect(settings.querySelector(".settings-page-layout .route-skeleton-nav")).toBeTruthy();
-    expect(settings.querySelectorAll(".route-skeleton-fields > div").length).toBeGreaterThan(2);
+    expect(settings.querySelector(`.settings-page-layout .${settingsStyles.navigation}`)).toBeTruthy();
+    expect(settings.querySelectorAll(`.${profileStyles.fields} > div`).length).toBeGreaterThan(2);
     expect(settings.querySelector(".route-skeleton-table, table")).toBeNull();
   });
 

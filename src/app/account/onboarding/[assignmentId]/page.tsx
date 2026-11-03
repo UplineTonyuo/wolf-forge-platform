@@ -7,8 +7,9 @@ import { SubmissionDetail } from "../../../../components/forms/submission-detail
 import { formatDate } from "../../../../lib/format";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 import styles from "../../../../components/forms/forms.module.css";
+import { assignedFormTitle } from "../../../../domain/forms/assignment-title";
 
-export const metadata: Metadata = { title: "Onboarding item" };
+export const metadata: Metadata = { title: "Order form" };
 
 /**
  * One assigned onboarding or intake Form.
@@ -34,11 +35,11 @@ export default async function AssignedFormPage({
         ? await context.services.forms.getSubmission(history.latest_submission_id)
         : null;
       return <div className={styles.clientFormPage}>
-        <Link href="/account/onboarding" className={styles.backLink}><ArrowLeft aria-hidden="true" />All onboarding</Link>
-        <h1>{history.title}</h1>
+        <Link href="/account/projects#forms" className={styles.backLink}><ArrowLeft aria-hidden="true" />All forms</Link>
+        <h1>{assignedFormTitle(history)}</h1>
         {!workEnabled ? <p>Form collection is paused. Your request and submitted responses are retained.</p> : null}
         {receipt ? <SubmissionDetail detail={receipt} canCorrect={false} automaticPdf={history.status === "completed" && typeof query.submitted === "string" && query.submitted === history.latest_submission_id && query.submitted === receipt.submission.id} /> : <p>No response has been submitted. This request remains outstanding.</p>}
-        {history.order_id ? <Link href={`/account/projects/${history.order_id}`}>View your order →</Link> : null}
+        {history.order_id && context.user.modules.portal_projects === true ? <Link href={`/account/projects/${history.order_id}`}>View your order →</Link> : null}
       </div>;
     }
     const detail = await context.services.forms.getAssignedForm(assignmentId);
@@ -49,20 +50,20 @@ export default async function AssignedFormPage({
 
     return (
       <div className={styles.clientFormPage}>
-        <Link href="/account/onboarding" className={styles.backLink}>
+        <Link href="/account/projects#forms" className={styles.backLink}>
           <ArrowLeft aria-hidden="true" />
-          All onboarding
+          All forms
         </Link>
 
         <section className={styles.clientAssignmentContext}>
           <div>
-            <span>{assignment.form_type === "intake" ? "Project information" : "Account setup"}</span>
-            <strong>{assignment.title}</strong>
+            <span>{assignment.form_type === "intake" ? "Order information" : "Account setup"}</span>
+            <strong>{assignedFormTitle(assignment)}</strong>
           </div>
           <dl>
             {assignment.order_title ? (
               <div>
-                <dt>Project</dt>
+                <dt>Order</dt>
                 <dd>{assignment.order_title}</dd>
               </div>
             ) : null}
@@ -88,6 +89,7 @@ export default async function AssignedFormPage({
           mode="assigned"
           assignmentId={assignmentId}
           completed={completed}
+          displayTitle={assignedFormTitle(assignment)}
         />
       </div>
     );

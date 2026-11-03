@@ -13,6 +13,7 @@ import { ServiceChooserProvider } from "./services/service-chooser-context";
 import { portalNavigationFor } from "./portal-nav-registry";
 import { WHITE_LABEL_PUBLICATION_CONTRACT_VERSION, type RuntimeWhiteLabelConfiguration } from "../../domain/white-label/publication";
 import { TenantBrandingProvider, useRuntimeBranding, type RuntimeBrandingReader } from "../shell/tenant-branding-provider";
+import { coveredRoute, RouteTransitionProvider } from "../shell/route-transition";
 
 /**
  * The client workspace shell.
@@ -57,6 +58,11 @@ export function ClientAccountShell({
   const brandingState = useRuntimeBranding(runtimeConfiguration, `${user.id}:${user.companyId}`, true, readRuntimeConfiguration);
   const { branding, unavailable } = brandingState;
 
+  function begin(url: URL) {
+    const route = coveredRoute(url, pathname, (path) => path === "/account" || path.startsWith("/account/"));
+    if (route) setPendingRoute(route);
+  }
+
   function navigate(route: string, event: MouseEvent<HTMLAnchorElement>) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
@@ -69,6 +75,7 @@ export function ClientAccountShell({
 
   return (
     <TenantBrandingProvider value={brandingState}>
+    <RouteTransitionProvider begin={begin}>
     <ServiceChooserProvider catalog={serviceCatalog} available={storeGranted}>
       <PortalDrawerProvider>
       <div
@@ -106,15 +113,16 @@ export function ClientAccountShell({
             notificationSoundEnabled={notificationSoundEnabled}
           />
 
-          <div className="portal-main-inner" aria-busy={pendingRoute !== null}>
+          <div className="portal-main-inner">
             {pendingRoute ? <ClientRouteSkeleton pathname={pendingRoute} /> : null}
             {/* Keep unsent editor state mounted until navigation commits. */}
-            <div hidden={pendingRoute !== null}>{children}</div>
+            <div hidden={pendingRoute !== null} aria-busy={pendingRoute !== null}>{children}</div>
           </div>
         </main>
       </div>
       </PortalDrawerProvider>
     </ServiceChooserProvider>
+    </RouteTransitionProvider>
     </TenantBrandingProvider>
   );
 }

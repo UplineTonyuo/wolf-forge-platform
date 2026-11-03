@@ -75,12 +75,13 @@ describe("security response headers (C1)", () => {
     expect(permissions).not.toContain("microphone=()");
   });
 
-  it("applies the whole set to every path through one rule", () => {
+  it("keeps the whole security set on every path and scopes the stricter invoice override", () => {
     const rules = securityHeaderRules(productionEnvironment);
 
-    expect(rules).toHaveLength(1);
+    expect(rules).toHaveLength(2);
     expect(rules[0]?.source).toBe("/:path*");
     expect(rules[0]?.headers).toEqual(buildSecurityHeaders(productionEnvironment));
+    expect(rules[1]?.source).toBe("/share/invoices/:path*");
   });
 
   it("delegates call media only to this workspace on Daily primary and failover domains", () => {

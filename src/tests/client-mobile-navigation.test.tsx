@@ -36,7 +36,7 @@ function Workspace() {
 
 it("uses native closed-dialog semantics and synchronizes cancellation without remounting the editor", () => {
   render(<Workspace />);
-  expect(screen.queryByRole("link", { name: "Projects" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Orders" })).not.toBeInTheDocument();
   const editor = screen.getByRole("textbox", { name: "Unsent reply" });
   fireEvent.change(editor, { target: { value: "Keep this unsent reply" } });
   const trigger = screen.getByRole("button", { name: "Open navigation" });
@@ -57,6 +57,6 @@ it("closes the mobile dialog when returning to desktop and leaves one navigation
   act(() => { mobile = false; resize?.(); });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   expect(screen.getAllByRole("navigation", { name: "Client portal" })).toHaveLength(1);
-  expect(screen.getByRole("link", { name: "Projects" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Orders" })).toBeVisible();
   expect(screen.getByRole("button", { name: "Open navigation" })).toHaveAttribute("aria-expanded", "false");
 });

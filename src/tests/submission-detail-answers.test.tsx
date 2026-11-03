@@ -11,6 +11,13 @@ vi.mock("../app/actions/forms", () => ({ correctFormSubmissionAction: mocks.corr
 vi.mock("../app/actions/intake-drafts", () => ({ loadIntakeFollowUp: async () => "not_required" }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 describe("shared submission answer compatibility", () => {
+  it("distinguishes a support-recorded signature from a client-authored signature", () => {
+    const detail = response(undefined, [answer({ consent: true, drawing: [[[0, 0], [100, 100]]],
+      support_administrator_id: "90000000-0000-4000-8000-000000000001",
+      support_session_id: "90000000-0000-4000-8000-000000000002" }, "signature")]);
+    render(<SubmissionDetail detail={detail} canCorrect={false} />);
+    expect(screen.getByText("Recorded by authorized support on behalf of this client.")).toBeVisible();
+  });
   it("renders read-only saved answers/signatures and hides credentials", () => {
     const detail = response(undefined, [answer(false, "checkbox"), answer({ name: "Historical signer", consent: true }, "signature", 1), answer("credential", "password", 2)]);
     render(<SubmissionDetail detail={detail} canCorrect={false} />);
