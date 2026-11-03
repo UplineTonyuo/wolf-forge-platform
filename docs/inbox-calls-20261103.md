@@ -67,6 +67,12 @@ Native lock-screen calling and continuous background ringing are not promised. B
 
 ## Rollback and memory
 
+## WOAD manual-QA pilot
+
+The owner subsequently authorized a WOAD release and selected two existing accounts for manual QA. Migration `20261103150100_ticket_call_pilot_scope.sql` adds an operator-only `pilot_profile_ids` restriction at the shared database participant-eligibility boundary. Both caller and selected recipient must be in the pilot and still pass all existing Ticket, Tenant, session and permission checks. An excluded Owner cannot bypass this through the RPC. Removing a participant ends their existing invitation through normal authority revocation. NULL retains ordinary eligibility; an empty array denies everybody. Browser settings cannot alter the pilot. This adds no role, credential or customer-data changes.
+
+Production enablement must pin only the two owner-selected existing profile IDs before admission is enabled. The full database regression includes test 197. Calls remain limited by the existing reservations, deadlines, throttles and provider controls; the pilot is not a provider spending guarantee. Actual two-person media and OS delivery remain the owner's manual acceptance, not a claimed automated pass.
+
 Keep admission and call-push flags OFF; preserve provider expiry/cleanup and usage ledgers. An app rollback must not delete reservations, frozen participants or uncertain receipts. Do not destructively reverse migrations holding call history.
 
 Canonical Obsidian notes remain read-only under D-319. A separate steward proposal accompanies the evidence; no .ai-memory, sync hooks or Raw writes were created.
