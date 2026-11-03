@@ -10,7 +10,7 @@ $graph = (Resolve-Path -LiteralPath $GraphRoot).Path
 $runtime = Join-Path $graph 'graphify-out\automation'
 $configPath = Join-Path $runtime 'config.json'
 $program = Join-Path $runtime 'program'
-$launch = Join-Path $program 'scripts\graphify\launch-automation.ps1'
+$runner = Join-Path $program 'scripts\graphify\refresh-after-merge.py'
 $taskDescription = "Owner-approved Wolf Forge Graphify maintenance; runtime=$runtime"
 $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 if ($task -and $task.Description -cne $taskDescription) { throw 'Task name collision; unrelated task preserved' }
@@ -64,7 +64,8 @@ if ($memory -ne (Join-Path $vault '02 Projects\Wolf Forge Platform\AI Memory')) 
 foreach ($path in @($graph,$vault,$memory,$runtime,$program)) { Assert-PlainPath $path }
 $gitExe = (Get-Command git.exe -ErrorAction Stop).Source
 $python = Join-Path $graph 'graphify-out\trial\.venv\Scripts\python.exe'
-if (-not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Existing pinned Python environment missing; no installation attempted' }
+$pythonw = Join-Path (Split-Path -Parent $python) 'pythonw.exe'
+if (-not (Test-Path -LiteralPath $python -PathType Leaf) -or -not (Test-Path -LiteralPath $pythonw -PathType Leaf)) { throw 'Existing pinned Python environment missing; no installation attempted' }
 if ((Invoke-CheckedGit -Arguments @('remote','get-url','origin')) -cne "https://github.com/$repository.git") { throw 'Unexpected graph repository' }
 if (((Invoke-CheckedGit -Arguments @('rev-parse','--show-toplevel')) -replace '/','\') -ne $graph) { throw 'Unexpected graph root' }
 $null = & $gitExe -C $graph symbolic-ref -q HEAD
@@ -76,7 +77,7 @@ if ($LASTEXITCODE -ne 0 -or $sourceStatus) { throw 'Commit and review setup befo
 $revision = & $gitExe -C $sourceRoot rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify setup revision' }
 $files = @('scripts/graphify/refresh-after-merge.py','scripts/graphify/build-local.py',
-           'scripts/graphify/stage-export.py','scripts/graphify/launch-automation.ps1','docs/agents/graphify-trial.md')
+           'scripts/graphify/stage-export.py','docs/agents/graphify-trial.md')
 foreach ($name in $files) { Assert-PlainPath (Join-Path $sourceRoot $name) }
 if ($task) {
     Disable-ScheduledTask -TaskName $taskName | Out-Null
@@ -134,9 +135,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Real read-only verification failed; task remai
 $status = Get-Content -LiteralPath (Join-Path $runtime 'status.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($status.state -cne 'verified') { throw 'Current main is not verified; task remains disabled/unregistered' }
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-$shell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-$arguments = '-NoProfile -NonInteractive -WindowStyle Hidden -File "' + $launch + '"'
-$action = New-ScheduledTaskAction -Execute $shell -Argument $arguments -WorkingDirectory $graph
+$arguments = '-I -B "' + $runner + '" --config "' + $configPath + '"'
+$action = New-ScheduledTaskAction -Execute $pythonw -Argument $arguments -WorkingDirectory $graph
 $periodic = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
 $periodic.Repetition.StopAtDurationEnd = $false
 $logon = New-ScheduledTaskTrigger -AtLogOn -User $identity
@@ -144,7 +144,7 @@ $principal = New-ScheduledTaskPrincipal -UserId $identity -LogonType Interactive
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 15) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
 Register-ScheduledTask -TaskName $taskName -Description $taskDescription -Action $action -Trigger @($periodic,$logon) -Principal $principal -Settings $settings -Force | Out-Null
 $saved = Get-ScheduledTask -TaskName $taskName
-if ($saved.Actions.Execute -cne $shell -or $saved.Actions.Arguments -cne $arguments -or $saved.Settings.WakeToRun -or
+if ($saved.Actions.Execute -cne $pythonw -or $saved.Actions.Arguments -cne $arguments -or $saved.Settings.WakeToRun -or
     [int]$saved.Principal.RunLevel -ne 0 -or [int]$saved.Principal.LogonType -ne 3 -or
     @($saved.Triggers | Where-Object {$_.Repetition.Interval -eq 'PT5M'}).Count -ne 1) { throw 'Saved task definition mismatch' }
 Write-Output "Registered and read back: $taskName; every 5 minutes and at sign-in; normal privileges; no wake."

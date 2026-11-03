@@ -27,7 +27,7 @@ JOBS = {'static lint boundary', 'TypeScript compile boundary', 'compiled app and
         'JavaScript and TypeScript tests', 'local Supabase pgTAP and RLS tests',
         'production dependency vulnerabilities', 'repository and history secret scan'}
 PROGRAM_FILES = ('scripts/graphify/refresh-after-merge.py', 'scripts/graphify/build-local.py',
-                 'scripts/graphify/stage-export.py', 'scripts/graphify/launch-automation.ps1',
+                 'scripts/graphify/stage-export.py',
                  'docs/agents/graphify-trial.md')
 
 
