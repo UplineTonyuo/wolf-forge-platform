@@ -1,4 +1,14 @@
 -- Bound new durable records, independently of admitted-call/media quotas.
+-- Snapshot refreshed at each call; the under-lock check remains authoritative.
+create function private.ticket_call_history_available(p_profile uuid,p_stamp timestamptz) returns boolean
+language sql volatile security definer set search_path='' as $$
+ select count(*) filter(where initiated_by=p_profile and created_at>=p_stamp-interval '1 day')<30
+  and count(*) filter(where initiated_by=p_profile)<300
+  and count(*) filter(where created_at>=p_stamp-interval '1 day')<120 and count(*)<1200
+ from private.ticket_calls where created_at>=p_stamp-interval '30 days';
+$$;
+revoke all on function private.ticket_call_history_available(uuid,timestamptz) from public,anon,authenticated,service_role;
+
 create or replace function public.app_request_ticket_call(p_ticket_id uuid,p_request_id uuid,p_device_id uuid,p_mode text,p_recipient_id uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare t public.tickets; c private.ticket_calls; settings private.ticket_call_settings; env private.ticket_call_environment;
@@ -7,6 +17,15 @@ declare t public.tickets; c private.ticket_calls; settings private.ticket_call_s
 begin
   sid:=private.ticket_call_session();
   perform private.consume_rate_limit('ticket-call-request',auth.uid()::text,interval '1 minute',60);
+  -- Avoid shared sweeps for already exhausted fresh-record requests. No row locks here.
+  if p_request_id is not null
+    and exists(select 1 from public.tickets where id=p_ticket_id and tenant_id=private.current_tenant_id())
+    and private.ticket_call_enabled(private.current_tenant_id())
+    and private.ticket_call_profile_allowed(auth.uid(),p_ticket_id)
+    and not exists(select 1 from private.ticket_calls where tenant_id=private.current_tenant_id()
+      and initiated_by=auth.uid() and request_id=p_request_id)
+    and not private.ticket_call_history_available(auth.uid(),clock_timestamp()) then
+    raise exception 'Call history limit reached' using errcode='WF429'; end if;
   perform private.ticket_call_lock();
   perform private.process_ticket_call_deadlines(); stamp:=clock_timestamp();
   if p_request_id is null or p_device_id is null or p_mode is null or p_mode not in ('audio','video') then
@@ -24,11 +43,7 @@ begin
     return private.ticket_call_projection(c);
   end if;
   -- Exact-request replay above remains available; every new durable outcome counts.
-  if (select count(*) filter(where initiated_by=auth.uid() and created_at>=stamp-interval '1 day')>=30
-      or count(*) filter(where initiated_by=auth.uid())>=300
-      or count(*) filter(where created_at>=stamp-interval '1 day')>=120
-      or count(*)>=1200
-    from private.ticket_calls where created_at>=stamp-interval '30 days') then
+  if not private.ticket_call_history_available(auth.uid(),stamp) then
     raise exception 'Call history limit reached' using errcode='WF429'; end if;
   perform private.consume_rate_limit('ticket-call-invite',auth.uid()::text,interval '1 minute',12);
   perform private.consume_rate_limit('ticket-call-provider-global','daily',interval '1 minute',60);
@@ -82,4 +97,3 @@ begin
   insert into private.ticket_call_events(call_id,event,actor_id) values(c.id,coalesce(refusal,'requested'),auth.uid());
   return private.ticket_call_projection(c);
 end $$;
-
