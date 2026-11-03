@@ -1,6 +1,6 @@
 begin;
 
-select plan(45);
+select plan(48);
 
 -- WL-2.5 (KI-111, Tickets): every Ticket operation requires the Ticket to belong
 -- to the caller's current Tenant. A foreign Ticket behaves like a missing one.
@@ -155,6 +155,14 @@ as $$
   where summary.ticket_id::text like 'c3000000-0000-4000-8000-00000000120%';
 $$;
 
+-- Saving is personal; it must neither change the legacy global timestamp nor
+-- grant a saver in a different Tenant. Inspect persisted fixture rows as owner.
+create function pg_temp.savers(p_ticket text)
+returns text language sql security definer as $$
+  select coalesce(string_agg(profile_id::text, ',' order by profile_id), '')
+  from private.ticket_inbox_memberships where ticket_id=p_ticket::uuid;
+$$;
+
 create function pg_temp.act(p_actor text, p_header text)
 returns void
 language sql
@@ -164,7 +172,7 @@ as $$
 $$;
 
 grant execute on function pg_temp.try(text), pg_temp.battery(text, text, text), pg_temp.snap(text),
-  pg_temp.listed(), pg_temp.act(text, text) to authenticated;
+  pg_temp.listed(), pg_temp.savers(text), pg_temp.act(text, text) to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- Shared helper (trusted call with the caller's claims)
@@ -222,8 +230,10 @@ select is(
   'detail:ok reply:ok quote:ok note:ok status:ok priority:ok assign:ok inbox:ok react:ok download:ok archive:ok',
   'WF admin -> WF Ticket: every operation allowed'
 );
-select is(pg_temp.snap('c3000000-0000-4000-8000-000000001201'), 'in_progress/high/t/t/4/1',
+select is(pg_temp.snap('c3000000-0000-4000-8000-000000001201'), 'in_progress/high/t/f/4/1',
   'WF Ticket changed by the WF admin');
+select is(pg_temp.savers('c3000000-0000-4000-8000-000000001201'), '20000000-0000-0000-0000-000000001201',
+  'WF admin saved only their own personal Inbox membership');
 
 -- -----------------------------------------------------------------------------
 -- Tenant B admin (WF Ticket now archived: restore it for the B attempts)
@@ -241,16 +251,20 @@ select is(
   'detail:42501 reply:42501 quote:42501 note:42501 status:P0002 priority:P0002 assign:P0002 inbox:P0002 react:42501 download:42501 archive:P0002',
   'B admin -> WF Ticket: every operation denied'
 );
-select is(pg_temp.snap('c3000000-0000-4000-8000-000000001201'), 'in_progress/high/f/t/4/1',
+select is(pg_temp.snap('c3000000-0000-4000-8000-000000001201'), 'in_progress/high/f/f/4/1',
   'WF Ticket unchanged after the B admin attempts');
+select is(pg_temp.savers('c3000000-0000-4000-8000-000000001201'), '20000000-0000-0000-0000-000000001201',
+  'Foreign admin attempts did not add or alter the WF personal save');
 select is(
   pg_temp.battery('c3000000-0000-4000-8000-000000001202', 'c4000000-0000-4000-8000-000000001202',
     'c5000000-0000-4000-8000-000000001202'),
   'detail:ok reply:ok quote:ok note:ok status:ok priority:ok assign:ok inbox:ok react:ok download:ok archive:ok',
   'B admin -> B Ticket: every operation allowed'
 );
-select is(pg_temp.snap('c3000000-0000-4000-8000-000000001202'), 'in_progress/high/t/t/4/1',
+select is(pg_temp.snap('c3000000-0000-4000-8000-000000001202'), 'in_progress/high/t/f/4/1',
   'B Ticket changed by the B admin');
+select is(pg_temp.savers('c3000000-0000-4000-8000-000000001202'), '20000000-0000-0000-0000-000000001202',
+  'B admin saved only their own personal Inbox membership');
 
 reset role;
 update public.tickets set archived_at = null where id = 'c3000000-0000-4000-8000-000000001202';
