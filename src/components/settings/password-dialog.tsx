@@ -147,9 +147,10 @@ export function PasswordDialog({
     if (!state.changedAt || acknowledgedChangeRef.current === state.changedAt) return;
     acknowledgedChangeRef.current = state.changedAt;
     formRef.current?.reset();
+    if (state.warning) return;
     onClose();
     onChanged();
-  }, [onChanged, onClose, state.changedAt]);
+  }, [onChanged, onClose, state.changedAt, state.warning]);
 
   const dialog = (
     <div
@@ -171,8 +172,8 @@ export function PasswordDialog({
         <div className={styles.header}>
           <h2 id={titleId}>Change password</h2>
           <p id={descriptionId}>
-            Enter your current password, then choose a new one. Other devices
-            will be signed out.
+            Enter your current password, then choose a new one. We also request
+            sign-out on your other devices.
           </p>
         </div>
 
@@ -185,15 +186,15 @@ export function PasswordDialog({
                 label={field.label}
                 autoComplete={field.autoComplete}
                 error={state.fieldErrors[field.name]}
-                disabled={pending}
+                disabled={pending || Boolean(state.changedAt)}
                 inputRef={index === 0 ? firstFieldRef : undefined}
               />
             ))}
           </div>
 
-          {state.error ? (
+          {state.warning || state.error ? (
             <p className={styles.formError} role="alert">
-              {state.error}
+              {state.warning || state.error}
             </p>
           ) : (
             <p className={styles.hint}>
@@ -208,10 +209,10 @@ export function PasswordDialog({
               onClick={closeDialog}
               disabled={pending}
             >
-              Cancel
+              {state.changedAt ? "Close" : "Cancel"}
             </button>
 
-            <button type="submit" className={styles.primary} aria-busy={pending || undefined} disabled={pending}>
+            <button type="submit" className={styles.primary} aria-busy={pending || undefined} disabled={pending || Boolean(state.changedAt)}>
               {pending ? <Loader2 aria-hidden="true" /> : null}
               {pending ? "Updating" : "Update password"}
             </button>

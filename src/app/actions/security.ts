@@ -49,27 +49,14 @@ function safePasswordError(code: string | undefined): string {
 /**
  * Changes the signed-in account's own password.
  *
- * Flow, and why:
+ * Server-verified self-service context selects the actor. The cookie-bound Auth
+ * client receives the current and new passwords in one updateUser request;
+ * current-password enforcement depends on the Auth provider's configuration.
+ * No throwaway sign-in or administrator API is used.
  *
- *  1. `getSelfServiceContext()` establishes a server-verified actor — internal
- *     member or client account alike, since changing your own password is not
- *     a staff capability. The
- *     account's email is read from `app_get_my_profile` (server side) â€” it is
- *     never accepted from the browser, so this cannot be pointed at anyone else.
- *  2. The current password is proven by attempting a sign-in with it on a
- *     throwaway client that never persists a session. This uses only the Supabase
- *     Auth API: no password hash is read, no custom verification is performed and
- *     nothing touches an application table. supabase-js has no dedicated
- *     "verify current password" call, and the alternative â€” Supabase's
- *     reauthentication nonce â€” requires `secure_password_change = true` plus a
- *     working SMTP sender, neither of which this project currently has.
- *  3. The change itself goes through `updateUser` on the cookie-bound session
- *     client, which is the self-service Auth API. The admin API is deliberately
- *     not used anywhere in this path.
- *  4. Every other session is then revoked explicitly with `scope: "others"`
- *     rather than relying on assumptions about GoTrue's default behaviour. The
- *     caller's own session survives, so the user is not logged out of the tab
- *     they just used.
+ * After a successful update, request sign-out of other sessions and report its
+ * confirmed result separately. An unconfirmed sign-out does not undo the
+ * password change or invite resubmission.
  *
  * No password value is logged, retained or returned at any point.
  */
@@ -106,8 +93,8 @@ export async function changeMyPasswordAction(
   const supabase = await createNextServerSupabaseClient();
 
   /*
-   * Supabase Auth verifies the current password and changes the credential in
-   * one authenticated request. No temporary sign-in session is created.
+   * Supply both passwords to the authenticated self-service Auth request.
+   * No temporary sign-in session is created.
    */
   const { error } = await supabase.auth.updateUser({
     current_password: parsed.data.current_password,
@@ -163,8 +150,13 @@ export async function changeMyPasswordAction(
     return fail(safePasswordError(error.code));
   }
 
-  /* Anything signed in with the old password is now invalidated. */
-  await supabase.auth.signOut({ scope: "others" }).catch(() => undefined);
+  let otherSessionsRevoked = false;
+  try {
+    const { error: revocationError } = await supabase.auth.signOut({ scope: "others" });
+    otherSessionsRevoked = !revocationError;
+  } catch {
+    // The password already changed; an uncertain sign-out must not invite another update.
+  }
 
   /*
    * A credential change is one of the few successes worth recording
@@ -184,7 +176,7 @@ export async function changeMyPasswordAction(
     actorId: context.actor.id,
     actorClass: "self_service",
     outcome: "succeeded",
-    metadata: { action: "auth.change_password", other_sessions_revoked: true },
+    metadata: { action: "auth.change_password", other_sessions_revoked: otherSessionsRevoked },
   });
   await recordSecurityAuditEvent({
     event: "auth.password.changed",
@@ -195,9 +187,16 @@ export async function changeMyPasswordAction(
     outcome: "succeeded",
     /* Not `other_sessions_revoked`: that key carries the "session" fragment
      * and would be stripped from permanent rows by design. */
-    metadata: { action: "auth.change_password", other_logins_revoked: true },
+    metadata: { action: "auth.change_password", other_logins_revoked: otherSessionsRevoked },
   });
 
-  return { error: null, fieldErrors: {}, changedAt: new Date().toISOString() };
+  return {
+    error: null,
+    fieldErrors: {},
+    changedAt: new Date().toISOString(),
+    ...(!otherSessionsRevoked ? {
+      warning: "Your password was changed, but signing out other devices could not be confirmed. Sign out of those devices manually.",
+    } : {}),
+  };
 }
 

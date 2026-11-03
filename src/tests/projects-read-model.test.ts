@@ -322,7 +322,10 @@ describe("Projects bulk outcomes", () => {
   });
 
   it("builds an all-failed batch without claiming any success", () => {
-    const result = failedProjectBatch(["a", "b"], "Choose a valid project status.");
+    const result = failedProjectBatch([
+      "10000000-0000-4000-8000-000000000001",
+      "10000000-0000-4000-8000-000000000002",
+    ], "Choose a valid project status.");
     expect(result.succeeded).toEqual([]);
     expect(result.failed).toHaveLength(2);
     expect(result.attempted).toBe(2);
