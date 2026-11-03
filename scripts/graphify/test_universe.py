@@ -5,6 +5,9 @@ from html.parser import HTMLParser
 import json
 from pathlib import Path
 import runpy
+import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -103,6 +106,28 @@ class UniverseTests(unittest.TestCase):
         self.assertEqual(data['nodes'], [])
         self.assertEqual(data['edges'], [])
         self.assertGreater(len(self.api['render_html'](data)), 500)
+
+    def test_wolf_geometry_is_deterministic_bounded_and_scales_only_depth(self):
+        template = (SCRIPTS / 'universe.html').read_text(encoding='utf-8')
+        geometry = re.search(r'// BEGIN WOLF GEOMETRY(.*?)// END WOLF GEOMETRY', template, re.S)
+        self.assertIsNotNone(geometry, 'The approved wolf layout is missing')
+        helpers = '\n'.join(re.findall(r'^function (?:hash|random)\([^\n]+', template, re.M))
+        node = shutil.which('node') or str(Path('C:/Program Files/nodejs/node.exe'))
+        program = helpers + geometry.group(1) + '''
+const a=wolfPosition('symbol-a',0,80), again=wolfPosition('symbol-a',0,80);
+const flat=wolfPosition('symbol-a',0,0), deep=wolfPosition('symbol-a',0,160);
+const many=Array.from({length:200},(_,i)=>wolfPosition('symbol-'+i,i,80));
+process.stdout.write(JSON.stringify({a,again,flat,deep,many}));
+'''
+        result = subprocess.run([node, '-e', program], text=True, capture_output=True, check=True)
+        value = json.loads(result.stdout)
+        self.assertEqual(value['a'], value['again'])
+        self.assertEqual(value['a'][:2], value['flat'][:2])
+        self.assertEqual(value['a'][:2], value['deep'][:2])
+        self.assertEqual(value['flat'][2], 0)
+        self.assertAlmostEqual(value['deep'][2], value['a'][2] * 2)
+        self.assertGreater(len({tuple(p) for p in value['many']}), 190)
+        self.assertTrue(all(abs(p[0]) < 320 and abs(p[1]) < 320 and abs(p[2]) <= 80 for p in value['many']))
 
     def test_pinned_graphify_null_location_is_an_unknown_source_line(self):
         self.graph['nodes'][0]['source_location'] = None

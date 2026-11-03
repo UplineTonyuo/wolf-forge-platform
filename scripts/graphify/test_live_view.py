@@ -59,6 +59,8 @@ class LiveViewTests(unittest.TestCase):
         self.assertNotEqual(previous['version'], current['version'])
         self.assertEqual(current['source'], NEW)
         self.assertIn(NEW.encode(), current['html'])
+        self.assertIn(b'data-default-layout="wolf"', current['html'])
+        self.assertIn(b'id="galaxy-layout"', current['html'])
         self.assertEqual(state, 'ready')
 
     def test_incomplete_or_changed_export_keeps_last_verified_snapshot(self):
