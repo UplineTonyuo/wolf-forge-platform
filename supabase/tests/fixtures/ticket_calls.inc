@@ -23,7 +23,7 @@ select ('e1700000-0000-4000-8000-00000000'||n)::uuid,'f0f0f0f0-0000-4000-8000-00
   case when n='1704' then null when n='1702' then '20000000-0000-4000-8000-000000001705' else '20000000-0000-4000-8000-000000001704' end::uuid,
   'Synthetic calling Ticket '||n,'open' from unnest(array['1701','1702','1703','1704']) n;
 update private.ticket_call_environment set enabled=true,backend_ref='ci',environment='test',
-  verified_at=clock_timestamp(),media_enabled=true;
+  verified_at=clock_timestamp(),media_enabled=true,account_exclusive=true,account_exclusive_verified_at=clock_timestamp();
 insert into private.ticket_call_account_usage(month,unmapped_seconds,verified_at)
   values(date_trunc('month',clock_timestamp() at time zone 'UTC')::date,0,clock_timestamp());
 insert into private.ticket_call_settings(tenant_id,enabled,fallback_team_profile_id,monthly_minutes)

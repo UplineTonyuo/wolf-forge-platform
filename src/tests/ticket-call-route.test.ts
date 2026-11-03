@@ -7,7 +7,13 @@ const id = "71000000-0000-4000-8000-000000000001";
 const request = (body: unknown, method = "POST", origin = "https://app.example") => new Request("https://app.example/api/ticket-calls", {
   method, headers: { origin, host: "app.example", "content-type": "application/json" }, body: JSON.stringify(body),
 });
-beforeEach(() => { vi.clearAllMocks(); f.context.mockResolvedValue({ client: {} }); f.mutate.mockResolvedValue({ outcome: "busy" }); f.end.mockResolvedValue({ ended: true }); });
+beforeEach(() => { vi.clearAllMocks(); vi.stubEnv("DAILY_CALLS_ENABLED","1"); vi.stubEnv("DAILY_DOMAIN","wolfforge.daily.co"); vi.stubEnv("DAILY_API_KEY","synthetic"); f.context.mockResolvedValue({ actor: {}, client: {} }); f.mutate.mockResolvedValue({ outcome: "busy" }); f.end.mockResolvedValue({ ended: true }); });
+it("stops new admission when the provider switch is off but permits ending", async()=>{
+ vi.stubEnv("DAILY_CALLS_ENABLED","0");
+ expect((await POST(request({action:"request",ticket_id:id,request_id:id,device_id:id,mode:"audio"}))).status).toBe(503);
+ expect(f.mutate).not.toHaveBeenCalled();
+ expect((await POST(request({action:"end",call_id:id}))).status).toBe(200);
+});
 it("refuses foreign origin before authentication", async () => {
   expect((await POST(request({}, "POST", "https://foreign.example"))).status).toBe(403);
   expect(f.context).not.toHaveBeenCalled();

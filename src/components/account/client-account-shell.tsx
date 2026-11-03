@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useOptimistic, type MouseEvent } from "react";
+import { InboxCallProvider } from "../calls/call-provider";
 import { usePathname, useRouter } from "next/navigation";
 import type { ClientNavCounts } from "../../domain/client-portal/summary";
 import type { ServiceChooserCatalog } from "../../domain/client-portal/service-chooser";
@@ -78,6 +79,7 @@ export function ClientAccountShell({
     <RouteTransitionProvider begin={begin}>
     <ServiceChooserProvider catalog={serviceCatalog} available={storeGranted}>
       <PortalDrawerProvider>
+      <InboxCallProvider key={user.id} profileId={user.id} notificationSoundEnabled={notificationSoundEnabled}>
       <div
         className={`client-portal${branding ? " tenant-workspace" : ""}`}
         style={branding?.style}
@@ -120,6 +122,7 @@ export function ClientAccountShell({
           </div>
         </main>
       </div>
+      </InboxCallProvider>
       </PortalDrawerProvider>
     </ServiceChooserProvider>
     </RouteTransitionProvider>

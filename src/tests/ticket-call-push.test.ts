@@ -8,6 +8,7 @@ const endpoint = "https://fcm.googleapis.com/call-device-test";
 const config = { origin, publicKey: "A".repeat(87) };
 beforeEach(() => {
   vi.clearAllMocks(); vi.stubEnv("VERCEL_ENV", "preview"); vi.stubEnv("SUPABASE_URL", "https://rsnmlcyopnxucwgfttyf.supabase.co");
+  vi.stubEnv("DAILY_CALLS_ENABLED","1");vi.stubEnv("DAILY_DOMAIN","wolfforge.daily.co");vi.stubEnv("DAILY_API_KEY","synthetic");
   f.support.mockResolvedValue(false); f.context.mockResolvedValue({ actor: { id: "self" }, client: { rpc: f.rpc } });
   f.headers.mockResolvedValue(new Headers({ host: new URL(origin).host }));
   f.rpc.mockResolvedValue({ data: config, error: null });
@@ -18,7 +19,8 @@ it("allows own internal/client configuration without changing the message contex
   expect((await callPushContext())?.config).toEqual(config);
   expect(f.rpc).toHaveBeenCalledWith("app_get_my_call_push_configuration", {});
 });
-it.each(["support", "backend", "host", "private key"])("refuses %s before enrollment", async reason => {
+it.each(["support", "backend", "host", "private key", "disabled"])("refuses %s before enrollment", async reason => {
+  if (reason === "disabled") vi.stubEnv("DAILY_CALLS_ENABLED","0");
   if (reason === "support") f.support.mockResolvedValue(true);
   if (reason === "backend") vi.stubEnv("SUPABASE_URL", "https://unapproved.supabase.co");
   if (reason === "host") f.headers.mockResolvedValue(new Headers({ host: "different.invalid" }));

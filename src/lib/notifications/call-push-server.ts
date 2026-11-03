@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { readDailyCallConfig } from "../daily/calls";
 import { clientPushAvailable } from "../../domain/notifications/push";
 import { clientSupportRequested } from "../supabase/client-support";
 import { getVerifiedSessionContext } from "../supabase/next-server";
@@ -8,7 +9,7 @@ import type { CallRpc } from "../../services/ticket-call-service";
 
 const configuration = z.object({ origin: z.url(), publicKey: z.string().regex(/^[A-Za-z0-9_-]{87}$/) }).strict();
 export async function callPushContext() {
-  if (await clientSupportRequested() || !clientPushAvailable(process.env)) return null;
+  if (!readDailyCallConfig() || await clientSupportRequested() || !clientPushAvailable(process.env)) return null;
   const context = await getVerifiedSessionContext();
   if (!context || context.actor.support) return null;
   const rpc = context.client.rpc.bind(context.client) as unknown as CallRpc["rpc"];

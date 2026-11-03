@@ -1,4 +1,9 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "codex/woad-live-calls-20261026": false
+    }
+  },
   "crons": [
     {
       "path": "/api/internal/team-voice-cleanup",

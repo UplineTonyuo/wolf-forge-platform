@@ -37,6 +37,7 @@ export const callSettings = z.object({
 }).strict();
 export const callMutation = z.union([callRequest, callCommand, callSettings]);
 export const callRead = z.union([
+  z.object({ action: z.literal("prepare"), ticket_id: id }).strict(),
   z.object({ action: z.literal("current"), ticket_id: id.optional(), call_id: id.optional() }).strict()
     .refine(value => !value.ticket_id || !value.call_id),
   z.object({ action: z.literal("history"), ticket_id: id, before: z.iso.datetime({ offset: true }).optional(), before_id: id.optional() })

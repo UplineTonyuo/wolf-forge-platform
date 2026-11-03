@@ -1,0 +1,21 @@
+/** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
+import { cleanup,fireEvent,render,screen } from "@testing-library/react";
+import { afterEach,expect,it,vi } from "vitest";
+vi.mock("../components/account/ui/portal-dialog",()=>({PortalDialog:({children,open,title}:{children:React.ReactNode;open:boolean;title:string})=>open?<div role="dialog" aria-label={title}>{children}</div>:null}));
+import { CallScreen } from "../components/calls/call-screen";
+import { emptyMedia } from "../components/calls/call-media";
+import type { CallController,CallState } from "../components/calls/call-controller";
+import type { CallMedia } from "../components/calls/call-media";
+const id="71000000-0000-4000-8000-000000000001",other="71000000-0000-4000-8000-000000000002";
+const call={id,ticketId:id,callerId:other,calleeId:id,mode:"audio",state:"ringing",expiresAt:"2026-11-03T12:15:00Z"} as CallState["call"];
+const state={call,peer:{name:"Synthetic client",avatarUrl:null},busy:false,error:"",minimized:false,canJoin:false,joinAttempt:0};
+const command=vi.fn();const controller={profileId:id,command,close:vi.fn(),minimize:vi.fn(),end:vi.fn(),allowJoin:vi.fn()} as unknown as CallController;
+afterEach(cleanup);
+it("offers answer and decline with camera-free voice presentation",()=>{render(<CallScreen state={state} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);
+ expect(screen.getByText("Voice only · Camera stays off")).toBeInTheDocument();fireEvent.click(screen.getByRole("button",{name:"Answer"}));expect(command).toHaveBeenCalledWith("accept");expect(screen.queryByRole("button",{name:"Turn camera on"})).not.toBeInTheDocument();
+});
+it("a minimized call keeps an accessible reopen control",()=>{render(<CallScreen state={{...state,minimized:true}} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);expect(screen.queryByRole("dialog")).not.toBeInTheDocument();expect(screen.getByRole("button",{name:/Synthetic client/})).toBeInTheDocument();});
+it("keeps audio recovery inside the modal and the countdown outside the live region",()=>{render(<CallScreen state={state} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0} playBlocked onPlay={vi.fn()}/>);
+ expect(screen.getByRole("dialog")).toContainElement(screen.getByRole("button",{name:"Tap to hear the call"}));expect(screen.getByRole("status")).not.toHaveTextContent("left");
+});

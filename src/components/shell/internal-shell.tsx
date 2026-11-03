@@ -22,6 +22,7 @@ import {
   Palette,
 } from "lucide-react";
 import Link from "next/link";
+import { InboxCallProvider } from "../calls/call-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
 import type {
@@ -221,6 +222,7 @@ export function InternalShell({
     <TenantBrandingProvider value={brandingState}>
     <RouteTransitionProvider begin={begin}>
     <TeamPresenceProvider enabled={user.teamMessaging.use}>
+    <InboxCallProvider key={user.id} profileId={user.id} notificationSoundEnabled={notificationSoundEnabled}>
       <div
         className={`internal-app${branding ? " tenant-workspace" : ""}`}
         style={branding?.style}
@@ -310,6 +312,7 @@ export function InternalShell({
         </main>
       </div>
       </div>
+    </InboxCallProvider>
     </TeamPresenceProvider>
     </RouteTransitionProvider>
     </TenantBrandingProvider>

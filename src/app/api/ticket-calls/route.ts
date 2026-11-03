@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { readDailyCallConfig } from "../../../lib/daily/calls";
 import { callMutation, callRead } from "../../../domain/tickets/calls";
 import { readBoundedJson } from "../../../lib/security/bounded-json";
 import { requestIsSameOrigin } from "../../../lib/security/same-origin";
@@ -23,7 +24,9 @@ export async function GET(request: Request) {
   try {
     const context = await getVerifiedSessionContext();
     if (!context) return json({ ok: false }, 401);
-    return json({ ok: true, data: await readTicketCalls(context.client, input.data) });
+    if (context.actor?.support) return json({ ok: false }, 403);
+    const data = await readTicketCalls(context.client, input.data);
+    return json({ ok: true, data: input.data.action === "current" || input.data.action === "prepare" ? { ...data, enabled: Boolean(readDailyCallConfig()) && "enabled" in data && data.enabled } : data });
   } catch (error) { return failure(error); }
 }
 async function mutate(request: Request, ending = false) {
@@ -37,6 +40,10 @@ async function mutate(request: Request, ending = false) {
   try {
     const context = await getVerifiedSessionContext();
     if (!context) return json({ ok: false }, 401);
+    if (context.actor?.support) return json({ ok: false }, 403);
+    if (!ending && "action" in input.data && ["request", "accept"].includes(input.data.action) && !readDailyCallConfig()) {
+      return json({ ok: false, error: "Calling is unavailable." }, 503);
+    }
     return json({ ok: true, data: ending
       ? await endTicketCall(context.client, (input.data as { ticket_id: string }).ticket_id, (input.data as { call_id: string }).call_id)
       : await mutateTicketCall(context.client, input.data) });

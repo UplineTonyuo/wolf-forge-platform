@@ -38,6 +38,9 @@ export async function readTicketCalls(client: UserScopedClient, value: unknown) 
   if (input.action === "current") {
     return callAvailability.parse(await callRpc(rpc, "app_ticket_call_current", { p_ticket_id: input.ticket_id, p_call_id: input.call_id }));
   }
+  if (input.action === "prepare") {
+    return callAvailability.parse(await callRpc(rpc,"app_ticket_call_prepare",{p_ticket_id:input.ticket_id}));
+  }
   return input.action === "history"
     ? z.array(ticketCall).max(50).parse(await callRpc(rpc, "app_ticket_call_history", {
       p_ticket_id: input.ticket_id, p_before: input.before, p_before_id: input.before_id,

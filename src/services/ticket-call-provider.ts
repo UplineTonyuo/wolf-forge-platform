@@ -1,10 +1,10 @@
 import "server-only";
 import { z } from "zod";
-import { callEvidence } from "../domain/tickets/calls";
+import { callEvidence, ticketCall } from "../domain/tickets/calls";
 import { callRoomProperties, DAILY_CALL_ORIGIN, verifiedCallRoom } from "../lib/daily/calls";
 import { callRpc, type CallRpc } from "./ticket-call-service";
 
-// Deliberately no live adapter or scheduled invocation in Phase 1.
+// All provider operations run behind durable database claims, never browser commands.
 export type CallProvider = {
   createRoom(name: string, properties: ReturnType<typeof callRoomProperties>): Promise<unknown>;
   readRoom(name: string): Promise<unknown>;
@@ -76,6 +76,14 @@ export async function reconcileTicketCallCleanup(trusted: CallRpc, provider: Cal
   }
   // Room absence does not certify media termination or settle participant usage.
   return { absent };
+}
+
+export async function confirmTicketCallPresence(user:CallRpc,trusted:CallRpc,provider:CallProvider & {readPresence(name:string):Promise<unknown>},callId:string,deviceId:string){
+  const joined=roomClaim.omit({created:true,claimId:true}).parse(await callRpc(user,"app_ticket_call_media_probe",{p_call_id:z.uuid().parse(callId),p_device_id:z.uuid().parse(deviceId)}));
+  if(joined.id!==callId||joined.roomName!==`wf-call-${callId}`)throw new Error("Unexpected room claim");
+  const presence=z.object({total_count:z.literal(2),data:z.array(z.object({id:z.string().min(1).max(128),room:z.literal(joined.roomName),userId:z.uuid()})).length(2)})
+    .parse(await provider.readPresence(joined.roomName));
+  return ticketCall.parse(await callRpc(trusted,"app_confirm_ticket_call_presence",{p_call_id:callId,p_presence:presence}));
 }
 
 export async function ingestTicketCallEvidence(trusted: CallRpc, value: unknown, complete = false) {

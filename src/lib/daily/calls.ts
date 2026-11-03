@@ -36,11 +36,11 @@ export function verifiedCallRoom(value: unknown, name: string, expiresAt: number
     (Array.isArray(setting) && setting.length === 0));
 }
 
-export async function dailyRequest(key: string, endpoint: string, method = "GET", body?: unknown) {
+export async function dailyRequest(key: string, endpoint: string, method = "GET", body?: unknown, timeoutMs = 8_000) {
   const response = await fetch(`https://api.daily.co/v1/${endpoint}`, {
     method, headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    cache: "no-store", redirect: "error", signal: AbortSignal.timeout(8_000),
+    cache: "no-store", redirect: "error", signal: AbortSignal.timeout(timeoutMs),
   });
   if (response.status === 404 && method === "GET") return null;
   if (!response.ok || !response.body) throw new Error("Call provider unavailable");
