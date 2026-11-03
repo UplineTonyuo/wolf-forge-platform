@@ -77,7 +77,8 @@ if ($LASTEXITCODE -ne 0 -or $sourceStatus) { throw 'Commit and review setup befo
 $revision = & $gitExe -C $sourceRoot rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot identify setup revision' }
 $files = @('scripts/graphify/refresh-after-merge.py','scripts/graphify/build-local.py',
-           'scripts/graphify/stage-export.py','docs/agents/graphify-trial.md')
+           'scripts/graphify/stage-export.py','scripts/graphify/export-universe.py',
+           'scripts/graphify/universe.html','docs/agents/graphify-trial.md')
 foreach ($name in $files) { Assert-PlainPath (Join-Path $sourceRoot $name) }
 if ($task) {
     Disable-ScheduledTask -TaskName $taskName | Out-Null
