@@ -32,6 +32,14 @@ it("recovers controls after a transient offline read",async()=>{
  controller.refresh.mockResolvedValueOnce(null).mockResolvedValue({enabled:true});render(<TicketCallControls ticketId={id}/>);
  await waitFor(()=>expect(controller.refresh).toHaveBeenCalledOnce());window.dispatchEvent(new Event("online"));expect(await screen.findByRole("button",{name:"Voice call"})).toBeInTheDocument();
 });
+it("uses icon buttons with accessible labels and no toolbar notification enrollment",async()=>{
+ render(<TicketCallControls ticketId={id}/>);
+ const voice=await screen.findByRole("button",{name:"Voice call"});
+ expect(voice).toHaveAttribute("title","Voice call");
+ expect(voice).toHaveTextContent("");
+ expect(voice.querySelector("svg")).not.toBeNull();
+ expect(screen.queryByRole("button",{name:/Enable call alerts/})).not.toBeInTheDocument();
+});
 it("incoming call unmounts preparation and releases its preview tracks",async()=>{
  const original=Object.getOwnPropertyDescriptor(navigator,"mediaDevices");const stop=vi.fn();
  const track={readyState:"live",stop};const stream={getTracks:()=>[track],getAudioTracks:()=>[track],getVideoTracks:()=>[]};

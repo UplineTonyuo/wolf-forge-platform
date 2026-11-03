@@ -420,13 +420,56 @@ describe("Add to Ticket conversation", () => {
 });
 
 describe("View in Inbox", () => {
-  it("replaces the CTA once the Ticket is durably in the Inbox", async () => {
+  it("keeps a legacy-visible Ticket openable and available to save personally", async () => {
     getInternalContext.mockResolvedValue(
       context({ detail: detail({ ticket: { ...detail().ticket, inbox_added_at: "2026-09-18T09:00:00Z" } }) }),
     );
     await renderPage();
 
+    expect(screen.getByRole("link", { name: "View in Inbox" })).toHaveAttribute("href", "/tickets/t1?inbox=tickets&ticket=t1");
+    fireEvent.click(screen.getByRole("button", { name: "Save to my Inbox" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to Inbox" }));
+    await waitFor(() => expect(actions.addTicketToInboxAction).toHaveBeenCalledWith("t1"));
+  });
+
+  it("does not offer a personal save to read-only staff on a legacy-visible Ticket", async () => {
+    getInternalContext.mockResolvedValue(context({ edit: false, detail: detail({
+      ticket: { ...detail().ticket, inbox_added_at: "2026-09-18T09:00:00Z" },
+    }) }));
+    await renderPage();
+    expect(screen.getByRole("link", { name: "View in Inbox" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save to my Inbox" })).not.toBeInTheDocument();
+    expect(screen.getByText(/You have not saved this Ticket personally/)).toBeInTheDocument();
+  });
+
+  it("holds the success dialog while refreshed props confirm the personal save", async () => {
+    getInternalContext.mockResolvedValue(context({ detail: detail({
+      ticket: { ...detail().ticket, inbox_added_at: "2026-09-18T09:00:00Z" },
+    }) }));
+    vi.mocked(actions.addTicketToInboxAction).mockResolvedValue({ ok: true });
+    const { rerender } = await renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Save to my Inbox" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to Inbox" }));
+    await waitFor(() => expect(screen.getByText("Ticket added to Inbox")).toBeInTheDocument());
+
+    getInternalContext.mockResolvedValue(context({ detail: detail({ ticket: {
+      ...detail().ticket, inbox_added_at: "2026-09-18T09:00:00Z", personal_inbox_added_at: "2026-11-04T00:00:00Z",
+    } }) }));
+    rerender(await TicketDetailPage({ params: Promise.resolve({ ticketId: "t1" }) }));
+    expect(screen.getByRole("dialog", { name: "Ticket added to Inbox" })).toBeInTheDocument();
+    expect(screen.queryByText(/Saved to your Inbox/)).not.toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("replaces the save CTA only once the viewer personally saved the Ticket", async () => {
+    getInternalContext.mockResolvedValue(
+      context({ detail: detail({ ticket: { ...detail().ticket, inbox_added_at: "2026-09-18T09:00:00Z", personal_inbox_added_at: "2026-11-04T00:00:00Z" } }) }),
+    );
+    await renderPage();
+
     expect(screen.queryByRole("button", { name: "Add to Ticket conversation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save to my Inbox" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Saved to your Inbox/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View in Inbox" })).toBeInTheDocument();
   });
 

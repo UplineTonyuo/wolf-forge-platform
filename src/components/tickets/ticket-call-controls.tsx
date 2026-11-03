@@ -1,8 +1,7 @@
 "use client";
-import { Mic,Video } from "lucide-react";
+import { Phone,Video } from "lucide-react";
 import { useEffect,useState,useSyncExternalStore } from "react";
 import { useInboxCalls } from "../calls/call-provider";
-import { CallNotifications } from "../calls/call-notifications";
 import { CallPrepare } from "../calls/call-prepare";
 import styles from "../calls/calls.module.css";
 export function TicketCallControls({ticketId,disabled=false}:{ticketId:string;disabled?:boolean}){
@@ -25,8 +24,8 @@ function Controls({ticketId,disabled}:{ticketId:string;disabled:boolean}){
  const active=state.call&&state.call.state!=="ended";
  if(active&&preparing)setPreparing(null);
  return <div className={styles.controlsBar} aria-label="Conversation calls">
-  {active?<button type="button" onClick={()=>controller.minimize(false)}>Open current call</button>:<><button type="button" disabled={disabled||state.busy} onClick={()=>setPreparing("audio")}><Mic aria-hidden="true"/>Voice call</button><button type="button" disabled={disabled||state.busy} onClick={()=>setPreparing("video")}><Video aria-hidden="true"/>Video call</button></>}
+  {active?<button type="button" aria-label="Open current call" title="Open current call" onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/></button>:<><button type="button" aria-label="Voice call" title="Voice call" disabled={disabled||state.busy} onClick={()=>setPreparing("audio")}><Phone aria-hidden="true"/></button><button type="button" aria-label="Video call" title="Video call" disabled={disabled||state.busy} onClick={()=>setPreparing("video")}><Video aria-hidden="true"/></button></>}
   {preparing&&!active?<CallPrepare ticketId={ticketId} mode={preparing} controller={controller} onClose={()=>setPreparing(null)}/>:null}
-  <CallNotifications/>{state.error&&!state.call?<p role="alert">{state.error}</p>:null}
+  {state.error&&!state.call?<p role="alert">{state.error}</p>:null}
  </div>;
 }

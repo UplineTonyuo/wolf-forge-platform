@@ -346,6 +346,7 @@ function TicketComposerBody({
       }
       onSubmit={submit}
       data-client-view={mode === "client" || undefined}
+      data-target-kind={target.kind}
       data-sending={attached && pending && !disabled || undefined}
       data-compact={compact || undefined}
       data-recording={recordingVoice || undefined}

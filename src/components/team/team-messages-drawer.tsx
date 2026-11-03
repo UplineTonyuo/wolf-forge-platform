@@ -41,6 +41,7 @@ import {
   listTicketAssigneesAction,
 } from "../../app/actions/tickets";
 import { TicketAdminConversation } from "../tickets/ticket-admin-conversation";
+import { TicketCallControls } from "../tickets/ticket-call-controls";
 import { TicketInspector } from "../tickets/ticket-inspector";
 import { TeamTicketsPane } from "./team-tickets-pane";
 import { useTicketInboxList } from "./use-ticket-inbox-list";
@@ -1017,6 +1018,7 @@ export function TeamMessagesDrawer({
     if (!render) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('.portal-overlay[data-layer="call"]')) return;
       if (event.key === "Escape") {
         if (pickerOpen) {
           setPickerOpen(false);
@@ -1782,6 +1784,7 @@ export function TeamMessagesDrawer({
                     <strong>{activeTicketDetail.ticket.subject}</strong>
                     <span>Ticket {activeTicketDetail.ticket.public_ref}</span>
                   </div>
+                  <TicketCallControls ticketId={activeTicketDetail.ticket.id} disabled={!ticketCapabilities.reply || activeTicketDetail.ticket.status === "closed" || Boolean(activeTicketDetail.ticket.archived_at)} />
                   <button
                     type="button"
                     className={`${styles.iconButton} ${styles.detailsButton}`}

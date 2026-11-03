@@ -35,7 +35,10 @@ describe("listTicketSummariesAction", () => {
   });
 
   it("reads the Inbox-only summaries list, not the full Ticket list and not a transcript", async () => {
-    const summaries = [{ ticket_id: "t1" }];
+    const summaries = [
+      { ticket_id: "legacy", inbox_added_at: "2026-09-18T09:00:00Z", personal_inbox_added_at: null },
+      { ticket_id: "personal", inbox_added_at: "2026-11-04T00:00:00Z", personal_inbox_added_at: "2026-11-04T00:00:00Z" },
+    ];
     const listInbox = vi.fn().mockResolvedValue(summaries);
     const list = vi.fn();
     const get = vi.fn();

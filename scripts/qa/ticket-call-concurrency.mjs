@@ -49,7 +49,7 @@ const actor = (n, sid = n) => `do $$begin
   perform set_config('request.jwt.claims','${JSON.stringify({ sub: uid(n), role: "authenticated", session_id: `33000000-0000-4000-8000-00000000${sid}` })}',true);
   perform set_config('request.headers','${JSON.stringify({ "x-wf-tenant": tenant })}',true);
 end$$; set local role authenticated;`;
-const request = (t, id) => `select public.app_request_ticket_call('${ticket(t)}','${requestId(id)}','${device("0001")}','audio');`;
+const request = (t, id, recipient = t === "1702" ? "1705" : "1704") => `select public.app_request_ticket_call('${ticket(t)}','${requestId(id)}','${device("0001")}','audio',${recipient ? `'${uid(recipient)}'` : "null"});`;
 const command = (action, id, d = "0002") => `select public.app_ticket_call_command('${action}','${id}','${device(d)}');`;
 const json = lines => JSON.parse(lines.at(-1));
 const observer = new Session("calling-observer");
@@ -125,7 +125,7 @@ try {
   }, true, () => observer.query("select pg_sleep(3.2);"));
 
   await reset();
-  await race("opposite directions", "1701", request("1701", "0010"), "1704", request("1701", "0011"), async (left, right) => {
+  await race("opposite directions", "1701", request("1701", "0010"), "1704", request("1701", "0011", null), async (left, right) => {
     assert.equal(json(left).state, "ringing"); assert.equal(json(right).outcome, "busy");
     assert.equal(Number((await observer.query("select count(*) from private.ticket_call_reservations;"))[0]), 1);
   });
@@ -142,7 +142,7 @@ try {
       from generate_series(1,19) n;
     insert into private.ticket_call_reservations select id,date_trunc('month',now())::date,1800,1800
       from private.ticket_calls where legacy and tenant_id='${tenant}';`);
-  await race("last account budget admission", "1701", request("1701", "0014"), "1702", request("1704", "0015"), async (left, right) => {
+  await race("last account budget admission", "1701", request("1701", "0014"), "1702", request("1704", "0015", "1703"), async (left, right) => {
     assert.equal(json(left).state, "ringing"); assert.equal(json(right).outcome, "refused");
     assert.equal(Number((await observer.query("select sum(coalesce(settled_seconds,reserved_seconds)) from private.ticket_call_reservations;"))[0]), 36000);
   });

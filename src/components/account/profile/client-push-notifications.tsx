@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { clientPushStatusAction, setClientPushAction } from "../../../app/actions/push";
 import type { ClientPushConfiguration } from "../../../domain/notifications/push";
-
-function applicationServerKey(key: string): ArrayBuffer {
-  const raw = atob(key.replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from(raw, (character) => character.charCodeAt(0)).buffer;
-}
+import { ensureBrowserPushSubscription } from "../../../lib/notifications/browser-push-subscription";
 
 const subscribeSupport = () => () => {};
 const serverSupport = () => null;
@@ -25,6 +21,7 @@ export function ClientPushNotifications({ config }: { config: ClientPushConfigur
   const [active, setActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const inFlight = useRef(false);
 
   useEffect(() => {
     let current = true;
@@ -39,44 +36,33 @@ export function ClientPushNotifications({ config }: { config: ClientPushConfigur
   }, [supported]);
 
   async function enable() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setMessage("");
-    let subscription: PushSubscription | null = null;
-    let created = false;
     try {
       if (Notification.permission === "denied") {
         setMessage("Notifications are blocked. Allow them in your browser’s site settings, then try again.");
         return;
       }
-      const permission = await Notification.requestPermission();
+      const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
       if (permission !== "granted") {
         setMessage("Notifications were not enabled. You can keep using the notification bell.");
         return;
       }
-      await navigator.serviceWorker.register("/push-sw.js", { scope: "/", updateViaCache: "none" });
-      const registration = await navigator.serviceWorker.ready;
-      subscription = await registration.pushManager.getSubscription();
-      if (subscription && !(await clientPushStatusAction(subscription.endpoint))) {
-        await subscription.unsubscribe();
-        subscription = null;
-      }
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true, applicationServerKey: applicationServerKey(config.publicKey),
-        });
-        created = true;
-      }
+      const subscription = await ensureBrowserPushSubscription(config.publicKey);
       const result = await setClientPushAction(subscription.endpoint, true);
       if (!result.ok) throw new Error("Registration refused");
       setActive(true);
       setMessage("Notifications are enabled on this device.");
     } catch {
-      if (created) await subscription?.unsubscribe().catch(() => false);
       setMessage("Notifications could not be enabled. Please try again.");
-    } finally { setBusy(false); }
+    } finally { inFlight.current = false; setBusy(false); }
   }
 
   async function disable() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setMessage("");
     try {
@@ -85,13 +71,14 @@ export function ClientPushNotifications({ config }: { config: ClientPushConfigur
       if (subscription) {
         const result = await setClientPushAction(subscription.endpoint, false);
         if (!result.ok) throw new Error("Disable refused");
-        await subscription.unsubscribe();
       }
-      for (const notification of await registration?.getNotifications() ?? []) notification.close();
+      for (const notification of await registration?.getNotifications() ?? []) {
+        if (!notification.tag.startsWith("wolf-forge-call")) notification.close();
+      }
       setActive(false);
       setMessage("Notifications are turned off on this device.");
     } catch { setMessage("Notifications could not be turned off. Please try again."); }
-    finally { setBusy(false); }
+    finally { inFlight.current = false; setBusy(false); }
   }
 
   return <section className="portal-section" aria-labelledby={headingId}>

@@ -15,7 +15,7 @@ afterEach(cleanup);
 it("offers answer and decline with camera-free voice presentation",()=>{render(<CallScreen state={state} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);
  expect(screen.getByText("Voice only · Camera stays off")).toBeInTheDocument();fireEvent.click(screen.getByRole("button",{name:"Answer"}));expect(command).toHaveBeenCalledWith("accept");expect(screen.queryByRole("button",{name:"Turn camera on"})).not.toBeInTheDocument();
 });
-it("a minimized call keeps an accessible reopen control",()=>{render(<CallScreen state={{...state,minimized:true}} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);expect(screen.queryByRole("dialog")).not.toBeInTheDocument();expect(screen.getByRole("button",{name:/Synthetic client/})).toBeInTheDocument();});
+it("a minimized ongoing call keeps an accessible reopen control",()=>{render(<CallScreen state={{...state,call:{...state.call!,state:"active"},minimized:true}} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);expect(screen.queryByRole("dialog")).not.toBeInTheDocument();expect(screen.getByRole("button",{name:/Synthetic client/})).toBeInTheDocument();});
 it("keeps audio recovery inside the modal and the countdown outside the live region",()=>{render(<CallScreen state={state} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0} playBlocked onPlay={vi.fn()}/>);
  expect(screen.getByRole("dialog")).toContainElement(screen.getByRole("button",{name:"Tap to hear the call"}));expect(screen.getByRole("status")).not.toHaveTextContent("left");
 });

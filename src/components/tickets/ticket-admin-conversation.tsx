@@ -6,10 +6,10 @@ import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import type { TeamConversationView } from "../../domain/team/projections";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketComposer } from "./ticket-composer";
-import { TicketCallControls } from "./ticket-call-controls";
 import { TicketConversation } from "./ticket-conversation";
 import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
+import { useTicketCallHistory } from "./use-ticket-call-history";
 
 /**
  * The staff Ticket conversation.
@@ -58,6 +58,7 @@ export function TicketAdminConversation({
   onUnavailable?: () => void;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const history = useTicketCallHistory(ticketId);
   const conversation = useTicketConversationMessages({
     ticketId,
     serverMessages: messages,
@@ -78,11 +79,12 @@ export function TicketAdminConversation({
 
   return (
     <div className={`${styles.orderConversationSurface} ${styles.ticketAdminSurface} ticket-admin-surface-marker`}>
-      <TicketCallControls ticketId={ticketId} disabled={!canReply || repliesDisabled} />
       <TicketConversation
         orderChat
         viewerProfileId={viewerProfileId}
         messages={conversation.messages}
+        callHistory={history.entries}
+        historyControls={history.error ? <p role="status">{history.error} <button type="button" onClick={() => void history.load()}>Retry call history</button></p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
         heading={heading}
         sourceLabel="Ticket"
         hideInternalNotes

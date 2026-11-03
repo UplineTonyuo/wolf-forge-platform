@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Search, TicketIcon, X } from "lucide-react";
+import { AlertCircle, BellRing, Search, TicketIcon, X } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatTeamRelativeTime } from "../../domain/team/projections";
@@ -104,6 +104,7 @@ export function TeamTicketsPane({
           onClick={() => onSelect(ticket.ticket_id)}
         >
           <span className={styles.ticketRowSubject}>{ticket.subject}</span>
+          {ticket.unanswered === true ? <span className={styles.ticketUnanswered}><BellRing aria-hidden="true" size={13} />Unanswered</span> : null}
           <span className={styles.ticketRowClient}>
             {ticket.company_name ?? ticket.client_name ?? "Unlinked client"}
           </span>

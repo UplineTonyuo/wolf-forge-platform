@@ -22,6 +22,10 @@ select ('e1700000-0000-4000-8000-00000000'||n)::uuid,'f0f0f0f0-0000-4000-8000-00
   case when n in ('1701','1702') then '20000000-0000-4000-8000-000000001701' else '20000000-0000-4000-8000-000000001702' end::uuid,
   case when n='1704' then null when n='1702' then '20000000-0000-4000-8000-000000001705' else '20000000-0000-4000-8000-000000001704' end::uuid,
   'Synthetic calling Ticket '||n,'open' from unnest(array['1701','1702','1703','1704']) n;
+-- Explicit synthetic personal saves; never infer this from assignments/global timestamps.
+insert into private.ticket_inbox_memberships(ticket_id,profile_id)
+select t.id,m.profile_id from public.tickets t join public.tenant_memberships m on m.tenant_id=t.tenant_id
+where t.tenant_id='f0f0f0f0-0000-4000-8000-000000001701' and m.account_class='internal';
 update private.ticket_call_environment set enabled=true,backend_ref='ci',environment='test',
   verified_at=clock_timestamp(),media_enabled=true,account_exclusive=true,account_exclusive_verified_at=clock_timestamp();
 insert into private.ticket_call_account_usage(month,unmapped_seconds,verified_at)

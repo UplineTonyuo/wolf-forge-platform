@@ -151,9 +151,9 @@ export class TicketRepository {
 
   /**
    * The Inbox Tickets pane's own read. Same row shape as list(), narrowed
-   * server-side to Tickets whose conversation is durably in the Inbox
-   * (inbox_added_at is not null), so the pane never fetches Tickets it can
-   * never render.
+   * server-side to authorized legacy-visible or personally saved Tickets.
+   * personal_inbox_added_at separately identifies the viewer's deliberate save;
+   * visibility alone never establishes call-recipient eligibility.
    */
   async listInbox(): Promise<TicketSummary[]> {
     const result = await this.client.rpc("app_list_ticket_summaries", {

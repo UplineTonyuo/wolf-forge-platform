@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -13,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useBodyScrollLock } from "../../ui/use-body-scroll-lock";
+import { lockModalSiblings } from "../../ui/modal-inert";
 import { TenantBrandingScope } from "../../shell/tenant-branding-provider";
 
 /**
@@ -23,11 +25,13 @@ import { TenantBrandingScope } from "../../shell/tenant-branding-provider";
  * entrance and exit durations, keyboard behaviour, outside-click behaviour and
  * reduced-motion handling are defined once rather than three times.
  *
- * Deliberately NOT the native <dialog> element. Tailwind's preflight resets
+ * Ordinary dialogs use a portaled panel. Tailwind's preflight resets
  * `margin: 0` on every element, which removes the `margin: auto` the user agent
  * relies on to centre a modal <dialog> — that is exactly why the New message
  * modal was pinned to the top-left corner. Owning the positioning here removes
- * the dependency on a UA default a global reset can silently defeat.
+ * the dependency on a UA default a global reset can silently defeat. The call
+ * variant promotes this treatment into a native top-layer dialog so it can
+ * interrupt native confirmations; its fullscreen positioning is explicit.
  *
  * Children mount only while the dialog is open, so a dialog body keeps its own
  * state per opening and resets naturally on close — no reset effect required.
@@ -64,6 +68,7 @@ export function PortalDialog({
       dialogs keep the header they were designed with. */
   showClose = false,
   headerAction,
+  layer,
 }: {
   open: boolean;
   onClose: () => void;
@@ -77,10 +82,13 @@ export function PortalDialog({
   showClose?: boolean;
   /** Optional control rendered beside the close button, e.g. "Clear cart". */
   headerAction?: ReactNode;
+  /** Calls must interrupt even a portaled Inbox drawer. */
+  layer?: "call";
 }) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const nativeCallRef = useRef<HTMLDialogElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
   /*
@@ -114,6 +122,23 @@ export function PortalDialog({
   const render = open || exiting;
   const phase = open ? "open" : "closing";
 
+  useLayoutEffect(() => {
+    if (!mounted || !render || layer !== "call") return;
+    const dialog = nativeCallRef.current;
+    if (!dialog) return;
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    // A native top-layer modal can interrupt an existing native confirmation too.
+    if (!dialog.open) {
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    }
+    panelRef.current?.focus();
+    return () => {
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      returnFocusRef.current?.focus({ preventScroll: true });
+    };
+  }, [mounted, render, layer]);
+
   useEffect(() => {
     if (!exiting) return;
     const timer = setTimeout(() => setExiting(false), exitMsFor(size));
@@ -130,11 +155,18 @@ export function PortalDialog({
     [],
   );
 
+  useEffect(() => {
+    if (!open || layer !== "call") return;
+    const overlay = panelRef.current?.closest(".portal-overlay");
+    if (!overlay) return;
+    return lockModalSiblings(overlay as HTMLElement);
+  }, [open, layer]);
+
   /* Remember what opened the dialog so focus can be handed back on close. */
   useEffect(() => {
     if (!open) return;
 
-    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    if (layer !== "call") returnFocusRef.current = document.activeElement as HTMLElement | null;
 
     /*
      * The panel itself, not its first focusable. A dialog whose header carries
@@ -148,13 +180,20 @@ export function PortalDialog({
     return () => {
       returnFocusRef.current?.focus({ preventScroll: true });
     };
-  }, [open, focusables, initialFocusRef]);
+  }, [open, focusables, initialFocusRef, layer]);
 
   useEffect(() => {
     if (!render) return;
 
     function onKeyDown(event: KeyboardEvent) {
+      const foreground = document.querySelector('.portal-overlay[data-layer="call"]');
+      if (event.defaultPrevented || (foreground && !foreground.contains(panelRef.current))) return;
+      if (layer === "call" && !open) {
+        if (event.key === "Escape" || event.key === "Tab") event.preventDefault();
+        return;
+      }
       if (event.key === "Escape") {
+        event.preventDefault();
         event.stopPropagation();
         onClose();
         return;
@@ -165,7 +204,7 @@ export function PortalDialog({
       // Keep Tab inside the dialog: an overlay the keyboard can walk out of is
       // not modal to anyone using one.
       const nodes = focusables();
-      if (nodes.length === 0) return;
+      if (nodes.length === 0) { event.preventDefault(); panelRef.current?.focus(); return; }
 
       const first = nodes[0]!;
       const last = nodes[nodes.length - 1]!;
@@ -181,7 +220,7 @@ export function PortalDialog({
       if (event.shiftKey && (active === first || outside)) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && (active === last || outside)) {
+      } else if (!event.shiftKey && (active === last || outside || active === panelRef.current)) {
         event.preventDefault();
         first.focus();
       }
@@ -192,15 +231,26 @@ export function PortalDialog({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [render, focusables, onClose]);
+  }, [render, focusables, onClose, layer, open]);
+
+
 
   useBodyScrollLock(render);
 
   if (!mounted || !render) return null;
 
+  const Overlay = layer === "call" ? "dialog" : "div";
+
   return createPortal(
     <TenantBrandingScope>
-    <div className="portal-overlay" data-phase={phase} data-size={size}>
+    <Overlay
+      ref={(node: HTMLDivElement | HTMLDialogElement | null) => { nativeCallRef.current = node?.tagName === "DIALOG" ? node as HTMLDialogElement : null; }}
+      className="portal-overlay" data-phase={phase} data-size={size} data-layer={layer}
+      aria-modal={layer === "call" ? true : undefined}
+      aria-labelledby={layer === "call" ? titleId : undefined}
+      aria-describedby={layer === "call" && description ? descriptionId : undefined}
+      onCancel={layer === "call" ? event => { event.preventDefault(); if (open) onClose(); } : undefined}
+    >
       <button
         type="button"
         className="portal-overlay-backdrop"
@@ -215,10 +265,10 @@ export function PortalDialog({
         data-size={size}
         // Focusable so the dialog itself can take focus on open.
         tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
+        role={layer === "call" ? undefined : "dialog"}
+        aria-modal={layer === "call" ? undefined : true}
+        aria-labelledby={layer === "call" ? undefined : titleId}
+        aria-describedby={layer !== "call" && description ? descriptionId : undefined}
       >
         <header className="portal-overlay-head">
           <div>
@@ -247,7 +297,7 @@ export function PortalDialog({
 
         {footer ? <footer className="portal-overlay-foot">{footer}</footer> : null}
       </div>
-    </div>
+    </Overlay>
     </TenantBrandingScope>,
     document.body,
   );

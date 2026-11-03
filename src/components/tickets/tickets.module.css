@@ -3379,6 +3379,7 @@
 
 /* Canonical Ticket attachment composer ------------------------------------ */
 .composer[data-client-view] .ticketRichComposer { min-height: 136px; }
+.composer[data-client-view][data-target-kind="ticket"] .ticketRichComposer { min-height: 96px; }
 .composer[data-client-view] footer { justify-content: flex-end; }
 .composer[data-client-view] .composerActions { width: 100%; justify-content: flex-end; }
 .composer[data-recording] .composerActions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
@@ -4722,3 +4723,12 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 }
 
 .orderChat .thread .messageBubble[data-audio-only] .attachments > li { padding: 0; border: 0; background: transparent; }
+
+.orderChat .thread > .callHistoryEntry {
+  display:flex;justify-content:center;align-items:flex-start;gap:8px;padding:14px 16px;
+  color:var(--wf-text-muted);font-size:12px;line-height:1.5;text-align:center;
+}
+.callHistoryEntry>svg{width:16px;height:16px;flex:0 0 auto;margin-top:2px;color:var(--wf-navy)}
+.callHistoryEntry>div{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+.callHistoryEntry strong{font-weight:600;color:var(--wf-navy)}
+.callHistoryEntry time{font-size:11px}

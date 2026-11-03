@@ -31,6 +31,18 @@ describe("invitation service", () => {
       expect(callMutation.safeParse({ action, call_id: id, device_id: id }).success).toBe(false);
     }
   });
+  it("accepts exactly one recipient identifier and lets the RPC reauthorize it", async () => {
+    const input = { action: "request", request_id: id, ticket_id: id, device_id: id, mode: "audio", recipient_id: id };
+    expect(callMutation.safeParse(input).success).toBe(true);
+    for (const recipient_id of [[], [id, id], "forged", null]) {
+      expect(callMutation.safeParse({ ...input, recipient_id }).success).toBe(false);
+    }
+    rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "recipient revoked" } });
+    await expect(mutateTicketCall(client, input)).rejects.toThrow();
+    expect(rpc).toHaveBeenCalledWith("app_request_ticket_call", {
+      p_ticket_id: id, p_request_id: id, p_device_id: id, p_mode: "audio", p_recipient_id: id,
+    });
+  });
   it("returns only the validated four owner numbers", async () => {
     rpc.mockResolvedValue({ data: { made: 4, answered: 2, missed: 1, connectedSeconds: 123 }, error: null });
     expect(await readTicketCalls(client, { action: "summary", month: "2026-10-01" })).toEqual({ made: 4, answered: 2, missed: 1, connectedSeconds: 123 });

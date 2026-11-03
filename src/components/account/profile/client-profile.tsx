@@ -1,6 +1,7 @@
 "use client";
 
 import { ClientPushNotifications } from "./client-push-notifications";
+import { CallNotifications } from "../../calls/call-notifications";
 import type { ClientPushConfiguration } from "../../../domain/notifications/push";
 
 import { Check, Loader2, Trash2, Upload } from "lucide-react";
@@ -267,6 +268,7 @@ export function ClientProfile({
        * safe to share with the internal Settings surface verbatim.
        */}
       {pushConfiguration ? <ClientPushNotifications config={pushConfiguration} /> : null}
+      <section className="portal-security" aria-label="Call notifications"><h2>Call notifications</h2><CallNotifications /></section>
       <div className="portal-security">
         <SecuritySection
           identities={identities}

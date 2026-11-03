@@ -11,6 +11,7 @@ import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
 import { useTicketUnavailableBoundary } from "./ticket-access-boundary";
+import { useTicketCallHistory } from "./use-ticket-call-history";
 
 /**
  * The client Ticket conversation — the same chat surface as the staff one
@@ -47,6 +48,7 @@ export function TicketClientConversation({
   repliesDisabled: boolean;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const history = useTicketCallHistory(ticketId);
   const onUnavailable = useTicketUnavailableBoundary();
   const conversation = useTicketConversationMessages({
     ticketId,
@@ -69,13 +71,15 @@ export function TicketClientConversation({
 
   return (
     <div className={styles.orderConversationSurface}>
-      <TicketCallControls ticketId={ticketId} disabled={repliesDisabled} />
       <TicketConversation
         orderChat
         clientView
+        callControls={<TicketCallControls ticketId={ticketId} disabled={repliesDisabled} />}
         sourceLabel="Ticket"
         viewerProfileId={viewerProfileId}
         messages={conversation.messages}
+        callHistory={history.entries}
+        historyControls={history.error ? <p role="status">{history.error} <button type="button" onClick={() => void history.load()}>Retry call history</button></p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
         onReply={repliesDisabled ? undefined : setReplyTo}
         canReact
         onToggleReaction={toggleReaction}

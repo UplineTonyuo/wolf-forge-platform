@@ -150,7 +150,7 @@ select is(
 -- Snapshot first: raw public.tickets is deliberately unreadable to
 -- authenticated, and this comparison is about the stored value, not the call.
 create temporary table inbox_membership_before as
-  select inbox_added_at from public.tickets where id = 'f0200000-0000-0000-0000-000000000001';
+  select added_at as inbox_added_at from private.ticket_inbox_memberships where ticket_id = 'f0200000-0000-0000-0000-000000000001' and profile_id = 'f0000000-0000-0000-0000-000000000001';
 
 set local role authenticated;
 set local "request.jwt.claim.sub" = 'f0000000-0000-0000-0000-000000000001';
@@ -158,7 +158,7 @@ select public.app_add_ticket_to_inbox('f0200000-0000-0000-0000-000000000001'); -
 reset role;
 
 select is(
-  (select inbox_added_at from public.tickets where id = 'f0200000-0000-0000-0000-000000000001'),
+  (select added_at from private.ticket_inbox_memberships where ticket_id = 'f0200000-0000-0000-0000-000000000001' and profile_id = 'f0000000-0000-0000-0000-000000000001'),
   (select inbox_added_at from inbox_membership_before),
   'a second add returns the original timestamp rather than restamping it'
 );
@@ -207,11 +207,11 @@ select throws_ok(
 );
 select is(
   (select count(*) from public.app_list_ticket_summaries(false, true) where ticket_id in ('f0200000-0000-0000-0000-000000000001', 'f0200000-0000-0000-0000-000000000002', 'f0200000-0000-0000-0000-000000000003')),
-  1::bigint,
-  'Company A sees only its own Inbox Ticket, never Company B''s'
+  0::bigint,
+  'client accounts do not have an internal personal Inbox'
 );
 select is(
-  (select message_count from public.app_list_ticket_summaries(false, true)),
+  (select message_count from public.app_list_ticket_summaries(false, false) where ticket_id = 'f0200000-0000-0000-0000-000000000001'),
   1::bigint,
   'the client-facing message_count still excludes internal notes'
 );

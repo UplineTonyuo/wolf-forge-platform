@@ -88,6 +88,7 @@ export function TicketWorkspace({
             <TicketInboxAction
               ticketId={ticket.id}
               inboxAddedAt={ticket.inbox_added_at ?? null}
+              personalInboxAddedAt={ticket.personal_inbox_added_at ?? null}
               canManage={capabilities.edit}
             />
           }
