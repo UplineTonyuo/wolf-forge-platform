@@ -58,6 +58,8 @@ describe('client manual invoice report',()=>{
     mocks.submit.mockResolvedValueOnce({ok:false,error:'Invoice balance changed; refresh before reporting payment.'});
     mountClient();fireEvent.click(screen.getByRole('button',{name:"I've paid"}));attach();fireEvent.submit(reportForm());
     await screen.findByRole('alert');expect(screen.getByRole('dialog')).toBeTruthy();
+    // The refusal alert can render before React finishes the submission transition.
+    await waitFor(()=>expect((screen.getByRole('button',{name:'Submit payment receipt'}) as HTMLButtonElement).disabled).toBe(false));
     fireEvent.submit(reportForm());await waitFor(()=>expect(mocks.submit).toHaveBeenCalledTimes(2));
     expect(mocks.fetch).toHaveBeenCalledTimes(1);expect(mocks.submit.mock.calls[1]).toEqual(mocks.submit.mock.calls[0]);
   });
