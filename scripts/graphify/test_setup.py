@@ -1,5 +1,6 @@
 """Exercise graph source and vault boundaries with synthetic files only."""
 import contextlib
+import builtins
 import hashlib
 import json
 import os
@@ -64,6 +65,37 @@ class SetupTests(unittest.TestCase):
             build['run_graphify']('query', 'synthetic')
         self.assertFalse((self.root / 'unwanted-skill-refresh').exists())
 
+    def test_cli_output_override_stays_in_source_checkout(self):
+        package = self.root / 'graphify'
+        package.mkdir()
+        (package / '__init__.py').write_text('')
+        (package / '__main__.py').write_text(
+            'import os\nfrom pathlib import Path\n'
+            'Path("chosen-output.txt").write_text(os.environ.get("GRAPHIFY_OUT", ""))\n'
+        )
+        with patch.dict(os.environ, {'PYTHONPATH': str(self.root), 'GRAPHIFY_OUT': str(self.root / 'elsewhere')}):
+            self.load('build-local.py')['run_graphify']('query', 'synthetic')
+        self.assertEqual((self.root / 'chosen-output.txt').read_text(), str(self.root / 'graphify-out'))
+
+    def test_output_is_pinned_before_first_parser_import(self):
+        subprocess.run(['git', 'init', '--quiet', str(self.root)], check=True)
+        (self.root / 'src').mkdir()
+        (self.root / 'src/example.ts').write_text('export function sample() { return 1; }')
+        original_import = builtins.__import__
+        observed = []
+
+        def observe(name, *args, **kwargs):
+            if name.startswith('graphify'):
+                observed.append(os.environ.get('GRAPHIFY_OUT'))
+            return original_import(name, *args, **kwargs)
+
+        with patch.dict(os.environ, {'GRAPHIFY_OUT': str(self.root / 'elsewhere')}):
+            build = self.load('build-local.py')
+            with patch('builtins.__import__', side_effect=observe):
+                build['corpus']()
+        self.assertTrue(observed)
+        self.assertTrue(all(value == str(self.root / 'graphify-out') for value in observed))
+
     def export(self):
         export = self.load('stage-export.py')
         trial = self.root / 'graphify-out/trial'
@@ -86,6 +118,22 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(list(self.vault.iterdir()), [])
         rows = json.loads((self.root / 'graphify-out/trial/external-files.json').read_text())
         self.assertEqual({Path(r['target']).name for r in rows}, {'GRAPH_REPORT.md', 'README.md', 'graph.html'})
+
+    def test_stale_html_is_omitted_from_preview(self):
+        export = self.export()
+        (self.root / 'graphify-out/.graph.html.stale').write_text('Visualization failed')
+        export['preview']()
+        rows = json.loads((self.root / 'graphify-out/trial/external-files.json').read_text())
+        self.assertEqual({Path(r['target']).name for r in rows}, {'GRAPH_REPORT.md', 'README.md'})
+        self.assertEqual(list(self.vault.iterdir()), [])
+
+    def test_missing_html_still_stages_markdown(self):
+        export = self.export()
+        (self.root / 'graphify-out/graph.html').unlink()
+        export['preview']()
+        rows = json.loads((self.root / 'graphify-out/trial/external-files.json').read_text())
+        self.assertEqual({Path(r['target']).name for r in rows}, {'GRAPH_REPORT.md', 'README.md'})
+        self.assertEqual(list(self.vault.iterdir()), [])
 
     def test_changed_destination_refuses_entire_copy(self):
         export = self.export()

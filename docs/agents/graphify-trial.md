@@ -28,6 +28,7 @@ git switch --detach origin/main
 if ($LASTEXITCODE -ne 0) { throw 'Detached refresh failed' }
 $env:PYTHONDONTWRITEBYTECODE = '1'
 $env:GRAPHIFY_NO_AUTO_REFRESH = '1'
+$env:GRAPHIFY_OUT = Join-Path $graphRoot 'graphify-out'
 $graphPython = Join-Path $graphRoot 'graphify-out/trial/.venv/Scripts/python.exe'
 & $graphPython -B (Join-Path $setupRoot 'scripts/graphify/build-local.py') --build
 if ($LASTEXITCODE -ne 0) { throw 'Scoped build failed' }
@@ -35,11 +36,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Scoped build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Export staging failed' }
 ```
 
-The current working directory selects the source checkout; the script location selects the setup. Only `src/`, `supabase/migrations/`, `supabase/functions/`, `scripts/` and `docs/` are eligible. Git ignore rules, sensitive paths/content, symlinks and generated directories are excluded. Source hashes and SHA are recorded and rechecked. Markdown uses structural parsing; images and semantic document interpretation are skipped. Clustering uses `--no-label`, without a model. Never substitute upstream generic rebuild, watch, semantic extraction, install, hook or cloud commands.
+The current working directory selects the source checkout; the script location selects the setup. The build forces `GRAPHIFY_OUT` to that checkout's absolute `graphify-out/` before parser imports and in its CLI child, so inherited overrides cannot redirect graph/cache writes. Only `src/`, `supabase/migrations/`, `supabase/functions/`, `scripts/` and `docs/` are eligible. Git ignore rules, sensitive paths/content, symlinks and generated directories are excluded. Source hashes and SHA are recorded and rechecked. Markdown uses structural parsing; images and semantic document interpretation are skipped. Clustering uses `--no-label`, without a model. Never substitute upstream generic rebuild, watch, semantic extraction, install, hook or cloud commands.
 
 ## Query and verify
 
-Set `$env:GRAPHIFY_NO_AUTO_REFRESH = '1'` before every CLI command; upstream otherwise may rewrite older user skills or OpenCode plugin configuration even during a query. The build script forces this setting for its child process. Run `& $graphPython -B -m graphify query "your question" --budget 1500` from the graph checkout, using the same pinned module entry point as the build. This avoids depending on a generated Windows launcher. `query`, `affected`, `path` and `explain` read its local `graphify-out/graph.json`. Every answer must be cross-checked against current source lines. A seed or file name selected after source inspection is assisted discovery, not an independent natural-language success.
+Set `$env:GRAPHIFY_NO_AUTO_REFRESH = '1'` and `$env:GRAPHIFY_OUT = Join-Path $graphRoot 'graphify-out'` before every CLI command; upstream otherwise may rewrite older user skills or OpenCode plugin configuration even during a query, or use another output directory. The build script forces both settings for its child process. Run `& $graphPython -B -m graphify query "your question" --budget 1500` from the graph checkout, using the same pinned module entry point as the build. This avoids depending on a generated Windows launcher. `query`, `affected`, `path` and `explain` read its local `graphify-out/graph.json`. Every answer must be cross-checked against current source lines. A seed or file name selected after source inspection is assisted discovery, not an independent natural-language success.
 
 The graph is a code-navigation aid. Dynamic Supabase RPC calls, framework dispatch, SQL definition history, generated types and ambiguous symbol resolution can produce omissions or misleading connections. It is not evidence of deployed database state, authorization correctness or test success. Exact string searches remain useful. Compare answer completeness and output size on real tasks; CLI timing does not measure human/agent time or token savings.
 
@@ -54,7 +55,7 @@ The staging command writes `graphify-out/trial/external-files.diff`, `external-f
 if ($LASTEXITCODE -ne 0) { throw 'Approved copy/readback failed' }
 ```
 
-Copy refuses changed staged or destination hashes and re-reads copied bytes. Unrelated files are preserved. Oversize HTML is excluded; deleting an older published HTML needs its own reviewed approval. Never copy `graph.json`, native node notes, canvas, ownership manifests, Python environments or configuration into the vault. HTML may load third-party visualization assets when opened.
+Copy refuses changed staged or destination hashes and re-reads copied bytes. Unrelated files are preserved. Missing HTML, HTML marked stale by `.graph.html.stale`, and oversize HTML are excluded from the preview; old HTML never receives a new provenance header when the generator reports it stale. Deleting an older published HTML needs its own reviewed approval. Never copy `graph.json`, native node notes, canvas, ownership manifests, Python environments or configuration into the vault. HTML may load third-party visualization assets when opened.
 
 ## Validate the setup
 

@@ -49,10 +49,11 @@ def save(name: str, value) -> None:
 
 def run_graphify(*args: str) -> None:
     subprocess.run([sys.executable, '-B', '-m', 'graphify', *args], cwd=ROOT, check=True,
-                   env={**os.environ, 'GRAPHIFY_NO_AUTO_REFRESH': '1'})
+                   env={**os.environ, 'GRAPHIFY_NO_AUTO_REFRESH': '1', 'GRAPHIFY_OUT': str(OUT)})
 
 
 def corpus():
+    os.environ['GRAPHIFY_OUT'] = str(OUT)
     from graphify.detect import _is_sensitive
     from graphify.extract import _DISPATCH
     names = sorted(set(git('ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', *SCOPES).decode('utf-8').strip('\0').split('\0')) - {''})

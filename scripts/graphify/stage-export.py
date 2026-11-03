@@ -47,10 +47,12 @@ def preview():
     readme = README_TEMPLATE.read_text(encoding='utf-8')
     (STAGE / 'README.md').write_text(header + '\n\n' + readme, encoding='utf-8')
     names = ['GRAPH_REPORT.md', 'README.md']
-    html = (f"<!-- Source commit: {meta['source_commit']} | Build date: {meta['build_date']} -->\n".encode() + (OUT / 'graph.html').read_bytes())
-    if len(html) < 10_000_000:
-        (STAGE / 'graph.html').write_bytes(html)
-        names.append('graph.html')
+    html_path = OUT / 'graph.html'
+    if html_path.is_file() and not (OUT / '.graph.html.stale').exists():
+        html = (f"<!-- Source commit: {meta['source_commit']} | Build date: {meta['build_date']} -->\n".encode() + html_path.read_bytes())
+        if len(html) < 10_000_000:
+            (STAGE / 'graph.html').write_bytes(html)
+            names.append('graph.html')
     target_dir = destination()
     manifest = []
     with (TRIAL / 'external-files.diff').open('w', encoding='utf-8', newline='\n') as patch:
