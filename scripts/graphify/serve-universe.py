@@ -119,16 +119,19 @@ def plain_bytes(path, root, limit):
 
 
 class SnapshotStore:
-    def __init__(self, graph_root, exports, renderer_dir=None):
+    def __init__(self, graph_root, exports, renderer_dir=None, notes=None):
         self.graph = Path(graph_root).resolve()
         self.exports = Path(exports).resolve()
         self.runtime = self.graph / 'graphify-out/automation'
         self.renderer_dir = Path(renderer_dir or Path(__file__).parent).resolve()
         self.renderer = runpy.run_path(str(self.renderer_dir / 'export-universe.py'))
+        self.notes = notes
         self.renderer_hash = hashlib.sha256(
             (self.renderer_dir / 'export-universe.py').read_bytes() +
-            (self.renderer_dir / 'universe.html').read_bytes()).hexdigest()
+            (self.renderer_dir / 'universe.html').read_bytes() +
+            (self.renderer_dir / 'project-context.py').read_bytes()).hexdigest()
         self.cached = None
+        self.publication = None
         self.lock = threading.Lock()
 
     def _read(self, path, root, limit):
@@ -145,31 +148,55 @@ class SnapshotStore:
             raise ValueError('Invalid published source')
         if not isinstance(export_hash, str) or not re.fullmatch('[0-9a-f]{64}', export_hash):
             raise ValueError('Invalid published HTML fingerprint')
-        version = hashlib.sha256((source + export_hash + self.renderer_hash).encode()).hexdigest()
-        if self.cached and self.cached['version'] == version:
-            return self.cached
-        html = self._read(self.exports / 'graph.html', self.exports, 10_000_000)
-        if hashlib.sha256(html).hexdigest() != export_hash or source.encode() not in html[:1000]:
-            raise ValueError('Published HTML fingerprint/provenance mismatch')
-        if b'<title>Wolf Forge Universe</title>' not in html:
-            # Bootstrap older publications in memory; never overwrite vault exports.
-            out = self.graph / 'graphify-out'
-            metadata_bytes = self._read(out / 'trial/build-metadata.json', out, 100_000)
-            graph_bytes = self._read(out / 'graph.json', out, 100_000_000)
-            metadata, graph = json.loads(metadata_bytes), json.loads(graph_bytes)
-            if metadata.get('source_commit') != source or graph.get('built_at_commit') != source:
-                raise Unavailable('Graph data is in transition')
-            html = self.renderer['render_html'](self.renderer['build_payload'](graph, metadata)).encode('utf-8')
-            if (self._read(out / 'trial/build-metadata.json', out, 100_000) != metadata_bytes
-                    or self._read(out / 'graph.json', out, 100_000_000) != graph_bytes):
-                raise Unavailable('Graph data changed during rendering')
+        base_key = hashlib.sha256((source + export_hash + self.renderer_hash).encode()).hexdigest()
+        publication = self.publication
+        if not publication or publication['key'] != base_key:
+            html = self._read(self.exports / 'graph.html', self.exports, 10_000_000)
+            if hashlib.sha256(html).hexdigest() != export_hash or source.encode() not in html[:1000]:
+                raise ValueError('Published HTML fingerprint/provenance mismatch')
+            if b'<title>Wolf Forge Universe</title>' in html:
+                payload = self.renderer['compact_payload'](html.decode('utf-8'), source)
+            else:
+                payload = self._legacy_payload(source)
+            publication = {'key':base_key,'payload':payload}
+        payload = publication['payload']
+        knowledge = self.notes.snapshot(payload['nodes']) if self.notes else None
+        context_hash = json.dumps(knowledge,sort_keys=True,separators=(',',':'))
+        version = hashlib.sha256((base_key + context_hash).encode()).hexdigest()
         if (self.runtime / 'pending.json').exists() or self._read(state_path, self.runtime, 100_000) != before:
             raise Unavailable('Publication changed during rendering')
-        if b'<html ' not in html:
-            raise ValueError('Invalid universe document')
+        self.publication = publication
+        if self.cached and self.cached['version'] == version:
+            return self.cached
+        try:
+            html = self.renderer['render_html'](payload, knowledge).encode('utf-8')
+        except ValueError as error:
+            if not knowledge or '10 MB' not in str(error):
+                raise
+            knowledge={'available':False,'status':'unavailable','notes':[],'links':[],
+                       'message':'Note metadata exceeds the view size limit; code remains available'}
+            context_hash=json.dumps(knowledge,sort_keys=True,separators=(',',':'))
+            version=hashlib.sha256((base_key+context_hash).encode()).hexdigest()
+            html=self.renderer['render_html'](payload,knowledge).encode('utf-8')
+        if (self.runtime / 'pending.json').exists() or self._read(state_path, self.runtime, 100_000) != before:
+            raise Unavailable('Publication changed during rendering')
         attributes = f'<html data-live-version="{version}" data-live-source="{source}" '.encode()
         html = html.replace(b'<html ', attributes, 1)
         return {'version': version, 'source': source, 'html': html}
+
+    def _legacy_payload(self, source):
+        # Bootstrap older publications in memory; never overwrite vault exports.
+        out = self.graph / 'graphify-out'
+        metadata_bytes = self._read(out / 'trial/build-metadata.json', out, 100_000)
+        graph_bytes = self._read(out / 'graph.json', out, 100_000_000)
+        metadata, graph = json.loads(metadata_bytes), json.loads(graph_bytes)
+        if metadata.get('source_commit') != source or graph.get('built_at_commit') != source:
+            raise Unavailable('Graph data is in transition')
+        payload = self.renderer['build_payload'](graph, metadata)
+        if (self._read(out / 'trial/build-metadata.json', out, 100_000) != metadata_bytes
+                or self._read(out / 'graph.json', out, 100_000_000) != graph_bytes):
+            raise Unavailable('Graph data changed during rendering')
+        return payload
 
     def snapshot(self):
         with self.lock:
@@ -306,7 +333,8 @@ def configured_store(config_path):
     exports = memory.parent / 'Code Graph'
     if exports.resolve() != exports.absolute():
         raise ValueError('Redirected Code Graph destination')
-    return SnapshotStore(graph, exports, program / 'scripts/graphify')
+    context = runpy.run_path(str(program / 'scripts/graphify/project-context.py'))
+    return SnapshotStore(graph, exports, program / 'scripts/graphify', notes=context['NotesIndex'](memory,vault))
 
 
 if __name__ == '__main__':

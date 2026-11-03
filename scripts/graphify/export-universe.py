@@ -11,10 +11,12 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import runpy
 import tempfile
 
 TEMPLATE = Path(__file__).with_name('universe.html')
 MAX_HTML_BYTES = 9_990_000  # Leave space for the publisher's provenance header.
+CONTEXT = runpy.run_path(str(Path(__file__).with_name('project-context.py')))
 
 
 def text(value, maximum=1000):
@@ -73,7 +75,41 @@ def build_payload(graph, metadata):
                      'version': '0.9.90', 'files': metadata['files']}, 'nodes': compact, 'edges': links}
 
 
-def render_html(payload):
+def compact_payload(html,source):
+    match=re.search(r'<script id="graph-data" type="application/json">(.*?)</script>',html,re.S)
+    if match is None:
+        raise ValueError('Missing compact graph data')
+    payload=json.loads(match[1])
+    if (not isinstance(payload,dict) or not isinstance(payload.get('meta'),dict)
+            or not isinstance(payload.get('nodes'),list) or not isinstance(payload.get('edges'),list)):
+        raise ValueError('Invalid compact payload shape')
+    meta,nodes,edges=payload['meta'],payload['nodes'],payload['edges']
+    if (meta.get('source')!=source or meta.get('version')!='0.9.90'
+            or type(meta.get('files')) is not int or meta['files']<0
+            or not isinstance(nodes,list) or not isinstance(edges,list)
+            or len(nodes)>250_000 or len(edges)>1_000_000):
+        raise ValueError('Invalid compact snapshot')
+    seen=set()
+    for node in nodes:
+        if not isinstance(node,list) or len(node)!=7:
+            raise ValueError('Invalid compact node')
+        for value in node:
+            text(value,2000)
+        if node[6] in seen or (node[1] and (node[1].startswith('/') or ':' in node[1] or '\\' in node[1] or '..' in PurePosixPath(node[1]).parts)):
+            raise ValueError('Invalid compact node path/id')
+        seen.add(node[6])
+    for edge in edges:
+        if (not isinstance(edge,list) or len(edge)!=3 or any(type(i) is not int or not 0<=i<len(nodes) for i in edge[:2])):
+            raise ValueError('Invalid compact edge')
+        text(edge[2],100)
+    meta={'source':source,'version':'0.9.90','files':meta['files'],'date':text(meta.get('date',''),100)}
+    return {'meta':meta,'nodes':nodes,'edges':edges}
+
+
+def render_html(payload,knowledge=None):
+    payload={**payload,'payments':CONTEXT['payment_indices'](payload['nodes']),
+             'knowledge':knowledge or {'available':False,'status':'unavailable','notes':[],'links':[],
+                                       'message':'Project notes are available in the live view'}}
     data = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
     for char, escaped in (('<', '\\u003c'), ('>', '\\u003e'), ('&', '\\u0026')):
         data = data.replace(char, escaped)

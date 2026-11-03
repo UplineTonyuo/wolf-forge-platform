@@ -129,6 +129,38 @@ process.stdout.write(JSON.stringify({a,again,flat,deep,many}));
         self.assertGreater(len({tuple(p) for p in value['many']}), 190)
         self.assertTrue(all(abs(p[0]) < 320 and abs(p[1]) < 320 and abs(p[2]) <= 80 for p in value['many']))
 
+    def test_note_links_accept_windows_paths_and_refuse_write_or_foreign_targets(self):
+        template=(SCRIPTS/'universe.html').read_text(encoding='utf-8')
+        function=re.search(r'function noteUri\(note\)\{.*?\n\}',template,re.S)
+        self.assertIsNotNone(function)
+        files=re.search(r'^const noteFiles=.*',template,re.M)[0]
+        heading_function=re.search(r'^function headingUri.*',template,re.M)[0]
+        program=files+'\n'+function[0]+'\n'+heading_function+r'''
+const note={file:'02 Decisions.md',uri:'obsidian://open?path='+encodeURIComponent('C:\\vault\\02 Projects\\Wolf Forge Platform\\AI Memory\\02 Decisions.md')+'&paneType=tab'};
+const good=noteUri(note);
+const write=noteUri({...note,uri:note.uri+'&append=true'});
+const foreign=noteUri({...note,uri:'obsidian://open?path='+encodeURIComponent('C:\\other\\02 Decisions.md')+'&paneType=tab'});
+const action=noteUri({...note,uri:note.uri.replace('obsidian://open','obsidian://new')});
+const heading=headingUri(note,'Wallet & invoice');
+process.stdout.write(JSON.stringify({good,write,foreign,action,heading}));
+'''
+        node=shutil.which('node') or str(Path('C:/Program Files/nodejs/node.exe'))
+        value=json.loads(subprocess.run([node,'-e',program],text=True,capture_output=True,check=True).stdout)
+        self.assertTrue(value['good'].startswith('obsidian://open?'))
+        self.assertEqual([value['write'],value['foreign'],value['action']],['','',''])
+        self.assertIn('%23Wallet%20%26%20invoice',value['heading'])
+
+    def test_compact_payload_rejects_bad_shapes_and_unsafe_nodes(self):
+        for mutation in ('meta','top','path','edge'):
+            data=self.api['build_payload'](self.graph,self.meta)
+            if mutation=='meta': data['meta']=[]
+            if mutation=='top': data=[]
+            if mutation=='path': data['nodes'][0][1]='\\\\server/private.ts'
+            if mutation=='edge': data['edges'][0][1]=999
+            html='<script id="graph-data" type="application/json">'+json.dumps(data)+'</script>'
+            with self.subTest(mutation=mutation),self.assertRaises(ValueError):
+                self.api['compact_payload'](html,SHA)
+
     def test_pinned_graphify_null_location_is_an_unknown_source_line(self):
         self.graph['nodes'][0]['source_location'] = None
         data = self.api['build_payload'](self.graph, self.meta)

@@ -84,6 +84,48 @@ class LiveViewTests(unittest.TestCase):
         with self.assertRaises(self.api['Unavailable']):
             self.store.snapshot()
 
+    def test_note_metadata_updates_live_version_without_changing_publication(self):
+        context=runpy.run_path(str(SCRIPTS/'project-context.py'))
+        vault=self.root.resolve()/'vault'
+        memory=vault/'02 Projects/Wolf Forge Platform/AI Memory'
+        memory.mkdir(parents=True)
+        for name in context['NOTE_FILES']:
+            (memory/name).write_text('# Project\n## Payments\nprivate paragraph',encoding='utf-8')
+        index=context['NotesIndex'](memory,vault)
+        store=self.api['SnapshotStore'](self.graph,self.exports,SCRIPTS,notes=index)
+        before=store.version()
+        (self.runtime/'pending.json').write_text('{}')
+        (memory/context['NOTE_FILES'][0]).write_text('# Changed title\n## Wallet\n',encoding='utf-8')
+        self.assertEqual(store.version()['version'],before['version'])
+        (self.runtime/'pending.json').unlink()
+        after=store.version()
+        self.assertNotEqual(before['version'],after['version'])
+        self.assertEqual(before['source'],after['source'])
+        self.assertIn(b'Changed title',store.snapshot()[0]['html'])
+
+    def test_modern_export_is_rerendered_with_current_program_and_inert_notes(self):
+        self.publish(OLD)
+        class Notes:
+            def snapshot(self,_nodes):
+                return {'available':True,'status':'ready','notes':[{'title':'</script><img src=x onerror=alert(1)>'}],'links':[]}
+        store=self.api['SnapshotStore'](self.graph,self.exports,SCRIPTS,notes=Notes())
+        html=store.snapshot()[0]['html']
+        self.assertIn(b'\\u003c/script\\u003e',html)
+        self.assertNotIn(b'<img src=x',html)
+        self.assertIn(b'data-default-layout="wolf"',html)
+
+    def test_optional_note_metadata_does_not_make_a_large_code_view_unavailable(self):
+        class Notes:
+            def snapshot(self,_nodes):
+                return {'available':True,'notes':[{'title':'X'*10000}],'links':[]}
+        store=self.api['SnapshotStore'](self.graph,self.exports,SCRIPTS,notes=Notes())
+        payload=store._legacy_payload(OLD)
+        size=len(store.renderer['render_html'](payload).encode())
+        store.renderer['render_html'].__globals__['MAX_HTML_BYTES']=size+500
+        html=store.snapshot()[0]['html']
+        self.assertIn(OLD.encode(),html)
+        self.assertNotIn(b'X'*1000,html)
+
     def start_server(self):
         server = self.api['make_server'](self.store, 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
