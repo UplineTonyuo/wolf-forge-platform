@@ -34,9 +34,9 @@ Interfaces:payment_indices(compact_nodes)->list[int]; NotesIndex(memory,vault).s
 Files: universe.html, scoped guide/spec/plan and existing viewer tests.
 - [x] Add All/Payments, note diamonds/source filter, distinct note counts, note inspector/headings/mentions and exact Open in Obsidian links. Keep layout/focus independent.
 - [x] Verify real data, focus/code/test/note navigation, URI targets and seven widths; live note-refresh proof follows installation with the authorised steward update.
-- [ ] One fresh source review; fix material findings with regressions; scan/commit/push same PR.
-- [ ] Back up eight-file runtime/config and protected hashes, install/read back tasks/program/live view. Preserve exports/environment.
-- [ ] Narrowly update/re-read Current State/Implementation Log; propose Decisions/Security evidence in PR; save handoff.
+- [x] One fresh source review; fix material findings with regressions; scan/commit/push same PR.
+- [x] Back up prior runtime/config and protected hashes, install/read back the eight-file program/tasks/live view. Preserve exports/environment.
+- [x] Narrowly update/re-read Current State/Implementation Log; propose Decisions/Security evidence in PR; save handoff.
 
 ## Ledger
 
@@ -48,3 +48,5 @@ RED: eight context tests failed for the missing module; live metadata tests fail
 Final review returned two P2 findings: unbounded note read during concurrent growth, and search Escape stopping the panel reset. Both accepted and fixed in one pass. Bounded-growth test watched fail before the MAX_BYTES+1 read fix; search-focused Escape reproduced then passed in browser. Final focused suite71/71passes. Additional RED→GREEN cases cover long Markdown fences, malformed compact payloads and percent-encoded heading URIs. Browser also verifies note→code reference,78Payments test symbols, test search/selection, no-results recovery, All restoring11,920code symbols and Payments surviving Galaxy/Wolf switches. Long24-heading inspector checked at320/360/390/430/768/1280/1440px without page overflow; mobile screenshot inspected. No browser errors captured. No new review loop or unrelated product changes.
 
 Live post-save check: note metadata version changed automatically while code source stayededdede8, without browser reload. Readback found one180-character capped historical heading; a watched failing truncation test then fixed its link to open the original file instead of a false heading target.71tests pass after that guard. Installation startup readback also observed the viewer's duplicate one-minute trigger recording0x800710E0 exactly one minute after the healthy pythonw process started. Removed the redundant once trigger; viewer retains sign-in startup plus immediate installer start. Primary five-minute task is unchanged. Final saved task/URI guard readback follows this commit.
+
+Final installed revisiona6fe575: all eight fingerprints verified; viewerRunning/result267009, oneMSFT_TaskLogonTrigger, no wake/unlimited/restart3; maintenanceReady/result0. Exact shortened-heading fallback verified against the real Current State note, with tooltip/ellipsis. Native Payments view verifies784code/4notes; canonical graph/export/checkpoint stayeddede8 while Vercel waits. Current State revision reconciled and Implementation Log appended; both saved notes reread, original log prefix and unrelated content preserved. The prior760b927program/config backup is intact. Temporary9141preview stopped; native9137retained. No actual reboot, Obsidian protocol launch, main merge or new real-merge publication claimed. Source lane remains for review.
