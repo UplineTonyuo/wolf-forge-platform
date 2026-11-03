@@ -36,6 +36,18 @@ describe("invitation service", () => {
     expect(await readTicketCalls(client, { action: "summary", month: "2026-10-01" })).toEqual({ made: 4, answered: 2, missed: 1, connectedSeconds: 123 });
     expect(rpc).toHaveBeenCalledWith("app_ticket_call_owner_summary", { p_month: "2026-10-01" });
   });
+  it("reads the current actor's call without letting the browser choose an actor", async () => {
+    const current = { enabled: false, profileId: id, accountClass: "client", call: null, peer: null, ticketId: null };
+    rpc.mockResolvedValue({ data: current, error: null });
+    expect(await readTicketCalls(client, { action: "current", ticket_id: id })).toEqual(current);
+    expect(rpc).toHaveBeenCalledWith("app_ticket_call_current", { p_ticket_id: id, p_call_id: undefined });
+    await expect(readTicketCalls(client, { action: "current", profile_id: id })).rejects.toThrow();
+  });
+  it("refuses malformed or over-broad current-call projections", async () => {
+    rpc.mockResolvedValue({ data: { enabled: true, profileId: id, accountClass: "client", call: null, peer: null, ticketId: null, token: "not-media" }, error: null });
+    await expect(readTicketCalls(client, { action: "current" })).rejects.toThrow();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
   it("requires a complete keyset cursor", async () => {
     await expect(readTicketCalls(client, { action: "history", ticket_id: id, before: "2026-10-01T00:00:00Z" })).rejects.toThrow();
     expect(rpc).not.toHaveBeenCalled();

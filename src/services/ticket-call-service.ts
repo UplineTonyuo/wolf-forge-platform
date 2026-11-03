@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { callMutation, callRead, callOwnerSummary, ticketCall } from "../domain/tickets/calls";
+import { callAvailability, callMutation, callRead, callOwnerSummary, ticketCall } from "../domain/tickets/calls";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { UserScopedClient } from "../lib/supabase/user-client";
 
@@ -35,6 +35,9 @@ export async function mutateTicketCall(client: UserScopedClient, value: unknown)
 export async function readTicketCalls(client: UserScopedClient, value: unknown) {
   const input = callRead.parse(value);
   const rpc = client as unknown as CallRpc;
+  if (input.action === "current") {
+    return callAvailability.parse(await callRpc(rpc, "app_ticket_call_current", { p_ticket_id: input.ticket_id, p_call_id: input.call_id }));
+  }
   return input.action === "history"
     ? z.array(ticketCall).max(50).parse(await callRpc(rpc, "app_ticket_call_history", {
       p_ticket_id: input.ticket_id, p_before: input.before, p_before_id: input.before_id,

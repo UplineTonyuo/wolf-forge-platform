@@ -15,6 +15,14 @@ export const ticketCall = z.object({
 });
 export type TicketCall = z.infer<typeof ticketCall>;
 
+export const callAvailability = z.object({
+  enabled: z.boolean(), profileId: id, accountClass: z.enum(["internal", "client"]),
+  call: ticketCall.nullable(), ticketId: id.nullable(),
+  peer: z.object({ name: z.string().min(1).max(200), avatarUrl: z.string().max(2048).nullable() }).strict().nullable(),
+}).strict().refine(value => !value.call ||
+  ((value.profileId === value.call.callerId || value.profileId === value.call.calleeId) && value.ticketId === value.call.ticketId));
+export type CallAvailability = z.infer<typeof callAvailability>;
+
 export const callRequest = z.object({
   action: z.literal("request"), ticket_id: id, request_id: id, device_id: id,
   mode: z.enum(["audio", "video"]),
@@ -29,6 +37,8 @@ export const callSettings = z.object({
 }).strict();
 export const callMutation = z.union([callRequest, callCommand, callSettings]);
 export const callRead = z.union([
+  z.object({ action: z.literal("current"), ticket_id: id.optional(), call_id: id.optional() }).strict()
+    .refine(value => !value.ticket_id || !value.call_id),
   z.object({ action: z.literal("history"), ticket_id: id, before: z.iso.datetime({ offset: true }).optional(), before_id: id.optional() })
     .strict().refine(value => (value.before === undefined) === (value.before_id === undefined)),
   z.object({ action: z.literal("summary"), month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-01$/) }).strict(),
