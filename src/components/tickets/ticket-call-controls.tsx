@@ -1,0 +1,32 @@
+"use client";
+import { Mic,Video } from "lucide-react";
+import { useEffect,useState,useSyncExternalStore } from "react";
+import { useInboxCalls } from "../calls/call-provider";
+import { CallNotifications } from "../calls/call-notifications";
+import { CallPrepare } from "../calls/call-prepare";
+import styles from "../calls/calls.module.css";
+export function TicketCallControls({ticketId,disabled=false}:{ticketId:string;disabled?:boolean}){
+ const controller=useInboxCalls();
+ return controller?<Controls key={ticketId} ticketId={ticketId} disabled={disabled}/>:null;
+}
+function Controls({ticketId,disabled}:{ticketId:string;disabled:boolean}){
+ const controller=useInboxCalls()!;const state=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
+ const [enabled,setEnabled]=useState(false);
+ const [preparing,setPreparing]=useState<"audio"|"video"|null>(null);
+ useEffect(()=>{
+  let stopped=false;let last=0;let liveEnabled=true;
+  const check=async()=>{if(Date.now()-last<5000)return;last=Date.now();const data=await controller.refresh({ticket_id:ticketId});if(!stopped&&data){liveEnabled=data.enabled;setEnabled(liveEnabled);}};
+  void check();const live=(event:Event)=>{if(liveEnabled&&(event as CustomEvent).detail===ticketId)void check();};
+  const recover=()=>{if(document.visibilityState==="visible"){last=0;void check();}};
+  window.addEventListener("wolf-forge-ticket-live",live);window.addEventListener("online",recover);document.addEventListener("visibilitychange",recover);
+  return()=>{stopped=true;window.removeEventListener("wolf-forge-ticket-live",live);window.removeEventListener("online",recover);document.removeEventListener("visibilitychange",recover);};
+ },[controller,ticketId]);
+ if(!enabled)return null;
+ const active=state.call&&state.call.state!=="ended";
+ if(active&&preparing)setPreparing(null);
+ return <div className={styles.controlsBar} aria-label="Conversation calls">
+  {active?<button type="button" onClick={()=>controller.minimize(false)}>Open current call</button>:<><button type="button" disabled={disabled||state.busy} onClick={()=>setPreparing("audio")}><Mic aria-hidden="true"/>Voice call</button><button type="button" disabled={disabled||state.busy} onClick={()=>setPreparing("video")}><Video aria-hidden="true"/>Video call</button></>}
+  {preparing&&!active?<CallPrepare ticketId={ticketId} mode={preparing} controller={controller} onClose={()=>setPreparing(null)}/>:null}
+  <CallNotifications/>{state.error&&!state.call?<p role="alert">{state.error}</p>:null}
+ </div>;
+}

@@ -6,6 +6,7 @@ import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import type { TeamConversationView } from "../../domain/team/projections";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketComposer } from "./ticket-composer";
+import { TicketCallControls } from "./ticket-call-controls";
 import { TicketConversation } from "./ticket-conversation";
 import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
@@ -77,6 +78,7 @@ export function TicketAdminConversation({
 
   return (
     <div className={`${styles.orderConversationSurface} ${styles.ticketAdminSurface} ticket-admin-surface-marker`}>
+      <TicketCallControls ticketId={ticketId} disabled={!canReply || repliesDisabled} />
       <TicketConversation
         orderChat
         viewerProfileId={viewerProfileId}

@@ -5,6 +5,7 @@ import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { toggleClientTicketMessageReactionAction } from "../../app/actions/tickets";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { TicketComposer } from "./ticket-composer";
+import { TicketCallControls } from "./ticket-call-controls";
 import { TicketConversation } from "./ticket-conversation";
 import styles from "./tickets.module.css";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
@@ -68,6 +69,7 @@ export function TicketClientConversation({
 
   return (
     <div className={styles.orderConversationSurface}>
+      <TicketCallControls ticketId={ticketId} disabled={repliesDisabled} />
       <TicketConversation
         orderChat
         clientView

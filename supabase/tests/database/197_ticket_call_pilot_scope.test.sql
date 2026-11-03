@@ -1,0 +1,34 @@
+begin;
+select no_plan();
+\ir ../fixtures/ticket_calls.inc
+
+select is((select pilot_profile_ids from private.ticket_call_environment),null::uuid[],'pilot defaults preserve the existing OFF rollout');
+select ok(private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001703','e1700000-0000-4000-8000-000000001701'),'ordinary eligible owner before a pilot restriction');
+update private.ticket_call_environment set pilot_profile_ids=array['20000000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001704']::uuid[];
+select ok(private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001701','e1700000-0000-4000-8000-000000001701'),'pilot client retains own Ticket scope');
+select ok(private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001704','e1700000-0000-4000-8000-000000001701'),'selected pilot team member retains scope');
+select ok(not private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001703','e1700000-0000-4000-8000-000000001701'),'another owner is excluded despite normal Ticket authority');
+select ok(not private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001705','e1700000-0000-4000-8000-000000001702'),'other team members are excluded');
+select ok(not private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001701','e1700000-0000-4000-8000-000000001703'),'pilot does not grant another client Ticket');
+select ok(not has_table_privilege('authenticated','private.ticket_call_environment','update'),'browser cannot change the pilot');
+select ok(not has_table_privilege('service_role','private.ticket_call_environment','update'),'service API cannot change the pilot');
+select set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000001703","role":"authenticated","session_id":"33000000-0000-4000-8000-000000001703"}',true);
+select set_config('request.headers','{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001701"}',true);
+set local role authenticated;
+select throws_ok($q$select public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701','71000000-0000-4000-8000-000000001971','72000000-0000-4000-8000-000000001971','video')$q$,'42501','Call unavailable','excluded owner cannot bypass the UI using the request RPC');
+reset role;
+select is((select count(*) from private.ticket_calls),0::bigint,'excluded caller creates no call or invitation');
+select set_config('request.jwt.claims','{"sub":"20000000-0000-4000-8000-000000001701","role":"authenticated","session_id":"33000000-0000-4000-8000-000000001701"}',true);
+set local role authenticated;
+select is(public.app_request_ticket_call('e1700000-0000-4000-8000-000000001701','71000000-0000-4000-8000-000000001972','72000000-0000-4000-8000-000000001972','video')->>'state','ringing','both allowed parties can create the invitation');
+reset role;
+update private.ticket_call_environment set pilot_profile_ids=array['20000000-0000-4000-8000-000000001701']::uuid[];
+select is(private.process_ticket_call_deadlines(),1,'withdrawing a participant terminates an existing invitation');
+select is((select reason from private.ticket_calls where request_id='71000000-0000-4000-8000-000000001972'),'authority_revoked','withdrawal records the real authority reason');
+select is((select count(*) from private.ticket_call_claims),0::bigint,'no-provider withdrawal releases both busy claims');
+update private.ticket_call_environment set pilot_profile_ids='{}';
+select ok(not private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001701','e1700000-0000-4000-8000-000000001701'),'empty pilot list refuses every participant');
+update private.ticket_call_environment set pilot_profile_ids=null;
+select ok(private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001703','e1700000-0000-4000-8000-000000001701'),'operator can restore ordinary eligibility after the pilot');
+select * from finish();
+rollback;

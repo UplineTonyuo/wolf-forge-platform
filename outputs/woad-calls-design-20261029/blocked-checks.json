@@ -1,0 +1,9 @@
+{
+    "At":  "2026-10-29T02:42:10.1278142+08:00",
+    "FreeRamGiB":  2.72,
+    "RequiredGiB":  5.5,
+    "ProductionBuild":  "BLOCKED: existing memory guard",
+    "DatabaseTests":  "BLOCKED: test:db invokes Docker-backed local Supabase; Docker prohibited",
+    "BuildLaunched":  false,
+    "DatabaseCommandInvoked":  false
+}

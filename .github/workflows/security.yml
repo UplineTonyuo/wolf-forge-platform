@@ -22,6 +22,7 @@ jobs:
   typecheck:
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -36,6 +37,7 @@ jobs:
   lint:
     name: static lint boundary
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -70,6 +72,7 @@ jobs:
   tests:
     name: JavaScript and TypeScript tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -109,10 +112,15 @@ jobs:
       - name: real manual invoice receipts, public links and concurrent settlement
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node scripts/qa/check-invoice-manual-payments-rest.mjs
+      # The calling races commit synthetic Auth prerequisites across physical
+      # connections. Keep them after REST probes that require an empty database.
+      - name: overlapping calling transactions
+        run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
     name: production dependency vulnerabilities
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -126,6 +134,7 @@ jobs:
   secrets:
     name: repository and history secret scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:

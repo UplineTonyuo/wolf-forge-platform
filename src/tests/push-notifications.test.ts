@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 import { allowedPushEndpoint, clientPushAvailable } from "../domain/notifications/push";
-import { dispatchClientPush, validPushEndpoint } from "../../supabase/functions/studio-web-push/handler";
+import { dispatchClientPush, dispatchCallPush, validPushEndpoint } from "../../supabase/functions/studio-web-push/handler";
 
 const project = "https://rsnmlcyopnxucwgfttyf.supabase.co";
 const productionProject = "https://jwynqsyirgenqlmkooah.supabase.co";
@@ -39,6 +39,16 @@ function dispatcherFixture(target = endpoint, backend = project, origin = studio
 }
 
 describe("background dispatch", () => {
+  it.each([1,40])("call delivery uses only remaining ring TTL %s and high urgency",async ttl=>{
+    const f=dispatcherFixture();f.rpc.mockImplementation(async name=>({data:name==="app_get_studio_push_dispatch_settings"?{projectUrl:project,origin:studioOrigin,publicKey:"public",privateKey:"private"}:name==="app_claim_ticket_call_push_deliveries"?[{id:"delivery",attemptId:"attempt",endpoint,ttl}]:true,error:null}));
+    expect(await dispatchCallPush(f.rpc,f.details,f.send,project)).toEqual({accepted:1,refused:false});
+    expect(f.details).toHaveBeenCalledWith({endpoint},null,expect.objectContaining({TTL:ttl,urgency:"high"}));
+    expect(f.rpc).toHaveBeenLastCalledWith("app_finish_ticket_call_push_delivery",expect.objectContaining({p_outcome:"accepted"}));
+  });
+  it("refuses an expired ring delivery without sending it",async()=>{
+    const f=dispatcherFixture();f.rpc.mockImplementation(async name=>({data:name==="app_get_studio_push_dispatch_settings"?{projectUrl:project,origin:studioOrigin,publicKey:"public",privateKey:"private"}:name==="app_claim_ticket_call_push_deliveries"?[{id:"delivery",attemptId:"attempt",endpoint,ttl:0}]:true,error:null}));
+    expect((await dispatchCallPush(f.rpc,f.details,f.send,project)).accepted).toBe(0);expect(f.send).not.toHaveBeenCalled();
+  });
   it("sends no content, forbids redirects and binds the result to its durable attempt", async () => {
     const f = dispatcherFixture();
     expect(await dispatchClientPush(f.rpc, f.details, f.send, project)).toEqual({ accepted: 1, refused: false });

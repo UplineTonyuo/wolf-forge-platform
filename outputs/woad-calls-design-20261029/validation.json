@@ -1,0 +1,15 @@
+{
+    "At":  "2026-10-29T02:34:42.4734531+08:00",
+    "NpmCi":  0,
+    "Typegen":  0,
+    "Typecheck":  0,
+    "Lint":  0,
+    "Vitest":  0,
+    "GeneratedSourceRestored":  true,
+    "TestedMergeTree":  "c71cf3e7ff485f9dc29787e79c8d9a52ad3fd635",
+    "TestFiles":  298,
+    "Tests":  3744,
+    "DependencyAudit":  0,
+    "TrackedSecretScan":  0,
+    "SourceRestoreGitDiffClean":  true
+}

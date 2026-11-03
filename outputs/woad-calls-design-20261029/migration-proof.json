@@ -1,0 +1,16 @@
+{
+    "MainSha":  "205214bae3a965384e1974bcd64915911ea1eefe",
+    "CallMigration":  "20261026123450_ticket_live_calls.sql",
+    "MigrationCountMain":  183,
+    "LatestMain":  "20261028123000_purchase_intake_internal_notifications.sql",
+    "LaterMigrations":  [
+                            "20261027120000_drawn_form_signatures.sql",
+                            "20261027123000_client_order_start.sql",
+                            "20261027123100_order_start_retry_job.sql",
+                            "20261027130000_form_submission_pdf_receipts.sql",
+                            "20261028123000_purchase_intake_internal_notifications.sql"
+                        ],
+    "TimestampCollisions":  0,
+    "SortsAfterAllMain":  false,
+    "DatabaseConnections":  0
+}

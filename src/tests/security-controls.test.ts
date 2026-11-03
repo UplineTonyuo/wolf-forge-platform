@@ -84,6 +84,18 @@ describe("security response headers (C1)", () => {
     expect(rules[1]?.source).toBe("/share/invoices/:path*");
   });
 
+  it("delegates call media only to this workspace on Daily primary and failover domains", () => {
+    const environment = { ...productionEnvironment, dailyCalls: true };
+    const permissions = headerValue(buildSecurityHeaders(environment), "Permissions-Policy");
+    const origins = ["https://wolfforge.daily.co", "https://wolfforge.dailywebrtc.com", "https://wolfforge.dailywebrtc.net"];
+    const allowlist = origins.map((origin) => `"${origin}"`).join(" ");
+    expect(permissions).toContain(`camera=(self ${allowlist})`);
+    expect(permissions).toContain(`microphone=(self ${allowlist})`);
+    expect(permissions).not.toContain("*");
+    expect(buildReportOnlyContentSecurityPolicy(environment)).toContain(`frame-src 'self' ${origins.join(" ")}`);
+    expect(headerValue(buildSecurityHeaders(productionEnvironment), "Permissions-Policy")).not.toContain("daily");
+  });
+
   it("enforces only the CSP directives that cannot break rendering", () => {
     // Framing, plugins, <base> hijacking and form exfiltration are independent
     // of how Next emits scripts and styles, so enforcing them is always safe.

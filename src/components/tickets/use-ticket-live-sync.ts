@@ -167,6 +167,9 @@ export function useTicketLiveSync({
         } else if (payload?.ok && payload.data) {
           scheduleState.current.failures = 0;
           const data = payload.data;
+          if (!projectId && data.ticketId === conversationId && data.orderId === undefined) {
+            window.dispatchEvent(new CustomEvent("wolf-forge-ticket-live", { detail: conversationId }));
+          }
           /*
            * The id check is the cross-Ticket guard. A response that resolved
            * after the viewer moved on belongs to a conversation that is no

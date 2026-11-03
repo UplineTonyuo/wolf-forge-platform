@@ -93,5 +93,5 @@ export function isAccountPath(path: string): boolean {
  */
 export function safeAccountNextPath(value: unknown): string {
   const path = safeNextPath(value, DEFAULT_ACCOUNT_NEXT_PATH);
-  return isAccountPath(path) ? path : DEFAULT_ACCOUNT_NEXT_PATH;
+  return isAccountPath(path) || /^\/calls\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(path) ? path : DEFAULT_ACCOUNT_NEXT_PATH;
 }

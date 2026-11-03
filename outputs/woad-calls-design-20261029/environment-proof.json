@@ -1,0 +1,19 @@
+{
+    "At":  "2026-10-29T02:29:08.2483622+08:00",
+    "StudioRef":  "rsnmlcyopnxucwgfttyf",
+    "ProductionRefDifferent":  true,
+    "StudioEvidence":  "src/domain/notifications/push.ts; ../Build-WoadCalls-20261026.ps1; ../Start-WoadCallsQa-20261026.ps1",
+    "BuildEnvFiles":  [
+
+                      ],
+    "InheritedSupabaseUrlPresent":  false,
+    "CredentialProof":  {
+                            "Location":  "C:\\Users\\TrojanNiAnton\\Documents\\Codex\\2026-10-20\\continue-the-wolf-forge-spp-project\\work\\pwa-preview-private\\synthetic-identities.dpapi",
+                            "Exists":  true,
+                            "DecryptableJson":  true,
+                            "HasSyntheticDomain":  true,
+                            "HasTeamEntry":  true,
+                            "HasClientEntry":  true
+                        },
+    "PushEvidence":  "public/push-sw.js; src/lib/notifications/push-server.ts; supabase/migrations/20261020110724_studio_web_push_notifications.sql; supabase/migrations/20261022151319_production_web_push.sql; supabase/functions/studio-web-push/handler.ts"
+}

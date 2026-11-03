@@ -16,6 +16,9 @@ it("creates a nonblank task, preserves the request on failure, and refreshes aft
   fireEvent.click(screen.getByRole("button", { name: "Add task" }));
   expect((await screen.findByRole("alert")).textContent).toBe("Try again");
   expect((input as HTMLInputElement).value).toBe("  Review delivery  ");
+  // The error may paint before React finishes the transition. A real user can
+  // retry only after the submit button is enabled again.
+  await waitFor(() => expect((screen.getByRole("button", { name: "Add task" }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole("button", { name: "Add task" }));
   await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
   expect(mocks.manage.mock.calls[0]).toEqual(mocks.manage.mock.calls[1]);
