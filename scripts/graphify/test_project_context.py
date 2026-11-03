@@ -94,6 +94,10 @@ class ContextTests(unittest.TestCase):
         self.assertNotEqual(before,after)
         self.assertEqual(len(after['notes'][0]['sections']),24)
         self.assertEqual(after['notes'][0]['section_count'],40)
+        p.write_text('# Brain\n## Wallet '+('X'*200)+'\n',encoding='utf-8')
+        section=self.index.snapshot(self.nodes)['notes'][0]['sections'][0]
+        self.assertEqual(len(section['title']),180)
+        self.assertTrue(section['truncated'])
 
     def test_file_references_are_capped_per_note(self):
         paths=['src/payments/file'+str(i)+'.ts' for i in range(45)]

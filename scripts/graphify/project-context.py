@@ -68,7 +68,7 @@ def parse_note(text,name):
             label=clean_title(heading[2])
             if len(heading[1])==1 and title==name[:-3]:
                 title=label
-            section={'title':label,'line':number,'paths':[]}
+            section={'title':label,'line':number,'paths':[],'truncated':label!=heading[2].strip()}
         for mention in re.findall(r'`([^`\r\n]{1,260})`',line):
             path=repo_path(mention)
             if path and path not in section['paths']:
@@ -77,7 +77,7 @@ def parse_note(text,name):
     matched=[s for s in sections if PAYMENT.search(s['title']) or any(PAYMENT.search(p) for p in s['paths'])]
     selected=matched[:24]
     references=list(dict.fromkeys(p for section in selected for p in section['paths']))
-    headings=[{'title':section['title'],'line':section['line']} for section in selected]
+    headings=[{'title':section['title'],'line':section['line'],'truncated':section.get('truncated',False)} for section in selected]
     return {'title':clean_title(title),'sections':headings,'paths':references[:30],
             'reference_count':len(references),'section_count':len(matched),'payment':bool(matched)}
 

@@ -190,7 +190,7 @@ function renderNoteInspector(node){
   if(note.modified)body.append(element('p','note-meta','Note modified '+new Date(note.modified).toLocaleString()));
   body.append(element('h3','connections-title','Payment sections'));
   const list=element('ul','note-headings');
-  for(const section of note.sections){const item=element('li','');const target=headingUri(note,String(section.title));if(target){const link=element('a','',String(section.title));link.href=target;item.append(link,element('small','',' · line '+String(section.line)));}else item.textContent=String(section.title)+' · line '+String(section.line);list.append(item);}
+  for(const section of note.sections){const item=element('li','');const target=section.truncated?noteUri(note):headingUri(note,String(section.title));const label=String(section.title)+(section.truncated?'…':'');if(target){const link=element('a','',label);link.href=target;if(section.truncated)link.title='Shortened heading; opens the original note';item.append(link,element('small','',' · line '+String(section.line)));}else item.textContent=label+' · line '+String(section.line);list.append(item);}
   body.append(list);
   if((note.section_count||0)>note.sections.length)body.append(element('p','note-meta',number(note.sections.length)+' of '+number(note.section_count)+' matching headings shown. Open the original note for all sections.'));
   body.append(element('h3','connections-title','Explicit file references'));
