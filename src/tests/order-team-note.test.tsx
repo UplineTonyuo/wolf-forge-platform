@@ -45,7 +45,9 @@ describe("team note editor", () => {
     view.rerender(<OrderTeamNote orderId="one" note="Refreshed saved note" canEdit />);
     expect(screen.getByRole("textbox")).toHaveValue("Draft note");
     fireEvent.click(screen.getByRole("button", { name: "Save" })); await screen.findByRole("alert"); expect(screen.getByRole("textbox")).toHaveValue("Draft note");
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" })); expect(screen.getByText("Refreshed saved note")).toBeVisible();
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancel).toBeEnabled());
+    fireEvent.click(cancel); expect(screen.getByText("Refreshed saved note")).toBeVisible();
   });
   it("supports clearing a note", async () => {
     mocks.save.mockResolvedValue({ ok: true, notes: null }); render(<OrderTeamNote orderId="one" note="Saved" canEdit />); edit("");
