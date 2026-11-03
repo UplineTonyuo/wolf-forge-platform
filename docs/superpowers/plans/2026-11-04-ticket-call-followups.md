@@ -64,3 +64,14 @@
 - [x] Prepare the local-only checkpoint handoff and steward proposal. Canonical notes remain read-only; no push, deployment, hosted migration, pilot expansion or real-user activity.
 - [ ] Execute isolated SQL/RLS/concurrency and actual Realtime/SSE acceptance once the missing target/identity/session/runner prerequisites are explicitly available.
 - [ ] Owner browser and real two-person media acceptance, followed by separately authorized rollout.
+
+### CI continuation — 2026-11-04
+
+- User now authorizes GitHub CI validation. Keep this existing worktree/branch; no production rollout, hosted databases, local Docker, or real-user activity.
+- Billing preflight: authenticated account Free; November Actions usage 763 Linux minutes, fully discounted, net $0. One standard-Linux workflow has a maximum 110 runner-minutes ($0.66 before included credit); no paid runner or new artifact upload.
+- [x] Reproduce missing Vercel exclusion and add this exact branch to `git.deploymentEnabled: false`, preserving existing rules/crons. Guard check now passes.
+- [x] Add optional manual CI acceptance: real synthetic password sessions/cookies, compiled Next route, private Realtime wake, authoritative read, reconnect/lifecycle, revoked-session denial and disconnect cleanup. Runtime refuses execution outside disposable GitHub Linux; local negative guard check refuses before any backend access. No Daily media endpoint or provider credential is used.
+- [ ] Fresh review, static checks, feature-only push and one manual workflow dispatch with `call_acceptance=true`; record exact run/SHA and each job result. No main merge or Vercel promotion.
+- [ ] Resolve verified CI failures and rerun only the failed jobs as appropriate. SQL/RLS/concurrency/build and transport remain pending until actual runner evidence passes.
+- [ ] User browser/two-device media and OS delivery acceptance remain separate. Canonical notes stay read-only; prepare a steward proposal outside the vault.
+- Fresh CI-harness review: corrected a nonexistent provider-room relation before execution; provider state lives on `private.ticket_calls`. Reproduced a false-positive lifecycle assertion (401 counted as an ended call); the new regression failed, then passed after requiring HTTP 200, `ok=true`, and explicit `call=null`. Review reported no other Important/Critical or minor finding.
