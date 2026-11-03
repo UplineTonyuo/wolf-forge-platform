@@ -172,13 +172,12 @@ Write-Output "Registered and read back: $taskName; every 5 minutes and at sign-i
 $viewerArguments = '-I -B "' + $viewerRunner + '" --config "' + $configPath + '"'
 $viewerAction = New-ScheduledTaskAction -Execute $pythonw -Argument $viewerArguments -WorkingDirectory $graph
 $viewerSettings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden
-$viewerOnce = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
-Register-ScheduledTask -TaskName $viewerName -Description $viewerDescription -Action $viewerAction -Trigger @($viewerOnce,$logon) -Principal $principal -Settings $viewerSettings -Force | Out-Null
+Register-ScheduledTask -TaskName $viewerName -Description $viewerDescription -Action $viewerAction -Trigger $logon -Principal $principal -Settings $viewerSettings -Force | Out-Null
 $savedViewer = Get-ScheduledTask -TaskName $viewerName
 if ($savedViewer.Actions.Execute -cne $pythonw -or $savedViewer.Actions.Arguments -cne $viewerArguments -or
     $savedViewer.Settings.WakeToRun -or [int]$savedViewer.Principal.RunLevel -ne 0 -or
     [int]$savedViewer.Principal.LogonType -ne 3 -or $savedViewer.Settings.ExecutionTimeLimit -ne 'PT0S' -or
-    @($savedViewer.Triggers).Count -ne 2 -or $savedViewer.Settings.RestartCount -ne 3) {
+    @($savedViewer.Triggers).Count -ne 1 -or $savedViewer.Triggers[0].CimClass.CimClassName -ne 'MSFT_TaskLogonTrigger' -or $savedViewer.Settings.RestartCount -ne 3) {
     throw 'Saved viewer task definition mismatch'
 }
 Start-ScheduledTask -TaskName $viewerName
