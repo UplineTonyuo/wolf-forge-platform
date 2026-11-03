@@ -30,6 +30,10 @@ New pgTAP195/196 cover privacy, grants, subscriptions, expiry, push deduplicatio
 
 ## Validation evidence
 
+Candidate `7fa6bbe` ran the full security workflow [41642443550](https://github.com/UplineTonyuo/wolf-forge-platform/actions/runs/41642443550). Full Next build/PDF font trace, TypeScript, lint, dependency audit and both secret scans passed. Vitest reported 4492 passed / 1 failed: an existing task-retry test clicked the still-disabled button before React ended its transition. The test now waits for the actual enabled retry control; task behavior is unchanged. Focused retry/reconciliation tests passed 7/7 after correction.
+
+Disposable Supabase ran 6983 assertions before reconciliation test 196 aborted on a PL/pgSQL record/table-alias ambiguity (`c.id`). The table alias is now `expired_call`; the existing two-expired-call regression exercises this exact path. Test 195 passed. Real PostgREST support, Team voice Storage and manual-invoice probes passed in the same disposable job. Full SQL and overlapping-call acceptance remain pending the corrected candidate's CI; these partial results are not a suite pass.
+
 Evidence directory: outputs/inbox-calls-20261103 in the shared task workspace. Preliminary full Vitest run:4480/4480. Subsequent targeted regression runs and final exact-head checks are recorded in execution-ledger.md and JSON/log receipts; do not treat earlier foundation CI as a fresh pass.
 
 Type generation and guarded full typecheck passed locally with a1536MiB heap after fixing three test typing errors. A prior768MiB typecheck exhausted its heap; this was not a source pass. The full Next build retains its5.5GiB free-RAM guard and is intended for disposable CI if unavailable locally.

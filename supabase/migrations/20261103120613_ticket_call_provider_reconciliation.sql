@@ -109,10 +109,10 @@ begin
   select * into s from private.ticket_call_provider_scans where month=s.month;
   -- A complete account scan with any ongoing meeting is conservative: do not certify freshness or release holds.
   if not s.ongoing then
-   for work in select c.id from private.ticket_calls c
-    where c.expires_at<s.cutoff-interval '5 minutes' and c.reconciled_at is null and not c.legacy
-     and c.accepted_at is not null and c.provider_state<>'none'
-     and exists(select 1 from private.ticket_call_cleanup q where q.call_id=c.id and q.result='verified') loop
+   for work in select expired_call.id from private.ticket_calls expired_call
+    where expired_call.expires_at<s.cutoff-interval '5 minutes' and expired_call.reconciled_at is null and not expired_call.legacy
+     and expired_call.accepted_at is not null and expired_call.provider_state<>'none'
+     and exists(select 1 from private.ticket_call_cleanup q where q.call_id=expired_call.id and q.result='verified') loop
     -- History absence cannot prove zero use. Keep the entire reservation as conservative usage.
     update private.ticket_call_reservations set settled_seconds=reserved_seconds where call_id=work.id;
     update private.ticket_calls set state='ended',provider_state='ended',reconciled_at=clock_timestamp(),
