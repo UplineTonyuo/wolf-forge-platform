@@ -1,6 +1,6 @@
 # Custom Wolf Forge calls inside Inbox
 
-Date: 2026-11-03. Status: proposed Phase 2 design for approval. The owner selected the custom Wolf Forge screen over recoloring Daily Prebuilt. Product implementation and live calling are not claimed complete.
+Date: 2026-11-03. Status: owner approved the custom screen and explicitly requested BOTH in-app ringing and closed-app call notifications. Product implementation and live calling are not claimed complete. Closed-app push is included in this implementation, not deferred.
 
 ## Intent and approved direction
 
@@ -35,7 +35,13 @@ Replace createFrame with the pinned SDK's createCallObject. Bind received audio/
 
 ## Signalling, cleanup and usage
 
-Use private, receive-only Supabase Realtime signalling scoped to the authenticated actor and Tenant. Signals contain an opaque call ID/version only; they prompt a fresh authorized status read. Database authorization rejects cross-Tenant subscription and client publishing. Maintain one coordinator/subscription per app session, unsubscribe when disabled or signed out, coalesce duplicate hints, and re-read on reconnect/focus/online. Do not reintroduce five-second idle polling. Reuse existing authenticated app transport and notification infrastructure where it meets these rules; implementation may choose the smallest equivalent safe integration.
+Preserve the existing HttpOnly server session architecture; do not introduce a browser Supabase Auth client or expose a login access token for Realtime. Reuse the payload-free authenticated push wakeup and service-worker-to-window messages for immediate in-app signalling. The worker obtains an opaque current call ID/version from a fresh same-origin authenticated read; it forwards that hint to existing windows. A single call coordinator per app session refetches authorized call/peer state. Coalesce hints and resync on reconnect/focus/online. Reuse open-conversation live responses as the fallback when call notifications are denied; show that incoming alerts require permission outside that conversation. Do not add an app-wide five-second idle poll. Active invitation/media refreshes are bounded by the fixed call lifetime and stop at terminal state.
+
+Add explicit “Enable call notifications” opt-in for eligible internal and client actors using existing VAPID configuration and worker registration. Store endpoint/session/Tenant/origin binding through guarded RPCs; no role changes or implicit enrollment. Preserve ordinary client message push behavior and its configuration. New call delivery intents are private, exact-once per call/version/device, short-lived and currently authorized at claim. Use high urgency and TTL no longer than the remaining invitation deadline. Reuse the existing Edge worker and bounded database wake/recovery pattern, adding a separate call-delivery claim/finish path rather than increasing generic message polling.
+
+When a usable app window acknowledges an incoming hint, show the in-app incoming dialog; otherwise show fixed generic “Incoming call from Wolf Forge” / “Open Wolf Forge to answer.” No names, Ticket details, room URLs or tokens in OS notifications. Notification clicks open a bounded same-origin opaque-call destination and preserve unsent work in an existing window. Resolve actor class and Ticket destination on the server. Sign-in/expired/declined/answered-elsewhere calls must render the correct current state, never auto-accept or create a replacement room. Keep login return-path validation explicit and closed to external URLs.
+
+Browser/OS permission, suspended processes, offline state, Focus and platform support affect notification display. iOS requires its supported installed-app path. No native ringing/continuous background sound guarantee is made. Denied permission has a useful in-app path; successful push-provider acceptance is not evidence that the OS displayed it. Tests must distinguish dispatch, display and click/open behavior.
 
 Add the real Daily REST adapter to the existing provider boundary: deterministic private rooms, readback after uncertain creation, participant-scoped token issuance, and bounded ejection/deletion. Preserve the durable attempt/cleanup claims. A transport success or browser teardown cannot certify provider termination.
 
@@ -43,7 +49,7 @@ Use trusted Daily meeting-history reconciliation to ingest finalized participant
 
 Preserve the600 test /5400 live participant-minute monthly allocations,6000 combined, conservative reservations, uncertain holds, month splits and existing throttles. Both participants consume usage. The lack of a verified provider-side hard spending stop remains a release gap, not a guarantee of zero charges. Confirm the actual account/allowance/retention and controls before enabling real calls. No paid upgrade, new card, extra service or higher allocation is authorized.
 
-Daily webhooks currently require a card; they are not needed for this first implementation. Use the existing-account REST path without enabling billing. Closed-app call push, team device enrollment and native lock-screen ringing are a later delivery slice; this release must not promise them. Existing ordinary message notifications remain unchanged.
+Daily webhooks currently require a card; they are not needed for this implementation. Use the existing-account REST path without enabling billing. Closed-app call push and internal/client device enrollment are included; native lock-screen calling UI and continuous background ringing are not promised. Existing ordinary message notifications remain unchanged.
 
 ## Delivery and evidence
 
