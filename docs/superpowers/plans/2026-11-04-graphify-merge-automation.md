@@ -46,8 +46,8 @@ Interfaces: PowerShell `-Mode Install|Remove|Status -GraphRoot <path>`; install 
 - [x] Validate PowerShell AST and real scheduler object construction without changing policy or using elevated privileges; saved task readback follows installation.
 - [x] Update scoped trial documentation with the owner's narrow recurring exception and disable/status instructions.
 - [x] Run Python suite and tracked secret scan; dispatch one independent code/security review; fix important findings with regression checks.
-- [ ] Commit setup only, back up the lane branch under D-306, install reviewed frozen program, run real read-only verification and scheduled no-change invocation; inspect persisted task/state/files.
-- [ ] Append factual setup evidence to the existing implementation log, preserve unrelated content, and reread saved files. Save a concise handoff and exact Desktop/clipboard report.
+- [x] Commit setup only, back up the lane branch under D-306, install reviewed frozen program, run real read-only verification and scheduled no-change invocation; inspect persisted task/state/files.
+- [x] Append factual setup evidence to the existing implementation log, preserve unrelated content, and reread saved files. Save a concise handoff; Desktop/clipboard report is the final closeout step.
 
 ## Execution ledger
 
@@ -59,3 +59,5 @@ Interfaces: PowerShell `-Mode Install|Remove|Status -GraphRoot <path>`; install 
 - Live verification: REST 2026-03-10 omits actual merge-SHA evidence even on full PRs; pinned supported 2022-11-28 and added full PR lookup. Missing-summary-field regression RED→GREEN; actual main30c/security41683247516 exact-SHA verification passes. Never relax the exact merge-SHA requirement.
 - Ruling: Remove unregisters only this owned task and preserves all local runtime evidence, rather than deleting its program/state — smaller and reversible; no automatic destructive cleanup of runtime directories. Completed receipt history is still bounded to20. Cost if wrong: a few retained local setup files after removal.
 - Live launcher regression: initial Windows PowerShell5.1 task failed (exit1, execution policy restricted for `.ps1`), while installation from the existing PowerShell7 session was permitted. Preserved every execution policy, disabled the failed task, and removed the unnecessary shell launcher. Task now directly invokes existing `pythonw.exe -I -B`; real scheduled invocation/readback is the regression check. No policy bypass or new interpreter installation.
+- Installed frozen revision add8601. Real scheduled invocation02:13:17SGT and automatic timer invocation02:14:06SGT both exited0/unchanged; all four vault targets preserved. Saved task action/identity/limited-interactive/no-wake/PT5M settings read back. Real safe checkout and installed manifest verified. Fresh build1550sourcehashes/11811nodes/30016edges/517communities,25.493s,0modeltokens.
+- Branch backed up and draft PR110 opened; main untouched. New-merge publication/recovery uses temporary-vault acceptance; no main merge fabricated. Manually updated existing Current State Graphify facts and appended setup evidence to existing Implementation Log under exclusive handles, preserving its prefix and22other canonical/Security notes. No automatic curated-note permission or ID allocation. Handoff/evidence saved to current chat outputs.
