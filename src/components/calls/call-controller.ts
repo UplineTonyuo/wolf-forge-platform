@@ -30,6 +30,7 @@ export class CallController{
   if(call && this.terminal.has(call.id) && call.state!=="ended")return;
   if(call?.state==="ended"){this.terminal.add(call.id);this.onRelease();}
   if(this.state.call && !call && this.state.call.state!=="ended"){this.onRelease();this.patch({call:{...this.state.call,state:"ended"},canJoin:false});return;}
+  if(previous?.state==="ended"&&!call)this.requestKey=null;
   this.patch({call,...(peer===undefined?(call?.id!==previous?.id?{peer:null}:{}):{peer}),...(call?.state==="ended"?{canJoin:false}:{})});
  }
  async refresh(query:{ticket_id?:string;call_id?:string}={}):Promise<CallAvailability|null>{
@@ -49,6 +50,8 @@ export class CallController{
  async prepare(ticket:string){const value=callAvailability.parse(await this.api(`/api/ticket-calls?action=prepare&ticket_id=${encodeURIComponent(ticket)}`));if(value.profileId!==this.profileId)throw new Error("Account changed");return value;}
  async request(ticket:string,mode:"audio"|"video",preferences:CallDevicePreferences={},recipient?:string){
   if(this.disposed || this.state.busy || (this.state.call && this.state.call.state!=="ended"))return;
+  // Clear the completed attempt once; a lost response to the new attempt must retain its key.
+  if(this.state.call?.state==="ended"){this.requestKey=null;this.patch({call:null,peer:null});}
   this.preferences=preferences;this.stopping=false;this.sequence++;this.patch({busy:true,error:"",minimized:false});
   if(this.requestKey?.ticket!==ticket || this.requestKey.mode!==mode || this.requestKey.recipient!==recipient)this.requestKey={ticket,mode,recipient,id:randomUuid()};
   try{
@@ -78,7 +81,7 @@ export class CallController{
  }
  allowJoin(){this.patch({canJoin:true,error:"",joinAttempt:this.state.joinAttempt+1});}
  minimize=(value=true)=>this.patch({minimized:value});
- close=()=>{if(!this.state.call || this.state.call.state==="ended")this.patch({call:null,error:"",peer:null});else this.minimize();};
+ close=()=>{if(!this.state.call || this.state.call.state==="ended"){if(this.state.call?.state==="ended")this.requestKey=null;this.patch({call:null,error:"",peer:null});}else this.minimize();};
  error=(message:string)=>this.patch({error:message});
  connectionFailed(message:string){this.onRelease();this.patch({canJoin:false,error:message});}
  async confirmPresence(){const call=this.state.call;if(!call||!["accepted","connecting"].includes(call.state)||!this.state.canJoin)return;

@@ -54,8 +54,14 @@ export function CallScreen({state,controller,media,mediaState,now,playBlocked=fa
     </div>
     {!ended&&mediaState.state==="connected"?<details className={styles.devices} onToggle={event=>{if(event.currentTarget.open)void deviceMenu();}}><summary><Headphones aria-hidden="true"/>Device settings</summary><div>
      {(["audioinput","videoinput","audiooutput"] as const).filter(kind=>kind!=="videoinput"||call.mode==="video").map(kind=>{
-      const label=kind==="audioinput"?"Microphone":kind==="videoinput"?"Camera":"Speaker";const choices=devices.filter(d=>d.kind===kind);
-      return choices.length?<AnimatedSelect key={kind} name={`call-${kind}`} label={label} menuLabel={`Choose ${label.toLowerCase()}`} value={selected[kind]??""} options={[{value:"",label:`System ${label.toLowerCase()}`},...choices.map((d,i)=>({value:d.deviceId,label:d.label||`${label} ${i+1}`}))]} onChange={id=>{void media.device(kind,id).then(ok=>{if(ok)setSelected(v=>({...v,[kind]:id}));});}}/>:null;
+      const output=kind==="audiooutput";
+      if(output&&(typeof HTMLMediaElement==="undefined"||!("setSinkId" in HTMLMediaElement.prototype)))return null;
+      const label=kind==="audioinput"?"Microphone":kind==="videoinput"?"Camera":"Speaker";
+      const choices=devices.filter(d=>d.kind===kind&&(!output||!!d.deviceId));
+      const options=choices.map((d,i)=>({value:d.deviceId,label:output&&d.deviceId==="default"?"System speaker":d.label||`${label} ${i+1}`}));
+      if(!output)options.unshift({value:"",label:`System ${label.toLowerCase()}`});
+      const defaultId=output&&choices.some(d=>d.deviceId==="default")?"default":"";
+      return choices.length?<AnimatedSelect key={kind} name={`call-${kind}`} label={label} menuLabel={`Choose ${label.toLowerCase()}`} value={selected[kind]??defaultId} options={options} onChange={id=>{void media.device(kind,id).then(ok=>{if(ok)setSelected(v=>({...v,[kind]:id}));});}}/>:null;
      })}
     </div></details>:null}
    </div>

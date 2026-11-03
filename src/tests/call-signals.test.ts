@@ -23,3 +23,29 @@ it("retries a transient failed HTTP open even when EventSource reports CLOSED",a
  Source.sources[0]!.readyState=Source.CLOSED;Source.sources[0]!.onerror!();await vi.advanceTimersByTimeAsync(10000);
  expect(Source.sources).toHaveLength(2);stop();
 });
+
+it("recovers after more than six failed opens with one capped-backoff connection",async()=>{
+ vi.stubGlobal("EventSource",Source);vi.useFakeTimers();const wake=vi.fn().mockResolvedValue(null);const stop=connectCallSignals(wake);
+ try{
+  for(const delay of [10000,20000,40000,60000,60000,60000,60000]){
+   const count=Source.sources.length;const source=Source.sources.at(-1)!;source.onerror!();source.onerror!();
+   expect(vi.getTimerCount()).toBe(1);await vi.advanceTimersByTimeAsync(delay-1);expect(Source.sources).toHaveLength(count);
+   await vi.advanceTimersByTimeAsync(1);expect(Source.sources).toHaveLength(count+1);expect(source.close).toHaveBeenCalledOnce();
+  }
+  Source.sources.at(-1)!.listeners.get("wake")!();await vi.advanceTimersByTimeAsync(60000);
+  expect(wake).toHaveBeenCalledOnce();expect(vi.getTimerCount()).toBe(0);expect(Source.sources).toHaveLength(8);
+ }finally{stop();}
+});
+
+it.each(["hidden","offline","disposed","disabled"])("cancels a pending reconnect when %s",async reason=>{
+ vi.stubGlobal("EventSource",Source);vi.useFakeTimers();const wake=vi.fn();const stop=connectCallSignals(wake);
+ try{
+  const source=Source.sources[0]!;source.onerror!();expect(vi.getTimerCount()).toBe(1);
+  if(reason==="hidden"){vi.spyOn(document,"visibilityState","get").mockReturnValue("hidden");document.dispatchEvent(new Event("visibilitychange"));}
+  if(reason==="offline"){vi.spyOn(navigator,"onLine","get").mockReturnValue(false);window.dispatchEvent(new Event("offline"));}
+  if(reason==="disposed")stop();
+  if(reason==="disabled"){await vi.advanceTimersByTimeAsync(10000);Source.sources.at(-1)!.listeners.get("disabled")!();}
+  const count=Source.sources.length;await vi.advanceTimersByTimeAsync(300000);
+  expect(vi.getTimerCount()).toBe(0);expect(Source.sources).toHaveLength(count);expect(wake).not.toHaveBeenCalled();
+ }finally{stop();vi.restoreAllMocks();}
+});

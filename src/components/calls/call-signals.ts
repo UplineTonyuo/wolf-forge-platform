@@ -21,7 +21,8 @@ export function connectCallSignals(wake: () => Promise<unknown>) {
       if (source !== current) return;
       stop();
       // A failed HTTP open is also CLOSED. Only the explicit disabled event stops retries.
-      if (++failures <= 5) timer = setTimeout(start, Math.min(60_000, 10_000 * 2 ** (failures - 1)));
+      failures = Math.min(failures + 1, 4);
+      timer = setTimeout(start, Math.min(60_000, 10_000 * 2 ** (failures - 1)));
     };
   };
   const recover = () => { stop(); failures = 0; start(); };
