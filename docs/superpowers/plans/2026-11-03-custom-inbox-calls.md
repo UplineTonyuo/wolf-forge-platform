@@ -31,9 +31,9 @@
 
 Files: .github/workflows/security.yml (expected conflict), integration ledger at task outputs.
 
-- [ ] Verify clean approved-design checkpoint and completed prior writer. Record BASE; merge origin/main, not rebase. Preserve all current main CI checks plus the call concurrency step.
-- [ ] Run existing focused call domain/service/provider/route/UI tests with one worker and a bounded heap. Record exact fresh results; investigate baseline failures before continuing.
-- [ ] Verify migration timestamps are unique and integration diff contains only intended call work. Commit the integration separately.
+- [x] Verify clean approved-design checkpoint and completed prior writer. Record BASE; merge origin/main, not rebase. Preserve all current main CI checks plus the call concurrency step.
+- [x] Run existing focused call domain/service/provider/route/UI tests with one worker and a bounded heap. Record exact fresh results; investigate baseline failures before continuing.
+- [x] Verify migration timestamps are unique and integration diff contains only intended call work. Commit the integration separately.
 
 ### Task2: Guarded call projections, push bindings and delivery intents
 
@@ -41,9 +41,9 @@ Files: src/domain/tickets/calls.ts; src/services/ticket-call-service.ts; src/app
 
 Interfaces: CallAvailability={enabled:boolean,call:TicketCall|null,peer:{name:string,avatarUrl:string|null}|null}; GET action=current returns only the current actor's eligible frozen invitation. Existing command status remains authoritative. A push status response is {active:boolean,call:{id:string,version:number}|null}, with no peer or Ticket details. Endpoint mutation registers/disables only the authenticated actor's current endpoint/session/origin.
 
-- [ ] Write failing tests for current-callee authority, privacy, disabled flags, wrong device, revoked/missing session, deduplication, expiry and endpoint isolation.
-- [ ] Implement bounded current projection, authorized peer metadata and separate private call-push intents/claims/receipts using existing helpers and VAPID configuration. Never overwrite ordinary message delivery behavior.
-- [ ] Run focused API tests; run SQL/RLS checks only in disposable CI. Commit coherent source/tests/migration without applying it to a hosted project.
+- [x] Write failing tests for current-callee authority, privacy, disabled flags, wrong device, revoked/missing session, deduplication, expiry and endpoint isolation.
+- [x] Implement bounded current projection, authorized peer metadata and separate private call-push intents/claims/receipts using existing helpers and VAPID configuration. Never overwrite ordinary message delivery behavior.
+- [x] Run focused API tests; run SQL/RLS checks only in disposable CI. Commit coherent source/tests/migration without applying it to a hosted project.
 
 ### Task3: Real Daily adapter and bounded reconciliation
 
@@ -51,9 +51,9 @@ Files: src/lib/daily/calls.ts; src/services/ticket-call-provider.ts; src/lib/dai
 
 Interfaces: createDailyCallProvider() implements existing CallProvider. prepareTicketCallMedia(user,trusted,provider,callId,deviceId) remains the sole media setup. reconcileDailyCalls(trusted,provider,now) returns counts only, with durable cursor/overlap and no token logging.
 
-- [ ] Write/run failing tests for deterministic room timeout/readback, expired setup, malformed provider data, duplicate/out-of-order meeting sessions, unknown deletion, budget staleness and disabled admission with cleanup still available.
-- [ ] Implement server-only bounded REST adapter and scheduled-entry handler using the existing authenticated maintenance pattern. Derive all resource/account names from trusted claims; do not enable a real schedule/provider during development.
-- [ ] Run provider tests and verify token restrictions; commit.
+- [x] Write/run failing tests for deterministic room timeout/readback, expired setup, malformed provider data, duplicate/out-of-order meeting sessions, unknown deletion, budget staleness and disabled admission with cleanup still available.
+- [x] Implement server-only bounded REST adapter and scheduled-entry handler using the existing authenticated maintenance pattern. Derive all resource/account names from trusted claims; do not enable a real schedule/provider during development.
+- [x] Run provider tests and verify token restrictions; commit.
 
 ### Task4: Custom media controller and Inbox screen
 
@@ -61,9 +61,9 @@ Files: src/components/calls/call-controller.ts, call-media.ts, call-screen.tsx, 
 
 Interfaces: one CallProvider React context owns request/accept/decline/cancel/end/minimize/reopen; CallScreen consumes authoritative call/peer plus observed local media state; createCallMedia uses the pinned SDK call object and exposes real tracks/device state. The server call model and browser-observed media model remain distinct.
 
-- [ ] Write/run failing tests for double clicks, accept on another device, stale import/join after cancel, track replacement/cleanup, autoplay refusal, denied permissions, disconnected/reconnecting states, truthful toggles and expiry.
-- [ ] Build navy/gold UI using existing dialogs, selectors and avatars; voice portrait/video stage; large controls; persistent active strip; accessible status/focus/reduced motion. Acquire devices only after user action. Replace obsolete Join controls and all idle5-second polling.
-- [ ] Run controller/component/media tests, plus existing Ticket composer/draft regressions. Render all seven widths with synthetic media and open device menus. Commit.
+- [x] Write/run failing tests for double clicks, accept on another device, stale import/join after cancel, track replacement/cleanup, autoplay refusal, denied permissions, disconnected/reconnecting states, truthful toggles and expiry.
+- [x] Build navy/gold UI using existing dialogs, selectors and avatars; voice portrait/video stage; large controls; persistent active strip; accessible status/focus/reduced motion. Acquire devices only after user action. Replace obsolete Join controls and all idle5-second polling.
+- [x] Run controller/component/media tests, plus existing Ticket composer/draft regressions. Render all seven widths with synthetic media and open device menus. Commit.
 
 ### Task5: Closed-app and open-app call delivery
 
@@ -71,9 +71,9 @@ Files: public/push-sw.js; supabase/functions/studio-web-push/handler.ts; src/com
 
 Interfaces: worker posts {type:'wolf-forge-call',id,version} only after authenticated endpoint status; page coordinator re-reads authorization. A shared /calls/UUID entry resolves actor/Ticket server-side and redirects to the proper Inbox with the opaque call ID; safe login return accepts only that exact bounded route shape. Never auto-accept.
 
-- [ ] Write/run failing tests for stale/wrong-account pushes, duplicate versions, active-window acknowledgement, no notification permission, expired deadline, abandoned dispatch, redirect attacks, missed/ended notification clicks and preservation of ordinary message push.
-- [ ] Extend worker/Edge dispatcher with separate call delivery claims, high urgency/remaining TTL and durable unknown receipts. Add explicit eligible internal/client opt-in using existing VAPID/endpoint controls. Preserve generic update delivery.
-- [ ] Run all push/entry/auth return tests, fake-worker click tests and disabled-feature no-idle-work checks. Commit; no real push to a customer device.
+- [x] Write/run failing tests for stale/wrong-account pushes, duplicate versions, active-window acknowledgement, no notification permission, expired deadline, abandoned dispatch, redirect attacks, missed/ended notification clicks and preservation of ordinary message push.
+- [x] Extend worker/Edge dispatcher with separate call delivery claims, high urgency/remaining TTL and durable unknown receipts. Add explicit eligible internal/client opt-in using existing VAPID/endpoint controls. Preserve generic update delivery.
+- [x] Run all push/entry/auth return tests, fake-worker click tests and disabled-feature no-idle-work checks. Commit; no real push to a customer device.
 
 ### Task6: Whole-branch acceptance and handoff
 

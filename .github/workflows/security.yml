@@ -103,8 +103,6 @@ jobs:
       # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite
         run: npm run test:db
-      - name: overlapping calling transactions
-        run: node scripts/qa/ticket-call-concurrency.mjs
       - name: real PostgREST client support isolation and missing-hook checks
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node scripts/qa/check-client-support-rest.mjs
@@ -114,6 +112,10 @@ jobs:
       - name: real manual invoice receipts, public links and concurrent settlement
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node scripts/qa/check-invoice-manual-payments-rest.mjs
+      # The calling races commit synthetic Auth prerequisites across physical
+      # connections. Keep them after REST probes that require an empty database.
+      - name: overlapping calling transactions
+        run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
     name: production dependency vulnerabilities
