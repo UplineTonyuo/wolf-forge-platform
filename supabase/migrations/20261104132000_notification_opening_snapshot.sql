@@ -38,12 +38,19 @@ revoke all on function private.client_notification_visible(public.notifications)
 create function public.app_client_notification_feed() returns jsonb
 language plpgsql stable security definer set search_path='' as $$
 declare caller uuid:=private.require_active_notification_actor(); items jsonb; unread bigint;
+ without_tickets bigint; without_projects bigint; without_conversations bigint;
 begin
  if private.profile_account_class(caller)<>'client' then raise insufficient_privilege; end if;
- select count(*) into unread from public.notifications n
+ select count(*),
+  count(*) filter(where n.category is distinct from 'ticket' and n.entity_type is distinct from 'ticket'),
+  count(*) filter(where n.entity_type is distinct from 'order' and n.entity_type is distinct from 'order_task'),
+  count(*) filter(where n.category is distinct from 'ticket' and n.entity_type is distinct from 'ticket'
+   and n.entity_type is distinct from 'order' and n.entity_type is distinct from 'order_task')
+  into unread,without_tickets,without_projects,without_conversations from public.notifications n
   where n.recipient_profile_id=caller and n.audience='client' and n.read_at is null and private.client_notification_visible(n);
  select coalesce(jsonb_agg(to_jsonb(n)),'[]'::jsonb) into items from public.app_list_my_notifications(50) n;
- return jsonb_build_object('notifications',items,'unreadCount',unread);
+ return jsonb_build_object('notifications',items,'unreadCount',unread,'unreadCounts',
+  jsonb_build_object('withoutTickets',without_tickets,'withoutProjects',without_projects,'withoutConversations',without_conversations));
 end $$;
 
 create function public.app_open_client_notifications(p_request_id uuid,p_requested_at timestamptz) returns jsonb

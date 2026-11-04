@@ -23,11 +23,12 @@ import {
   markOpenedClientNotificationsReadAction,
   markClientNotificationReadAction,
   type WalletNotificationItem,
+  type NotificationUnreadCounts,
 } from "../../app/actions/notifications";
 import { shouldRingForUnread } from "../../domain/notifications/ring";
 import { notificationPollDelay, NOTIFICATION_POLL_TICK_MS } from "../../domain/notifications/polling";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
-import { notificationVisibleWithModules } from "../../domain/notifications/visibility";
+import { notificationVisibleWithModules, visibleNotificationUnreadCount } from "../../domain/notifications/visibility";
 import {
   playNotificationChime,
   unlockNotificationAudio,
@@ -227,9 +228,11 @@ export function ClientNotificationBell({
     >([]);
   const cacheGeneration = useRef(0);
   const [totalUnread, setTotalUnread] = useState<number | null>(null);
+  const [unreadCounts, setUnreadCounts] = useState<NotificationUnreadCounts | null>(null);
   useTicketCacheRevocation(() => {
     setNotifications((items) => items.filter((item) => notificationVisibleWithModules(item, false, true)));
     setTotalUnread(null);
+    setUnreadCounts(null);
     setRinging(false);
   }, cacheGeneration);
   const notifications = cachedNotifications.filter((item) => notificationVisibleWithModules(item, ticketsAvailable, projectsAvailable));
@@ -263,7 +266,8 @@ export function ClientNotificationBell({
       }
       const items=result.notifications.filter(item=>notificationVisibleWithModules(item,generation === cacheGeneration.current && ticketsAvailableRef.current,projectsAvailableRef.current));
       setNotifications(items);
-      setTotalUnread(generation === cacheGeneration.current && ticketsAvailableRef.current&&projectsAvailableRef.current ? result.unreadCount ?? items.filter(item=>!item.readAt).length : null);
+      setTotalUnread(generation === cacheGeneration.current ? result.unreadCount ?? null : null);
+      setUnreadCounts(generation === cacheGeneration.current ? result.unreadCounts ?? null : null);
       openingRequest.current=null;
       setReadError(false);
       setOpeningExpired(false);
@@ -429,6 +433,7 @@ export function ClientNotificationBell({
 
             setNotifications(items);
             setTotalUnread(generation === cacheGeneration.current ? result.unreadCount ?? null : null);
+            setUnreadCounts(generation === cacheGeneration.current ? result.unreadCounts ?? null : null);
 
             setError(null);
           } else if (!silent) {
@@ -643,7 +648,7 @@ export function ClientNotificationBell({
     [],
   );
 
-  const unread = ticketsAvailable && projectsAvailable && totalUnread !== null ? totalUnread :
+  const unread = visibleNotificationUnreadCount(totalUnread,unreadCounts,ticketsAvailable,projectsAvailable) ??
     notifications.filter(
       (notification) =>
         !notification.readAt,

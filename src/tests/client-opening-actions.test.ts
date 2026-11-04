@@ -24,3 +24,11 @@ it("returns a sanitized expiry recovery code and server clock without treating c
  f.rpc.mockResolvedValueOnce({data:null,error:{code:"22023",message:"Opening request conflicts"}});
  expect(await markOpenedClientNotificationsReadAction(opening)).not.toHaveProperty("code");
 });
+it("validates complete module-filtered counts before acknowledging a feed",async()=>{
+ f.rpc.mockResolvedValueOnce({data:{requestId:opening.requestId,snapshotAt:opening.requestedAt,readCount:151},error:null})
+  .mockResolvedValueOnce({data:{notifications:[],unreadCount:151,unreadCounts:{withoutTickets:150,withoutProjects:149,withoutConversations:148}},error:null});
+ expect(await markOpenedClientNotificationsReadAction(opening)).toEqual({ok:true,notifications:[],unreadCount:151,unreadCounts:{withoutTickets:150,withoutProjects:149,withoutConversations:148}});
+ f.rpc.mockResolvedValueOnce({data:{requestId:opening.requestId,snapshotAt:opening.requestedAt,readCount:151},error:null})
+  .mockResolvedValueOnce({data:{notifications:[],unreadCount:1,unreadCounts:{withoutTickets:151,withoutProjects:0,withoutConversations:0}},error:null});
+ expect((await markOpenedClientNotificationsReadAction(opening)).ok).toBe(false);
+});

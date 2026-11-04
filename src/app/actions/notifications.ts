@@ -35,11 +35,18 @@ export type WalletNotificationItem = {
   readAt: string | null;
 };
 
+export type NotificationUnreadCounts = {
+  withoutTickets: number;
+  withoutProjects: number;
+  withoutConversations: number;
+};
+
 export type WalletNotificationResult =
   | {
       ok: true;
       notifications: WalletNotificationItem[];
       unreadCount?: number;
+      unreadCounts?: NotificationUnreadCounts;
     }
   | {
       ok: false;
@@ -205,8 +212,13 @@ type NotificationClient = Awaited<ReturnType<typeof getClientContext>>["client"]
 async function clientNotificationFeed(client: NotificationClient): Promise<WalletNotificationResult> {
   const result = await client.rpc("app_client_notification_feed");
   if (result.error) return failure();
-  const feed = z.object({ notifications: z.array(z.unknown()).max(50), unreadCount: z.number().int().nonnegative() }).parse(result.data);
-  return { ok: true, notifications: normalizeRows(feed.notifications), unreadCount: feed.unreadCount };
+  const count=z.number().int().nonnegative();
+  const feed = z.object({ notifications: z.array(z.unknown()).max(50), unreadCount: count,
+    unreadCounts:z.object({withoutTickets:count,withoutProjects:count,withoutConversations:count}).strict().optional(),
+  }).refine(value=>!value.unreadCounts||Object.values(value.unreadCounts).every(count=>count<=value.unreadCount)).parse(result.data);
+  return { ok: true, notifications: normalizeRows(feed.notifications), unreadCount: feed.unreadCount,
+    ...(feed.unreadCounts ? {unreadCounts:feed.unreadCounts} : {}),
+  };
 }
 
 export async function markOpenedClientNotificationsReadAction(value: unknown): Promise<WalletNotificationResult> {

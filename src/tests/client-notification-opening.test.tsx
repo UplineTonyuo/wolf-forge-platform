@@ -7,6 +7,7 @@ vi.mock("../app/actions/notifications",()=>({getClientNotificationsAction:f.list
 vi.mock("../lib/notifications/browser-notification-feedback",()=>({playNotificationChime:vi.fn(),unlockNotificationAudio:vi.fn()}));
 import {ClientNotificationBell} from "../components/account/client-notification-bell";
 import {HeaderPanelsProvider} from "../components/account/command/header-panels";
+import {notifyTicketAccessUnavailable} from "../components/tickets/ticket-access-boundary";
 const item={id:"71000000-0000-4000-8000-000000000001",companyId:null,title:"Synthetic notification",body:"Activity",reason:null,createdAt:new Date().toISOString(),href:"/account",kind:"credit",category:"payment",audience:"client",readAt:null};
 const acknowledged={ok:true,notifications:[{...item,readAt:new Date().toISOString()}],unreadCount:0};
 beforeEach(()=>{vi.resetAllMocks();Object.defineProperty(document,"hidden",{configurable:true,value:false});Object.defineProperty(navigator,"onLine",{configurable:true,value:true});window.matchMedia=vi.fn().mockReturnValue({matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()});f.list.mockResolvedValue({ok:true,notifications:[item],unreadCount:151});f.read.mockResolvedValue(acknowledged);});
@@ -44,4 +45,24 @@ it("refreshes the complete unread count after an individual row is opened from h
  f.list.mockResolvedValue({ok:true,notifications:[{...item,readAt:new Date().toISOString()}],unreadCount:150});
  fireEvent.pointerEnter(screen.getByRole("button",{name:"Notifications"}),{pointerType:"mouse"});fireEvent.click(await screen.findByText(item.title));
  await screen.findByLabelText("150 unread notifications");expect(f.read).not.toHaveBeenCalled();expect(f.single).toHaveBeenCalledWith(item.id);
+});
+it.each([[false,true],[true,false],[false,false]])("keeps complete counts when conversation modules are hidden; tickets=%s projects=%s",async(ticketsAvailable,projectsAvailable)=>{
+ const unreadCounts={withoutTickets:151,withoutProjects:151,withoutConversations:151};
+ f.list.mockResolvedValue({ok:true,notifications:[item],unreadCount:201,unreadCounts});
+ f.read.mockResolvedValue({ok:true,notifications:[item],unreadCount:202,unreadCounts:{...unreadCounts,withoutTickets:152,withoutProjects:152,withoutConversations:152}});
+ render(<ClientNotificationBell ticketsAvailable={ticketsAvailable} projectsAvailable={projectsAvailable}/>);
+ await screen.findByLabelText("151 unread notifications");
+ fireEvent.click(screen.getByRole("button",{name:"Notifications"}));
+ await screen.findByLabelText("152 unread notifications");
+});
+it("invalidates complete module counts and a late opening after access revocation",async()=>{
+ const unreadCounts={withoutTickets:151,withoutProjects:201,withoutConversations:151};
+ f.list.mockResolvedValue({ok:true,notifications:[item],unreadCount:201,unreadCounts});
+ let finish!:(value:unknown)=>void;f.read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+ render(<ClientNotificationBell ticketsAvailable={false}/>);await screen.findByLabelText("151 unread notifications");
+ fireEvent.click(screen.getByRole("button",{name:"Notifications"}));
+ await act(async()=>notifyTicketAccessUnavailable());
+ await act(async()=>finish({ok:true,notifications:[item,{...item,id:"71000000-0000-4000-8000-000000000002",category:"ticket",entityType:"ticket"}],unreadCount:202,unreadCounts:{withoutTickets:152,withoutProjects:202,withoutConversations:152}}));
+ await screen.findByLabelText("1 unread notifications");
+ expect(screen.queryByLabelText("152 unread notifications")).toBeNull();
 });

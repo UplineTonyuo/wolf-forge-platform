@@ -40,6 +40,10 @@ begin
     where m.tenant_id=tenant and m.profile_id=p_manager_profile_id and m.account_class='internal'
       and m.archived_at is null and p.archived_at is null and r.name='manager' for share of m,p,r;
   if not found then raise exception 'Choose an active manager in this workspace' using errcode='22023'; end if;
+  -- Actor/module/edit authority may have changed while either lock was waiting.
+  perform private.require_internal_actor();
+  perform public.app_require_module_access('clients');
+  perform private.require_permission('clients.edit');
   select manager_profile_id into previous from private.client_manager_assignments where company_id=p_company_id;
   if previous is distinct from p_manager_profile_id then
     insert into private.client_manager_assignments(tenant_id,company_id,manager_profile_id,assigned_by)

@@ -352,6 +352,24 @@ try {
       assert.equal((await observer.query(`select manager_profile_id from private.client_manager_assignments where company_id='${company}';`))[0],uid('1705'));
       assert.equal(Number((await observer.query(`select count(*) from public.activity_events where entity_id='${company}' and metadata->>'field'='manager_profile_id';`))[0]),1);
     });
+  await observer.query(`update public.tenant_memberships set archived_at=null where tenant_id='${tenant}' and profile_id='${uid('1705')}';`);
+  for (const [suffix, permission] of [
+    ['9001', "'clients.edit'"],
+    ['9002', "(select required_permission_key from public.permission_modules where module_key='clients')"],
+  ]) {
+    const account=`e2030000-0000-4000-8000-00000000${suffix}`;
+    await observer.query(`insert into public.companies(id,tenant_id,name,status) values('${account}','${tenant}','Synthetic operator revocation account','client');`);
+    await race(`manager operator authority revoked during account wait (${suffix})`,'1703',
+      `reset role; update public.companies set name=name where id='${account}';
+       insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
+       values('${tenant}','${uid('1704')}',${permission},false)
+       on conflict(tenant_id,profile_id,permission_key) do update set allowed=false;`,
+      '1704',`select public.app_assign_client_manager('${account}','${uid('1705')}');`,async()=>{
+        assert.equal(Number((await observer.query(`select count(*) from private.client_manager_assignments where company_id='${account}';`))[0]),0);
+        assert.equal(Number((await observer.query(`select count(*) from public.activity_events where entity_id='${account}' and metadata->>'field'='manager_profile_id';`))[0]),0);
+      },/permission denied|module access is denied/);
+    await observer.query(`delete from public.profile_permission_overrides where tenant_id='${tenant}' and profile_id='${uid('1704')}' and permission_key=${permission};`);
+  }
   await observer.query(`delete from public.notifications where recipient_profile_id='${uid('1701')}';
     insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key,created_at)
     select '${uid('1701')}','${tenant}','${company}','client','client','Synthetic opening race','Synthetic activity','/account','opening-race:'||n,clock_timestamp()-interval '1 hour' from generate_series(1,151) n;`);
