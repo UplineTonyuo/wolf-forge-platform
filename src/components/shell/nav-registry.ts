@@ -42,7 +42,6 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "tickets", label: "Tickets", route: "/tickets" },
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
-      { id: "todo", label: "Operations", route: "/todo" },
       { id: "white_label", label: "White Label", route: "/white-label" },
     ],
   },
@@ -114,6 +113,7 @@ export function activeNavigationRoute(pathname: string): string | undefined {
 
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "Operations";
+  if (pathname === "/todo" || pathname.startsWith("/todo/")) return "Operations";
   if (pathname === "/clients/new") return "New client";
   if (pathname === "/companies") return "Companies";
   if (pathname === "/companies/new") return "New company";

@@ -10,6 +10,7 @@ import {
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { clientNameSearchScore } from "../../lib/client-name-search";
 import { getInternalContext } from "../../lib/supabase/next-server";
+import { z } from "zod";
 
 export type CreateCompanyState = {
   error: string | null;
@@ -510,6 +511,27 @@ export async function bulkArchiveClientsAction(
     "That client could not be deleted.",
     (companyId) => context.services.companies.archive(companyId, context.actor),
   );
+}
+
+export async function listClientManagerOptionsAction() {
+  try {
+    const context = await getInternalContext();
+    await context.services.permissions.requireModuleAccess("clients");
+    if (!context.user.clients.edit) return { ok: false as const, managers: [] };
+    return { ok: true as const, managers: await context.services.companies.managerOptions() };
+  } catch { return { ok: false as const, managers: [] }; }
+}
+
+export async function bulkAssignClientManagerAction(companyIds: string[], managerId: string): Promise<ClientBulkResult> {
+  if (!z.array(z.uuid()).min(1).max(100).safeParse(companyIds).success || !z.uuid().safeParse(managerId).success) {
+    return failedClientBatch(Array.isArray(companyIds) ? companyIds.slice(0, 100) : [], "Choose up to 100 client accounts and an active manager.");
+  }
+  const context = await getInternalContext();
+  try {
+    await context.services.permissions.requireModuleAccess("clients");
+    if (!context.user.clients.edit) return failedClientBatch(companyIds, "You do not have permission to edit Clients.");
+  } catch (error) { return failedClientBatch(companyIds, clientMutationError(error, "Manager assignment was rejected.")); }
+  return runClientBatch(context, companyIds, "Manager assignment could not be confirmed.", id => context.services.companies.assignManager(id, managerId, context.actor));
 }
 
 

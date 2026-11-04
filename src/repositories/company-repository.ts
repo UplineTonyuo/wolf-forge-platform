@@ -53,4 +53,16 @@ export class CompanyRepository {
       "Company",
     );
   }
+
+  async managerOptions() {
+    return unwrapMany(await this.client.rpc("app_list_client_manager_options"));
+  }
+  async managerAssignments() {
+    return unwrapMany(await this.client.rpc("app_list_client_manager_assignments"));
+  }
+  async assignManager(id: string, managerId: string) {
+    const result = await this.client.rpc("app_assign_client_manager", { p_company_id: id, p_manager_profile_id: managerId });
+    const persisted = unwrapOne(result, "Client manager");
+    if (persisted !== managerId) throw new Error("Manager assignment could not be confirmed.");
+  }
 }

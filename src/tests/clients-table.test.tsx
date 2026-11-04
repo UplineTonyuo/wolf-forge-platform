@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const refresh = vi.fn();
 const bulkArchiveClientsAction = vi.fn();
 const bulkChangeClientStatusAction = vi.fn();
+const bulkAssignClientManagerAction = vi.fn();
+const listClientManagerOptionsAction = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
@@ -15,6 +17,8 @@ vi.mock("next/navigation", () => ({
 vi.mock("../app/actions/clients", () => ({
   bulkArchiveClientsAction: (...args: unknown[]) => bulkArchiveClientsAction(...args),
   bulkChangeClientStatusAction: (...args: unknown[]) => bulkChangeClientStatusAction(...args),
+  bulkAssignClientManagerAction: (...args: unknown[]) => bulkAssignClientManagerAction(...args),
+  listClientManagerOptionsAction: (...args: unknown[]) => listClientManagerOptionsAction(...args),
 }));
 
 const { ClientsTable, clientInitials } = await import("../components/clients/clients-table");
@@ -48,6 +52,8 @@ beforeEach(() => {
   refresh.mockReset();
   bulkArchiveClientsAction.mockReset();
   bulkChangeClientStatusAction.mockReset();
+  bulkAssignClientManagerAction.mockReset();
+  listClientManagerOptionsAction.mockResolvedValue({ ok: true, managers: [{ id: rows[1]!.id, name: "Synthetic Manager" }] });
 });
 
 afterEach(cleanup);
@@ -258,15 +264,22 @@ describe("Clients bulk actions", () => {
     expect(screen.getByText("1 selected")).toBeTruthy();
   });
 
-  it("does not invent a manager mutation that the Clients model cannot store", () => {
+  it("requires a selected eligible manager before applying account assignment", async () => {
     renderTable();
     fireEvent.click(screen.getByRole("checkbox", { name: "Select Matt Quinn" }));
     fireEvent.click(screen.getByRole("button", { name: /Select an action/iu }));
 
     const manager = screen.getByRole("menuitem", { name: /Assign a manager/iu });
 
-    expect((manager as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText("Available after assignment setup")).toBeTruthy();
+    expect((manager as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(manager);
+    await waitFor(() => expect(screen.queryByText("Loading managers…")).toBeNull());
     expect((screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /Manager for selected client accounts/ }));
+    fireEvent.click(await screen.findByRole("option", { name: "Synthetic Manager" }));
+    bulkAssignClientManagerAction.mockResolvedValue({attempted:1,succeeded:[{id:rows[0]!.id,label:rows[0]!.name}],failed:[]});
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(bulkAssignClientManagerAction).toHaveBeenCalledWith([rows[0]!.id],rows[1]!.id));
+    expect(refresh).toHaveBeenCalled();
   });
 });

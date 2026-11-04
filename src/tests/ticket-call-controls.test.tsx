@@ -5,12 +5,18 @@ import { afterEach,beforeEach,expect,it,vi } from "vitest";
 const f=vi.hoisted(()=>({current:vi.fn()}));
 vi.mock("../components/calls/call-provider",()=>({useInboxCalls:f.current}));
 vi.mock("../components/calls/call-notifications",()=>({CallNotifications:()=>null}));
-import { TicketCallControls } from "../components/tickets/ticket-call-controls";
+import { TicketCallControls,OrderCallControls } from "../components/tickets/ticket-call-controls";
 const id="71000000-0000-4000-8000-000000000001";
 let snapshot:{call:{state:string}|null;busy:boolean;error:string}={call:null,busy:false,error:""};
 const controller={refresh:vi.fn(),prepare:vi.fn(),snapshot:()=>snapshot,subscribe:()=>()=>{},request:vi.fn(),minimize:vi.fn()};
 beforeEach(()=>{vi.clearAllMocks();snapshot={call:null,busy:false,error:""};controller.refresh.mockResolvedValue({enabled:true});controller.prepare.mockResolvedValue({enabled:true,peer:{name:"Synthetic participant",avatarUrl:null}});f.current.mockReturnValue(controller);});
 afterEach(()=>cleanup());
+it("uses an explicit order read and order preparation without a Ticket identifier",async()=>{
+ render(<OrderCallControls orderId={id}/>);
+ fireEvent.click(await screen.findByRole("button",{name:"Voice call"}));
+ await waitFor(()=>expect(controller.prepare).toHaveBeenCalledWith(id,true));
+ expect(controller.refresh).toHaveBeenCalledWith({order_id:id});expect(controller.request).not.toHaveBeenCalled();
+});
 it("hides calling when no shared shell or server grant exists",async()=>{
  f.current.mockReturnValue(null);const {container,rerender}=render(<TicketCallControls ticketId={id}/>);expect(container).toBeEmptyDOMElement();
  f.current.mockReturnValue(controller);controller.refresh.mockResolvedValue({enabled:false});rerender(<TicketCallControls ticketId={id}/>);await waitFor(()=>expect(controller.refresh).toHaveBeenCalled());expect(container).toBeEmptyDOMElement();

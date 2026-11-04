@@ -13,10 +13,13 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   bulkArchiveClientsAction,
   bulkChangeClientStatusAction,
+  bulkAssignClientManagerAction,
+  listClientManagerOptionsAction,
   type ClientBulkResult,
 } from "../../app/actions/clients";
 import { AccountAvatar } from "../ui/account-avatar";
 import { RowActionMenu } from "../ui/row-action-menu";
+import { AnimatedSelect } from "../ui/animated-select";
 
 export type ClientTableRow = {
   id: string;
@@ -27,6 +30,7 @@ export type ClientTableRow = {
   createdLabel: string;
   status: string;
   statusLabel: string;
+  managerName?: string;
 };
 
 export type ClientStatusOption = {
@@ -82,7 +86,7 @@ function ClientAvatar({ name, src }: { name: string; src?: string | null }) {
   );
 }
 
-function describeResult(result: ClientBulkResult, action: "status" | "delete") {
+function describeResult(result: ClientBulkResult, action: "status" | "manager" | "delete") {
   const verb = action === "delete" ? "deleted" : "updated";
   if (result.attempted === 0) return "No clients were selected.";
   if (result.succeeded.length === 0) {
@@ -120,7 +124,12 @@ export function ClientsTable({
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [result, setResult] = useState<ClientBulkResult | null>(null);
-  const [resultAction, setResultAction] = useState<"status" | "delete">("status");
+  const [resultAction, setResultAction] = useState<"status" | "manager" | "delete">("status");
+  const [managers, setManagers] = useState<{id:string;name:string}[]>([]);
+  const [managerId, setManagerId] = useState("");
+  const [managerLoading, setManagerLoading] = useState(false);
+  const [managerError, setManagerError] = useState(false);
+  const mutationInFlight = useRef(false);
 
   /*
    * The bulk action tray is an in-flow expanding section (the same
@@ -145,6 +154,7 @@ export function ClientsTable({
   const bulkTriggerLabel =
     action === "status"
       ? `Change status: ${statusLabel}`
+      : action === "manager" ? "Assign a manager"
       : action === "delete"
         ? "Delete"
         : "Select an action";
@@ -163,8 +173,15 @@ export function ClientsTable({
     setTrayOpen(true);
   }
 
-  function chooseAction(next: "status" | "delete") {
+  async function loadManagers() {
+    setManagerLoading(true); setManagerError(false);
+    try { const result = await listClientManagerOptionsAction(); setManagers(result.managers); setManagerError(!result.ok); }
+    catch { setManagerError(true); }
+    finally { setManagerLoading(false); }
+  }
+  function chooseAction(next: "status" | "manager" | "delete") {
     setAction(next);
+    if (next === "manager") void loadManagers();
     if (next === "status") setTrayView("status");
     else closeTray();
   }
@@ -239,7 +256,9 @@ export function ClientsTable({
     setSelected(allSelected ? new Set() : new Set(rows.map((row) => row.id)));
   }
 
-  async function runMutation(kind: "status" | "delete") {
+  async function runMutation(kind: "status" | "manager" | "delete") {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
     setBusy(true);
 
     let outcome: ClientBulkResult;
@@ -247,6 +266,7 @@ export function ClientsTable({
       outcome =
         kind === "status"
           ? await bulkChangeClientStatusAction(selectedIds, status)
+          : kind === "manager" ? await bulkAssignClientManagerAction(selectedIds, managerId)
           : await bulkArchiveClientsAction(selectedIds);
     } catch {
       outcome = {
@@ -261,6 +281,7 @@ export function ClientsTable({
     }
 
     setBusy(false);
+    mutationInFlight.current = false;
     setConfirmDelete(false);
     setResultAction(kind);
     setResult(outcome);
@@ -277,6 +298,7 @@ export function ClientsTable({
 
   function requestApply() {
     if (action === "status" && status) void runMutation("status");
+    if (action === "manager" && managerId && canEdit) void runMutation("manager");
     if (action === "delete") setConfirmDelete(true);
   }
 
@@ -332,7 +354,7 @@ export function ClientsTable({
                 type="button"
                 className={action === "delete" ? "clients-bulk-apply is-danger" : "clients-bulk-apply"}
                 aria-busy={busy || undefined}
-                disabled={busy || !action || (action === "status" && !status)}
+                disabled={busy || !action || (action === "status" && !status) || (action === "manager" && (!managerId || managerLoading || managerError))}
                 onClick={requestApply}
               >
                 {busy ? "Applying…" : "Apply"}
@@ -351,9 +373,8 @@ export function ClientsTable({
                     >
                       Change status
                     </button>
-                    <button type="button" role="menuitem" disabled>
+                    <button type="button" role="menuitem" disabled={!canEdit} onClick={() => chooseAction("manager")}>
                       <span>Assign a manager</span>
-                      <small>Available after assignment setup</small>
                     </button>
                     <button
                       type="button"
@@ -391,6 +412,12 @@ export function ClientsTable({
                 )}
               </div>
             </div>
+
+            {action === "manager" ? <div>
+              <AnimatedSelect name="client-manager" label="Manager for selected client accounts" menuLabel="Active workspace managers" value={managerId} options={[{value:"",label:"Choose a manager"},...managers.map(person=>({value:person.id,label:person.name}))]} onChange={setManagerId} disabled={busy || managerLoading || managerError}/>
+              <p role="status">{managerLoading ? "Loading managers…" : managerError ? "Managers could not be loaded." : managers.length ? "Applies to the selected client accounts, including their contacts. Access permissions stay the same." : "No active manager is available in this workspace."}</p>
+              {managerError ? <button type="button" onClick={() => void loadManagers()}>Retry managers</button> : null}
+            </div> : null}
           </div>
         </div>
       </div>
@@ -444,6 +471,7 @@ export function ClientsTable({
                           {client.name}
                         </Link>
                         {client.email ? <small>{client.email}</small> : null}
+                        {client.managerName ? <small>Manager: {client.managerName}</small> : null}
                       </span>
                     </div>
                   </td>

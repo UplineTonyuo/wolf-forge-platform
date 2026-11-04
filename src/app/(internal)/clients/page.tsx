@@ -139,6 +139,7 @@ export default async function ClientsPage({
   try {
     const clients =
       await context.services.companies.listActive();
+    const managers = new Map((await context.services.companies.managerAssignments()).map(row => [row.company_id, row.manager_name]));
 
     const search =
       q.trim();
@@ -336,6 +337,7 @@ export default async function ClientsPage({
               createdLabel: formatDate(client.created_at),
               status: normalizeStatus(client.status),
               statusLabel: statusLabel(client.status),
+              managerName: managers.get(client.id),
             }))}
             statuses={filterOptions.filter((option) => option.value !== "all")}
             canEdit={context.user.clients.edit}

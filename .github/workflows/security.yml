@@ -127,6 +127,8 @@ jobs:
       # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite
         run: npm run test:db
+      - name: full database function lint
+        run: npm run lint:db
       - name: real PostgREST client support isolation and missing-hook checks
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: node scripts/qa/check-client-support-rest.mjs

@@ -39,7 +39,26 @@ it("requires an authenticated session", async () => {
   expect((await POST(request({ action: "end", call_id: id }))).status).toBe(401);
   expect(f.mutate).not.toHaveBeenCalled();
 });
+it("explains the intentional support-session restriction without reading call data", async () => {
+  f.context.mockResolvedValue({ actor: { support: true }, client: {} });
+  const response = await GET(new Request(`https://app.example/api/ticket-calls?action=history&ticket_id=${id}`, { headers: { "sec-fetch-site": "same-origin" } }));
+  expect(response.status).toBe(403);
+  expect(await response.json()).toMatchObject({ ok: false, code: "SUPPORT_MODE" });
+  expect(f.read).not.toHaveBeenCalled();
+});
 it("allows narrow legacy termination without a Ticket read", async () => {
   expect((await DELETE(request({ ticket_id: id, call_id: id }, "DELETE"))).status).toBe(200);
   expect(f.end).toHaveBeenCalledWith({}, id, id);
+});
+it("keeps genuine-client history readable independently of provider enablement", async () => {
+  vi.stubEnv("DAILY_CALLS_ENABLED","0");
+  f.context.mockResolvedValue({actor:{accountClass:"client"},client:{}});
+  f.read.mockResolvedValue([]);
+  const response=await GET(new Request(`https://app.example/api/ticket-calls?action=history&ticket_id=${id}`,{headers:{"sec-fetch-site":"same-origin"}}));
+  expect(response.status).toBe(200);expect(await response.json()).toEqual({ok:true,data:[]});
+});
+it.each([["RATE_LIMITED",429,"RATE_LIMITED"],["DATABASE_ERROR",503,"CALL_SERVICE_UNAVAILABLE"]])("reports sanitized %s reads without exposing backend detail",async(code,status,safeCode)=>{
+ f.read.mockRejectedValueOnce({code,message:"synthetic private backend detail"});
+ const response=await GET(new Request(`https://app.example/api/ticket-calls?action=history&order_id=${id}`,{headers:{"sec-fetch-site":"same-origin"}}));
+ expect(response.status).toBe(status);expect(await response.json()).toMatchObject({ok:false,code:safeCode});
 });

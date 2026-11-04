@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 if (process.env.CI !== "true") throw new Error("Calling concurrency tests run only on disposable CI");
+if (process.env.GITHUB_ACTIONS !== "true" || process.platform !== "linux" || process.env.DATABASE_URL || process.env.SUPABASE_ACCESS_TOKEN) throw new Error("Requires an isolated GitHub Linux runner without hosted credentials");
 const database = "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const tenant = "f0f0f0f0-0000-4000-8000-000000001701";
 const uid = n => `20000000-0000-4000-8000-00000000${n}`;
@@ -291,6 +292,76 @@ try {
     await assert.rejects(capDenied.query(`begin; set local statement_timeout='2s'; ${actor("1701")} ${request("1701", "0090")}`), /Call history limit reached/);
     console.log("PASS exhausted fresh-record allowance refused before held account lock");
   } finally { await capHolder.query("rollback;"); capHolder.close(); capDenied.close(); }
+  await resetCostFixtures();
+  const nativeOrder = 'e2040000-0000-4000-8000-000000009001';
+  const nativeTask = 'e2040000-0000-4000-8000-000000009002';
+  await observer.query(`insert into public.services(id,tenant_id,name) values
+    ('e2040000-0000-4000-8000-000000009003','${tenant}','Synthetic native race service');
+    insert into public.orders(id,tenant_id,company_id,service_id,title,status,assigned_to_profile_id) values
+    ('${nativeOrder}','${tenant}','e0000000-0000-4000-8000-000000001701','e2040000-0000-4000-8000-000000009003','Synthetic native race','working','${uid('1704')}');
+    insert into public.order_tasks(id,tenant_id,order_id,title,assigned_to_profile_id) values
+    ('${nativeTask}','${tenant}','${nativeOrder}','Synthetic native assignee','${uid('1705')}');`);
+  const nativeInvite = (id, recipient='1704') => `select public.app_request_order_call('${nativeOrder}','${requestId(id)}','${device('9001')}','audio','${uid(recipient)}');`;
+  await race('native same-request replay', '1701', nativeInvite('9001'), '1701', nativeInvite('9001'), async(left,right)=>{
+    assert.equal(json(left).id,json(right).id);
+    assert.equal(Number((await observer.query(`select count(*) from private.ticket_calls where order_id='${nativeOrder}';`))[0]),1);
+    assert.equal(Number((await observer.query('select count(*) from private.ticket_call_reservations;'))[0]),1);
+  });
+  await resetCostFixtures();
+  await race('native disjoint-pair one-live admission', '1701', nativeInvite('9002'), '1702', nativeInvite('9003','1705'), async(left,right)=>{
+    assert.equal(json(left).state,'ringing');assert.equal(json(right).outcome,'busy');
+    assert.equal(Number((await observer.query('select count(*) from private.ticket_call_reservations;'))[0]),1);
+    assert.equal(Number((await observer.query(`select count(*) from private.ticket_calls where order_id='${nativeOrder}' and state<>'ended';`))[0]),1);
+  });
+  await resetCostFixtures();
+  // Separate native conversations and participants still share the account budget.
+  const secondNativeOrder='e2040000-0000-4000-8000-000000009004';
+  await observer.query(`insert into public.orders(id,tenant_id,company_id,service_id,title,status,assigned_to_profile_id)
+    select '${secondNativeOrder}',tenant_id,company_id,service_id,'Synthetic other native race','working','${uid('1705')}' from public.orders where id='${nativeOrder}';
+    insert into private.ticket_calls(id,request_id,ticket_id,tenant_id,initiated_by,mode,participants,state,legacy,created_at,expires_at)
+    select gen_random_uuid(),gen_random_uuid(),'${ticket('1701')}','${tenant}','${uid('1705')}','audio',array['${uid('1705')}'::uuid],'ended',true,now()-interval '20 minutes',now()-interval '5 minutes' from generate_series(1,19);
+    insert into private.ticket_call_reservations select id,date_trunc('month',now())::date,1800,1800 from private.ticket_calls where legacy and tenant_id='${tenant}';`);
+  await race('native last shared account budget admission','1701',nativeInvite('9005'),'1702',
+    `select public.app_request_order_call('${secondNativeOrder}','${requestId('9006')}','${device('9002')}','audio','${uid('1705')}');`,async(left,right)=>{
+      assert.equal(json(left).state,'ringing');assert.equal(json(right).outcome,'refused');
+      assert.equal(Number((await observer.query('select sum(coalesce(settled_seconds,reserved_seconds)) from private.ticket_call_reservations;'))[0]),36000);
+    });
+  await resetCostFixtures();
+  await race('native task recipient revoked while request waits', '1704',
+    `reset role; update public.order_tasks set assigned_to_profile_id=null where id='${nativeTask}';`,
+    '1701',nativeInvite('9004','1705'),async()=>{
+      assert.equal(Number((await observer.query(`select count(*) from private.ticket_calls where order_id='${nativeOrder}';`))[0]),0);
+      assert.equal(Number((await observer.query('select count(*) from private.ticket_call_reservations;'))[0]),0);
+    },/Call unavailable/);
+
+  const company='e0000000-0000-4000-8000-000000001701';
+  await observer.query(`update public.tenant_memberships set role_id=(select id from public.roles where name='manager') where tenant_id='${tenant}' and profile_id='${uid('1705')}';`);
+  const assignManager=`select public.app_assign_client_manager('${company}','${uid('1705')}');`;
+  await race('manager archival wins eligibility race','1704',
+    `reset role; update public.tenant_memberships set archived_at=clock_timestamp() where tenant_id='${tenant}' and profile_id='${uid('1705')}';`,
+    '1704',assignManager,async()=>{
+      assert.equal(Number((await observer.query(`select count(*) from private.client_manager_assignments where company_id='${company}';`))[0]),0);
+    },/Choose an active manager/);
+  await observer.query(`update public.tenant_memberships set archived_at=null where tenant_id='${tenant}' and profile_id='${uid('1705')}';`);
+  await race('manager concurrent assignment persists and audits once','1704',assignManager,'1704',assignManager,async()=>{
+    assert.equal((await observer.query(`select manager_profile_id from private.client_manager_assignments where company_id='${company}';`))[0],uid('1705'));
+    assert.equal(Number((await observer.query(`select count(*) from public.activity_events where entity_id='${company}' and metadata->>'field'='manager_profile_id';`))[0]),1);
+  });
+  await race('manager assignment locks eligibility through persistence','1704',assignManager,'1704',
+    `reset role; update public.tenant_memberships set archived_at=clock_timestamp() where tenant_id='${tenant}' and profile_id='${uid('1705')}';`,async()=>{
+      assert.equal((await observer.query(`select manager_profile_id from private.client_manager_assignments where company_id='${company}';`))[0],uid('1705'));
+      assert.equal(Number((await observer.query(`select count(*) from public.activity_events where entity_id='${company}' and metadata->>'field'='manager_profile_id';`))[0]),1);
+    });
+  await observer.query(`delete from public.notifications where recipient_profile_id='${uid('1701')}';
+    insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key,created_at)
+    select '${uid('1701')}','${tenant}','${company}','client','client','Synthetic opening race','Synthetic activity','/account','opening-race:'||n,clock_timestamp()-interval '1 hour' from generate_series(1,151) n;`);
+  const openingStamp=new Date().toISOString();
+  const opening=`select public.app_open_client_notifications('${requestId('9050')}','${openingStamp}');`;
+  await race('notification opening replay excludes a later arrival','1701',opening,'1701',opening,async(left,right)=>{
+    assert.equal(json(left).readCount,151);assert.equal(json(right).readCount,151);
+    assert.equal(Number((await observer.query(`select count(*) from public.notifications where recipient_profile_id='${uid('1701')}' and read_at is null;`))[0]),1);
+  },false,()=>observer.query(`insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key,created_at)
+    values('${uid('1701')}','${tenant}','${company}','client','client','Synthetic later arrival','Synthetic activity','/account','opening-race:later',clock_timestamp());`));
 } finally {
   await resetCostFixtures().catch(() => {});
   observer.close();

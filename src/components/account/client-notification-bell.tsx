@@ -20,7 +20,7 @@ import {
 } from "react";
 import {
   getClientNotificationsAction,
-  markAllClientNotificationsReadAction,
+  markOpenedClientNotificationsReadAction,
   markClientNotificationReadAction,
   type WalletNotificationItem,
 } from "../../app/actions/notifications";
@@ -34,6 +34,7 @@ import {
 } from "../../lib/notifications/browser-notification-feedback";
 import { useHeaderPanels } from "./command/header-panels";
 import styles from "./client-notification-bell.module.css";
+import { randomUuid } from "../../lib/random-uuid";
 
 function formatActivityTime(
   value: string,
@@ -225,11 +226,51 @@ export function ClientNotificationBell({
       WalletNotificationItem[]
     >([]);
   const cacheGeneration = useRef(0);
+  const [totalUnread, setTotalUnread] = useState<number | null>(null);
   useTicketCacheRevocation(() => {
     setNotifications((items) => items.filter((item) => notificationVisibleWithModules(item, false, true)));
+    setTotalUnread(null);
     setRinging(false);
   }, cacheGeneration);
   const notifications = cachedNotifications.filter((item) => notificationVisibleWithModules(item, ticketsAvailable, projectsAvailable));
+  const openingRequest = useRef<{requestId:string;requestedAt:string} | null>(null);
+  const readInFlight = useRef(false);
+  const queuedOpening = useRef(false);
+  const readVersion = useRef(0);
+  const serverClockOffset = useRef(0);
+  const [readError, setReadError] = useState(false);
+  const [openingExpired, setOpeningExpired] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
+  const markOpening = useCallback(async function markOpening(deliberate = true) {
+    if (readInFlight.current) { if (deliberate) queuedOpening.current = true; return; }
+    if (!openingRequest.current) openingRequest.current = {requestId:randomUuid(),requestedAt:new Date(Date.now()+serverClockOffset.current).toISOString()};
+    else if (deliberate) queuedOpening.current = true;
+    readInFlight.current = true;
+    const generation = cacheGeneration.current;
+    readVersion.current++;
+    setMarkingRead(true);
+    let continueOpening = false;
+    try {
+      const result = await markOpenedClientNotificationsReadAction(openingRequest.current);
+      if (!result.ok) {
+        if (result.code === "OPENING_EXPIRED") {
+          openingRequest.current=null;
+          queuedOpening.current=false;
+          setOpeningExpired(true);
+          if (result.serverTime && Number.isFinite(Date.parse(result.serverTime))) serverClockOffset.current=Date.parse(result.serverTime)-Date.now();
+        }
+        setReadError(true); return;
+      }
+      const items=result.notifications.filter(item=>notificationVisibleWithModules(item,generation === cacheGeneration.current && ticketsAvailableRef.current,projectsAvailableRef.current));
+      setNotifications(items);
+      setTotalUnread(generation === cacheGeneration.current && ticketsAvailableRef.current&&projectsAvailableRef.current ? result.unreadCount ?? items.filter(item=>!item.readAt).length : null);
+      openingRequest.current=null;
+      setReadError(false);
+      setOpeningExpired(false);
+      continueOpening=queuedOpening.current; queuedOpening.current=false;
+    } catch { setReadError(true); }
+    finally { readVersion.current++; readInFlight.current = false; setMarkingRead(false); if (continueOpening) void markOpening(); }
+  }, []);
 
   const noteIncoming =
     useCallback(
@@ -365,6 +406,7 @@ export function ClientNotificationBell({
         }
 
         const generation = cacheGeneration.current;
+        const version = readVersion.current;
         try {
           const result =
             await getClientNotificationsAction();
@@ -378,15 +420,15 @@ export function ClientNotificationBell({
           }
 
           if (result.ok) {
+            if (readInFlight.current || version !== readVersion.current) return;
             const items = generation === cacheGeneration.current ? result.notifications
               : result.notifications.filter((item) => notificationVisibleWithModules(item, false, true));
             noteIncoming(
               items,
             );
 
-            setNotifications(
-              items,
-            );
+            setNotifications(items);
+            setTotalUnread(generation === cacheGeneration.current ? result.unreadCount ?? null : null);
 
             setError(null);
           } else if (!silent) {
@@ -601,7 +643,7 @@ export function ClientNotificationBell({
     [],
   );
 
-  const unread =
+  const unread = ticketsAvailable && projectsAvailable && totalUnread !== null ? totalUnread :
     notifications.filter(
       (notification) =>
         !notification.readAt,
@@ -634,33 +676,13 @@ export function ClientNotificationBell({
 
     void markClientNotificationReadAction(
       notification.id,
-    );
+    ).then(() => load(true, undefined, true));
 
     setOpen(false);
   }
 
   function markAllAsRead() {
-    if (unread === 0) {
-      return;
-    }
-
-    const readAt =
-      new Date().toISOString();
-
-    setNotifications(
-      (current) =>
-        current.map(
-          (notification) =>
-            notification.readAt
-              ? notification
-              : {
-                  ...notification,
-                  readAt,
-                },
-        ),
-    );
-
-    void markAllClientNotificationsReadAction();
+    void markOpening();
   }
   return (
     <div
@@ -719,6 +741,10 @@ export function ClientNotificationBell({
           panels?.cancelClose()
         }
         onClick={() => {
+          const explicitlyOpening = managed ? !(open && panels.pinned) : !open;
+          if (explicitlyOpening) {
+            void markOpening();
+          }
           if (managed) {
             panels.toggle(
               "notifications",
@@ -780,6 +806,7 @@ export function ClientNotificationBell({
           </div>
 
           <div className={styles.headerActions}>
+            {markingRead ? <small role="status">Marking read…</small> : readError ? <button type="button" onClick={() => void markOpening(false)}>{openingExpired ? "Mark current notifications read" : "Retry marking read"}</button> : null}
             {loading ? (
               <small>
                 Refreshing...
