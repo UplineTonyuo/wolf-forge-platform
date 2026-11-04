@@ -280,7 +280,7 @@ try {
   const holder = new Session("cost-global-lock-holder"), denied = new Session("cost-early-denial");
   try {
     await holder.query("begin; select private.ticket_call_lock();");
-    await assert.rejects(denied.query(`begin; set local statement_timeout='2 seconds'; ${actor("1701")} ${request("1701", "0001")}`), /rate limit exceeded/);
+    await assert.rejects(denied.query(`begin; set local statement_timeout='2s'; ${actor("1701")} ${request("1701", "0001")}`), /rate limit exceeded/);
     console.log("PASS matching retry denied while another physical session holds account lock");
   } finally { await holder.query("rollback;"); holder.close(); denied.close(); }
   await resetCostFixtures();
@@ -288,7 +288,7 @@ try {
   const capHolder = new Session("cost-cap-lock-holder"), capDenied = new Session("cost-cap-early-denial");
   try {
     await capHolder.query("begin; select private.ticket_call_lock();");
-    await assert.rejects(capDenied.query(`begin; set local statement_timeout='2 seconds'; ${actor("1701")} ${request("1701", "0090")}`), /Call history limit reached/);
+    await assert.rejects(capDenied.query(`begin; set local statement_timeout='2s'; ${actor("1701")} ${request("1701", "0090")}`), /Call history limit reached/);
     console.log("PASS exhausted fresh-record allowance refused before held account lock");
   } finally { await capHolder.query("rollback;"); capHolder.close(); capDenied.close(); }
 } finally {
