@@ -1,4 +1,5 @@
--- A deliberate opening owns one immutable server snapshot, independent of the 50-row feed.
+-- A deliberate opening freezes eligible row versions before its serialization wait.
+-- Timestamp alone cannot exclude a later commit from an older producer transaction.
 create table private.notification_openings (
   profile_id uuid not null references public.profiles(id),
   tenant_id uuid not null references public.tenants(id),
@@ -56,12 +57,21 @@ end $$;
 create function public.app_open_client_notifications(p_request_id uuid,p_requested_at timestamptz) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare caller uuid:=private.require_active_notification_actor(); tenant uuid:=private.current_tenant_id();
- receipt private.notification_openings; changed integer; stamp timestamptz:=clock_timestamp();
+ receipt private.notification_openings; changed integer; stamp timestamptz:=clock_timestamp(); candidates jsonb;
 begin
  if private.profile_account_class(caller)<>'client' then raise insufficient_privilege; end if;
  if p_request_id is null or p_requested_at is null or p_requested_at<stamp-interval '1 day' or p_requested_at>stamp+interval '5 minutes' then
   raise exception 'Opening request expired or invalid' using errcode='22023'; end if;
- perform private.consume_rate_limit('notification-open',caller::text,interval '1 minute',60);
+ -- ONE statement owns the pre-wait MVCC snapshot even if rate admission waits.
+ -- CASE admits first: a refused request never scans/collects the unread rows.
+ -- Keep only IDs/system versions in memory; no feed limit, new durable rows or producer changes.
+ -- xmin alone is insufficient for multiple versions written by the same transaction.
+ select case when private.consume_rate_limit('notification-open',caller::text,interval '1 minute',60)>0 then
+  (select coalesce(jsonb_agg(jsonb_build_object('id',n.id,'row_xmin',n.xmin::text,'row_ctid',n.ctid::text)),'[]'::jsonb)
+   from public.notifications n
+   where n.recipient_profile_id=caller and n.audience='client' and n.read_at is null
+    and n.created_at<=stamp and private.client_notification_visible(n))
+  else '[]'::jsonb end into candidates;
  -- Bounded receipt retention; expired request timestamps cannot recreate an opening.
  delete from private.notification_openings where profile_id=caller and requested_at<stamp-interval '1 day';
  perform pg_advisory_xact_lock(hashtextextended('notification-open:'||caller::text,0));
@@ -73,7 +83,9 @@ begin
   insert into private.notification_openings(profile_id,tenant_id,request_id,requested_at,snapshot_at)
    values(caller,tenant,p_request_id,p_requested_at,stamp) returning * into receipt;
   update public.notifications n set read_at=coalesce(n.read_at,stamp)
-   where n.recipient_profile_id=caller and n.audience='client' and n.read_at is null
+   from jsonb_to_recordset(candidates) as seen(id uuid,row_xmin text,row_ctid text)
+   where n.id=seen.id and n.xmin::text=seen.row_xmin and n.ctid::text=seen.row_ctid
+    and n.recipient_profile_id=caller and n.audience='client' and n.read_at is null
     and n.created_at<=receipt.snapshot_at and private.client_notification_visible(n);
   get diagnostics changed=row_count;
   update private.notification_openings set read_count=changed

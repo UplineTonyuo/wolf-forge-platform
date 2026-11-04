@@ -52,5 +52,59 @@ select is((public.app_client_notification_feed()->'unreadCounts'->>'withoutTicke
 select is((public.app_client_notification_feed()->'unreadCounts'->>'withoutProjects')::int,2,'Projects mask excludes order entities');
 select is((public.app_client_notification_feed()->'unreadCounts'->>'withoutConversations')::int,1,'both masks preserve the nonconversation unread count');
 reset role;
+-- Deterministic first-execution interleaving, complementary to the physical
+-- three-session harness. Receipt insertion publishes via the real producer
+-- AFTER membership capture. now() is the earlier transaction timestamp.
+-- Refreshes here also share xmin, so the tuple version must be checked too.
+create function pg_temp.publish_first_opening_notification() returns void language sql as $$
+ select private.emit_client_conversation_notification(
+  'e0000000-0000-4000-8000-000000001701','tickets.view','ticket','e1700000-0000-4000-8000-000000001701','ticket',
+  'Synthetic producer','Synthetic first-opening publication','/account/messages/e1700000-0000-4000-8000-000000001701',
+  '20000000-0000-4000-8000-000000001704',now());
+$$;
+create function pg_temp.prepare_first_opening(kind text) returns void language plpgsql as $$
+begin
+ delete from public.notifications where recipient_profile_id in
+  ('20000000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001702');
+ insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key)
+  select '20000000-0000-4000-8000-000000001701','f0f0f0f0-0000-4000-8000-000000001701',
+   'e0000000-0000-4000-8000-000000001701','client','client','Synthetic unchanged notification','Synthetic activity',
+   '/account','opening-205:first:'||n from generate_series(1,151) n;
+ if kind<>'new-row' then
+  perform pg_temp.publish_first_opening_notification();
+  if kind='refresh-read' then
+   update public.notifications set read_at=now() where recipient_profile_id='20000000-0000-4000-8000-000000001701'
+    and event_key='client-conversation:ticket:e1700000-0000-4000-8000-000000001701';
+  end if;
+ end if;
+end $$;
+create function pg_temp.publish_after_first_receipt() returns trigger
+language plpgsql security definer set search_path='' as $$
+begin perform pg_temp.publish_first_opening_notification(); return new; end $$;
+create trigger opening_first_publication after insert on private.notification_openings for each row
+ when (new.profile_id='20000000-0000-4000-8000-000000001701' and new.request_id in
+  ('71000000-0000-4000-8000-000000002053','71000000-0000-4000-8000-000000002054','71000000-0000-4000-8000-000000002055'))
+ execute function pg_temp.publish_after_first_receipt();
+
+select pg_temp.prepare_first_opening('new-row');
+select pg_temp.opening_actor(); set local role authenticated;
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002053',now())->>'readCount')::int,151,'FIRST opening excludes a newly published backdated row');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,1,'new late publication remains unread');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002053',now())->>'readCount')::int,151,'lost-ack replay returns the first receipt');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,1,'replay does not extend the first snapshot');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002061',now())->>'readCount')::int,1,'a later explicit opening can acknowledge the new row');
+reset role;
+select pg_temp.prepare_first_opening('refresh-unread');
+select pg_temp.opening_actor(); set local role authenticated;
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002054',now())->>'readCount')::int,151,'FIRST opening excludes a refreshed unread row version with the same xmin');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,1,'refreshed unread conversation remains unread');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002062',now())->>'readCount')::int,1,'a later explicit opening acknowledges the refreshed version');
+reset role;
+select pg_temp.prepare_first_opening('refresh-read');
+select pg_temp.opening_actor(); set local role authenticated;
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002055',now())->>'readCount')::int,151,'FIRST opening excludes an existing read row refreshed to unread');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,1,'refreshed formerly-read conversation remains unread');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002063',now())->>'readCount')::int,1,'a later explicit opening acknowledges the formerly-read row');
+reset role;
 select * from finish();
 rollback;

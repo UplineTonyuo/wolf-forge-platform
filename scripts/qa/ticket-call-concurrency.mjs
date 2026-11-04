@@ -383,6 +383,120 @@ try {
     assert.equal(Number((await observer.query(`select count(*) from public.notifications where recipient_profile_id='${uid('1701')}' and read_at is null;`))[0]),1);
   },false,()=>observer.query(`insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key,created_at)
     values('${uid('1701')}','${tenant}','${company}','client','client','Synthetic later arrival','Synthetic activity','/account','opening-race:later',clock_timestamp());`));
+
+  // First execution, not replay: an earlier producer commits while a NEW opening
+  // waits on admission/recipient serialization or the row version. Keep now().
+  const publishConversation = `select private.emit_client_conversation_notification(
+    '${company}','tickets.view','ticket','${ticket('1701')}','ticket','Synthetic producer',
+    'Synthetic first-opening publication','/account/messages/${ticket('1701')}','${uid('1704')}',now());`;
+  const conversationKey = `client-conversation:ticket:${ticket('1701')}`;
+  async function firstOpeningPublication(kind, legacy, index, waitOn) {
+    const producer = new Session(`opening-producer-${index}`);
+    const holder = waitOn === 'row-version' ? producer : new Session(`opening-holder-${index}`);
+    const opener = new Session(`opening-new-request-${index}`);
+    const key = requestId(String(9100 + index));
+    const rpc = legacy ? 'pg_temp.open_client_notifications_90' : 'public.app_open_client_notifications';
+    try {
+      await observer.query(`delete from public.notifications where recipient_profile_id in ('${uid('1701')}','${uid('1702')}');
+        delete from private.client_conversation_presence where profile_id in ('${uid('1701')}','${uid('1702')}')
+          and conversation_type='ticket' and conversation_id='${ticket('1701')}';
+        insert into public.notifications(recipient_profile_id,tenant_id,company_id,audience,category,title,body,href,event_key,created_at)
+        select '${uid('1701')}','${tenant}','${company}','client','client','Synthetic existing unread','Synthetic activity',
+          '/account','first-opening:${index}:'||n,now()-interval '1 hour' from generate_series(1,151) n;`);
+      if (kind !== 'new-row') {
+        await observer.query(publishConversation);
+        if (kind === 'refresh-read') await observer.query(`update public.notifications set read_at=now()
+          where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`);
+      }
+      const before = await observer.query(`select xmin::text||':'||ctid::text from public.notifications
+        where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`);
+      if (legacy) {
+        await opener.query('create temporary table opening_baseline_scope(guard boolean);');
+        await opener.query(await readFile(new URL('../../supabase/tests/fixtures/notification_opening_90b94748.inc', import.meta.url), 'utf8'));
+      }
+      await producer.query('begin; select now();'); // T0: actual transaction timestamp, before the opening.
+      const producerPid = Number((await producer.query('select pg_backend_pid();'))[0]);
+      if (waitOn === 'recipient') {
+        await holder.query(`begin; select pg_advisory_xact_lock(hashtextextended('notification-open:${uid('1701')}',0));`);
+      } else if (waitOn === 'rate-counter') {
+        // Lock both adjacent real buckets without resetting successful request counts.
+        await holder.query(`begin; insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+          select 'notification-open','${uid('1701')}',b,b+interval '2 minutes',1
+          from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b
+          on conflict(scope,subject,window_start) do update set hits=private.rate_limit_counters.hits;`);
+      } else {
+        // Capture sees the committed old version; UPDATE must wait on this uncommitted refresh.
+        await producer.query(publishConversation);
+      }
+      const holderPid = Number((await holder.query('select pg_backend_pid();'))[0]);
+      await opener.query(`begin; ${actor('1701')}`);
+      const openerPid = Number((await opener.query('select pg_backend_pid();'))[0]);
+      assert.equal(new Set([producerPid, holderPid, openerPid]).size, waitOn === 'row-version' ? 2 : 3,
+        'producer/opener and independent advisory/rate holder use distinct physical sessions');
+      await new Promise(resolve => setTimeout(resolve, 20)); // Establish strict T0 < T1 without backdating input.
+      const requestedAt = new Date().toISOString();
+      const openingSql = `select ${rpc}('${key}','${requestedAt}');`;
+      const pending = opener.query(openingSql).then(lines => ({ lines }), error => ({ error }));
+      let blocked = false;
+      for (let n = 0; n < 100; n++) {
+        const waiting = await observer.query(`select ${holderPid}=any(pg_blocking_pids(${openerPid}))
+          and exists(select 1 from pg_locks where pid=${openerPid} and locktype='${waitOn === 'recipient' ? 'advisory' : 'transactionid'}' and not granted);`);
+        if (waiting[0] === 't') { blocked = true; break; }
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      assert.ok(blocked, `NEW request genuinely waits on the intended ${waitOn} lock, not a replay`);
+      if (waitOn !== 'row-version') await producer.query(publishConversation);
+      const published = json(await producer.query(`select jsonb_build_object('usesTransactionNow',created_at=now(),
+        'version',xmin::text||':'||ctid::text) from public.notifications
+        where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`));
+      assert.equal(published.usesTransactionNow, true, 'canonical producer keeps its earlier now() timestamp');
+      if (kind !== 'new-row') assert.notEqual(published.version, before[0], 'canonical upsert refreshes the existing row version');
+      await producer.query('commit;');
+      if (waitOn !== 'row-version') {
+        // Publication is visible while the opening is still blocked on a different holder.
+        assert.equal((await observer.query(`select read_at is null from public.notifications
+          where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`))[0], 't');
+        await holder.query('commit;');
+      }
+      const result = await pending;
+      assert.ok(!result.error, result.error?.message);
+      const receipt = json(result.lines);
+      await opener.query('commit;');
+      assert.equal(receipt.requestId, key, 'first execution has its own new request ID');
+      const state = json(await observer.query(`select jsonb_build_object('unread',read_at is null,
+        'backdated',created_at<='${receipt.snapshotAt}'::timestamptz) from public.notifications
+        where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`));
+      assert.equal(state.backdated, true, 'counterexample defeats a timestamp-only cutoff');
+      const replay = json(await opener.query(`begin; ${actor('1701')} ${openingSql} commit;`));
+      assert.deepEqual(replay, receipt, 'lost-ack replay returns the original immutable receipt');
+      const afterReplay = (await observer.query(`select read_at is null from public.notifications
+        where recipient_profile_id='${uid('1701')}' and event_key='${conversationKey}';`))[0] === 't';
+      assert.equal(afterReplay, state.unread, 'replay never extends membership');
+      const feed = json(await opener.query(`begin; ${actor('1701')} select public.app_client_notification_feed(); commit;`));
+      return { unread: state.unread, readCount: receipt.readCount, unreadCount: feed.unreadCount };
+    } finally { if (holder !== producer) holder.close(); producer.close(); opener.close(); }
+  }
+  function assertFirstOpening(result) {
+    assert.equal(result.unread, true, 'late publication must remain unread on FIRST opening');
+    assert.equal(result.readCount, 151, 'all unchanged eligible rows are acknowledged, not the late version');
+    assert.equal(result.unreadCount, 1, 'authorized complete badge retains exactly the late notification');
+  }
+  for (const [waitIndex, waitOn] of ['recipient','rate-counter','row-version'].entries()) {
+    for (const [kindIndex, kind] of ['new-row','refresh-unread','refresh-read'].entries()) {
+      if (waitOn === 'row-version' && kind !== 'refresh-unread') continue;
+      const index = waitIndex * 3 + kindIndex;
+      const red = await firstOpeningPublication(kind, true, index * 2, waitOn);
+      assert.throws(() => assertFirstOpening(red), /late publication must remain unread on FIRST opening/);
+      console.log(`RED exact90b94748 baseline ${waitOn}/${kind}: first-opening oracle rejects the backdated publication`);
+      assertFirstOpening(await firstOpeningPublication(kind, false, index * 2 + 1, waitOn));
+      const next = json(await observer.query(`begin; ${actor('1701')}
+        select public.app_open_client_notifications('${requestId(String(9200 + index))}',clock_timestamp()); commit;`));
+      assert.equal(next.readCount, 1, 'a later explicit NEW opening can acknowledge the late publication');
+      const badge = json(await observer.query(`begin; ${actor('1701')} select public.app_client_notification_feed(); commit;`));
+      assert.equal(badge.unreadCount, 0, 'the later explicit opening authoritatively clears that unread badge');
+      console.log(`GREEN first opening ${waitOn}/${kind}: physical overlap; late version unread; replay and later explicit opening checked`);
+    }
+  }
 } finally {
   await resetCostFixtures().catch(() => {});
   observer.close();

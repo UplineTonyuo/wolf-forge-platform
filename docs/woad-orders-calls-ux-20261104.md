@@ -1,5 +1,31 @@
 # Orders, calls and client UX — local task checkpoint
 
+## Approved full release continuation — 2026-11-05
+
+Owner approval in `outputs/orders-calls-final-audit-20261105/approved-release-continuation.txt` supersedes prior hold/CI-only wording for THIS release. Continue original session/worktree, reviewed six-path correction first; current included allowance, isolated baseline RED/candidate GREEN, final exact-candidate checks and verified private DB+Storage backup gate the ten migrations/controlled PR114 merge/merge-result checks/WOAD promotion. No routine reapproval; stop for failed gates, missing evidence/access or unverified cost. Separate dependency/login/legal proposals excluded. Prior results remain exact-SHA history. Current billing APIs404; fresh owner usage evidence requested before dispatch. PR114 temporarily closes before correction push to avoid duplicate automatic validation. No production mutation is authorized before the stated gates actually pass.
+
+## Active first-opening correction — 2026-11-05
+
+Original session01a1a678-218d-7ba2-8b21-6876f09bba88 confirmed via both process session IDs. Same worktree/branch/HEAD90b94748; existing two handoff edits preserved. Coordinator recheck at `outputs/orders-calls-final-audit-20261105/review.md` identifies the ORIGINAL first-opening/backdated-producer gap, not badge masking. Earlier immutable/fixed claims were too broad: green90 evidence covers replay after an existing receipt and its executed cases, not this NEW-request counterexample or changed code.
+
+Producer transactionT0 predates openingT1. Opening waits on its recipient lock with a NEW request ID. Canonical producer publishes/refreshes usingnow()=T0 and commits while it waits. Old UPDATE's fresh READ COMMITTED snapshot sees and reads the late version becausecreated_at<=T1. An earlier rate-counter wait is also covered by the prepared correction. Do not replace this with the old same-ID replay schedule.
+
+Local UNCOMMITTED fix in existing unapplied20261104132000: CASE-gated admission and membership capture in ONE MVCC statement (quota denial precedes the scan), freeze eligible id/xmin/ctid, then require unchanged row versions plus all original visibility on UPDATE. No producer clock changes, new schema/grants/backfill, feed limit, rate/retention weakening or polling. Physical regression prepares exact90 temporary-function RED and candidate GREEN for recipient/rate waits xnew/unread-refresh/read-refresh; observes exact blocker PID/type and keepsnow() semantics. SQL205 adds deterministic post-receipt publication/same-xmin refresh cases. All physical/SQL RED/GREEN is UNEXECUTED: no local authorized isolated target, no Docker/CI under hold. No model test is called SQL proof.
+
+Local bell/action compatibility:2files/17testsPASS. TypeScript noEmit/incrementalfalse2048MiB exit0; final MJS syntax/ESLint1536MiB and whitespacePASS; inclusive scanner0/2337. Baseline fixture equals exact90function after only temporary-name normalization (SHA25617d1446dc0791a61135fe34baa6a668d38401695076b7ec7a96972bfb45a96a7). Targeted read-only source review found no remaining concrete defect. UPDATE/EPQ held-row schedule also prepared. No SQL RED/GREEN executed. Further changed-code SQL/pgTAP/RLS/physical/affected/final validation remains pending;90b94748's4612JS/7223SQL/24races/transport results remain historical exact-SHA evidence. Old release wrappers/checksums/preflight pinned90 are obsolete for the working delta and must not be promoted. Existing ten-migration/private-backup/controlled-rollout gates still apply after explicit hold lift. No commit/push/dispatch/production migration/merge/promotion/provider request/vault write. Full report below and companion final handoff are corrected to this state.
+
+Earlier sections below are historical snapshots, superseded by this active correction and its unexecuted-validation limits.
+
+## Historical queue handoff — before the first-opening correction
+
+Candidate90b94748/treef5f0dcdd057702ee15a2fab5ae6bbb71579ff52d is committed/pushed. FullPR41875532489attempt2 passed all7jobs (389files/4612JS,167files/7223SQL,fullDBlint/24physicalraces). Exact transport41877061435 completed/success, including legacy strict decoder, native/linked Auth/Realtime/SSE, manager persistence and151-notification acceptance. Its queued API/UI was stale: logs ran17:22–17:29UTC; final success published17:43:06. Both jobs now confirm success. GitHub internal cause remains unverified; earlier incident resolution is not causal proof.
+
+The owner's latest instruction holds **all further dispatch and deployment**, preserves this run and free-only usage. No cancellation/redispatch/production mutation followed that hold. PR114 remains draft/open/unmerged. Final read-only production receipt:207 migrations through20261103161636, manager/opening tables absent, no temporary backup role, pilot2. WOAD remainsdpl_hLstfmZUqRVvojtkQoiGZ6hJhjDN/7aa06cf. Ten migrations remainUNAPPLIED. No fresh backup, production preflight, migration, merge, promotion or manual media pass is claimed.
+
+Prepared private wrappers/alignment/preflight received source review, including markers before locks and top-level timeout bounds; all remainunexecuted. Existing production high/critical audit gate passed with5moderate transitive findings remaining; no dependency/scanner changes. This file and `woad-orders-calls-ux-final-20261104.md` are local uncommitted handoff-only edits, unpushed to avoid another PR run under the hold. The latter contains the complete current seven-item/file report, evidence, ten-migration order, pending gates, rollback, owner QA and exact-content steward proposal. Vault remains read-only.
+
+Exact committed source ZIP: TEMPwolf-forge-orders-calls-20261104/source-90b94748.zip,56 hash-verified entries, SHA256181E82AD3A31A40FDA6DE7452651B27FB0F4FB5BA819AB38707CD8C002CF9EA2. No automatic compaction configured. Do not infer release permission from green CI while the explicit owner hold remains.
+
 ## Active release continuation — 2026-11-04 23:00 SGT
 
 ### Serving-version compatibility correction — 2026-11-05 01:04 SGT
