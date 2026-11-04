@@ -29,6 +29,10 @@ Parents: security bba827fe8324c208a919344c357fcea273c7a73a and call 961b4962e186
 
 ## Remaining acceptance
 
+### First CI run correction
+
+Run 41764225935 at 12eca51 reached all migrations and passed formal SQL199–202. The database gate failed because Supabase recursively discovered the manual pre-fix reproduction under supabase/tests/manual; its expected denial on the repaired schema is not a pgTAP test. Move that file intact to scripts/qa/reproductions/project-task-create-replay-red.sql. No assertion, migration, application body or harness guard changes. After the first run finishes, dispatch database_only=true and call_acceptance=false on the corrected commit, preserving the completed build/transport/application evidence through unchanged source blobs. Maximum additional configured job-time: database20 + secrets10 =30 minutes. Record the RED discovery failure and subsequent GREEN separately.
+
 Prior 562 security tests and 146 call tests are historical separate-branch evidence, not a combined pass. Full database/RLS/race/transport/build acceptance remains pending until the exact combined candidate completes CI. Real two-person media and closed-device behavior remain the owner's later manual QA. Current-password Auth enforcement and Daily's provider hard-stop limitation are separate unresolved acceptance/operational matters.
 
 Evidence: C:/Users/TrojanNiAnton/Documents/Codex/2026-10-20/continue-the-wolf-forge-spp-project/outputs/spp-isolated-validation-20261104.
