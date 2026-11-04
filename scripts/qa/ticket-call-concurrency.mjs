@@ -299,8 +299,8 @@ try {
     ('e2040000-0000-4000-8000-000000009003','${tenant}','Synthetic native race service');
     insert into public.orders(id,tenant_id,company_id,service_id,title,status,assigned_to_profile_id) values
     ('${nativeOrder}','${tenant}','e0000000-0000-4000-8000-000000001701','e2040000-0000-4000-8000-000000009003','Synthetic native race','working','${uid('1704')}');
-    insert into public.order_tasks(id,tenant_id,order_id,title,assigned_to_profile_id) values
-    ('${nativeTask}','${tenant}','${nativeOrder}','Synthetic native assignee','${uid('1705')}');`);
+    insert into public.order_tasks(id,order_id,title,assigned_to_profile_id) values
+    ('${nativeTask}','${nativeOrder}','Synthetic native assignee','${uid('1705')}');`);
   const nativeInvite = (id, recipient='1704') => `select public.app_request_order_call('${nativeOrder}','${requestId(id)}','${device('9001')}','audio','${uid(recipient)}');`;
   await race('native same-request replay', '1701', nativeInvite('9001'), '1701', nativeInvite('9001'), async(left,right)=>{
     assert.equal(json(left).id,json(right).id);

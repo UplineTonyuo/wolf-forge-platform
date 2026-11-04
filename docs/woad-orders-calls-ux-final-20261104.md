@@ -1,4 +1,4 @@
-Implemented locally on `codex/woad-orders-calls-ux-20261104`, based on `7e011865`. Changes are uncommitted; both migrations remain **unapplied**.
+Candidate committed/pushed on `codex/woad-orders-calls-ux-20261104`: source `2f15b1e`, integrated checkpoint `1c306eb`, based on preserved `7e011865`. **All three new migrations remain unapplied; WOAD is not promoted.** Current release evidence and CI corrections are in [the task handoff](woad-orders-calls-ux-20261104.md). The behavior table and earlier local validation totals below are the historical first handoff, not new release-gate passes. Notification opening has since been upgraded to a complete authorized server snapshot beyond the50-row feed.
 
 | Item | Behavior and principal changed files |
 |---|---|

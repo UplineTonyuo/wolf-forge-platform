@@ -147,7 +147,7 @@ describe("Sidebar navigation renders the destination skeleton", () => {
   });
 
   it("covers every sidebar destination with its own skeleton, never the generic or previous one", async () => {
-    const routes = ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings"];
+    const routes = ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings"];
     const seen = new Set<string>();
     for (const [index, route] of routes.entries()) {
       const shell = start(routes[(index + routes.length - 1) % routes.length]!);

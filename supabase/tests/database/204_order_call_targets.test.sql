@@ -17,8 +17,8 @@ insert into public.orders(id,tenant_id,company_id,service_id,title,status,assign
  'e0000000-0000-4000-8000-000000001701','e2040000-0000-4000-8000-000000000001','Synthetic order-call project','working',
  '20000000-0000-4000-8000-000000001704' from unnest(array['2','3']) n;
 update public.tickets set order_id='e2040000-0000-4000-8000-000000000003' where id='e1700000-0000-4000-8000-000000001701';
-insert into public.order_tasks(order_id,tenant_id,title,assigned_to_profile_id) values
- ('e2040000-0000-4000-8000-000000000002','f0f0f0f0-0000-4000-8000-000000001701','Synthetic second assigned participant','20000000-0000-4000-8000-000000001705');
+insert into public.order_tasks(order_id,title,assigned_to_profile_id) values
+ ('e2040000-0000-4000-8000-000000000002','Synthetic second assigned participant','20000000-0000-4000-8000-000000001705');
 create function pg_temp.order_call_actor(n text default '1701') returns void language plpgsql as $$
 begin
  perform set_config('request.jwt.claim.sub','',true); perform set_config('request.jwt.claim.role','',true);

@@ -60,11 +60,27 @@ reset role;
 delete from private.rate_limit_counters where scope in ('ticket-call-request','ticket-call-command');
 select pg_temp.actor(); set local role authenticated;
 select lives_ok($q$do $b$begin for i in 1..60 loop perform pg_temp.invite(); end loop; end$b$$q$,'60 matching invitation receipts remain usable');
+reset role;
+select is((select sum(hits)::bigint from private.rate_limit_counters where scope='ticket-call-request' and subject='20000000-0000-4000-8000-000000001701'),60::bigint,'every matching request retry is counted even across a minute boundary');
+-- The successful loop may straddle a fixed window. Assert the cap in both
+-- adjacent windows instead of assuming all iterations used one wall-clock minute.
+insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+ select 'ticket-call-request','20000000-0000-4000-8000-000000001701',b,b+interval '2 minutes',60
+ from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b
+ on conflict(scope,subject,window_start) do update set hits=excluded.hits;
+set local role authenticated;
 select throws_ok($q$select pg_temp.invite()$q$,'WF429','rate limit exceeded','matching invitation retry is throttled');
 reset role;
 select is((select count(*) from private.ticket_calls where not legacy),1::bigint,'matching retries preserve one call record');
 select pg_temp.actor('1704'); set local role authenticated;
 select lives_ok($q$do $b$begin for i in 1..120 loop perform pg_temp.command('accept'); end loop; end$b$$q$,'matching accepted command remains idempotent within allowance');
+reset role;
+select is((select sum(hits)::bigint from private.rate_limit_counters where scope='ticket-call-command' and subject='20000000-0000-4000-8000-000000001704'),120::bigint,'every matching command retry is counted even across a minute boundary');
+insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+ select 'ticket-call-command','20000000-0000-4000-8000-000000001704',b,b+interval '2 minutes',120
+ from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b
+ on conflict(scope,subject,window_start) do update set hits=excluded.hits;
+set local role authenticated;
 select throws_ok($q$select pg_temp.command('accept')$q$,'WF429','rate limit exceeded','matching accepted command retry is throttled');
 reset role;
 update private.ticket_call_settings set enabled=false;

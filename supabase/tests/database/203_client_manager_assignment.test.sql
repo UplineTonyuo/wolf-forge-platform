@@ -39,15 +39,17 @@ insert into public.profile_permission_overrides(tenant_id,profile_id,permission_
 select pg_temp.manager_actor('1704'); set local role authenticated;
 select throws_ok($$select public.app_assign_client_manager('e0000000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001705')$$,'42501',null,'explicit internal edit denial stays authoritative');
 reset role;
-select pg_temp.manager_actor();
+select pg_temp.manager_actor('1704');
+delete from public.profile_permission_overrides where tenant_id='f0f0f0f0-0000-4000-8000-000000001701' and profile_id='20000000-0000-4000-8000-000000001704' and permission_key='clients.edit';
 insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
- select 'f0f0f0f0-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001703',required_permission_key,false
+ select 'f0f0f0f0-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001704',required_permission_key,false
  from public.permission_modules where module_key='clients';
 set local role authenticated;
 select throws_ok($$select public.app_assign_client_manager('e0000000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001705')$$,'42501',null,'Clients module permission denial blocks assignment');
 select throws_ok($$select * from public.app_list_client_manager_options()$$,'42501',null,'Clients module denial also hides manager choices');
 reset role;
-delete from public.profile_permission_overrides where tenant_id='f0f0f0f0-0000-4000-8000-000000001701' and profile_id='20000000-0000-4000-8000-000000001703';
+delete from public.profile_permission_overrides where tenant_id='f0f0f0f0-0000-4000-8000-000000001701' and profile_id='20000000-0000-4000-8000-000000001704';
+select pg_temp.manager_actor();
 update public.profiles set archived_at=now() where id='20000000-0000-4000-8000-000000001705';
 set local role authenticated;
 select throws_ok($$select public.app_assign_client_manager('e0000000-0000-4000-8000-000000001701','20000000-0000-4000-8000-000000001705')$$,'22023',null,'archived profile is rejected despite active membership');
