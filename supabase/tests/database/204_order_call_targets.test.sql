@@ -76,6 +76,8 @@ select pg_temp.order_call_actor(); set local role authenticated;
 select throws_ok($$select pg_temp.native_invite('2042')$$,'42501',null,'native support preserves pilot exclusion');
 reset role;
 update private.ticket_call_environment set pilot_profile_ids=null;
+-- The fixture transition must use an authorized Owner, not the prior Client JWT.
+select pg_temp.order_call_actor('1703');
 update public.orders set status='complete' where id='e2040000-0000-4000-8000-000000000002';
 select pg_temp.order_call_actor(); set local role authenticated;
 select is(jsonb_array_length(public.app_order_call_history('e2040000-0000-4000-8000-000000000002')),1,'ended order preserves authorized historical calls');

@@ -40,7 +40,8 @@ language plpgsql stable security definer set search_path='' as $$
 declare caller uuid:=private.require_active_notification_actor(); items jsonb; unread bigint;
 begin
  if private.profile_account_class(caller)<>'client' then raise insufficient_privilege; end if;
- select count(*) into unread from public.notifications n where n.read_at is null and private.client_notification_visible(n);
+ select count(*) into unread from public.notifications n
+  where n.recipient_profile_id=caller and n.audience='client' and n.read_at is null and private.client_notification_visible(n);
  select coalesce(jsonb_agg(to_jsonb(n)),'[]'::jsonb) into items from public.app_list_my_notifications(50) n;
  return jsonb_build_object('notifications',items,'unreadCount',unread);
 end $$;
@@ -65,7 +66,8 @@ begin
   insert into private.notification_openings(profile_id,tenant_id,request_id,requested_at,snapshot_at)
    values(caller,tenant,p_request_id,p_requested_at,stamp) returning * into receipt;
   update public.notifications n set read_at=coalesce(n.read_at,stamp)
-   where n.read_at is null and n.created_at<=receipt.snapshot_at and private.client_notification_visible(n);
+   where n.recipient_profile_id=caller and n.audience='client' and n.read_at is null
+    and n.created_at<=receipt.snapshot_at and private.client_notification_visible(n);
   get diagnostics changed=row_count;
   update private.notification_openings set read_count=changed
    where profile_id=caller and tenant_id=tenant and request_id=p_request_id returning * into receipt;

@@ -16,6 +16,10 @@ on:
         description: Run real call Realtime/SSE acceptance against a disposable runner-local stack
         type: boolean
         default: false
+      call_acceptance_only:
+        description: Recheck the compiled transport and secrets after the same candidate passes full PR gates
+        type: boolean
+        default: false
   schedule:
     # Recheck unchanged dependencies and repository history every week.
     - cron: "0 22 * * 0"
@@ -29,7 +33,7 @@ concurrency:
 
 jobs:
   typecheck:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -45,7 +49,7 @@ jobs:
       - run: npx next typegen && npm run typecheck
 
   lint:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
     name: static lint boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -93,7 +97,7 @@ jobs:
         run: npx supabase stop --no-backup
 
   tests:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
     name: JavaScript and TypeScript tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -110,6 +114,7 @@ jobs:
         run: npm test
 
   database:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.call_acceptance_only }}
     name: local Supabase pgTAP and RLS tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -144,7 +149,7 @@ jobs:
         run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
     name: production dependency vulnerabilities
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -163,6 +168,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: refuse incompatible or incomplete targeted dispatch inputs
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          DATABASE_ONLY: ${{ inputs.database_only }}
+          CALL_ACCEPTANCE: ${{ inputs.call_acceptance }}
+          CALL_ACCEPTANCE_ONLY: ${{ inputs.call_acceptance_only }}
+        run: |
+          if [ "$CALL_ACCEPTANCE_ONLY" = true ] && { [ "$DATABASE_ONLY" = true ] || [ "$CALL_ACCEPTANCE" != true ]; }; then
+            echo "::error::Transport-only validation requires call_acceptance=true and database_only=false."
+            exit 1
+          fi
       - uses: actions/checkout@v6
         with:
           # Full history. A secret removed in a later commit is still leaked.
