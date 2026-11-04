@@ -57,6 +57,42 @@ let caseNumber = 0;
 async function reset() {
   await observer.query(`delete from private.ticket_calls where tenant_id='${tenant}';`);
 }
+async function resetCostFixtures() {
+  await reset();
+  await observer.query(`delete from private.rate_limit_counters where scope like 'ticket-call-%' or scope='call-push.subscription';
+    delete from private.ticket_call_signal_leases;
+    delete from private.ticket_call_push_devices;
+    delete from private.studio_push_configuration;`);
+}
+const refusedRows = (count, user = "1701") => `insert into private.ticket_calls(id,request_id,ticket_id,tenant_id,initiated_by,mode,participants,state,outcome,created_at,expires_at,reconciled_at)
+  select gen_random_uuid(),gen_random_uuid(),'${ticket("1701")}','${tenant}','${uid(user)}','audio',array['${uid(user)}'::uuid],
+   'ended','refused',now()-interval '1 hour',now()-interval '45 minutes',now() from generate_series(1,${count});`;
+const pushOrigin = "https://wolf-forge-platform-callstest-wolf-forge.vercel.app";
+const pushFixture = `insert into public.tenant_domains(host,tenant_id,verified_at) values
+ ('wolf-forge-platform-callstest-wolf-forge.vercel.app','${tenant}',now()) on conflict(host) do nothing;
+ insert into private.studio_push_configuration(singleton,enabled,project_url,origin,tenant_id,public_key,vapid_secret_id,api_key_secret_id)
+ values(true,true,'https://rsnmlcyopnxucwgfttyf.supabase.co','${pushOrigin}','${tenant}',repeat('A',87),gen_random_uuid(),gen_random_uuid());
+ insert into private.ticket_call_push_devices(profile_id,tenant_id,session_id,endpoint,origin,enabled)
+ select '${uid("1704")}','${tenant}','33000000-0000-4000-8000-000000001704',
+ 'https://fcm.googleapis.com/cost-fixture-'||n,'${pushOrigin}',false from generate_series(1,19) n;`;
+const push = suffix => `select public.app_set_my_call_push_subscription('https://fcm.googleapis.com/cost-${suffix}','${pushOrigin}',true);`;
+const openStream = "select public.app_ticket_call_signal_context();";
+const streamLease = (action, id) => `select public.app_ticket_call_signal_lease('${action}','${id}');`;
+
+async function oldFunction(file, signature) {
+  const source = await readFile(new URL(`../../supabase/migrations/${file}`, import.meta.url), "utf8");
+  const marker = new RegExp(`create (?:or replace )?function public\\.${signature.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+  const match = marker.exec(source);
+  assert.ok(match, `Baseline function exists: ${signature}`);
+  const end = source.indexOf("end $$;", match.index);
+  assert.ok(end > match.index);
+  return source.slice(match.index, end + 8).replace(/^create (?:or replace )?function/, "create or replace function");
+}
+async function baseline(name, definition, check) {
+  await observer.query(`begin; ${definition}`);
+  try { await check(); console.log(`PASS baseline reproduction ${name}: SQL executed; all changes rolled back`); }
+  finally { await observer.query("rollback;"); }
+}
 async function invite(t = "1701", user = "1701") {
   return json(await observer.query(`begin; ${actor(user)} ${request(t, "0001")} commit;`));
 }
@@ -80,7 +116,7 @@ async function race(name, leftActor, leftSql, rightActor, rightSql, verify, expe
     await whileBlocked();
     await a.query("commit;");
     const right = await rightPromise;
-    if (expectRightFailure) assert.match(right.error?.message ?? "", /Call already taken or ended|Call unavailable/);
+    if (expectRightFailure) assert.match(right.error?.message ?? "", expectRightFailure instanceof RegExp ? expectRightFailure : /Call already taken or ended|Call unavailable/);
     else { assert.ok(!right.error, right.error?.message); await b.query("commit;"); }
     await verify(left, right.lines);
     console.log(`PASS ${name}: two overlapping transactions; persisted winner/effects checked`);
@@ -89,7 +125,8 @@ async function race(name, leftActor, leftSql, rightActor, rightSql, verify, expe
 try {
   await observer.query(await readFile(new URL("../../supabase/tests/fixtures/ticket_calls.inc", import.meta.url), "utf8"));
   await observer.query(`insert into auth.sessions(id,user_id,aal,not_after) values
-    ('33000000-0000-4000-8000-000000001799','${uid("1704")}','aal1',now()+interval '1 day');`);
+    ('33000000-0000-4000-8000-000000001799','${uid("1704")}','aal1',now()+interval '1 day'),
+    ('33000000-0000-4000-8000-000000001798','${uid("1704")}','aal1',now()+interval '1 day');`);
   await reset();
   let call = await invite();
   await race("two-device accept", "1704", command("accept", call.id), "1704", command("accept", call.id, "0003"), async () => {
@@ -150,7 +187,111 @@ try {
     .map(row => { const [month, seconds] = row.split(":"); return [month, Number(seconds)]; }),
     [["2026-10-01", 600], ["2026-11-01", 1200]]);
   console.log("PASS UTC month rollover: both worst-case monthly portions accounted");
+
+  // Reproduce the old definitions transactionally on this disposable backend.
+  // Rollback restores head definitions/data; these are never installed on a hosted target.
+  await resetCostFixtures(); call = await invite();
+  await observer.query(`begin; ${actor("1704")} ${command("accept", call.id)} commit;`);
+  const oldCommands = await oldFunction("20261103161636_ticket_call_inbox_followups.sql", "app_ticket_call_command(");
+  await baseline("CALL-DOW-01", oldCommands, async () => {
+    await observer.query(`update private.ticket_calls set provider_state='ready',room_claim_id=gen_random_uuid(),token_attempts=8 where id='${call.id}';`);
+    const claim = json(await observer.query(`${actor("1704")} ${command("setup", call.id)}`));
+    assert.equal(claim.id, call.id, "old SQL still grants a lookup claim when token attempts are exhausted");
+  });
+  const oldInvite = await oldFunction("20261103161636_ticket_call_inbox_followups.sql", "app_request_ticket_call(p_ticket_id uuid,p_request_id uuid,p_device_id uuid,p_mode text,p_recipient_id uuid)");
+  await baseline("CALL-DOW-06", oldInvite, async () => {
+    await observer.query(`insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+      select 'ticket-call-request','${uid("1701")}',b,b+interval '2 minutes',60
+      from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b
+      on conflict(scope,subject,window_start) do update set hits=excluded.hits;`);
+    assert.equal(json(await observer.query(`${actor("1701")} ${request("1701", "0001")}`)).id, call.id);
+  });
+  await baseline("CALL-DOW-03", oldInvite, async () => {
+    await observer.query(refusedRows(29));
+    assert.equal(json(await observer.query(`${actor("1701")} ${request("1701", "0080")}`)).outcome, "busy");
+    assert.equal(Number((await observer.query("reset role; select count(*) from private.ticket_calls;"))[0]), 31);
+  });
+  await resetCostFixtures();
+  const oldPush = await oldFunction("20261103114405_ticket_call_interface_delivery.sql", "app_set_my_call_push_subscription(");
+  await baseline("CALL-DOW-04", oldPush, async () => {
+    await observer.query(pushFixture);
+    await observer.query(`${actor("1704")} ${push("baseline-a")} ${push("baseline-b")}`);
+    assert.equal(Number((await observer.query("reset role; select count(*) from private.ticket_call_push_devices;"))[0]), 21);
+  });
+  const oldContext = await oldFunction("20261103161636_ticket_call_inbox_followups.sql", "app_ticket_call_signal_context()");
+  await baseline("CALL-DOW-02", oldContext, async () => {
+    await observer.query(actor("1704"));
+    for (let n = 0; n < 4; n++) assert.ok(json(await observer.query(openStream)).topic);
+    assert.equal(Number((await observer.query("reset role; select count(*) from private.ticket_call_signal_leases;"))[0]), 0);
+  });
+  call = await invite();
+  await observer.query(`begin; ${actor("1704")} ${command("accept", call.id)} commit;`);
+  const oldEvidence = await oldFunction("20261028200140_ticket_call_evidence_history.sql", "app_ingest_ticket_call_evidence(");
+  await baseline("CALL-DOW-05", oldEvidence, async () => {
+    await observer.query(`update private.ticket_calls set created_at=now()-interval '20 minutes',expires_at=now()-interval '5 minutes',
+     accepted_at=now()-interval '19 minutes',ring_deadline=now()-interval '19 minutes 20 seconds',
+     connect_deadline=now()-interval '18 minutes 15 seconds',provider_state='ready',state='connecting' where id='${call.id}';`);
+    const evidence = `jsonb_build_object('account','wolfforge','callId','${call.id}','eventId','cost-baseline','meetingId','cost-baseline',
+     'endedAt',now()-interval '6 minutes','intervals',jsonb_build_array(jsonb_build_object('sessionId','baseline-caller',
+     'profileId','${uid("1701")}','joinedAt',now()-interval '18 minutes','leftAt',now()-interval '8 minutes')))`;
+    await observer.query(`select public.app_ingest_ticket_call_evidence(${evidence});`);
+    const version = Number((await observer.query(`select version from private.ticket_calls where id='${call.id}';`))[0]);
+    assert.equal((await observer.query(`select public.app_ingest_ticket_call_evidence(${evidence});`))[0], "f");
+    assert.equal(Number((await observer.query(`select version from private.ticket_calls where id='${call.id}';`))[0]), version + 1);
+    assert.equal(Number((await observer.query(`select count(*) from private.ticket_call_events where call_id='${call.id}' and event='provider_evidence';`))[0]), 2);
+  });
+
+  await resetCostFixtures();
+  await observer.query(refusedRows(29));
+  await race("last actor durable record", "1701", request("1701", "0081"), "1701", request("1701", "0082"), async () => {
+    assert.equal(Number((await observer.query("select count(*) from private.ticket_calls;"))[0]), 30);
+  }, /Call history limit reached/);
+  await resetCostFixtures();
+  await observer.query(refusedRows(119, "1705"));
+  await race("last account durable record", "1701", request("1701", "0083"), "1702", request("1704", "0084", "1703"), async () => {
+    assert.equal(Number((await observer.query("select count(*) from private.ticket_calls;"))[0]), 120);
+  }, /Call history limit reached/);
+  await resetCostFixtures();
+  await observer.query(pushFixture);
+  await race("last retained device", "1704", push("race-a"), "1704", push("race-b"), async () => {
+    assert.equal(Number((await observer.query("select count(*) from private.ticket_call_push_devices;"))[0]), 20);
+  }, /Device history limit reached/);
+  await resetCostFixtures();
+  await observer.query(`begin; ${actor("1704")} ${openStream} ${openStream} commit;`);
+  await race("last same-session tab", "1704", openStream, "1704", openStream, async () => {
+    assert.equal(Number((await observer.query("select count(*) from private.ticket_call_signal_leases;"))[0]), 3);
+  }, /Call stream limit reached/);
+  const lease = (await observer.query("select id from private.ticket_call_signal_leases order by id limit 1;"))[0];
+  await race("disconnect versus renewal", "1704", streamLease("release", lease), "1704", streamLease("renew", lease), async (_left, right) => {
+    assert.deepEqual(right, [], "psql represents a refused SQL NULL renewal as an empty row");
+    assert.equal(Number((await observer.query(`select count(*) from private.ticket_call_signal_leases where id='${lease}';`))[0]), 0);
+  });
+  await observer.query(`begin; ${actor("1704", "1799")} ${openStream} ${openStream} ${openStream} commit;`);
+  await race("last profile slot across sessions", "1704", openStream, "1704", `${actor("1704", "1798")} ${openStream}`, async () => {
+    assert.equal(Number((await observer.query("select count(*) from private.ticket_call_signal_leases;"))[0]), 6);
+  }, /Call stream limit reached/);
+
+  // A refused retry must not wait for the account lock or enter its sweep.
+  await resetCostFixtures(); call = await invite();
+  await observer.query(`insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)
+   select 'ticket-call-request','${uid("1701")}',b,b+interval '2 minutes',60
+   from generate_series(date_trunc('minute',clock_timestamp()),date_trunc('minute',clock_timestamp())+interval '1 minute',interval '1 minute') b
+   on conflict(scope,subject,window_start) do update set hits=excluded.hits;`);
+  const holder = new Session("cost-global-lock-holder"), denied = new Session("cost-early-denial");
+  try {
+    await holder.query("begin; select private.ticket_call_lock();");
+    await assert.rejects(denied.query(`begin; set local statement_timeout='2 seconds'; ${actor("1701")} ${request("1701", "0001")}`), /rate limit exceeded/);
+    console.log("PASS matching retry denied while another physical session holds account lock");
+  } finally { await holder.query("rollback;"); holder.close(); denied.close(); }
+  await resetCostFixtures();
+  await observer.query(refusedRows(30));
+  const capHolder = new Session("cost-cap-lock-holder"), capDenied = new Session("cost-cap-early-denial");
+  try {
+    await capHolder.query("begin; select private.ticket_call_lock();");
+    await assert.rejects(capDenied.query(`begin; set local statement_timeout='2 seconds'; ${actor("1701")} ${request("1701", "0090")}`), /Call history limit reached/);
+    console.log("PASS exhausted fresh-record allowance refused before held account lock");
+  } finally { await capHolder.query("rollback;"); capHolder.close(); capDenied.close(); }
 } finally {
-  await reset().catch(() => {});
+  await resetCostFixtures().catch(() => {});
   observer.close();
 }

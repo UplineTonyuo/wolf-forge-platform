@@ -2,7 +2,8 @@
   "git": {
     "deploymentEnabled": {
       "codex/woad-live-calls-20261026": false,
-      "codex/woad-ticket-call-followups-20261104": false
+      "codex/woad-ticket-call-followups-20261104": false,
+      "codex/spp-security-fixes-20261104": false
     }
   },
   "crons": [

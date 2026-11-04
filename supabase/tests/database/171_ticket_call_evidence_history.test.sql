@@ -37,7 +37,14 @@ select throws_ok($q$select public.app_ingest_ticket_call_evidence(jsonb_set(pg_t
   '22023','Invalid participant evidence','same-company nonparticipant cannot appear in trusted intervals');
 select is((select count(*) from private.ticket_call_evidence),0::bigint,'rejected evidence leaves no partial receipt');
 select is(public.app_ingest_ticket_call_evidence(pg_temp.evidence()),true,'trusted finalized meeting evidence ingests');
+create temporary table evidence_before as select version,participant_seconds,connected_seconds,answered_at,
+ (select count(*) from private.ticket_call_events where call_id=c.id) as events,
+ (select count(*) from private.ticket_call_intervals where call_id=c.id) as intervals
+ from private.ticket_calls c where id=pg_temp.call_id();
 select is(public.app_ingest_ticket_call_evidence(pg_temp.evidence()),false,'duplicate event is idempotent');
+select is((select version from private.ticket_calls where id=pg_temp.call_id()),(select version from evidence_before),'identical incomplete evidence does not change version or emit version wake');
+select is((select count(*) from private.ticket_call_events where call_id=pg_temp.call_id()),(select events from evidence_before),'identical incomplete evidence writes no event');
+select is((select count(*) from private.ticket_call_intervals where call_id=pg_temp.call_id()),(select intervals from evidence_before),'identical evidence writes no interval');
 select throws_ok($q$select public.app_ingest_ticket_call_evidence(pg_temp.evidence()||'{"meetingId":"changed"}'::jsonb)$q$,
   '22023','Evidence replay conflicts','changed replay conflicts');
 select is((select connected_seconds from private.ticket_calls where id=pg_temp.call_id()),480::numeric,'connected seconds are overlapping presence');

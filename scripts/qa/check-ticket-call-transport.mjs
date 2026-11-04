@@ -81,6 +81,7 @@ async function main() {
   database = matches[0][0];
   need(await sql("select current_setting('server_version_num')::int >= 170000 and current_setting('server_version_num')::int < 180000;") === "t", "Requires PostgreSQL 17");
   need(await sql("select exists(select 1 from supabase_migrations.schema_migrations where version='20261103161636');") === "t", "Follow-up migration was not applied");
+  need(await sql("select exists(select 1 from supabase_migrations.schema_migrations where version='20261103225429');") === "t", "Stream lease migration was not applied");
   need(await sql(`select not exists(select 1 from auth.users) and not exists(select 1 from public.tickets)
     and not exists(select 1 from private.push_subscriptions) and not exists(select 1 from private.studio_push_configuration where enabled);`) === "t", "Requires an empty synthetic database with delivery disabled");
   need(await sql("select 'pgrst.db_pre_request=public.app_apply_client_support_context'=any(rolconfig) from pg_roles where rolname='authenticator';") === "t", "The real authorization hook must remain enabled");
@@ -146,7 +147,7 @@ async function main() {
 
   async function openStream(account) {
     const abort = new AbortController();
-    const response = await request("/api/ticket-call-events", account, { signal: AbortSignal.any([abort.signal, AbortSignal.timeout(30000)]) });
+    const response = await request("/api/ticket-call-events", account, { signal: AbortSignal.any([abort.signal, AbortSignal.timeout(120000)]) });
     need(response.status === 200 && response.headers.get("content-type")?.includes("text/event-stream"), "Authenticated private stream did not open");
     need(response.headers.get("cache-control")?.includes("no-store"), "Stream was cacheable");
     const reader = response.body.getReader();
@@ -194,6 +195,22 @@ async function main() {
   need(await endedCallWasRead(await request("/api/ticket-calls?action=current", callee)), "Ended invitation remained current or fresh read failed");
   await closeStream(stream);
   console.log("PASS disconnected readers settle; reconnect resynchronizes; decline broadcasts authoritative lifecycle state");
+  step = "shared multi-tab admission, renewal and disconnect release";
+  await until(async () => await sql("select count(*)=0 from private.ticket_call_signal_leases;") === "t", "Prior stream lease release");
+  const tabs = await Promise.all([openStream(callee), openStream(callee), openStream(callee)]);
+  need(await sql("select count(*)=3 from private.ticket_call_signal_leases;") === "t", "Three tabs did not retain exactly three leases");
+  const overflow = await request("/api/ticket-call-events", callee);
+  need(overflow.status === 429 && overflow.headers.get("retry-after") === "90", "Fourth same-session tab was not explicitly throttled");
+  const firstExpiry = Number(await sql("select extract(epoch from min(expires_at)) from private.ticket_call_signal_leases;"));
+  await until(async () => Number(await sql("select extract(epoch from min(expires_at)) from private.ticket_call_signal_leases;")) > firstExpiry + 20,
+    "Real route-to-database lease renewal", 40000);
+  need(tabs.every(tab => !tab.done && !tab.error), "An admitted tab ended before renewal");
+  await closeStream(tabs.pop());
+  await until(async () => await sql("select count(*)=2 from private.ticket_call_signal_leases;") === "t", "Disconnected tab releases its exact lease");
+  tabs.push(await openStream(callee));
+  for (const tab of tabs) await closeStream(tab);
+  await until(async () => await sql("select count(*)=0 from private.ticket_call_signal_leases;") === "t", "All tab leases released");
+  console.log("PASS three simultaneous real SSE/Realtime tabs; fourth 429; shared renewal; disconnect/replacement; all leases released");
   step = "revoked session authority";
   await sql("delete from auth.sessions where user_id=:'callee';", { callee: callee.id });
   const revoked = await request("/api/ticket-calls?action=current", callee);
