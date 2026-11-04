@@ -77,7 +77,7 @@ const pushFixture = `insert into public.tenant_domains(host,tenant_id,verified_a
  select '${uid("1704")}','${tenant}','33000000-0000-4000-8000-000000001704',
  'https://fcm.googleapis.com/cost-fixture-'||n,'${pushOrigin}',false from generate_series(1,19) n;`;
 const push = suffix => `select public.app_set_my_call_push_subscription('https://fcm.googleapis.com/cost-${suffix}','${pushOrigin}',true);`;
-const openStream = "select public.app_ticket_call_signal_context();";
+const openStream = "select public.app_ticket_call_signal_lease_context();";
 const streamLease = (action, id) => `select public.app_ticket_call_signal_lease('${action}','${id}');`;
 
 async function oldFunction(file, signature) {
@@ -219,7 +219,10 @@ try {
     await observer.query(`${actor("1704")} ${push("baseline-a")} ${push("baseline-b")}`);
     assert.equal(Number((await observer.query("reset role; select count(*) from private.ticket_call_push_devices;"))[0]), 21);
   });
-  const oldContext = await oldFunction("20261103161636_ticket_call_inbox_followups.sql", "app_ticket_call_signal_context()");
+  // Reproduce the old unleased implementation under the new route's contract name.
+  // baseline() rolls this fixture-only replacement back before admission/race checks.
+  const oldContext = (await oldFunction("20261103161636_ticket_call_inbox_followups.sql", "app_ticket_call_signal_context()"))
+    .replace("function public.app_ticket_call_signal_context()", "function public.app_ticket_call_signal_lease_context()");
   await baseline("CALL-DOW-02", oldContext, async () => {
     await observer.query(actor("1704"));
     for (let n = 0; n < 4; n++) assert.ok(json(await observer.query(openStream)).topic);

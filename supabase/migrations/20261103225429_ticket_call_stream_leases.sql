@@ -13,7 +13,9 @@ alter table private.ticket_call_signal_leases force row level security;
 revoke all on private.ticket_call_signal_leases from public,anon,authenticated,service_role;
 create index ticket_call_signal_leases_profile on private.ticket_call_signal_leases(profile_id,session_id,expires_at);
 
-create or replace function public.app_ticket_call_signal_context() returns jsonb
+-- Keep the serving app's strict {topic} RPC unchanged during migration-first rollout.
+-- Only the new server route uses this lease-acquiring contract; no fallback bypass.
+create function public.app_ticket_call_signal_lease_context() returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare topic text; sid uuid; stamp timestamptz; lease private.ticket_call_signal_leases;
 begin
@@ -61,6 +63,6 @@ begin
   where id=lease.id returning * into lease;
  return jsonb_build_object('expiresAt',lease.expires_at);
 end $$;
-revoke all on function public.app_ticket_call_signal_context(),public.app_ticket_call_signal_lease(text,uuid)
+revoke all on function public.app_ticket_call_signal_lease_context(),public.app_ticket_call_signal_lease(text,uuid)
  from public,anon,authenticated,service_role;
-grant execute on function public.app_ticket_call_signal_context(),public.app_ticket_call_signal_lease(text,uuid) to authenticated;
+grant execute on function public.app_ticket_call_signal_lease_context(),public.app_ticket_call_signal_lease(text,uuid) to authenticated;

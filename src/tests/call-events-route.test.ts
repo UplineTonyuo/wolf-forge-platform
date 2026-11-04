@@ -11,12 +11,14 @@ const req=(signal?:AbortSignal)=>new Request("https://app.example/api/ticket-cal
 beforeEach(()=>{
  vi.stubEnv("DAILY_CALLS_ENABLED","1");vi.stubEnv("DAILY_DOMAIN","wolfforge.daily.co");vi.stubEnv("DAILY_API_KEY","synthetic");
  f.context.mockResolvedValue({actor:{id},client:{rpc:f.rpc,channel:()=>channel,removeChannel:f.remove,realtime:{disconnect:f.disconnect}}});
- f.rpc.mockImplementation((name:string)=>Promise.resolve({data:name==="app_ticket_call_signal_context"?lease():name==="app_ticket_call_signal_lease"?{expiresAt:lease().expiresAt}:true,error:null}));f.authorize.mockResolvedValue(60000);f.on.mockReturnValue(channel);f.remove.mockResolvedValue("ok");f.disconnect.mockResolvedValue("ok");
+ f.rpc.mockImplementation((name:string)=>Promise.resolve({data:name==="app_ticket_call_signal_lease_context"?lease():name==="app_ticket_call_signal_context"?{topic}:name==="app_ticket_call_signal_lease"?{expiresAt:lease().expiresAt}:true,error:null}));f.authorize.mockResolvedValue(60000);f.on.mockReturnValue(channel);f.remove.mockResolvedValue("ok");f.disconnect.mockResolvedValue("ok");
  f.subscribe.mockImplementation((cb:(s:string)=>void)=>{cb("SUBSCRIBED");return channel;});
 });
 afterEach(()=>{vi.useRealTimers();vi.clearAllMocks();vi.unstubAllEnvs();});
 it("opens one authorized payload-free stream and releases its channel on cancellation",async()=>{
  const abort=new AbortController();const response=await GET(req(abort.signal));expect(response.headers.get("content-type")).toContain("text/event-stream");
+ expect(f.rpc).toHaveBeenCalledWith("app_ticket_call_signal_lease_context",{});
+ expect(f.rpc).not.toHaveBeenCalledWith("app_ticket_call_signal_context",{});
  const reader=response.body!.getReader();await reader.read();const first=new TextDecoder().decode((await reader.read()).value);expect(first).toContain("event: wake");expect(first).not.toContain(id);
  const wake=f.on.mock.calls[0]![2] as ()=>void;wake();const next=new TextDecoder().decode((await reader.read()).value);expect(next).toContain("data: {}");
  abort.abort();await reader.cancel();expect(f.remove).toHaveBeenCalledOnce();await vi.waitFor(()=>expect(f.disconnect).toHaveBeenCalledOnce());

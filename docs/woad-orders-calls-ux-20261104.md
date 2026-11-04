@@ -2,6 +2,16 @@
 
 ## Active release continuation — 2026-11-04 23:00 SGT
 
+### Serving-version compatibility correction — 2026-11-05 01:04 SGT
+
+Candidate `dbbce105f9fb9e7034a86e22d13a5eba7130cb15` passed full PR run [41871043639](https://github.com/UplineTonyuo/wolf-forge-platform/actions/runs/41871043639): all7 jobs,389 files/4612 JavaScript tests,167 files/7220 SQL assertions, full database lint, real REST/Storage probes and24 physical races. Those are historical evidence for that SHA, not a pass for the correction below. Focused transport run41872944073 was cancelled after a subsequent read-only compatibility review found a release blocker. PR114 is temporarily closed to avoid duplicate full runs during this correction. Production remains unchanged.
+
+The serving7aa06cf SSE route strictly decodes `app_ticket_call_signal_context()` as exactly `{topic}`. The verified UNAPPLIED stream-lease migration changed that existing RPC to `{topic,leaseId,expiresAt}`, which would cause503 and an unused lease before app promotion. The old idle controller has no polling fallback, so incoming in-app ringing would fail until another refresh. This is a concrete source/strict-decoder defect; no production incident was triggered.
+
+Corrected only the unapplied migration20261103225429: create a separate `app_ticket_call_signal_lease_context()` with the unchanged lease admission body, limits, locking, renewal/release and grants. Leave the applied historical legacy RPC untouched. The new server route always uses the new lease contract with no fallback. SQL201 and physical races target the new RPC; add exact legacy-shape/no-leaked-lease/anonymous denial assertions and real authenticated PostgREST acceptance using the serving version's exact strict decoder. No applied historical migration was modified; the complete pending set remains10.
+
+Focused route regression reproduced RED8failed/6passed, then GREEN14passed. TypeScript noEmit/incrementalfalse2048MiB exit0; changed-file ESLint1536MiB exit0; harness syntax and whitespace PASS. Isolated corrected SQL/races, fresh full candidate gates and transport remain pending. No backup scripts executed, temporary role created, production migration applied or deployment promoted. Vault notes remain read-only. Next: reviewed exact-file commit, DB-only validation, reopen for full final gates, then exact-SHA transport and the existing conditional release gates.
+
 This section supersedes the earlier frozen handoff's no-commit/no-push authorization and loaded-feed notification design. The owner now authorizes review, fixes, exact-file commit/push, bounded **free-only** GitHub CI, then WOAD release only after all stated automated/backup/migration gates pass. No paid Actions charges, pilot expansion, real-customer test mutations, local Docker or computer control. Vault remains read-only; the memory-steward proposal below is not applied.
 
 Verified branch remains `codex/woad-orders-calls-ux-20261104`, HEAD `7e011865a2f9e54316e284285223184808cedb2c`; all original changes preserved. Current source checkpoint: TEMP `wolf-forge-orders-calls-20261104/source-review-2251.zip`, 47 files reread/hash-verified, archive SHA256 `754178ACBB7232D4C7DF75FD3B5587DE10E00AA69CC072399A79E0B21EF98DCD`. Later review corrections are on disk and require a final checkpoint. No automatic compaction was configured.

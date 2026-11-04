@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   request.signal.addEventListener("abort", close, { once: true });
   if (request.signal.aborted) { close(); return new Response(null, { status: 204, headers: noStore }); }
   try {
-    const data = await callRpc(client, "app_ticket_call_signal_context", {});
+    const data = await callRpc(client, "app_ticket_call_signal_lease_context", {});
     if (data === null) { close(); return disabled(); }
     const parsed = z.object({ topic: z.string(), leaseId: z.uuid(), expiresAt: z.iso.datetime({ offset: true }) }).strict().parse(data);
     leaseId = parsed.leaseId;

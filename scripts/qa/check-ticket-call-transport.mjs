@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
+import { z } from "zod";
 
 const tenant = "f0f0f0f0-0000-4000-8000-000000000001";
 const app = "http://127.0.0.1:3059";
@@ -133,6 +134,12 @@ async function main() {
     need(account.cookie, "Real Auth cookies missing");
   }
   need(await sql("select count(*)=2 from auth.sessions;") === "t", "Expected two real Auth sessions");
+  // Exact decoder from serving7aa06cf: adding lease keys here would break its SSE route.
+  const legacyContext = z.object({ topic: z.string() }).strict().parse(
+    await okay(callee.api.rpc("app_ticket_call_signal_context"), "Serving-version stream context"));
+  need(legacyContext.topic === `ticket-calls:${tenant}:${callee.id}`, "Legacy stream topic changed");
+  need(await sql("select count(*)=0 from private.ticket_call_signal_leases;") === "t", "Legacy lookup leaked a lease");
+  console.log("PASS serving-version strict stream decoder against real PostgREST; legacy lookup allocates no lease");
   step = "compiled local application";
   await readFile(resolve(".next-studio-qa/BUILD_ID"), "utf8");
   server = spawn(process.execPath, ["--import",resolve("scripts/qa/stub-call-provider.mjs"),"node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3059"], {
