@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
 import { InternalShell } from "../components/shell/internal-shell";
 import type { InternalUser } from "../lib/supabase/next-server";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/orders", useRouter: () => ({ push: vi.fn(), prefetch: vi.fn() }) }));
+const navigation = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/orders", useRouter: () => ({ push: navigation.push, prefetch: vi.fn() }) }));
 vi.mock("../components/shell/workspace-command-bar", () => ({ WorkspaceCommandBar: ({ mobileNavigation }: { mobileNavigation: ReactNode }) => mobileNavigation }));
 vi.mock("../components/team/team-presence-provider", () => ({ TeamPresenceProvider: ({ children }: { children: ReactNode }) => children }));
 afterEach(cleanup);
@@ -63,5 +64,30 @@ it("opens the native modal, preserves permitted navigation and closes on destina
   media.matches = true;
   act(resize);
   expect(dialog).not.toHaveAttribute("open");
+  vi.unstubAllGlobals();
+});
+
+it("toggles Services in the mobile drawer without closing or navigating and keeps child grants independent", () => {
+  navigation.push.mockClear();
+  vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
+  HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
+  render(<InternalShell user={{ id: 'u1', displayName: 'Synthetic staff', role: 'staff', modules: { services: false, coupons: true, investment_intent: true, todo: true }, teamMessaging: { use: false } } as unknown as InternalUser}><p>Orders</p></InternalShell>);
+  fireEvent.click(screen.getByRole('button', { name: 'Open navigation' }));
+  const dialog = screen.getByRole('dialog');
+  expect(within(dialog).queryByRole('link', { name: 'Services' })).toBeNull();
+  expect(within(dialog).queryByRole('link', { name: 'Operations' })).toBeNull();
+  const toggle = within(dialog).getByRole('button', { name: 'Expand Services' });
+  toggle.focus();
+  expect(document.activeElement).toBe(toggle);
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(dialog).toHaveAttribute('open');
+  expect(navigation.push).not.toHaveBeenCalled();
+  const child = within(dialog).getByRole('link', { name: 'Coupons' });
+  expect(child.querySelector('svg')).toBeNull();
+  fireEvent.click(child);
+  expect(navigation.push).toHaveBeenCalledWith('/coupons');
+  expect(dialog).not.toHaveAttribute('open');
   vi.unstubAllGlobals();
 });

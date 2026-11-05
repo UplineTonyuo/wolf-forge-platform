@@ -272,13 +272,39 @@ describe("Add onboarding form", () => {
     expect(assignFormAction).not.toHaveBeenCalled();
   });
 
-  it("disables assignment when there is no eligible profile", () => {
+  it("hides assignment when there is no eligible profile", () => {
     renderActions({ eligibleProfiles: [] });
 
     fireEvent.click(screen.getByRole("button", { name: /actions/i }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /onboarding form/i }));
+    expect(screen.queryByRole("menuitem", { name: /onboarding form/i })).not.toBeInTheDocument();
+    expect(assignFormAction).not.toHaveBeenCalled();
+  });
 
-    expect(screen.getByText(/no eligible client profile/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /assign form/i })).toBeDisabled();
+  it("hides assignment when there is no published onboarding form", () => {
+    renderActions({ onboardingForms: [], eligibleProfiles: [{ id: "profile-1", label: "Jamie" }] });
+    fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+    expect(screen.queryByRole("menuitem", { name: /onboarding form/i })).not.toBeInTheDocument();
+  });
+
+  it("hides assignment despite eligible lists when assignment permission is denied", () => {
+    renderActions({ permissions: { ...allPermissions, formsAssign: false }, eligibleProfiles: [{ id: 'profile-1', label: 'Jamie' }] });
+    fireEvent.click(screen.getByRole('button', { name: /actions/i }));
+    expect(screen.queryByRole('menuitem', { name: /onboarding form/i })).not.toBeInTheDocument();
+  });
+
+  it("omits the Actions trigger when unusable onboarding is the only permission", () => {
+    const { container } = renderActions({ permissions: { edit: false, privateManage: false, invoiceManage: false, ticketCreate: false, formsAssign: true } });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("keeps a stale recipient rejection from the assignment server visible", async () => {
+    assignFormAction.mockResolvedValue({ ok: false, error: "Recipient is no longer eligible." });
+    renderActions({ eligibleProfiles: [{ id: "profile-1", label: "Jamie" }] });
+    fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /onboarding form/i }));
+    fireEvent.change(screen.getByLabelText("Onboarding form"), { target: { value: "form-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /assign form/i }));
+    expect(await screen.findByText("Recipient is no longer eligible.")).toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

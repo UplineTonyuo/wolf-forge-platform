@@ -107,11 +107,12 @@ export function ClientDetailActions({
     };
   }, [menuOpen]);
 
+  const canAssignOnboarding = permissions.formsAssign && onboardingForms.length > 0 && eligibleProfiles.length > 0;
   const hasAnyAction =
     permissions.edit ||
     permissions.invoiceManage ||
     permissions.ticketCreate ||
-    permissions.formsAssign ||
+    canAssignOnboarding ||
     welcomeEmailProfileId !== null;
 
   if (!hasAnyAction) {
@@ -183,7 +184,7 @@ export function ClientDetailActions({
           </button>
         ) : null}
 
-        {permissions.formsAssign ? (
+        {canAssignOnboarding ? (
           <button
             type="button"
             role="menuitem"
@@ -233,7 +234,7 @@ export function ClientDetailActions({
         />
       ) : null}
 
-      {activeModal === "onboarding" ? (
+      {activeModal === "onboarding" && canAssignOnboarding ? (
         <OnboardingFormModal
           onboardingForms={onboardingForms}
           eligibleProfiles={eligibleProfiles}

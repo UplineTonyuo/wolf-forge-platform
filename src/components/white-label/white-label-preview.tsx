@@ -123,7 +123,7 @@ export function WhiteLabelPreview({ state, device, phone = DEFAULT_PHONE, onTogg
   const focusView = useRef(false);
   const available = previewNavigationModules(state.modules);
   const active = available[view.module] ? view.module : "dashboard";
-  const entries = navigationCategories.flatMap((category) => category.items);
+  const entries = navigationCategories.flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]));
   const title = entries.find((entry) => entry.id === active)?.label ?? "Dashboard";
   const selectedModule = WHITE_LABEL_MODULES.find((entry) => entry.id === active);
   const detail = active === view.module ? view.detail : null;
@@ -152,7 +152,7 @@ export function WhiteLabelPreview({ state, device, phone = DEFAULT_PHONE, onTogg
   const navigation = (
     <div className="sidebar-navigation" role="group" aria-label="Preview navigation">
       {navigationCategories.map((category) => {
-        const items = category.items.filter((entry) => entry.id !== "todo" && entry.id !== "white_label"
+        const items = category.items.flatMap((entry) => [{ ...entry, child: false }, ...(entry.children ?? []).map(child => ({ ...child, child: true }))]).filter((entry) => entry.id !== "todo" && entry.id !== "white_label"
           && (available[entry.id] === true || (showControls && CONFIGURABLE.has(entry.id))));
         if (!items.length) return null;
         return <section key={category.id} className={`sidebar-section ${styles.navGroup}`} aria-label={category.label}>
@@ -163,9 +163,9 @@ export function WhiteLabelPreview({ state, device, phone = DEFAULT_PHONE, onTogg
               const configurable = CONFIGURABLE.has(entry.id);
               const selected = state.modules[entry.id] === true;
               return <li key={entry.id} className={styles.navRow} data-module={entry.id} data-enabled={visible} data-shown={visible}>
-                <button type="button" className={`sidebar-link ${active === entry.id ? "is-active" : ""}`} disabled={!visible}
+                <button type="button" className={`sidebar-link ${entry.child ? "sidebar-child-link" : ""} ${active === entry.id ? "is-active" : ""}`} disabled={!visible}
                   aria-label={`Open ${entry.label} preview`} aria-current={active === entry.id ? "page" : undefined} onClick={() => open(entry.id)}>
-                  <Icon aria-hidden={true} /><span>{entry.label}</span>
+                  {entry.child ? null : <Icon aria-hidden={true} />}<span>{entry.label}</span>
                 </button>
                 {configurable && showControls ? <button type="button" role="switch" aria-checked={selected} className={styles.moduleToggle}
                   aria-label={`${entry.label} module`} title={selected ? `Remove ${entry.label} from draft` : `Add ${entry.label} to draft`}

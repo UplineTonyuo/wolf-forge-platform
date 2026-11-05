@@ -14,7 +14,12 @@ import {
 import Link from "next/link";
 import { RouteTransitionLink } from "../../../../components/shell/route-transition";
 import { ClientDetailSections } from "../../../../components/clients/client-detail-sections";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
+import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-status-badge";
+import { financialAuthority, financialIdentity, invoiceVisibility } from "../../../../domain/invoices/visibility";
+import type { ClientInvoiceSummary } from "../../../../repositories/invoice-repository";
+import invoiceHistoryStyles from "../../../../components/clients/client-invoice-history.module.css";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
 import { ClientSignIn } from "../../../../components/clients/client-sign-in";
@@ -26,7 +31,7 @@ import { PageFrame } from "../../../../components/ui/page-frame";
 import { StatusBadge } from "../../../../components/ui/status-badge";
 import { canSendClientWelcomeEmail } from "../../../../lib/email/client-welcome-email-server";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
-import { formatDate } from "../../../../lib/format";
+import { formatCurrencyCents, formatDate } from "../../../../lib/format";
 import type { ActivityEventRow } from "../../../../lib/supabase/database-rows";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
 
@@ -208,6 +213,25 @@ export default async function ClientDetailPage({
 
     const historyGroups =
       groupHistory(visibleHistoryEvents);
+
+    let invoices: ClientInvoiceSummary[] = [];
+    let invoiceState: "ready" | "denied" | "error" = "ready";
+    let invoiceSignature = "";
+    if (activeTab === "invoices") {
+      if (!context.user.invoices.view && !context.user.invoices.manage) {
+        invoiceState = "denied";
+      } else {
+        try {
+          // New-work availability is independent of authorized issued history.
+          const workEnabled = await context.services.invoices.workEnabled();
+          invoices = await context.services.invoices.listForCompany(client.id);
+          invoiceSignature = invoiceVisibility(invoices, workEnabled, context.user.invoices, JSON.stringify([financialIdentity(context.user), client.id]));
+        } catch (error) {
+          unstable_rethrow(error);
+          invoiceState = ["PERMISSION_DENIED", "NOT_FOUND"].includes(toClientSafeError(error).code) ? "denied" : "error";
+        }
+      }
+    }
 
     return (
       <PageFrame
@@ -474,14 +498,28 @@ export default async function ClientDetailPage({
           <section className="client-tab-panel">
             <div className="client-section-heading">
               <div>
-                <span>INVOICES</span>
                 <h2>Billing history</h2>
               </div>
             </div>
 
-            <p className="client-detail-empty">
-              Invoice relationships will appear here when the billing domain is connected.
-            </p>
+            {invoiceState === "denied" ? <p role="alert">You do not have access to invoice history.</p>
+              : invoiceState === "error" ? <div role="alert"><p>Invoice history could not be loaded.</p><a href={`/clients/${client.id}?tab=invoices`}>Try again</a></div>
+                : <FinancialVisibilityBoundary key={`${client.id}:${financialAuthority("internal", invoiceSignature)}`} scope="internal" companyId={client.id} signature={invoiceSignature}>
+                  {invoices.length ? <ul className={invoiceHistoryStyles.list} aria-label="Client invoices">
+                    {invoices.map(({ invoice, financials }) => <li className={invoiceHistoryStyles.row} key={invoice.id}>
+                      <div className={invoiceHistoryStyles.identity}>
+                        <strong>{invoice.invoice_number == null ? "Pending" : `WF-${String(invoice.invoice_number).padStart(4, "0")}`}</strong>
+                        <span>{formatDate(invoice.issued_at ?? invoice.created_at)}</span>
+                      </div>
+                      <InvoiceStatusBadge state={financials.presentation_state} />
+                      <dl className={invoiceHistoryStyles.amounts}>
+                        <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
+                        <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
+                      </dl>
+                      <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : invoice.invoice_number}`}>View</RouteTransitionLink>
+                    </li>)}
+                  </ul> : <p className="client-detail-empty">No invoices for this client yet.</p>}
+                </FinancialVisibilityBoundary>}
           </section>
         ) : null}
 

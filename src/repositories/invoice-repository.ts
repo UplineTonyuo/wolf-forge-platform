@@ -192,6 +192,19 @@ export class InvoiceRepository {
     }));
   }
 
+  async listForCompany(companyId: string): Promise<ClientInvoiceSummary[]> {
+    const invoices = unwrapMany(await this.client
+      .from("invoices")
+      .select()
+      .eq("company_id", companyId)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })) as InvoiceRow[];
+    return Promise.all(invoices.map(async (invoice) => ({
+      invoice,
+      financials: await this.getFinancials(invoice.id),
+    })));
+  }
+
   async getForClient(id: string): Promise<ClientInvoiceDetail> {
     const [invoiceResult, companyResult, itemResult, financials] = await Promise.all([
       this.client.from("invoices").select().eq("id", id).is("archived_at", null).single(),

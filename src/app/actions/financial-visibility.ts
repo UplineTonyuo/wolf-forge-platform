@@ -5,7 +5,7 @@ import { invoiceFundingVisibility, invoiceVisibility, invoiceWorkVisibility, wal
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { getClientContext, getInternalContext } from "../../lib/supabase/next-server";
 
-export async function loadFinancialVisibilityAction(scope: "internal" | "internal-work" | "client" | "client-detail" | "wallet" | "store" | "dashboard", invoiceId?: string) {
+export async function loadFinancialVisibilityAction(scope: "internal" | "internal-work" | "client" | "client-detail" | "wallet" | "store" | "dashboard", invoiceId?: string, companyId?: string) {
   try {
     if (scope === "internal-work") {
       const context = await getInternalContext();
@@ -17,6 +17,14 @@ export async function loadFinancialVisibilityAction(scope: "internal" | "interna
     }
     if (scope === "internal" || scope === "client") {
       const context = scope === "internal" ? await getInternalContext() : await getClientContext();
+      if (scope === "internal" && companyId !== undefined) {
+        const internal = context as Awaited<ReturnType<typeof getInternalContext>>;
+        if (!internal.user.invoices.view && !internal.user.invoices.manage) return { ok: false as const, denied: true };
+        const company = await internal.services.companies.get(companyId);
+        const enabled = await internal.services.invoices.workEnabled();
+        const rows = await internal.services.invoices.listForCompany(company.id);
+        return { ok: true as const, signature: invoiceVisibility(rows, enabled, internal.user.invoices, JSON.stringify([financialIdentity(internal.user), company.id])) };
+      }
       const [rows, enabled] = await Promise.all([
         scope === "internal" ? context.services.invoices.list() : context.services.invoices.listForClient(),
         context.services.invoices.workEnabled(),

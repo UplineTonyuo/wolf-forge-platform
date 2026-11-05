@@ -11,6 +11,7 @@ import subscription from "../subscriptions/subscriptions.module.css";
 import report from "../reporting/reporting.module.css";
 import settings from "../settings/settings-foundation.module.css";
 import list from "../ui/admin-list.module.css";
+import clientInvoices from "../clients/client-invoice-history.module.css";
 import { SettingsSkeletonBody, SETTINGS_SECTION_LABELS, type SettingsSection } from "../settings/settings-skeleton";
 export type { SettingsSection } from "../settings/settings-skeleton";
 
@@ -275,6 +276,12 @@ function ClientSectionBody({ section }: { section: ClientSection }) {
   if (section !== "details") return <section className={section === "history" ? "client-tab-panel client-history-panel" : "client-tab-panel"} data-client-section={section}>
     <div className="client-section-heading"><div><Bar w={85} h={9} /><Bar w={150} h={18} className="route-skeleton-gap" /></div>{section === "projects" ? <Bar w={30} h={28} /> : null}</div>
     {section === "projects" ? <div className="client-project-summary">{[0, 1, 2].map(i => <div className="client-project-summary-row" key={i}><Bar w="65%" h={16} /><Bar w={65} h={24} /></div>)}</div>
+      : section === "invoices" ? <ul className={clientInvoices.list}>{[0, 1, 2].map(i => <li className={clientInvoices.row} key={i}>
+        <div className={clientInvoices.identity}><Bar w={80} h={14} /><Bar w={100} h={12} /></div>
+        <Bar w={65} h={24} />
+        <div className={clientInvoices.amounts}><Bar w={85} h={30} /><Bar w={85} h={30} /></div>
+        <Bar w={44} h={20} />
+      </li>)}</ul>
       : section === "history" ? <div className="client-history-timeline">{[0, 1].map(day => <section className="client-history-day" key={day}><h3><Bar w={110} /></h3><div className="client-history-events">{[0, 1, 2].map(i => <div className="client-history-event" key={i}><span className="client-history-marker"><Bar w={14} h={14} /></span><div className="client-history-copy"><div className="client-history-meta"><Bar w={70} h={9} /><Bar w={50} h={9} /></div><Bar w="75%" h={14} /></div></div>)}</div></section>)}</div>
       : <p className="client-detail-empty"><Bar w="60%" h={15} /></p>}
   </section>;

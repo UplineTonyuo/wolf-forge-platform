@@ -6,7 +6,9 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { startTransition, use, useEffect, useState } from "react";
 import type { Context, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { InternalShell } from "../components/shell/internal-shell";
+import { InternalShell, navigationIcons } from "../components/shell/internal-shell";
+import { UsersRound } from "lucide-react";
+import { activeNavigationRoute, navigationForModules, titleForPath } from "../components/shell/nav-registry";
 import type { InternalUser } from "../lib/supabase/next-server";
 import { notifyTicketAccessUnavailable } from "../components/tickets/ticket-access-boundary";
 import { RouteTransitionLink } from "../components/shell/route-transition";
@@ -89,7 +91,10 @@ function start(initial: string, role?: InternalUser["role"]) {
       if (options.button === 1) fireEvent(link, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
       else fireEvent.click(link, options);
     }),
-    click: (route: string) => act(async () => { fireEvent.click(container.querySelector(`.app-sidebar a[href='${route}']`)!); }),
+    click: async (route: string) => {
+      if (!container.querySelector(`.app-sidebar a[href='${route}']`)) await act(async () => fireEvent.click(container.querySelector('.app-sidebar button[aria-controls]')!));
+      await act(async () => fireEvent.click(container.querySelector(`.app-sidebar a[href='${route}']`)!));
+    },
     commit: (route: string) => act(async () => payloads.get(route)!()),
     skeleton: () => [...main.querySelectorAll("[data-skeleton]")].map((node) => node.getAttribute("data-skeleton")),
     active: () => container.querySelector(".app-sidebar a[aria-current='page']")?.getAttribute("href"),
@@ -147,7 +152,7 @@ describe("Sidebar navigation renders the destination skeleton", () => {
   });
 
   it("covers every sidebar destination with its own skeleton, never the generic or previous one", async () => {
-    const routes = ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings"];
+    const routes = ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings"];
     const seen = new Set<string>();
     for (const [index, route] of routes.entries()) {
       const shell = start(routes[(index + routes.length - 1) % routes.length]!);
@@ -211,6 +216,72 @@ describe("Sidebar navigation renders the destination skeleton", () => {
     fireEvent.click(document.querySelector(".app-sidebar a[href='/tickets']")!, { ctrlKey: true });
     expect(shell.skeleton()).toEqual([]);
     expect(shell.visibleText()).toBe("Page /team");
+  });
+});
+
+describe("Services disclosure and sidebar follow-ups", () => {
+  it("has separate navigation and disclosure, icon-free children and unique surface IDs", async () => {
+    const { container } = render(<Router initial="/dashboard" />);
+    const sidebar = container.querySelector('.app-sidebar')!;
+    const toggle = sidebar.querySelector<HTMLButtonElement>('button[aria-controls]')!;
+    expect(toggle).toHaveAccessibleName('Expand Services');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(sidebar.querySelector('a[href="/coupons"]')).toBeNull();
+    fireEvent.click(toggle);
+    expect(payloads.size).toBe(0);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect([...sidebar.querySelectorAll('.sidebar-children a')].map(a => a.textContent)).toEqual(['Coupons', 'Investment Intent']);
+    expect(sidebar.querySelector('.sidebar-children svg')).toBeNull();
+    expect(sidebar.querySelector('a button, button a')).toBeNull();
+    expect(sidebar.textContent).not.toContain('Marketing');
+    const ids = [...container.querySelectorAll('[id]')].map(node => node.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    fireEvent.click(toggle);
+    expect(sidebar.querySelector('a[href="/coupons"]')).toBeNull();
+    await act(async () => fireEvent.click(sidebar.querySelector('a[href="/services"]')!));
+    expect(payloads.has('/services')).toBe(true);
+  });
+
+  it.each(['/coupons/new', '/investment-intent/one'])("exposes active child on direct entry %s and permits manual collapse", (path) => {
+    const { container } = render(<Router initial={path} />);
+    const sidebar = container.querySelector('.app-sidebar')!;
+    const toggle = sidebar.querySelector('button[aria-controls]')!;
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(sidebar.querySelector('a[aria-current="page"]')).toHaveAttribute('href', activeNavigationRoute(path));
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(sidebar.querySelector('.sidebar-children a')).toBeNull();
+  });
+
+  it("keeps independently granted children when Services is unavailable", () => {
+    const setup = navigationForModules({ services: false, coupons: true, investment_intent: false }).find(c => c.id === 'setup');
+    expect(setup?.items).toMatchObject([{ id: 'services', navigable: false, children: [{ id: 'coupons' }] }]);
+    expect(navigationForModules({ services: false, coupons: false, investment_intent: false })).toEqual([]);
+    expect(navigationForModules({ services: true, coupons: false }).find(c => c.id === 'setup')?.items[0]?.children).toEqual([]);
+  });
+
+  it("hides Operations for every role, retains direct titles and changes only Members' icon", () => {
+    expect(navigationForModules(modules).flatMap(c => c.items).some(i => i.route === '/todo')).toBe(false);
+    expect(titleForPath('/todo')).toBe('Operations');
+    expect(titleForPath('/todo/departments/example')).toBe('Operations');
+    expect(titleForPath('/coupons/new')).toBe('Coupons');
+    expect(activeNavigationRoute('/services/example')).toBe('/services');
+    expect(navigationIcons.team).toBe(UsersRound);
+  });
+
+  it.each(['owner', 'admin', 'manager', 'staff'] as const)('keeps Operations hidden for %s', (role) => {
+    const { container } = render(<Router initial="/todo/departments" role={role} />);
+    expect(container.querySelector('a[href="/todo"]')).toBeNull();
+  });
+
+  it.each([{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }])('leaves Services and child modifier click %j to the browser', async (options) => {
+    const { container } = render(<Router initial="/coupons" />);
+    for (const route of ['/services', '/coupons', '/investment-intent']) {
+      const anchor = container.querySelector(`.app-sidebar a[href="${route}"]`)!;
+      expect(anchor.tagName).toBe('A');
+      await act(async () => fireEvent.click(anchor, options));
+    }
+    expect(payloads.size).toBe(0);
   });
 });
 
