@@ -327,9 +327,7 @@ reset role;
 select pg_temp.act(3);
 select throws_ok($$update private.tenant_module_publications set reason='rewrite' where tenant_id='f0f0f0f0-0000-4000-8000-000000008381'$$,'55000',null,'publication history immutable');
 
--- Additional fixture rows/overrides below exist only inside this savepoint/outer rollback.
--- They change no installed policy, role defaults, production grants or billing application code.
-savepoint nav_history_matrix;
+-- Keep these fixtures in the outer rollback; a savepoint rollback would also reset pgTAP's count.
 insert into public.invoices(id,tenant_id,company_id,created_by_profile_id,updated_by_profile_id)
 values('5a000000-0000-4000-8000-000000009901','f0f0f0f0-0000-4000-8000-000000008381',
   'e7360000-0000-4000-8000-000000008382','20000000-0000-4000-8000-000000008383','20000000-0000-4000-8000-000000008383');
@@ -372,7 +370,6 @@ select is((select count(*) from public.invoices where company_id='e7360000-0000-
 select throws_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,
   '42501',null,'revoking both internal capabilities refuses a fresh financial read');
 reset role;
-rollback to nav_history_matrix;
 
 select * from finish();
 rollback;
