@@ -5,7 +5,8 @@
       "codex/woad-ticket-call-followups-20261104": false,
       "codex/spp-security-fixes-20261104": false,
       "codex/woad-orders-calls-ux-20261104": false,
-      "codex/woad-integrated-validation-20261105": false
+      "codex/woad-integrated-validation-20261105": false,
+      "codex/woad-navigation-performance-release-20261106": false
     }
   },
   "crons": [
