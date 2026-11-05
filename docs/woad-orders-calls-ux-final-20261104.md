@@ -1,4 +1,53 @@
-# Current handoff — 2026-11-05
+# Agent 1 calls diagnostic follow-up — 2026-11-05 21:47 SGT
+
+This is the current **calls-only diagnostic** follow-up. The release history below is preserved; its superseded 90b94748/uncommitted/unexecuted headings are historical. The latest full-release evidence is `outputs/orders-calls-final-audit-20261105/summary.md` under the existing task workspace. This assignment does not authorize rollout.
+
+**Result: the genuine direct-client Ticket failure is still undiagnosed because its actual request could not be inspected. No additional application defect was confirmed, so no application/schema/test code was changed. Existing Order calling is committed but is not serving.**
+
+## Fresh checkout and access evidence
+
+- Verified Platform origin `https://github.com/UplineTonyuo/wolf-forge-platform.git`, branch `codex/woad-orders-calls-ux-20261104`, clean starting HEAD `6b60e8e8800af74e72de5ba93ae58f825f8241eb`. Original session `01a1a678-218d-7ba2-8b21-6876f09bba88` was not loaded and its recorded turn completed; no active second writer was found in this checkout. Navigation/performance threads were active in their separate lanes and were not edited.
+- Process environment resolved the Global OS to `C:/Users/TrojanNiAnton/Downloads/Anthony OS-20261009T175758Z-1-001/Anthony OS/10 Templates/Coding Agent OS/CODING AGENT OPERATING SYSTEM.md` and canonical memory to the same vault's `02 Projects/Wolf Forge Platform/AI Memory`. Skills Index and relevant existing memory/Security notes were read. The configured White-Label recovery repository is separate. Older canonical deployment/phase facts were not treated as current evidence; vault notes remain read-only.
+- Shared Graphify passed origin/task/pending/version/provenance checks before and after one bounded query: version 0.9.90; published/build/graph HEAD all `eddede8f96bbb8a0cb1c7826b2d8fcd115dbc821`; task Ready; no pending journal. Its older snapshot was navigation context only; references were checked in current source.
+- Fresh GitHub read: PR114 open/draft/unmerged at `6b60e8e`. Fresh Vercel alias/deployment read: WOAD still READY on `dpl_hLstfmZUqRVvojtkQoiGZ6hJhjDN`, SHA `7aa06cf7e784a7a792d87d07661f9d7df3b7e14a`. Its two Order conversation components lack the committed Order controls.
+- Fresh read-only production SQL: 207 migrations through `20261103161636`; **0 of the exact ten release migrations applied**; no `app_order_call_current/prepare/history` RPCs. Existing Ticket current/prepare/history definitions match the serving migration contracts.
+- Approved pair and Ticket `628ca6d4-259d-42ca-b637-57cfc9353364`: approved client is the Ticket client; both approved identities are pilot-included and participant-eligible; one eligible saved team recipient. Environment/media/exclusive-account verification and usage freshness/effective calling all passed at inspection; pilot count remains two. The client not being a saved internal recipient is expected. These aggregate predicates do not verify the browser's actual identity, Tenant selector or Auth session.
+- The owner confirmed direct client login and opened `/account`. Browser inventory still reported `The browser access host is unavailable`. Normal Chrome app inspection was refused with `Computer Use was not approved to use Google Chrome`, including after the owner's explicit renewed authorization. No account menu or endpoint could be inspected. **Actual signed-in POV, failing action/path, HTTP status, sanitized response code and request ID remain uncaptured.** No support-mode cause or production reproduction is claimed; no alternate session, JWT, Auth link or access workaround was attempted.
+
+## Traced boundaries and Order readiness
+
+| Boundary | Verified source behavior |
+| --- | --- |
+| Shared provider/controller | Both shells bind `InboxCallProvider` to the current profile. Mount/recovery reads `current`; explicit conversation controls read `current` with exactly one target. Failed idle reads hide controls; a live call failure releases local media. Call IDs/profile/target projections are validated; uncertain invitation retries retain their request ID. |
+| Client Ticket UI | `ticket-client-conversation.tsx` independently loads participant history and mounts existing `TicketCallControls`. Opening preparation reads `prepare`; microphone/camera checks and invitation require separate explicit actions. No media acquisition was performed by this diagnostic. |
+| HTTP/session/service | `GET /api/ticket-calls` checks same origin, strict action/target, verified session/Tenant and support refusal before user-scoped RPCs. `getVerifiedSessionContext` verifies claims; `private.ticket_call_session` independently requires a matching live Auth session. `current`, `prepare` and `history` use distinct RPCs. History does not depend on provider enablement. Candidate responses distinguish 401/NOT_AUTHENTICATED, 403/SUPPORT_MODE or PERMISSION_DENIED, 429/RATE_LIMITED and 503/CALL_SERVICE_UNAVAILABLE. Serving 7aa responses omit these codes. These are source contracts, **not observed failing-client HTTP results**. |
+| Recipient authority | Client Ticket preparation offers eligible personally saved internal recipients; admission rechecks the selected recipient. Native Order preparation offers eligible order/task assignees to clients and eligible company clients to internal callers. Linked Order preparation preserves the legitimate Ticket peer/recipient rules. No broadcast, arbitrary recipient or pilot expansion was added. |
+| Native and linked Orders | `/orders/[orderId]` passes `orderId`; `/account/projects/[projectId]` passes `project.id` through `ClientProjectDetail` to `ProjectConversation`. Both existing components use `OrderCallControls` and order history. Service calls explicit `app_order_call_current/prepare/history` and `app_request_order_call`. `conversation_call_target` resolves a real same-Tenant linked Ticket or a native order; the ledger enforces XOR Ticket/order targets. No Ticket is created and a native order UUID is not submitted to the Ticket request RPC. |
+| History/deep links/lifecycle | Existing history is participant-scoped, keyset-paginated and limited to 50; late responses cannot replace another conversation's history. `/calls/[callId]` reauthorizes before redirecting to `/orders/<id>?call=...` or `/account/projects/<id>?call=...`, with legitimate linked-Ticket mapping. The same call ledger, claims, media lifecycle, device limits, cleanup, idempotency, busy refusal, reservations, budget and stream controls are retained. |
+
+The confirmed cause of **missing Order controls** remains the serving/candidate deployment and schema gap. It does **not** establish the cause of the separate direct-client Ticket error. No speculative correction was made.
+
+## Fresh validation and limits
+
+Executed locally against unchanged application source, one worker, cache disabled and config runner used to avoid config-bundle/cache writes through the shared `node_modules` junction:
+
+```powershell
+node --max-old-space-size=512 node_modules/vitest/vitest.mjs run src/tests/ticket-call-route.test.ts src/tests/ticket-call-service.test.ts src/tests/call-controller.test.ts src/tests/order-call-target.test.ts src/tests/ticket-call-controls.test.tsx src/tests/ticket-call-history-sync.test.tsx src/tests/call-recipient-picker.test.tsx --maxWorkers=1 --no-file-parallelism --no-cache --configLoader runner
+node --max-old-space-size=256 --test scripts/qa/check-ticket-call-transport.test.mjs
+node --check scripts/qa/ticket-call-concurrency.mjs
+node --check scripts/qa/check-ticket-call-transport.mjs
+git diff --check
+```
+
+Results: **7 Vitest files / 55 tests PASS**, transport acceptance-helper **1/1 PASS**, both syntax checks and whitespace PASS. Fixtures mock actors/network/media; this is not actual Auth-session, ringing, two-person media or rendered-browser acceptance. No new regression/fix pair exists because no concrete new defect was confirmed. This is approved existing-work diagnosis, not a new design/feature exercise.
+
+Historical only: exact candidate 6b full CI41903542090 (4612 JS / 7234 SQL), database41902431809 and transport41905024772 remain the prior release evidence described by the latest summary; they were not rerun. CI-only concurrency/transport/provider-stub guards were preserved and not bypassed. No install, typecheck, broad suite or build was started in this Agent 1 slot. Available RAM was initially 0.65 GiB and 2.86 GiB before the bounded fixtures; the 5.5 GiB full-build guard remains.
+
+Pending only if the coordinator assigns a later serialized heavy slot: `node --max-old-space-size=2048 node_modules/typescript/bin/tsc --noEmit --incremental false`; full `node --max-old-space-size=2048 node_modules/vitest/vitest.mjs run --maxWorkers=1 --no-file-parallelism --no-cache --configLoader runner`; `npm run build` only above the existing RAM guard. Isolated SQL/physical/transport reruns require their existing authorized disposable Linux CI environment, which this assignment prohibits dispatching. Documentation-only follow-up does not claim a fresh full candidate pass.
+
+Next action: obtain approved browser-tool access to the existing genuine client tab; verify its POV, then capture only action/path, HTTP status, sanitized response code/request ID and relevant call UI, without starting a call or granting device permissions. Diagnose that response before proposing a fix. Order release remains blocked by the existing private-backup verification and migration/integration/promotion gates; the rejected automated backup was not retried or bypassed. No push, PR/CI dispatch, merge, deployment, hosted mutation, provider change, call, message, account change, vault write or backup inspection was performed. Only this existing handoff was updated; no alternative memory/release process was created.
+
+# Historical handoff — 2026-11-05 (superseded where noted above)
 
 **Latest authorization:** owner conditionally approved the full existing release via `approved-release-continuation.txt`. This supersedes historical hold/CI-only wording below. First commit/checkpoint the reviewed correction, verify current included Actions allowance, obtain isolated RED/GREEN and final candidate acceptance, then verified private backup, exact ten migrations, controlled merge/merge-result checks and production-config WOAD promotion. No routine reapproval; no paid usage or unrelated scope. Current billing APIs404; fresh usage evidence is pending before any dispatch. The historical and local preparation evidence below must not be mistaken for new SQL acceptance.
 
