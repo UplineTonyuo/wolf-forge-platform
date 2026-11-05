@@ -3,7 +3,6 @@ import {
   toServiceChooserCatalog,
   type ServiceChooserCatalog,
 } from "../../domain/client-portal/service-chooser";
-import type { ClientNavCounts } from "../../domain/client-portal/summary";
 import { getClientNavCounts } from "../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../lib/supabase/next-server";
 import { WhiteLabelPublicationRepository } from "../../repositories/white-label-publication-repository";
@@ -18,7 +17,7 @@ const emptyChooserCatalog: ServiceChooserCatalog = { folders: [], services: [] }
 
 export default async function ClientAccountLayout({ children }: { children: React.ReactNode }) {
   const context = await getClientContext();
-  const runtimeConfiguration = await new WhiteLabelPublicationService({
+  const runtimeConfigurationPromise = new WhiteLabelPublicationService({
     repository: new WhiteLabelPublicationRepository(context.client),
   }).getRuntimeConfiguration().catch(() => null);
 
@@ -29,10 +28,9 @@ export default async function ClientAccountLayout({ children }: { children: Reac
    * account is not entitled to read — and with an empty catalog its triggers
    * do not render at all.
    */
-  let serviceCatalog = emptyChooserCatalog;
-  if (context.user.modules.portal_store) {
-    serviceCatalog = toServiceChooserCatalog(await context.services.catalog.listStoreCatalog());
-  }
+  const serviceCatalogPromise = context.user.modules.portal_store
+    ? context.services.catalog.listStoreCatalog().then(toServiceChooserCatalog)
+    : Promise.resolve(emptyChooserCatalog);
 
   /**
    * Rail counts are real row counts, memoized for the request so the Dashboard
@@ -42,12 +40,7 @@ export default async function ClientAccountLayout({ children }: { children: Reac
    * The rail is decoration over an authorization decision made elsewhere, so a
    * failure to count must never take the workspace down with it.
    */
-  let navCounts: ClientNavCounts | null = null;
-  try {
-    navCounts = await getClientNavCounts();
-  } catch {
-    navCounts = null;
-  }
+  const navCountsPromise = getClientNavCounts().catch(() => null);
 
   /*
    * The notification chime honours the account's own stored preference, so the
@@ -55,7 +48,12 @@ export default async function ClientAccountLayout({ children }: { children: Reac
    * the command bar's avatar. A failed read falls back to sound on, matching
    * the column default, and to initials.
    */
-  const profile = await context.services.profile.getMine().catch(() => null);
+  const [runtimeConfiguration, serviceCatalog, navCounts, profile] = await Promise.all([
+    runtimeConfigurationPromise,
+    serviceCatalogPromise,
+    navCountsPromise,
+    context.services.profile.getMine().catch(() => null),
+  ]);
 
   return (
     <ClientDraftProvider key={`${context.user.companyId}:${context.user.id}`} owner={studioDraftSavingAvailable(process.env) ? `${context.user.companyId}:${context.user.id}` : null}>
