@@ -161,6 +161,26 @@ select '20000000-0000-4000-8000-000000008383','internal','payment','Invoice fixt
 select is(pg_temp.publish((select disabled from module_sets),1),2,'OFF retains nonzero wallet and paid/refunded history');
 select pg_temp.act(3);set local role authenticated;
 select is(public.app_invoices_work_enabled(),false,'work OFF is authoritative');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+create temp table nav_read_fingerprint as select pg_temp.business_hash() value;
+grant select on nav_read_fingerprint to authenticated;
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null
+  and id in (select id from fixture_ids where kind in ('paid','purchase'))),2::bigint,
+  'selected-company history includes manual-created and actual Store-purchase receipts OFF');
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null
+  and id=(select id from fixture_ids where kind='draft')),0::bigint,
+  'selected-company predicate does not expose OFF drafts');
+select is((select balance_due_cents from public.app_get_invoice_financials((select id from fixture_ids where kind='paid'))),0::bigint,
+  'manual receipt uses authoritative financials under current read authority');
+select is((select balance_due_cents from public.app_get_invoice_financials((select id from fixture_ids where kind='purchase'))),0::bigint,
+  'Store receipt uses authoritative financials under current read authority');
+select is(pg_temp.business_hash(),(select value from nav_read_fingerprint),
+  'scoped history and financial reads have no business, wallet, request or quota side effect');
+
 select is((select count(*) from public.invoices where id=(select id from fixture_ids where kind='paid')),1::bigint,'issued paid history remains');
 select is((select count(*) from public.invoices where id=(select id from fixture_ids where kind='draft')),0::bigint,'draft is not history');
 select is((select count(*) from public.invoice_items where invoice_id=(select id from fixture_ids where kind='draft')),0::bigint,'draft child items are not history');
@@ -224,6 +244,15 @@ select pg_temp.act(4);set local role authenticated;
 select throws_ok($$select public.app_get_company_wallet('e7360000-0000-4000-8000-000000008381')$$,'42501',null,'wallet visibility grants no denied permission');
 select throws_ok($$select public.app_list_my_wallet_history()$$,'42501',null,'history respects denied permission');
 select is((select count(*) from public.invoices),0::bigint,'OFF never grants Invoice view');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null),0::bigint,
+  'previously visible company history disappears after current read revocation');
+select throws_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,
+  '42501',null,'previously loaded financial receipt fails a fresh read after revocation');
+
 reset role;
 update public.profile_permission_overrides set allowed=true where profile_id='20000000-0000-4000-8000-000000008384' and permission_key='invoices.view';
 select pg_temp.act(6);set local role authenticated;
@@ -243,6 +272,13 @@ update public.companies set archived_at=now() where id='e7360000-0000-4000-8000-
 set local role authenticated;
 select throws_ok($$select public.app_record_invoice_payment(request_id,(select id from fixture_ids where kind='paid'),1000) from fixture_ids where kind='payment'$$,'42501',null,'accepted payment requires current Company visibility');
 select throws_ok($$select public.app_refund_invoice(request_id,(select id from fixture_ids where kind='paid'),250,'ledger only') from fixture_ids where kind='refund'$$,'42501',null,'accepted refund requires current Company visibility');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null),0::bigint,
+  'current company archive hides scoped history');
+
 reset role;
 update public.companies set archived_at=null where id='e7360000-0000-4000-8000-000000008381';
 update public.invoices set archived_at=now() where id=(select id from fixture_ids where kind='paid');
@@ -250,12 +286,27 @@ set local role authenticated;
 select throws_ok($$select public.app_record_invoice_payment(request_id,(select id from fixture_ids where kind='paid'),1000) from fixture_ids where kind='payment'$$,'42501',null,'accepted payment requires current Invoice visibility');
 select throws_ok($$select public.app_refund_invoice(request_id,(select id from fixture_ids where kind='paid'),250,'ledger only') from fixture_ids where kind='refund'$$,'42501',null,'accepted refund requires current Invoice visibility');
 select is((select count(*) from public.app_list_my_notifications(100) where event_key='wl238-paid'),0::bigint,'archived financial notifications are hidden');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null
+  and id=(select id from fixture_ids where kind='paid')),0::bigint,
+  'current invoice archive hides scoped history');
+
 reset role;
 update public.invoices set archived_at=null where id=(select id from fixture_ids where kind='paid');
 insert into public.tenants(id,slug,display_name,status) values('f0f0f0f0-0000-4000-8000-000000008382','wl238-invoices-foreign','Foreign Invoice Fixture','active');
 insert into public.tenant_memberships(tenant_id,profile_id,account_class,role_id) select 'f0f0f0f0-0000-4000-8000-000000008382','20000000-0000-4000-8000-000000008383','internal',id from public.roles where name='owner';
 select pg_temp.act(3,'f0f0f0f0-0000-4000-8000-000000008382');set local role authenticated;
 select throws_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,'42501',null,'authorized foreign Tenant cannot read financial history');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null),0::bigint,
+  'selected company UUID does not bypass the current Tenant');
+
 select throws_ok($$select public.app_record_invoice_payment(request_id,(select id from fixture_ids where kind='paid'),1000) from fixture_ids where kind='payment'$$,'P0002',null,'foreign Tenant cannot replay accepted payment');
 select throws_ok($$select public.app_get_company_wallet('e7360000-0000-4000-8000-000000008381')$$,'42501',null,'foreign Tenant cannot see wallet');
 reset role;
@@ -263,10 +314,62 @@ insert into public.companies(id,tenant_id,name,status) values('e7360000-0000-400
 update public.tenant_memberships set company_id='e7360000-0000-4000-8000-000000008382' where tenant_id='f0f0f0f0-0000-4000-8000-000000008381' and profile_id='20000000-0000-4000-8000-000000008384';
 select pg_temp.act(4);set local role authenticated;
 select throws_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,'42501',null,'changed Company cannot read financial history');
+
+-- Sidebar/client-detail acceptance extension: real existing fixture and policies.
+
+select is((select count(*) from public.invoices
+  where company_id='e7360000-0000-4000-8000-000000008381' and archived_at is null),0::bigint,
+  'changed client company cannot read another company via the scoped predicate');
+
 select throws_ok($$select public.app_purchase_service_with_balance(request_id,'e7360000-0000-4000-8000-000000008381') from fixture_ids where kind='purchase'$$,'P0002',null,'changed Company cannot replay purchase');
 select is((select count(*) from public.app_list_my_wallet_history()),0::bigint,'changed Company has no foreign wallet transactions');
 reset role;
 select pg_temp.act(3);
 select throws_ok($$update private.tenant_module_publications set reason='rewrite' where tenant_id='f0f0f0f0-0000-4000-8000-000000008381'$$,'55000',null,'publication history immutable');
+
+-- Keep these fixtures in the outer rollback; a savepoint rollback would also reset pgTAP's count.
+insert into public.invoices(id,tenant_id,company_id,created_by_profile_id,updated_by_profile_id)
+values('5a000000-0000-4000-8000-000000009901','f0f0f0f0-0000-4000-8000-000000008381',
+  'e7360000-0000-4000-8000-000000008382','20000000-0000-4000-8000-000000008383','20000000-0000-4000-8000-000000008383');
+set local role authenticated;
+select is((select count(*) from public.invoices where id='5a000000-0000-4000-8000-000000009901'),1::bigint,
+  'same-Tenant other-company fixture exists for this internal owner');
+select is((select count(*) from public.invoices where company_id='e7360000-0000-4000-8000-000000008381'
+  and archived_at is null and id='5a000000-0000-4000-8000-000000009901'),0::bigint,
+  'repository-equivalent company predicate excludes another visible company');
+reset role;
+insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
+values('f0f0f0f0-0000-4000-8000-000000008381','20000000-0000-4000-8000-000000008385','invoices.view',false),
+('f0f0f0f0-0000-4000-8000-000000008381','20000000-0000-4000-8000-000000008385','invoices.manage',true)
+on conflict(tenant_id,profile_id,permission_key) do update set allowed=excluded.allowed;
+select pg_temp.act(5); set local role authenticated;
+select ok(not public.app_has_permission('invoices.view') and public.app_has_permission('invoices.manage'),
+  'synthetic staff fixture is explicitly manage-only');
+select is((select count(*) from public.invoices where company_id='e7360000-0000-4000-8000-000000008381'
+  and archived_at is null and id=(select id from fixture_ids where kind='paid')),1::bigint,
+  'manage-only retains existing internal invoice history authority');
+select lives_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,
+  'manage-only can read the exact scoped receipt financials');
+reset role;
+update public.profile_permission_overrides set allowed=(permission_key='invoices.view')
+where tenant_id='f0f0f0f0-0000-4000-8000-000000008381' and profile_id='20000000-0000-4000-8000-000000008385'
+  and permission_key in ('invoices.view','invoices.manage');
+set local role authenticated;
+select ok(public.app_has_permission('invoices.view') and not public.app_has_permission('invoices.manage'),
+  'synthetic staff fixture is explicitly view-only');
+select is((select count(*) from public.invoices where company_id='e7360000-0000-4000-8000-000000008381'
+  and archived_at is null and id=(select id from fixture_ids where kind='paid')),1::bigint,
+  'view-only retains existing internal invoice history authority');
+reset role;
+update public.profile_permission_overrides set allowed=false
+where tenant_id='f0f0f0f0-0000-4000-8000-000000008381' and profile_id='20000000-0000-4000-8000-000000008385'
+  and permission_key in ('invoices.view','invoices.manage');
+set local role authenticated;
+select is((select count(*) from public.invoices where company_id='e7360000-0000-4000-8000-000000008381'
+  and archived_at is null),0::bigint,'revoking both internal read capabilities hides the same scoped history');
+select throws_ok($$select public.app_get_invoice_financials(id) from fixture_ids where kind='paid'$$,
+  '42501',null,'revoking both internal capabilities refuses a fresh financial read');
+reset role;
+
 select * from finish();
 rollback;
