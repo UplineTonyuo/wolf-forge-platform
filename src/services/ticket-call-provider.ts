@@ -14,7 +14,7 @@ export type CallProvider = {
 };
 const roomClaim = z.object({
   id: z.uuid(), roomName: z.string().regex(/^wf-call-[a-f0-9-]{36}$/), mode: z.enum(["audio", "video"]),
-  expiresAt: z.iso.datetime({ offset: true }), created: z.boolean(), claimId: z.uuid(),
+  expiresAt: z.iso.datetime({ offset: true }), created: z.boolean(), ready: z.boolean().default(false), claimId: z.uuid(),
 });
 const tokenClaim = roomClaim.omit({ created: true, claimId: true }).extend({ participantId: z.uuid() });
 
@@ -24,16 +24,18 @@ export async function prepareTicketCallMedia(user: CallRpc, trusted: CallRpc, pr
   if (claim.id !== callId || claim.roomName !== `wf-call-${callId}`) throw new Error("Unexpected room claim");
   const expiry = Math.floor(Date.parse(claim.expiresAt) / 1000);
   if (expiry <= Date.now() / 1000 || expiry > Date.now() / 1000 + 901) throw new Error("Call expired");
-  if (claim.created) {
-    try { await provider.createRoom(claim.roomName, callRoomProperties(expiry)); }
-    catch { /* Read the deterministic room after an uncertain creation. */ }
+  if (!claim.ready) {
+    if (claim.created) {
+      try { await provider.createRoom(claim.roomName, callRoomProperties(expiry)); }
+      catch { /* Read the deterministic room after an uncertain creation. */ }
+    }
+    const room = await provider.readRoom(claim.roomName);
+    if (!verifiedCallRoom(room, claim.roomName, expiry)) throw new Error("Call setup unavailable");
+    const completed = await callRpc(trusted, "app_complete_ticket_call_room", {
+      p_call_id: callId, p_claim_id: claim.claimId, p_room: room,
+    });
+    if (completed !== true) throw new Error("Call setup unavailable");
   }
-  const room = await provider.readRoom(claim.roomName);
-  if (!verifiedCallRoom(room, claim.roomName, expiry)) throw new Error("Call setup unavailable");
-  const completed = await callRpc(trusted, "app_complete_ticket_call_room", {
-    p_call_id: callId, p_claim_id: claim.claimId, p_room: room,
-  });
-  if (completed !== true) throw new Error("Call setup unavailable");
   const joined = tokenClaim.parse(await callRpc(user, "app_ticket_call_command", { ...args, p_action: "join" }));
   if (joined.id !== callId || joined.roomName !== claim.roomName || joined.expiresAt !== claim.expiresAt || joined.mode !== claim.mode) {
     throw new Error("Call changed");

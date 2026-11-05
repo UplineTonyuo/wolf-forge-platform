@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ApplicationError } from "../../../lib/errors/application-error";
 import { readDailyCallConfig } from "../../../lib/daily/calls";
 import { createDailyCallProvider } from "../../../lib/daily/provider";
 import { readServerEnvironment } from "../../../lib/env/server-env";
@@ -28,5 +29,10 @@ export async function POST(request:Request){
     const operation=parsed.data.action==="presence"?confirmTicketCallPresence:prepareTicketCallMedia;
     const data=await operation(context.client,trusted,createDailyCallProvider(config.key),parsed.data.call_id,parsed.data.device_id);
     return reply({ok:true,data});
-  }catch{return reply({ok:false,error:"Could not connect this call. Check your access or try again."},503);}
+  }catch(error){
+    if(error instanceof ApplicationError && error.code==="RATE_LIMITED")return Response.json(
+      {ok:false,error:"Too many call attempts. Please wait and try again."},
+      {status:429,headers:{"cache-control":"private, no-store","Retry-After":"60"}});
+    return reply({ok:false,error:"Could not connect this call. Check your access or try again."},503);
+  }
 }

@@ -6,6 +6,14 @@ import type { UserScopedClient } from "../lib/supabase/user-client";
 
 export type CallRpc = { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: unknown; error: unknown }> };
 
+function availability(value: unknown) {
+  // Keep the legacy root contract usable during migration-first rollout.
+  if (value && typeof value === "object" && !("orderId" in value) && "call" in value && value.call && typeof value.call === "object" && "orderId" in value.call && typeof value.call.orderId === "string") {
+    return callAvailability.parse({ ...value, orderId: value.call.orderId });
+  }
+  return callAvailability.parse(value);
+}
+
 export async function callRpc(client: CallRpc, name: string, args: Record<string, unknown>) {
   const result = await client.rpc(name, args);
   if (result.error) throw mapDatabaseError(result.error, "Call");
@@ -16,8 +24,9 @@ export async function mutateTicketCall(client: UserScopedClient, value: unknown)
   const input = callMutation.parse(value);
   const rpc = client as unknown as CallRpc;
   if (input.action === "request") {
-    return ticketCall.parse(await callRpc(rpc, "app_request_ticket_call", {
-      p_ticket_id: input.ticket_id, p_request_id: input.request_id, p_device_id: input.device_id, p_mode: input.mode,
+    const order = "order_id" in input;
+    return ticketCall.parse(await callRpc(rpc, order ? "app_request_order_call" : "app_request_ticket_call", {
+      ...(order ? { p_order_id: input.order_id } : { p_ticket_id: input.ticket_id }), p_request_id: input.request_id, p_device_id: input.device_id, p_mode: input.mode,
       p_recipient_id: input.recipient_id ?? null,
     }));
   }
@@ -36,11 +45,16 @@ export async function mutateTicketCall(client: UserScopedClient, value: unknown)
 export async function readTicketCalls(client: UserScopedClient, value: unknown) {
   const input = callRead.parse(value);
   const rpc = client as unknown as CallRpc;
+  if ("order_id" in input) {
+    const args = { p_order_id: input.order_id, ...(input.action === "history" ? { p_before: input.before, p_before_id: input.before_id } : {}) };
+    const data = await callRpc(rpc, `app_order_call_${input.action}`, args);
+    return input.action === "history" ? z.array(callHistoryEntry).max(50).parse(data) : callAvailability.parse(data);
+  }
   if (input.action === "current") {
-    return callAvailability.parse(await callRpc(rpc, "app_ticket_call_current", { p_ticket_id: input.ticket_id, p_call_id: input.call_id }));
+    return availability(await callRpc(rpc, "app_ticket_call_current", { p_ticket_id: input.ticket_id, p_call_id: input.call_id }));
   }
   if (input.action === "prepare") {
-    return callAvailability.parse(await callRpc(rpc,"app_ticket_call_prepare",{p_ticket_id:input.ticket_id}));
+    return availability(await callRpc(rpc,"app_ticket_call_prepare",{p_ticket_id:input.ticket_id}));
   }
   return input.action === "history"
     ? z.array(callHistoryEntry).max(50).parse(await callRpc(rpc, "app_ticket_call_history", {

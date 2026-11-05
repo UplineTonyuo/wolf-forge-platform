@@ -79,7 +79,7 @@ export function TicketClientConversation({
         viewerProfileId={viewerProfileId}
         messages={conversation.messages}
         callHistory={history.entries}
-        historyControls={history.error ? <p role="status">{history.error} <button type="button" onClick={() => void history.load()}>Retry call history</button></p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
+        historyControls={history.error ? <p role="status">{history.error} {history.retryable ? <button type="button" disabled={history.busy} onClick={() => void history.load()}>Retry call history</button> : null}</p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
         onReply={repliesDisabled ? undefined : setReplyTo}
         canReact
         onToggleReaction={toggleReaction}

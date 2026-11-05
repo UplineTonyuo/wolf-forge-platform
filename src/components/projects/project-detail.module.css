@@ -536,7 +536,8 @@ a.tab:hover {
   letter-spacing: 0.07em;
 }
 
-.panelHeading h2 {
+.panelHeading h2,
+.panelHeading h3 {
   margin: 0;
   font: inherit;
 }

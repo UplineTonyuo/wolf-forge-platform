@@ -51,3 +51,20 @@ it("explains unavailability without acquiring devices when nobody saved the Tick
   expect(screen.getByRole("button", { name: "Check microphone" })).toBeDisabled();
   expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
 });
+it("requires an eligible client choice for a native order and sends only order_id",async()=>{
+ const send=vi.fn(async(_url:unknown,init?:RequestInit)=>init?.method==="POST"?Response.json({ok:false},{status:403}):Response.json({ok:true,data:{enabled:true,profileId:client,accountClass:"internal",call:null,peer:null,ticketId:null,orderId:client,candidates:people.slice(0,2)}}));
+ render(<CallPrepare ticketId={client} order mode="audio" controller={new CallController(client,send as typeof fetch)} onClose={()=>{}}/>);
+ const choices=await screen.findAllByRole("radio");expect(choices).toHaveLength(2);
+ expect(screen.getByRole("button",{name:"Check microphone"})).toBeDisabled();fireEvent.click(choices[0]!);
+ fireEvent.click(screen.getByRole("button",{name:"Check microphone"}));
+ await waitFor(()=>expect(screen.getByRole("button",{name:"Start call"})).toBeEnabled());fireEvent.click(screen.getByRole("button",{name:"Start call"}));
+ await waitFor(()=>expect(send.mock.calls.some(([,init])=>init?.method==="POST")).toBe(true));
+ const body=JSON.parse(send.mock.calls.find(([,init])=>init?.method==="POST")![1]!.body as string);
+ expect(body).toMatchObject({order_id:client,recipient_id:ids[0]});expect(body).not.toHaveProperty("ticket_id");
+});
+it("uses the legitimate linked Ticket peer returned for an internal order",async()=>{
+ const send=vi.fn(async()=>Response.json({ok:true,data:{enabled:true,profileId:client,accountClass:"internal",call:null,peer:{name:"Linked client",avatarUrl:null},ticketId:ids[0],orderId:client}}));
+ render(<CallPrepare ticketId={client} order mode="audio" controller={new CallController(client,send as typeof fetch)} onClose={()=>{}}/>);
+ expect(await screen.findByRole("heading",{name:"Linked client"})).toBeInTheDocument();expect(screen.queryByRole("radio")).toBeNull();
+ expect(screen.getByRole("button",{name:"Check microphone"})).toBeEnabled();
+});

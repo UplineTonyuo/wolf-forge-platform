@@ -45,6 +45,8 @@ export type PasswordActionState = {
   fieldErrors: Record<string, string>;
   /** ISO timestamp of the last successful change, used to confirm in the UI. */
   changedAt: string | null;
+  /** A completed password change whose other-device sign-out is unconfirmed. */
+  warning?: string;
 };
 
 export const initialPasswordActionState: PasswordActionState = {

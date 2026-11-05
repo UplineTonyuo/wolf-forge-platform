@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import {
   describeProjectError,
   failedProjectBatch,
+  parseProjectBatchIds,
   runProjectBatch,
   unavailableProjectLabel,
   type ProjectBulkResult,
 } from "../../domain/orders/bulk";
 import { orderPriorities, orderStatuses, type OrderStatus } from "../../domain/orders/schema";
+import { uuidSchema } from "../../domain/shared";
 import { PermissionDeniedError, ValidationError, toClientSafeError } from "../../lib/errors/application-error";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
@@ -196,15 +198,22 @@ async function resolveProjectLabels(orderIds: string[]): Promise<Map<string, str
 
 async function runProjectAction(
   orderIds: string[],
+  allowed: boolean,
   validationMessage: string,
   operation: (orderId: string) => Promise<unknown>,
 ): Promise<ProjectBulkResult> {
-  const unique = Array.from(new Set(orderIds.filter(Boolean)));
+  let unique: string[];
+  try {
+    unique = parseProjectBatchIds(orderIds);
+  } catch (error) {
+    return failedProjectBatch(orderIds, toClientSafeError(error).message);
+  }
   if (unique.length === 0) return { attempted: 0, succeeded: [], failed: [] };
 
   try {
     const context = await getInternalContext();
     await context.services.permissions.requireModuleAccess("projects");
+    if (!allowed) throw new PermissionDeniedError();
   } catch (error) {
     return failedProjectBatch(unique, describeProjectError(error, validationMessage));
   }
@@ -231,7 +240,7 @@ export async function bulkChangeProjectStatusAction(
   }
 
   const context = await getInternalContext();
-  return runProjectAction(orderIds, "That status change was rejected.", (orderId) =>
+  return runProjectAction(orderIds, context.user.projects.edit, "That status change was rejected.", (orderId) =>
     context.services.orders.changeStatus(orderId, { status }, context.actor),
   );
 }
@@ -240,10 +249,13 @@ export async function bulkAssignProjectsAction(
   orderIds: string[],
   profileId: string | null,
 ): Promise<ProjectBulkResult> {
+  if (!uuidSchema.nullable().safeParse(profileId).success) {
+    return failedProjectBatch(orderIds, "Choose a valid teammate.");
+  }
   const context = await getInternalContext();
   // The database rejects archived, non-existent and client-role assignees; the
   // action never pre-approves an assignee on the browser's word.
-  return runProjectAction(orderIds, "That teammate cannot be assigned to this project.", (orderId) =>
+  return runProjectAction(orderIds, context.user.projects.assign, "That teammate cannot be assigned to this project.", (orderId) =>
     context.services.orders.assign(orderId, profileId, context.actor),
   );
 }
@@ -251,7 +263,7 @@ export async function bulkAssignProjectsAction(
 export async function bulkArchiveProjectsAction(orderIds: string[]): Promise<ProjectBulkResult> {
   const context = await getInternalContext();
   // Archive only. There is no hard-delete path anywhere in the application.
-  return runProjectAction(orderIds, "That project could not be archived.", (orderId) =>
+  return runProjectAction(orderIds, context.user.projects.archive, "That project could not be archived.", (orderId) =>
     context.services.orders.archive(orderId, context.actor),
   );
 }

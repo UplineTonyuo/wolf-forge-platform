@@ -33,7 +33,7 @@ export class CallController{
   if(previous?.state==="ended"&&!call)this.requestKey=null;
   this.patch({call,...(peer===undefined?(call?.id!==previous?.id?{peer:null}:{}):{peer}),...(call?.state==="ended"?{canJoin:false}:{})});
  }
- async refresh(query:{ticket_id?:string;call_id?:string}={}):Promise<CallAvailability|null>{
+ async refresh(query:{ticket_id?:string;order_id?:string;call_id?:string}={}):Promise<CallAvailability|null>{
   if(this.disposed)return null;
   if(this.reading){await this.readDone;return this.refresh(query);}
   this.reading=true;let readFinished!:()=>void;this.readDone=new Promise(resolve=>{readFinished=resolve;});const sequence=this.sequence;
@@ -42,20 +42,21 @@ export class CallController{
    if(this.disposed || sequence!==this.sequence)return null;
    if(data.profileId!==this.profileId)throw new Error("Your account changed. Reload before calling.");
    // Looking at another conversation must not clear a call in the shared shell.
-   if(!query.ticket_id || data.call || !this.state.call || this.state.call.ticketId===query.ticket_id)this.adopt(data.call,data.peer,!query.ticket_id&&!query.call_id);
+   if((!query.ticket_id&&!query.order_id) || data.call || !this.state.call || (query.order_id ? this.state.call.orderId===query.order_id : this.state.call.ticketId===query.ticket_id))this.adopt(data.call,data.peer,!query.ticket_id&&!query.order_id&&!query.call_id);
    return data;
   }catch(error){if(this.state.call?.state!=="ended" && this.state.call){this.onRelease();this.patch({canJoin:false,error:error instanceof Error?error.message:"Call unavailable."});}return null;}
   finally{this.reading=false;readFinished();}
  }
- async prepare(ticket:string){const value=callAvailability.parse(await this.api(`/api/ticket-calls?action=prepare&ticket_id=${encodeURIComponent(ticket)}`));if(value.profileId!==this.profileId)throw new Error("Account changed");return value;}
- async request(ticket:string,mode:"audio"|"video",preferences:CallDevicePreferences={},recipient?:string){
+ async prepare(ticket:string,order=false){const value=callAvailability.parse(await this.api(`/api/ticket-calls?action=prepare&${order?"order_id":"ticket_id"}=${encodeURIComponent(ticket)}`));if(value.profileId!==this.profileId)throw new Error("Account changed");return value;}
+ async request(ticket:string,mode:"audio"|"video",preferences:CallDevicePreferences={},recipient?:string,order=false){
   if(this.disposed || this.state.busy || (this.state.call && this.state.call.state!=="ended"))return;
   // Clear the completed attempt once; a lost response to the new attempt must retain its key.
   if(this.state.call?.state==="ended"){this.requestKey=null;this.patch({call:null,peer:null});}
   this.preferences=preferences;this.stopping=false;this.sequence++;this.patch({busy:true,error:"",minimized:false});
-  if(this.requestKey?.ticket!==ticket || this.requestKey.mode!==mode || this.requestKey.recipient!==recipient)this.requestKey={ticket,mode,recipient,id:randomUuid()};
+  const targetKey=`${order?"order":"ticket"}:${ticket}`;
+  if(this.requestKey?.ticket!==targetKey || this.requestKey.mode!==mode || this.requestKey.recipient!==recipient)this.requestKey={ticket:targetKey,mode,recipient,id:randomUuid()};
   try{
-   const call=ticketCall.parse(await this.api("/api/ticket-calls",{action:"request",ticket_id:ticket,mode,request_id:this.requestKey.id,device_id:this.deviceId,...(recipient?{recipient_id:recipient}:{})}));
+   const call=ticketCall.parse(await this.api("/api/ticket-calls",{action:"request",...(order?{order_id:ticket}:{ticket_id:ticket}),mode,request_id:this.requestKey.id,device_id:this.deviceId,...(recipient?{recipient_id:recipient}:{})}));
    if(this.disposed || this.stopping){await this.api("/api/ticket-calls",{action:"cancel",call_id:call.id},true);return;}
    this.adopt(call);this.patch({canJoin:call.state!=="ended"});await this.refresh({call_id:call.id});
   }catch(error){this.patch({error:error instanceof Error?error.message:"Call unavailable."});}

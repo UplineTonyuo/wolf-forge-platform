@@ -8,6 +8,12 @@ export class CompanyService {
 
   get(id: unknown) { return this.dependencies.repository.getById(parseInput(uuidSchema, id)); }
   listActive() { return this.dependencies.repository.listActive(); }
+  managerOptions() { return this.dependencies.repository.managerOptions(); }
+  managerAssignments() { return this.dependencies.repository.managerAssignments(); }
+  assignManager(id: unknown, managerId: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.assignManager(parseInput(uuidSchema, id), parseInput(uuidSchema, managerId));
+  }
 
   async create(input: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
