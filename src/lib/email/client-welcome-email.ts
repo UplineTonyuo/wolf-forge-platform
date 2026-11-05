@@ -70,7 +70,7 @@ export function clientWelcomeEmail(input: ClientWelcomeEmailInput): ClientWelcom
   const nextSteps = [
     "Open the secure link and choose a password only you know.",
     "Sign in with this email address and your new password.",
-    "Your projects, invoices and Inbox with our team are all in the portal.",
+    "Your projects, invoices and Tickets with our team are all in the portal.",
   ];
 
   const text = [

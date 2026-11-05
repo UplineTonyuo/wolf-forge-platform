@@ -203,7 +203,7 @@ function RouteSkeleton({ section, detail, title }: { section: string; detail: bo
     case "store": return <StoreSkeleton />;
     case "projects": return <div className="portal-page"><Heading title="Orders" /><Section><ProjectRows count={4} /></Section></div>;
     case "onboarding": return <OnboardingSkeleton />;
-    case "messages": return <div className="portal-page"><Heading title="Inbox" action /><MessageRows /></div>;
+    case "messages": return <div className="portal-page"><Heading title="Tickets" action /><MessageRows /></div>;
     case "reporting": return <ReportingSkeleton />;
     case "invoices": return <div className="portal-page"><Heading title="Invoices" /><section className="portal-balance" data-skeleton-block="outstanding-balance"><Bar width={150} /><Bar width={175} height={38} /><Bar width={220} /></section><Section><InvoiceRows /></Section></div>;
     case "subscriptions": return <div className="portal-page"><Heading title="Subscriptions" /><Section><SubscriptionRows /></Section></div>;

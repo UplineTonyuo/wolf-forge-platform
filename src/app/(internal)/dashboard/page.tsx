@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -112,6 +113,58 @@ function MetricCard({
   );
 }
 
+type DashboardServices = Awaited<ReturnType<typeof getInternalContext>>["services"];
+
+async function TopServicesSection({ topServicesRequest, catalogRequest, timeZone: tz, initialPeriod }: {
+  topServicesRequest: Promise<(Awaited<ReturnType<DashboardServices["dashboard"]["getTopServices"]>> | null)[]>;
+  catalogRequest: ReturnType<DashboardServices["catalog"]["listCatalog"]>;
+  timeZone: string;
+  initialPeriod: "week" | "month" | "year";
+}) {
+  const [topServices, catalog] = await Promise.all([topServicesRequest, catalogRequest]);
+  const serviceIcons = assignServiceIconsById(catalog.map((service) => ({
+    id: service.id, name: service.name, folderId: service.folder_id,
+  })));
+
+  function servicePanel(result: typeof topServices[number]) {
+    return {
+      rangeLabel: result
+        ? `${formatBusinessDate(result.range.start, tz)} to ${formatBusinessDate(new Date(Date.parse(result.range.end) - 1).toISOString(), tz)}` : "",
+      content: result ? result.services.length ? <ol className={styles.topServicesList}>
+        {result.services.map((service, index) => {
+          const ServiceIcon = serviceIcons.get(service.service_id ?? "") ?? ShoppingBag;
+          return <li key={service.service_id ?? service.name}>
+            <span className={styles.serviceRank} aria-hidden="true">{index + 1}</span>
+            <span className={styles.serviceGlyph}><ServiceIcon size={19} aria-hidden="true" /></span>
+            <strong className={styles.serviceName}>{service.name}</strong>
+            <span className={styles.serviceCount}><strong>{service.paid_orders}</strong><small>paid {service.paid_orders === 1 ? "order" : "orders"}</small></span>
+          </li>;
+        })}
+      </ol> : <div className={styles.softEmpty}>No paid orders in this period.</div>
+        : <div className={styles.softEmpty} role="status">Top services couldn’t be loaded. Try refreshing.</div>,
+    };
+  }
+
+  return <TopServicesPanel key={initialPeriod} initialPeriod={initialPeriod} periods={{
+    week: servicePanel(topServices[0] ?? null), month: servicePanel(topServices[1] ?? null), year: servicePanel(topServices[2] ?? null),
+  }} />;
+}
+
+function TopServicesLoading() {
+  return <article className={styles.topServicesPanel} aria-busy="true" aria-label="Loading top services" role="status">
+    <div className={styles.panelHead}><div className={styles.panelTitle}>
+      <span className={styles.panelIcon}><ShoppingBag size={17} aria-hidden="true" /></span>
+      <div><span>Paid orders</span><h2>Top services</h2><p>Loading services...</p></div>
+    </div></div>
+    <ol className={styles.topServicesList} aria-hidden="true">{[0, 1, 2, 3, 4].map((row) => <li key={row}>
+      <span className="internal-page-skeleton-bar" style={{ width: 12 }} />
+      <span className="internal-page-skeleton-bar" style={{ width: 36, height: 36 }} />
+      <span className="internal-page-skeleton-bar" style={{ width: "70%" }} />
+      <span className="internal-page-skeleton-bar" style={{ width: 56, height: 28 }} />
+    </li>)}</ol>
+  </article>;
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -168,10 +221,6 @@ export default async function DashboardPage({
     sales_trend: salesTrend,
   } = overview;
 
-  const [topServices, catalog] = await Promise.all([topServicesRequest, catalogRequest]);
-  const serviceIcons = assignServiceIconsById(catalog.map((service) => ({
-    id: service.id, name: service.name, folderId: service.folder_id,
-  })));
 
   const headline = revenue.current.find(
     (entry) => entry.currency === revenue.headline_currency,
@@ -222,24 +271,6 @@ export default async function DashboardPage({
   const shortDate = new Intl.DateTimeFormat("en", {
     timeZone: tz, month: "short", ...(trendPoints.length <= 31 ? { day: "numeric" as const } : {}),
   });
-  function servicePanel(result: typeof topServices[number]) {
-    return {
-      rangeLabel: result
-        ? `${formatBusinessDate(result.range.start, tz)} to ${formatBusinessDate(new Date(Date.parse(result.range.end) - 1).toISOString(), tz)}` : "",
-      content: result ? result.services.length ? <ol className={styles.topServicesList}>
-        {result.services.map((service, index) => {
-          const ServiceIcon = serviceIcons.get(service.service_id ?? "") ?? ShoppingBag;
-          return <li key={service.service_id ?? service.name}>
-            <span className={styles.serviceRank} aria-hidden="true">{index + 1}</span>
-            <span className={styles.serviceGlyph}><ServiceIcon size={19} aria-hidden="true" /></span>
-            <strong className={styles.serviceName}>{service.name}</strong>
-            <span className={styles.serviceCount}><strong>{service.paid_orders}</strong><small>paid {service.paid_orders === 1 ? "order" : "orders"}</small></span>
-          </li>;
-        })}
-      </ol> : <div className={styles.softEmpty}>No paid orders in this period.</div>
-        : <div className={styles.softEmpty} role="status">Top services couldn’t be loaded. Try refreshing.</div>,
-    };
-  }
 
   const headlineMoney = formatCurrencyCents(
     headline?.net_cents ?? 0,
@@ -360,9 +391,9 @@ export default async function DashboardPage({
       </section>
 
       <section className={styles.insightGrid}>
-        <TopServicesPanel key={servicesPeriod} initialPeriod={servicesPeriod} periods={{
-          week: servicePanel(topServices[0] ?? null), month: servicePanel(topServices[1] ?? null), year: servicePanel(topServices[2] ?? null),
-        }} />
+        <Suspense fallback={<TopServicesLoading />}>
+          <TopServicesSection topServicesRequest={topServicesRequest} catalogRequest={catalogRequest} timeZone={tz} initialPeriod={servicesPeriod} />
+        </Suspense>
         <article className={styles.subscriptionPanel}>
           <div className={styles.subscriptionOrb} aria-hidden="true" />
 
