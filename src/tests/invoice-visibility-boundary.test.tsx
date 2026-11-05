@@ -23,6 +23,14 @@ it("clears loaded financial content when current authorization is denied", async
   expect(screen.queryByText("Protected receipt")).toBeNull();
   expect(mocks.refresh).toHaveBeenCalled();
 });
+
+it('binds internal company history refresh to its company and redacts on current denial', async () => {
+  mocks.load.mockResolvedValue({ ok: false, denied: true });
+  render(<FinancialVisibilityBoundary scope="internal" companyId="selected" signature={original}><p>Selected company invoices</p></FinancialVisibilityBoundary>);
+  await screen.findByRole('alert');
+  expect(mocks.load).toHaveBeenCalledWith('internal', undefined, 'selected');
+  expect(screen.queryByText('Selected company invoices')).toBeNull();
+});
 it("clears stale new-work controls and refreshes after publication changes", async () => {
   mount();
   await waitFor(() => expect(mocks.load).toHaveBeenCalled());

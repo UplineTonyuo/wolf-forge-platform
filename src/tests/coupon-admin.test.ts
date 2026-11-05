@@ -101,7 +101,7 @@ describe("Coupons admin form serialization", () => {
 /** Mirrors what app_current_user_modules returns for a fully granted member. */
 function modules(overrides: Record<string, boolean> = {}): Record<string, boolean> {
   const granted = Object.fromEntries(
-    navigationCategories.flatMap((category) => category.items.map((item) => [item.id, true])),
+    navigationCategories.flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]).map((item) => [item.id, true])),
   );
 
   return { ...granted, ...overrides };
@@ -110,30 +110,26 @@ function modules(overrides: Record<string, boolean> = {}): Record<string, boolea
 describe("Coupons capability navigation", () => {
   it("removes Coupons without the coupons module", () => {
     const withoutCoupons = navigationForModules(modules({ coupons: false }));
-    const labels = withoutCoupons.flatMap((category) => category.items.map((item) => item.label));
+    const labels = withoutCoupons.flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]).map((item) => item.label));
     expect(labels).not.toContain("Coupons");
   });
 
-  /*
-   * Marketing now carries Investment Intent as well, so losing Coupons alone no
-   * longer empties the group. The group still disappears once nothing in it is
-   * granted, which is the behaviour this ever meant to protect.
-   */
-  it("drops the Marketing group only once every module in it is denied", () => {
+  it("keeps Intent independently gated under Services without a Marketing group", () => {
     const withoutCoupons = navigationForModules(modules({ coupons: false }));
-    expect(withoutCoupons.map((category) => category.label)).toContain("Marketing");
+    expect(withoutCoupons.map((category) => category.label)).not.toContain("Marketing");
     expect(
-      withoutCoupons.flatMap((category) => category.items.map((item) => item.label)),
+      withoutCoupons.flatMap((category) => category.items.flatMap((item) => item.children ?? []).map((item) => item.label)),
     ).toContain("Investment Intent");
 
     const withoutMarketing = navigationForModules(
       modules({ coupons: false, investment_intent: false }),
     );
     expect(withoutMarketing.map((category) => category.label)).not.toContain("Marketing");
+    expect(withoutMarketing.flatMap(category => category.items.flatMap(item => item.children ?? []))).toEqual([]);
   });
 
   it("shows Coupons when the coupons module is granted", () => {
-    const labels = navigationForModules(modules()).flatMap((category) => category.items.map((item) => item.label));
+    const labels = navigationForModules(modules()).flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]).map((item) => item.label));
     expect(labels).toContain("Coupons");
   });
 });

@@ -3,15 +3,15 @@ import { navigationCategories, navigationForModules, titleForPath } from "../com
 
 describe("Phase 3A navigation registry", () => {
   it("renders the complete Phase 3A.1 sidebar structure", () => {
-    expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Marketing", "Team", "Setup"]);
+    expect(navigationCategories.map((category) => category.label)).toEqual(["Overview", "Activity", "Billing", "Team", "Setup"]);
     expect(navigationCategories.flatMap((category) => category.items.map((item) => item.label))).toEqual([
-      "Dashboard", "Orders", "Tickets", "Reporting", "Clients", "Operations", "White Label", "Invoices", "Subscriptions", "Coupons", "Investment Intent", "Members", "Goals", "All Conversations", "Services", "Forms", "Settings",
+      "Dashboard", "Orders", "Tickets", "Reporting", "Clients", "White Label", "Invoices", "Subscriptions", "Members", "Goals", "All Conversations", "Services", "Forms", "Settings",
     ]);
   });
 
   it("routes every sidebar item", () => {
-    expect(navigationCategories.flatMap((category) => category.items.map((item) => item.route))).toEqual([
-      "/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/todo", "/white-label", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/team", "/team/goals", "/team/all-conversations", "/services", "/forms", "/settings",
+    expect(navigationCategories.flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]).map((item) => item.route))).toEqual([
+      "/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/white-label", "/invoices", "/subscriptions", "/team", "/team/goals", "/team/all-conversations", "/services", "/coupons", "/investment-intent", "/forms", "/settings",
     ]);
   });
 
@@ -69,7 +69,7 @@ describe("navigation derived from real module access", () => {
     const visible = navigationForModules(staffModules);
     const labels = visible.flatMap((category) => category.items.map((item) => item.label));
 
-    expect(labels).toEqual(["Orders", "Tickets", "Operations", "Services", "Forms"]);
+    expect(labels).toEqual(["Orders", "Tickets", "Services", "Forms"]);
     expect(visible.map((category) => category.label)).toEqual(["Activity", "Setup"]);
   });
 

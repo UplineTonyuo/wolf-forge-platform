@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InternalLayout({ children }: { children: React.ReactNode }) {
   const context = await getInternalContext();
-  const runtimeConfiguration = await new WhiteLabelPublicationService({
+  const runtimeConfigurationPromise = new WhiteLabelPublicationService({
     repository: new WhiteLabelPublicationRepository(context.client),
   }).getRuntimeConfiguration().catch(() => null);
 
@@ -17,7 +17,10 @@ export default async function InternalLayout({ children }: { children: React.Rea
    * portal's bell already reads, so the toggle on the Profile page controls
    * both. A failed read falls back to sound on, matching the column default.
    */
-  const profile = await context.services.profile.getMine().catch(() => null);
+  const [runtimeConfiguration, profile] = await Promise.all([
+    runtimeConfigurationPromise,
+    context.services.profile.getMine().catch(() => null),
+  ]);
   const showWhiteLabel = (await localUiQaBypassEnabled()) &&
     !(await isLocalQuickAccessSession(context.actor)) &&
     context.user.modules.settings === true &&

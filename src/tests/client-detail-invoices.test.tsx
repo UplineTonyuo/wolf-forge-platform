@@ -1,0 +1,139 @@
+/** @vitest-environment jsdom */
+import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PermissionDeniedError } from "../lib/errors/application-error";
+import { InvoiceRepository, type ClientInvoiceSummary } from "../repositories/invoice-repository";
+import { InvoiceService } from "../services/invoice-service";
+import type { UserMutationClient } from "../repositories/types";
+
+const companyId = "10000000-0000-4000-8000-000000000001";
+const mocks = vi.hoisted(() => ({
+  list: vi.fn(), workEnabled: vi.fn(), forms: vi.fn(), candidates: vi.fn(), actions: vi.fn(), boundary: vi.fn(),
+  user: { id: 'actor', tenantId: 'tenant', role: 'staff', clients: { privateManage: false, contactRead: false }, invoices: { view: true, manage: false }, forms: { assign: false }, tickets: { create: false } },
+}));
+vi.mock("next/navigation", () => ({ notFound: () => { throw new Error('not found'); }, unstable_rethrow: vi.fn() }));
+vi.mock("../lib/email/client-welcome-email-server", () => ({ canSendClientWelcomeEmail: async () => false }));
+vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({
+  user: mocks.user,
+  services: {
+    companies: { get: async (id: string) => ({ id, name: 'Synthetic account', created_at: '2026-10-01', status: 'client' }) },
+    orders: { listForCompany: async () => [] },
+    wfCard: { getMembership: async () => null },
+    invoices: { listForCompany: mocks.list, workEnabled: mocks.workEnabled },
+    forms: { list: mocks.forms, listOnboardingCandidates: mocks.candidates },
+  },
+}) }));
+vi.mock("../components/clients/client-detail-actions", () => ({ ClientDetailActions: (props: unknown) => { mocks.actions(props); return null; } }));
+vi.mock("../components/clients/client-detail-sections", () => ({ ClientDetailSections: ({ children }: { children: ReactNode }) => children }));
+vi.mock("../components/clients/client-status-control", () => ({ ClientStatusControl: () => null }));
+vi.mock("../components/invoices/financial-visibility-boundary", () => ({ FinancialVisibilityBoundary: ({ children, ...props }: { children: ReactNode }) => { mocks.boundary(props); return children; } }));
+vi.mock("../components/shell/route-transition", () => ({ RouteTransitionLink: ({ children, href }: { children: ReactNode; href: string }) => <a href={href}>{children}</a> }));
+const { default: ClientPage } = await import("../app/(internal)/clients/[companyId]/page");
+
+function summary(id: string, origin = 'manual', state = 'paid'): ClientInvoiceSummary {
+  return { invoice: { id, company_id: companyId, invoice_number: id === 'manual' ? 12 : 13, billing_reason: origin, status: state, created_at: '2026-10-01', issued_at: '2026-10-02', total_cents: 12500, currency: 'USD' }, financials: { presentation_state: state, balance_due_cents: 2500 } } as ClientInvoiceSummary;
+}
+const page = async (tab = 'invoices') => renderToStaticMarkup(await ClientPage({ params: Promise.resolve({ companyId }), searchParams: Promise.resolve({ tab }) }));
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.user.invoices = { view: true, manage: false };
+  mocks.user.forms.assign = false;
+  mocks.list.mockResolvedValue([summary('manual'), summary('store', 'store_purchase', 'overdue')]);
+  mocks.workEnabled.mockResolvedValue(true);
+  mocks.forms.mockResolvedValue([]);
+  mocks.candidates.mockResolvedValue([]);
+});
+
+describe('client invoice tab', () => {
+  it('loads the exact account, presents manual and store receipts with authoritative balance and detail links', async () => {
+    const html = await page();
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith(companyId);
+    expect(html).toContain('/invoices/manual');
+    expect(html).toContain('/invoices/store');
+    expect(html).toContain('WF-0012');
+    expect(html).toContain('WF-0013');
+    expect(html).toContain('Overdue');
+    expect(html).toContain('$125.00');
+    expect(html).toContain('$25.00');
+    expect(html).not.toContain('billing domain is connected');
+    expect(mocks.boundary).toHaveBeenCalledWith(expect.objectContaining({ scope: 'internal', companyId }));
+  });
+  it.each(['details', 'projects', 'activities', 'history'])('does not read invoices on %s', async (tab) => {
+    await page(tab);
+    expect(mocks.list).not.toHaveBeenCalled();
+    expect(mocks.workEnabled).not.toHaveBeenCalled();
+  });
+  it('gates before financial reads when invoice access is absent', async () => {
+    mocks.user.invoices.view = false;
+    expect(await page()).toContain('You do not have access to invoice history.');
+    expect(mocks.list).not.toHaveBeenCalled();
+    expect(mocks.workEnabled).not.toHaveBeenCalled();
+  });
+  it('retains authorized issued history when new work is off', async () => {
+    mocks.workEnabled.mockResolvedValue(false);
+    expect(await page()).toContain('/invoices/manual');
+  });
+  it('retains the existing manage-only invoice read authority', async () => {
+    mocks.user.invoices = { view: false, manage: true };
+    expect(await page()).toContain('/invoices/manual');
+    expect(mocks.list).toHaveBeenCalledExactlyOnceWith(companyId);
+  });
+  it('stops before invoice rows when the current availability read is denied', async () => {
+    mocks.workEnabled.mockRejectedValue(new PermissionDeniedError());
+    expect(await page()).toContain('You do not have access to invoice history.');
+    expect(mocks.list).not.toHaveBeenCalled();
+  });
+  it('shows a legitimate empty history', async () => {
+    mocks.list.mockResolvedValue([]);
+    expect(await page()).toContain('No invoices for this client yet.');
+  });
+  it('separates a current read denial from a retryable lookup error', async () => {
+    mocks.list.mockRejectedValue(new PermissionDeniedError());
+    expect(await page()).toContain('You do not have access to invoice history.');
+    mocks.list.mockRejectedValue(new Error('private database detail'));
+    const html = await page();
+    expect(html).toContain('Invoice history could not be loaded.');
+    expect(html).toContain('Try again');
+    expect(html).not.toContain('private database detail');
+  });
+  it('uses the existing draft label and status presentation', async () => {
+    const draft = summary('draft', 'manual', 'draft');
+    draft.invoice.invoice_number = null;
+    mocks.list.mockResolvedValue([draft]);
+    const html = await page();
+    expect(html).toContain('Pending');
+    expect(html).toContain('Draft');
+  });
+});
+
+describe('onboarding eligibility lookup', () => {
+  it('only offers published account onboarding and uses the scoped candidate lookup', async () => {
+    mocks.user.forms.assign = true;
+    mocks.forms.mockResolvedValue([{ id: 'published', name: 'Published', form_type: 'onboarding', status: 'published' }, { id: 'draft', form_type: 'onboarding', status: 'draft' }, { id: 'intake', form_type: 'service_intake', status: 'published' }]);
+    mocks.candidates.mockResolvedValue([{ profile_id: 'recipient', display_name: 'Synthetic recipient' }]);
+    await page();
+    expect(mocks.candidates).toHaveBeenCalledWith(companyId);
+    expect(mocks.actions).toHaveBeenCalledWith(expect.objectContaining({ onboardingForms: [{ id: 'published', name: 'Published' }], eligibleProfiles: [{ id: 'recipient', label: 'Synthetic recipient' }] }));
+  });
+  it('treats failed eligibility lookup as a failure rather than an empty list', async () => {
+    mocks.user.forms.assign = true;
+    mocks.forms.mockRejectedValue(new Error('lookup failed'));
+    expect(await page()).toContain('Unable to load this area.');
+    expect(mocks.actions).not.toHaveBeenCalled();
+  });
+});
+
+it('scopes invoice rows in the database before requesting any financials, without origin filtering or unrelated joins', async () => {
+  const records = [summary('manual').invoice, summary('store', 'store_purchase').invoice, { ...summary('other-company').invoice, company_id: 'other' }, { ...summary('archived').invoice, archived_at: 'now' }, { ...summary('other-tenant').invoice, tenant_id: 'foreign' }];
+  const filters: Array<[string, unknown]> = [];
+  const query = { select: vi.fn(() => query), eq: vi.fn((key: string, value: unknown) => { filters.push([key, value]); return query; }), is: vi.fn((key: string, value: unknown) => { filters.push([key, value]); return query; }), order: vi.fn(async () => ({ data: records.filter(row => (!('tenant_id' in row) || row.tenant_id !== 'foreign') && filters.every(([key, value]) => (row as unknown as Record<string, unknown>)[key] == value)), error: null })) };
+  const client = { from: vi.fn(() => query), rpc: vi.fn(async (_: string, args: { p_invoice_id: string }) => ({ data: [{ invoice_id: args.p_invoice_id }], error: null })) };
+  const service = new InvoiceService({ repository: new InvoiceRepository(client as unknown as UserMutationClient) });
+  const result = await service.listForCompany(companyId);
+  expect(filters).toEqual([['company_id', companyId], ['archived_at', null]]);
+  expect(client.from).toHaveBeenCalledExactlyOnceWith('invoices');
+  expect(result.map(row => row.invoice.id)).toEqual(['manual', 'store']);
+  expect(client.rpc.mock.calls).toEqual([['app_get_invoice_financials', { p_invoice_id: 'manual' }], ['app_get_invoice_financials', { p_invoice_id: 'store' }]]);
+  await expect(async () => service.listForCompany('invalid')).rejects.toThrow();
+});

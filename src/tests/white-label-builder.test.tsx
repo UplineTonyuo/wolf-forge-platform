@@ -186,7 +186,7 @@ describe("White Label builder", () => {
     fireEvent.click(edit);
     expect(edit).toHaveAttribute("aria-pressed", "true");
     expect(edit).toHaveTextContent("Done");
-    expect(configurable()).toEqual(["projects", "tickets", "reporting", "invoices", "subscriptions", "coupons", "investment_intent", "services", "forms"]);
+    expect(configurable()).toEqual(["projects", "tickets", "reporting", "invoices", "subscriptions", "services", "coupons", "investment_intent", "forms"]);
     for (const id of ["subscriptions", "coupons", "investment_intent"]) {
       expect(previewEntry(id)).toHaveAttribute("data-enabled", "false");
       expect(previewEntry(id).querySelector("button")).toBeDisabled();

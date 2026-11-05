@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { isValidElement, type ReactNode, type ReactElement } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { RouteSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
+import { ClientSectionSkeleton, RouteSkeleton, getInternalSkeletonVariant } from "../components/shell/route-skeletons";
 import { RouteTransitionLink } from "../components/shell/route-transition";
 import { ClientDetailSections } from "../components/clients/client-detail-sections";
 
@@ -31,6 +31,14 @@ it("selects a neutral Client-detail envelope without list tables, private values
   expect(container.querySelector(".client-side-summary")).toBeTruthy();
   expect(container.querySelector("table, .route-skeleton-table, a, input, button")).toBeNull();
   expect(screen.getAllByRole("status")).toHaveLength(1);
+});
+
+it("uses compact invoice rows for invoice-tab loading without financial values or interactive links", () => {
+  const { container } = render(<ClientSectionSkeleton section="invoices" />);
+  expect(screen.getByRole('status', { name: 'Loading client invoices' })).toBeTruthy();
+  expect(container.querySelectorAll('[data-client-section="invoices"] ul > li')).toHaveLength(3);
+  expect(container.querySelector('a, button')).toBeNull();
+  expect(container.querySelector('[data-client-section="invoices"]')?.textContent?.trim()).toBe('');
 });
 
 it("delegates section-body feedback while retaining History load-more and existing data reads", async () => {
