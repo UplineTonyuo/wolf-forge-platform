@@ -2,7 +2,7 @@
 
 import { ArrowRight, LoaderCircle, MessagesSquare, Plus, Send } from "lucide-react";
 import { RouteTransitionLink as Link } from "../../shell/route-transition";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useTransition } from "react";
 import { createClientTicketAction } from "../../../app/actions/tickets";
 import { ticketAttention } from "../../../domain/client-portal/attention";
 import type { ClientTicketSummary } from "../../../domain/tickets/schema";
@@ -10,10 +10,20 @@ import { formatDateTime } from "../../../lib/format";
 import { useBrowserTimeZone } from "../../../lib/use-browser-time-zone";
 import { OPEN_MESSAGE_COMPOSER_EVENT } from "../command/client-quick-action";
 import { AttentionPill } from "../ui/attention-pill";
-import { TicketRichTextEditor } from "../../tickets/ticket-rich-text-editor";
 import { cartDraftBody, cartDraftSubject } from "../../../domain/client-portal/cart";
 import { useCart } from "../cart/cart-store";
 import { PortalDialog } from "../ui/portal-dialog";
+import ticketStyles from "../../tickets/tickets.module.css";
+
+// The dialog mounts its children only when opened; keep editor code off the list's initial path.
+const TicketRichTextEditor = lazy(() => import("../../tickets/ticket-rich-text-editor").then((module) => ({ default: module.TicketRichTextEditor })));
+
+function EditorLoading() {
+  return <div className={ticketStyles.ticketRichEditor} role="status">
+    <div className={ticketStyles.ticketRichToolbar} aria-hidden="true"><span className="internal-page-skeleton-bar" style={{ width: 180 }} /></div>
+    <div className={ticketStyles.ticketRichComposer}>Loading message editor…</div>
+  </div>;
+}
 
 /**
  * The client communication centre.
@@ -126,7 +136,7 @@ export function ClientMessages({
     <div className="portal-page">
       <header className="portal-page-head portal-page-head-actions">
         <div>
-          <h1>Inbox</h1>
+          <h1>Tickets</h1>
           <p>
             {live.length === 0
               ? "Talk to Wolf Forge here. Every reply stays attached to your account."
@@ -169,7 +179,7 @@ export function ClientMessages({
           </button>
         </section>
       ) : (
-        <ul className="portal-message-list" aria-label="Your conversations">
+        <ul className="portal-message-list" aria-label="Your tickets">
           {ordered.map((ticket) => {
             const attention = ticketAttention(ticket.status);
 
@@ -256,14 +266,14 @@ export function ClientMessages({
             */}
           <div className="portal-dialog-field">
             <span>Message</span>
-            <TicketRichTextEditor
+            <Suspense fallback={<EditorLoading />}><TicketRichTextEditor
               key={composerKey}
               label="Write a message"
               placeholder="Write a message..."
               initialValue={message}
               disabled={pending}
               onChange={setMessage}
-            />
+            /></Suspense>
           </div>
 
           {error ? (

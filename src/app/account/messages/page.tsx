@@ -5,7 +5,7 @@ import { toClientSafeError } from "../../../lib/errors/application-error";
 import { readClientTickets } from "../../../lib/supabase/client-portal-data";
 import { getClientContext } from "../../../lib/supabase/next-server";
 
-export const metadata: Metadata = { title: "Inbox" };
+export const metadata: Metadata = { title: "Tickets" };
 
 export default async function ClientMessagesPage({
   searchParams,
@@ -32,7 +32,7 @@ export default async function ClientMessagesPage({
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "PERMISSION_DENIED") denied = true;
-    else loadError = safe.message || "Inbox could not be loaded.";
+    else loadError = safe.message || "Tickets could not be loaded.";
   }
 
   if (denied) redirect("/account");
@@ -41,7 +41,7 @@ export default async function ClientMessagesPage({
     return (
       <div className="portal-page">
         <header className="portal-page-head">
-          <h1>Inbox</h1>
+          <h1>Tickets</h1>
         </header>
         <p className="portal-empty">{loadError}</p>
       </div>

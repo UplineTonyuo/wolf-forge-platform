@@ -11,7 +11,7 @@ import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatDateTime } from "../../../../lib/format";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 
-export const metadata: Metadata = { title: "Message" };
+export const metadata: Metadata = { title: "Ticket" };
 
 export default async function ClientMessageDetailPage({
   params,
@@ -41,7 +41,7 @@ export default async function ClientMessageDetailPage({
       <TicketAccessBoundary key={ticket.id}><div className="portal-page">
         <Link href="/account/messages" className="portal-back">
           <ArrowLeft aria-hidden={true} />
-          All messages
+          All tickets
         </Link>
 
         {/*
