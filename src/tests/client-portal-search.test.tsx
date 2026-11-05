@@ -303,7 +303,7 @@ describe("client search panel", () => {
     await waitFor(() =>
       expect(within(panel).getByText("New photos for the homepage")).toBeInTheDocument(),
     );
-    expect(within(panel).getByText("Inbox")).toBeInTheDocument();
+    expect(within(panel).getByText("Tickets")).toBeInTheDocument();
     // No heading for a kind with no matches.
     expect(within(panel).queryByText("Services")).not.toBeInTheDocument();
   });

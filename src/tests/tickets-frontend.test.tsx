@@ -288,13 +288,13 @@ describe("Client Messages", () => {
 
   it("renders only client-safe list data and starts a conversation once", async () => {
     render(<ClientMessages summaries={[ticket]} />);
-    expect(screen.getByRole("heading", { name: "Inbox" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Tickets" })).toBeInTheDocument();
     /* Assignee identity is not part of the client projection at all. */
     expect(screen.queryByText("William")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New message" }));
     fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "New request" } });
     // The composer now uses the same rich text editor as the reply composer.
-    const editor = screen.getByRole("textbox", { name: "Write a message" });
+    const editor = await screen.findByRole("textbox", { name: "Write a message" });
     editor.innerHTML = "Please help us.";
     fireEvent.input(editor);
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
@@ -346,7 +346,7 @@ describe("Client Messages", () => {
     expect(actions.createClientTicketAction).not.toHaveBeenCalled();
   });
 
-  it("keeps submission disabled until both fields are filled", () => {
+  it("keeps submission disabled until both fields are filled", async () => {
     render(<ClientMessages summaries={[ticket]} />);
     fireEvent.click(screen.getByRole("button", { name: "New message" }));
 
@@ -356,7 +356,7 @@ describe("Client Messages", () => {
     fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "Only a subject" } });
     expect(send).toBeDisabled();
 
-    const editor = screen.getByRole("textbox", { name: "Write a message" });
+    const editor = await screen.findByRole("textbox", { name: "Write a message" });
     editor.innerHTML = "And a body.";
     fireEvent.input(editor);
     expect(send).toBeEnabled();

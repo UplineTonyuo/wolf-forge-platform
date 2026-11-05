@@ -77,7 +77,7 @@ export function RecentConversationsSection({
       <header className="portal-section-head">
         <h2 id="portal-recent-messages">Recent conversations</h2>
         <Link className="portal-secondary-action" href="/account/messages">
-          All messages
+          All tickets
           <ArrowUpRight aria-hidden={true} />
         </Link>
       </header>
