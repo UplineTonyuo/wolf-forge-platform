@@ -12,7 +12,7 @@ import {
   MessagesSquare,
   ReceiptText,
   Settings,
-  ShieldCheck,
+  ChevronDown,
   Tags,
   Target,
   TicketCheck,
@@ -24,14 +24,14 @@ import {
 import Link from "next/link";
 import { InboxCallProvider } from "../calls/call-provider";
 import { usePathname, useRouter } from "next/navigation";
-import { startTransition, useEffect, useOptimistic, useRef, useState } from "react";
+import { startTransition, useEffect, useId, useOptimistic, useRef, useState } from "react";
 import type {
   ComponentType,
   MouseEvent,
   ReactNode,
 } from "react";
 import type { InternalUser } from "../../lib/supabase/next-server";
-import { activeNavigationRoute, navigationForModules } from "./nav-registry";
+import { activeNavigationRoute, navigationForModules, routeIsCurrent, type NavigationItem } from "./nav-registry";
 import { WolfForgeMark } from "./wolf-forge-mark";
 import { WorkspaceCommandBar } from "./workspace-command-bar";
 import { AccountMenu } from "./account-menu";
@@ -55,7 +55,7 @@ export const navigationIcons: Record<string, ComponentType<{ "aria-hidden": true
   investment_intent: TrendingUp,
   services: Wrench,
   forms: FormInput,
-  team: ShieldCheck,
+  team: UsersRound,
   team_goals: Target,
   team_supervision: MessagesSquare,
   settings: Settings,
@@ -69,12 +69,14 @@ function SidebarLink({
   active,
   transitioning,
   onNavigate,
+  child = false,
 }: {
   id: string;
   label: string;
   route: string;
   active: boolean;
   transitioning: boolean;
+  child?: boolean;
   onNavigate: (
     route: string,
     event: MouseEvent<HTMLAnchorElement>,
@@ -85,6 +87,7 @@ function SidebarLink({
 
   const className = [
     "sidebar-link",
+    child ? "sidebar-child-link" : "",
     active ? "is-active" : "",
     transitioning
       ? "is-transition-target"
@@ -104,10 +107,35 @@ function SidebarLink({
         onNavigate(route, event)
       }
     >
-      <Icon aria-hidden={true} />
+      {child ? null : <Icon aria-hidden={true} />}
       <span>{label}</span>
     </Link>
   );
+}
+
+function SidebarDisclosure({ item, pathname, pendingRoute, onNavigate }: {
+  item: NavigationItem;
+  pathname: string;
+  pendingRoute: string | null;
+  onNavigate: Parameters<typeof SidebarLink>[0]["onNavigate"];
+}) {
+  const childrenId = useId();
+  const [disclosure, setDisclosure] = useState<{ pathname: string; open: boolean } | null>(null);
+  const children = item.children ?? [];
+  const open = disclosure?.pathname === pathname ? disclosure.open : children.some((child) => routeIsCurrent(child.route, pathname));
+  const Icon = navigationIcons[item.id] ?? FileText;
+  return <div className="sidebar-disclosure">
+    <div className="sidebar-disclosure-row">
+      {item.navigable !== false ? <SidebarLink {...item} active={item.route === activeNavigationRoute(pathname)} transitioning={pendingRoute === item.route} onNavigate={onNavigate} />
+        : <span className="sidebar-link sidebar-group-label"><Icon aria-hidden={true} /><span>{item.label}</span></span>}
+      {children.length ? <button type="button" className="sidebar-disclosure-toggle" aria-label={`${open ? "Collapse" : "Expand"} ${item.label}`} aria-expanded={open} aria-controls={childrenId} onClick={() => setDisclosure({ pathname, open: !open })}>
+        <ChevronDown aria-hidden="true" />
+      </button> : null}
+    </div>
+    <div id={childrenId} className="sidebar-children" hidden={!open}>
+      {open ? children.map((child) => <SidebarLink key={child.id} {...child} child active={child.route === activeNavigationRoute(pathname)} transitioning={pendingRoute === child.route} onNavigate={onNavigate} />) : null}
+    </div>
+  </div>;
 }
 
 export function InternalShell({
@@ -195,18 +223,18 @@ export function InternalShell({
           <section className="sidebar-section" key={category.id} aria-labelledby={`${mobile ? "mobile-" : ""}nav-${category.id}`}>
             <h2 id={`${mobile ? "mobile-" : ""}nav-${category.id}`}>{category.label}</h2>
             <div className="sidebar-links">
-              {category.items.map((item) => (
-                <SidebarLink
-                  key={item.id}
-                  {...item}
-                  active={item.route === activeNavigationRoute(pendingRoute ?? pathname)}
-                  transitioning={pendingRoute === item.route}
-                  onNavigate={(route, event) => {
+              {category.items.map((item) => {
+                const onNavigate: Parameters<typeof SidebarLink>[0]["onNavigate"] = (route, event) => {
                     if (mobile) mobileDrawerRef.current?.close();
                     handleSidebarNavigate(route, event);
-                  }}
-                />
-              ))}
+                };
+                return item.children ? <SidebarDisclosure key={item.id} item={item} pathname={pendingRoute ?? pathname} pendingRoute={pendingRoute} onNavigate={onNavigate} /> : <SidebarLink
+                  key={item.id} {...item}
+                  active={item.route === activeNavigationRoute(pendingRoute ?? pathname)}
+                  transitioning={pendingRoute === item.route}
+                  onNavigate={onNavigate}
+                />;
+              })}
             </div>
           </section>
         ))}

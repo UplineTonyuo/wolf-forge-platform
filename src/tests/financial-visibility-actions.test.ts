@@ -1,15 +1,17 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { invoiceFundingVisibility, invoiceVisibility, invoiceWorkVisibility, walletVisibility } from "../domain/invoices/visibility";
-import { NotFoundError } from "../lib/errors/application-error";
+import { NotFoundError, PermissionDeniedError } from "../lib/errors/application-error";
 
 const state = vi.hoisted(() => ({ enabled: true, membership: "active", balance: 1000, manage: true, status: "draft", targetDenied: false }));
 const capabilities = () => ({ view: true, manage: state.manage, markPaid: false, refund: false, void: false });
+const companyReads = vi.hoisted(() => ({ company: vi.fn(), invoices: vi.fn(), all: vi.fn(), allowed: true }));
 vi.mock("next/navigation", () => ({ unstable_rethrow: vi.fn() }));
 vi.mock("../lib/supabase/next-server", () => {
   const context = () => ({
-    user: { companyId: "company", invoices: capabilities() },
+    user: { companyId: "company", invoices: companyReads.allowed ? capabilities() : { view: false, manage: false } },
     services: {
-      invoices: { list: async () => [], listForClient: async () => [], workEnabled: async () => state.enabled, get: async (id: string) => {
+      companies: { get: companyReads.company },
+      invoices: { list: companyReads.all, listForCompany: companyReads.invoices, listForClient: async () => [], workEnabled: async () => state.enabled, get: async (id: string) => {
         if (state.targetDenied) throw new NotFoundError("Invoice");
         return { invoice: { id, status: state.status } };
       } },
@@ -21,7 +23,7 @@ vi.mock("../lib/supabase/next-server", () => {
   return { getInternalContext: async () => context(), getClientContext: async () => context() };
 });
 const { loadFinancialVisibilityAction } = await import("../app/actions/financial-visibility");
-beforeEach(() => { state.enabled = true; state.membership = "active"; state.balance = 1000; state.manage = true; state.status = "draft"; state.targetDenied = false; });
+beforeEach(() => { state.enabled = true; state.membership = "active"; state.balance = 1000; state.manage = true; state.status = "draft"; state.targetDenied = false; companyReads.allowed = true; vi.clearAllMocks(); companyReads.company.mockImplementation(async (id: string) => ({ id })); companyReads.invoices.mockResolvedValue([]); companyReads.all.mockResolvedValue([]); });
 it("detects Invoice OFF on the wallet surface without a ledger or balance change", async () => {
   const before = await loadFinancialVisibilityAction("wallet");
   state.enabled = false;
@@ -60,4 +62,28 @@ it("invalidates an edited target that becomes paid or loses record visibility", 
   expect(await loadFinancialVisibilityAction("internal-work", "target")).not.toEqual(before);
   state.targetDenied = true;
   expect(await loadFinancialVisibilityAction("internal-work", "target")).toEqual({ ok: false, denied: true });
+});
+
+it('refreshes only the selected authorized company and retains OFF history', async () => {
+  state.enabled = false;
+  expect(await loadFinancialVisibilityAction('internal', undefined, 'selected')).toEqual({ ok: true, signature: invoiceVisibility([], false, capabilities(), JSON.stringify([undefined, 'selected'])) });
+  expect(companyReads.company).toHaveBeenCalledExactlyOnceWith('selected');
+  expect(companyReads.invoices).toHaveBeenCalledExactlyOnceWith('selected');
+  expect(companyReads.all).not.toHaveBeenCalled();
+});
+
+it('denies company refresh before financial reads on capability or company revocation', async () => {
+  companyReads.allowed = false;
+  expect(await loadFinancialVisibilityAction('internal', undefined, 'selected')).toEqual({ ok: false, denied: true });
+  expect(companyReads.company).not.toHaveBeenCalled();
+  companyReads.allowed = true;
+  companyReads.company.mockRejectedValue(new PermissionDeniedError());
+  expect(await loadFinancialVisibilityAction('internal', undefined, 'selected')).toEqual({ ok: false, denied: true });
+  expect(companyReads.invoices).not.toHaveBeenCalled();
+  expect(companyReads.all).not.toHaveBeenCalled();
+});
+
+it('does not classify a company invoice lookup failure as a denial', async () => {
+  companyReads.invoices.mockRejectedValue(new Error('unavailable'));
+  expect(await loadFinancialVisibilityAction('internal', undefined, 'selected')).toEqual({ ok: false, denied: false });
 });

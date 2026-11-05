@@ -20,10 +20,12 @@ export type NavigationItem = {
   id: NavigationItemId | "white_label";
   label: string;
   route: string;
+  navigable?: boolean;
+  children?: NavigationItem[];
 };
 
 export type NavigationCategory = {
-  id: "overview" | "activity" | "billing" | "marketing" | "team" | "setup";
+  id: "overview" | "activity" | "billing" | "team" | "setup";
   label: string;
   items: NavigationItem[];
 };
@@ -42,7 +44,6 @@ export const navigationCategories: NavigationCategory[] = [
       { id: "tickets", label: "Tickets", route: "/tickets" },
       { id: "reporting", label: "Reporting", route: "/reporting" },
       { id: "clients", label: "Clients", route: "/clients" },
-      { id: "todo", label: "Operations", route: "/todo" },
       { id: "white_label", label: "White Label", route: "/white-label" },
     ],
   },
@@ -52,14 +53,6 @@ export const navigationCategories: NavigationCategory[] = [
     items: [
       { id: "invoices", label: "Invoices", route: "/invoices" },
       { id: "subscriptions", label: "Subscriptions", route: "/subscriptions" },
-    ],
-  },
-  {
-    id: "marketing",
-    label: "Marketing",
-    items: [
-      { id: "coupons", label: "Coupons", route: "/coupons" },
-      { id: "investment_intent", label: "Investment Intent", route: "/investment-intent" },
     ],
   },
   {
@@ -75,7 +68,10 @@ export const navigationCategories: NavigationCategory[] = [
     id: "setup",
     label: "Setup",
     items: [
-      { id: "services", label: "Services", route: "/services" },
+      { id: "services", label: "Services", route: "/services", children: [
+        { id: "coupons", label: "Coupons", route: "/coupons" },
+        { id: "investment_intent", label: "Investment Intent", route: "/investment-intent" },
+      ] },
       { id: "forms", label: "Forms", route: "/forms" },
       { id: "settings", label: "Settings", route: "/settings" },
     ],
@@ -92,7 +88,12 @@ export function navigationForModules(
   return navigationCategories
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => item.id === "white_label" ? showWhiteLabel : item.id === "team_goals" ? includeGoals : modules[item.id] === true),
+      items: category.items.flatMap((item) => {
+        const allowed = item.id === "white_label" ? showWhiteLabel : item.id === "team_goals" ? includeGoals : modules[item.id] === true;
+        if (!item.children) return allowed ? [item] : [];
+        const children = item.children.filter((child) => modules[child.id] === true);
+        return allowed || children.length ? [{ ...item, navigable: allowed, children }] : [];
+      }),
     }))
     .filter((category) => category.items.length > 0);
 }
@@ -107,13 +108,14 @@ export function routeIsCurrent(route: string, pathname: string): boolean {
  */
 export function activeNavigationRoute(pathname: string): string | undefined {
   return navigationCategories
-    .flatMap((category) => category.items)
+    .flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []]))
     .filter((item) => routeIsCurrent(item.route, pathname))
     .sort((a, b) => b.route.length - a.route.length)[0]?.route;
 }
 
 export function titleForPath(pathname: string): string {
   if (pathname === "/") return "Operations";
+  if (pathname === "/todo" || pathname.startsWith("/todo/")) return "Operations";
   if (pathname === "/clients/new") return "New client";
   if (pathname === "/companies") return "Companies";
   if (pathname === "/companies/new") return "New company";
@@ -122,6 +124,6 @@ export function titleForPath(pathname: string): string {
   if (pathname.startsWith("/reporting/")) return "Report";
   if (pathname.startsWith("/clients/")) return "Client";
   const route = activeNavigationRoute(pathname);
-  const item = navigationCategories.flatMap((category) => category.items).find((entry) => entry.route === route);
+  const item = navigationCategories.flatMap((category) => category.items.flatMap((item) => [item, ...item.children ?? []])).find((entry) => entry.route === route);
   return item?.label ?? "Wolf Forge";
 }

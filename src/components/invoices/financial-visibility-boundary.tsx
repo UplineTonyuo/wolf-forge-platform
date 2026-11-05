@@ -6,10 +6,11 @@ import { financialAuthority, financialRecordIds } from "../../domain/invoices/vi
 import { loadFinancialVisibilityAction } from "../../app/actions/financial-visibility";
 import { ACCESS_REFRESH_INTERVAL_MS } from "../../domain/polling-constants";
 
-export function FinancialVisibilityBoundary({ scope, signature, invoiceId, children }: {
+export function FinancialVisibilityBoundary({ scope, signature, invoiceId, companyId, children }: {
   scope: "internal" | "internal-work" | "client" | "client-detail" | "wallet" | "store" | "dashboard";
   signature: string;
   invoiceId?: string;
+  companyId?: string;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -22,7 +23,7 @@ export function FinancialVisibilityBoundary({ scope, signature, invoiceId, child
       if (inFlight || document.visibilityState === "hidden") return;
       inFlight = true;
       try {
-        const result = await loadFinancialVisibilityAction(scope, invoiceId);
+        const result = companyId === undefined ? await loadFinancialVisibilityAction(scope, invoiceId) : await loadFinancialVisibilityAction(scope, invoiceId, companyId);
         if (canceled) return;
         if (!result.ok && result.denied) {
           setBlocked((previous) => previous?.signature === signature && previous.state === "denied" ? previous : { signature, state: "denied" });
@@ -52,7 +53,7 @@ export function FinancialVisibilityBoundary({ scope, signature, invoiceId, child
       window.removeEventListener("focus", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [scope, signature, invoiceId, router]);
+  }, [scope, signature, invoiceId, companyId, router]);
   if (state === "denied") return <p role="alert">This financial information is no longer available.</p>;
   if (state === "updating") return <p role="status">Financial information is updating.</p>;
   return children;
