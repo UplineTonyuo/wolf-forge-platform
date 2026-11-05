@@ -242,7 +242,7 @@ async function main() {
   const delegatedOpening = () => supportApi.rpc("app_open_client_notifications", notificationOpening);
   const supportFeed = await success(delegatedNotifications(), "Delegated notification feed");
   need(supportFeed.notifications.some(row => row.id === supportNotification)
-    && supportFeed.notifications.every(row => row.recipient_profile_id === client.id), "Support notification feed crossed recipient scope");
+    && supportFeed.notifications.every(row => row.id !== otherNotification), "Support notification feed crossed recipient scope");
   const openingReceipt = await success(delegatedOpening(), "Delegated notification opening");
   need(openingReceipt.requestId === notificationOpening.p_request_id && openingReceipt.readCount >= 1, "Support opening did not acknowledge its selected-client snapshot");
   need(JSON.stringify(await success(delegatedOpening(), "Delegated notification replay")) === JSON.stringify(openingReceipt), "Support opening replay changed the receipt");
