@@ -8,6 +8,14 @@ afterEach(() => vi.unstubAllGlobals());
 const delegated = () => clientSupportFetch("https://provider.example.invalid");
 
 describe("delegated provider operation boundary", () => {
+  it.each(["app_client_notification_feed", "app_open_client_notifications"])("permits selected-client notification operation %s without changing its request", async (rpc) => {
+    const request = new Request(`https://provider.example.invalid/rest/v1/rpc/${rpc}`, {
+      method: "POST", headers: { Authorization: "Bearer original-administrator-token" },
+      body: rpc === "app_open_client_notifications" ? JSON.stringify({ p_request_id: "71000000-0000-4000-8000-000000002064", p_requested_at: "2026-11-06T00:00:00Z" }) : "{}",
+    });
+    await delegated()(request);
+    expect(network).toHaveBeenCalledWith(request, undefined);
+  });
   it("permits reviewed client reply metadata without granting internal reply metadata", async () => {
     await delegated()("https://provider.example.invalid/rest/v1/rpc/app_list_my_order_response_states",{method:"POST"});
     expect(network).toHaveBeenCalledOnce();
@@ -32,6 +40,8 @@ describe("delegated provider operation boundary", () => {
     ["https://provider.example.invalid/auth/v1/user", "PUT"],
     ["https://provider.example.invalid/rest/v1/rpc/app_update_my_profile", "POST"],
     ["https://provider.example.invalid/rest/v1/rpc/app_new_unreviewed_rpc", "POST"],
+    ["https://provider.example.invalid/rest/v1/rpc/app_request_ticket_call", "POST"],
+    ["https://provider.example.invalid/rest/v1/rpc/app_request_order_call", "POST"],
     ["https://provider.example.invalid/rest/v1/profiles", "PATCH"],
     ["https://provider.example.invalid/rest/v1/tenant_memberships", "GET"],
   ])("refuses unsupported %s %s before network", async (url, method) => {

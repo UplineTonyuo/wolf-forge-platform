@@ -15,7 +15,7 @@ export const CLIENT_SUPPORT_RPCS = [
   "app_send_order_message", "app_reply_to_order_message", "app_toggle_order_message_reaction", "app_reply_to_ticket", "app_reply_to_ticket_message", "app_toggle_ticket_message_reaction",
   "app_create_ticket", "app_prepare_ticket_attachment", "app_send_ticket_message_with_attachment",
   "app_get_ticket_attachment_download", "app_set_client_conversation_presence",
-  "app_list_my_notifications", "app_mark_notification_read", "app_mark_all_notifications_read",
+  "app_list_my_notifications", "app_client_notification_feed", "app_open_client_notifications", "app_mark_notification_read", "app_mark_all_notifications_read",
   "app_list_my_client_reports", "app_get_my_client_report", "app_mark_client_report_read", "app_count_my_unread_reports",
   "app_invoices_work_enabled", "app_get_invoice_financials", "app_list_invoice_items", "app_get_wf_card_settings",
   "app_get_invoice_manual_payment", "app_prepare_invoice_payment_receipt", "app_get_invoice_payment_receipt", "app_submit_invoice_manual_payment_claim",

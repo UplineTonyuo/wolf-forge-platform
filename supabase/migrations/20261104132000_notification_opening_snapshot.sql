@@ -97,3 +97,20 @@ begin
 end $$;
 revoke all on function public.app_client_notification_feed(),public.app_open_client_notifications(uuid,timestamptz) from public,anon,authenticated,service_role;
 grant execute on function public.app_client_notification_feed(),public.app_open_client_notifications(uuid,timestamptz) to authenticated;
+
+-- Preserve selected-client support notification access through the existing capability boundary.
+do $migration$
+declare target oid:='private.client_support_operation_allowed(text,text)'::regprocedure;
+ original text; replacement text; owner_before oid; acl_before aclitem[];
+ needle text:=$entry$'app_list_my_notifications',$entry$;
+begin
+ select prosrc,proowner,proacl into original,owner_before,acl_before from pg_proc where oid=target;
+ if (length(original)-length(replace(original,needle,'')))/length(needle)<>1
+  or position('app_client_notification_feed' in original)>0 or position('app_open_client_notifications' in original)>0 then
+  raise exception 'Unexpected support operation baseline'; end if;
+ replacement:=replace(original,needle,$entry$'app_list_my_notifications','app_client_notification_feed','app_open_client_notifications',$entry$);
+ execute replace(pg_get_functiondef(target),original,replacement);
+ if not exists(select 1 from pg_proc where oid=target and prosrc=replacement and proowner=owner_before and proacl is not distinct from acl_before) then
+  raise exception 'Support operation preservation failed'; end if;
+end;
+$migration$;

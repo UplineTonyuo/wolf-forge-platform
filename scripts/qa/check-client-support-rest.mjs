@@ -231,6 +231,27 @@ async function main() {
   await denied(makeClient(publicKey, owner.token, capability, foreignTenant).rpc("app_list_my_order_response_states", { p_order_ids: [] }), "Reply metadata rejects foreign Tenant support selector");
   const profiles = await success(supportApi.from("profiles").select("id"), "Supported profile read");
   need(profiles.length === 1 && profiles[0].id === client.id, "Support profile read disclosed another identity");
+  step = "delegated notification snapshot isolation and replay";
+  const supportNotification = randomUUID(), otherNotification = randomUUID();
+  await sql(`insert into public.notifications(id,recipient_profile_id,tenant_id,audience,category,title,body,href,event_key)
+    values (:'target'::uuid,:'client'::uuid,'${tenant}','client','client','Synthetic support notification','Synthetic activity','/account',:'target'),
+      (:'other'::uuid,:'other_client'::uuid,'${tenant}','client','client','Synthetic other notification','Synthetic activity','/account',:'other');`,
+  { target: supportNotification, client: client.id, other: otherNotification, other_client: other.id });
+  const delegatedNotifications = () => supportApi.rpc("app_client_notification_feed");
+  const notificationOpening = { p_request_id: randomUUID(), p_requested_at: new Date().toISOString() };
+  const delegatedOpening = () => supportApi.rpc("app_open_client_notifications", notificationOpening);
+  const supportFeed = await success(delegatedNotifications(), "Delegated notification feed");
+  need(supportFeed.notifications.some(row => row.id === supportNotification)
+    && supportFeed.notifications.every(row => row.recipient_profile_id === client.id), "Support notification feed crossed recipient scope");
+  const openingReceipt = await success(delegatedOpening(), "Delegated notification opening");
+  need(openingReceipt.requestId === notificationOpening.p_request_id && openingReceipt.readCount >= 1, "Support opening did not acknowledge its selected-client snapshot");
+  need(JSON.stringify(await success(delegatedOpening(), "Delegated notification replay")) === JSON.stringify(openingReceipt), "Support opening replay changed the receipt");
+  need((await success(delegatedNotifications(), "Delegated notification badge")).unreadCount === 0, "Support notification badge did not acknowledge the snapshot");
+  need(await sql(`select (select read_at is not null from public.notifications where id=:'target'::uuid)
+    and (select read_at is null from public.notifications where id=:'other'::uuid);`,
+  { target: supportNotification, other: otherNotification }) === "t", "Support opening mutated another recipient");
+  await denied(makeClient(publicKey, anotherOwner.data.session.access_token, capability).rpc("app_open_client_notifications", notificationOpening), "Notification opening rejects another Owner Auth session");
+  await denied(makeClient(publicKey, owner.token, capability, foreignTenant).rpc("app_client_notification_feed"), "Notification feed rejects foreign Tenant support selector");
   const companies = await success(supportApi.from("companies").select("id"), "Supported company read");
   need(companies.length === 1 && companies[0].id === client.company, "Support company read disclosed another company");
   const state = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Own support state");
@@ -307,6 +328,8 @@ async function main() {
   await denied(supportApi.rpc("app_list_form_submissions", {}), "Missing-hook Forms visibility submission summaries");
   await denied(delegatedPdf(), "Missing-hook PDF receipt");
   await denied(delegatedReplyStates(), "Missing-hook client reply metadata");
+  await denied(delegatedNotifications(), "Missing-hook notification feed");
+  await denied(delegatedOpening(), "Missing-hook notification opening");
   const blockedRequest = randomUUID();
   await denied(supportApi.rpc("app_reply_to_ticket", { p_request_id: blockedRequest, p_ticket_id: ticket, p_body: "Synthetic missing-hook reply must never persist" }), "Missing-hook ordinary business mutation");
   need(await sql("select not exists(select 1 from public.ticket_messages where request_id=:'request'::uuid);", { request: blockedRequest }) === "t", "A missing-hook business mutation persisted");
@@ -520,6 +543,8 @@ async function main() {
   await denied(proof(), "Exited support capability");
   await denied(delegatedPdf(), "Exited support PDF receipt");
   await denied(delegatedReplyStates(), "Exited support client reply metadata");
+  await denied(delegatedNotifications(), "Exited support notification feed");
+  await denied(delegatedOpening(), "Exited support notification opening");
   const finalOwner = await ownMembership(owner.api);
   need(finalOwner.length === 1 && finalOwner[0].role_name === "owner", "Support exit changed the original Owner session");
   need(await sessionSnapshot() === beforeSessions, "Support changed an existing client Auth session");
