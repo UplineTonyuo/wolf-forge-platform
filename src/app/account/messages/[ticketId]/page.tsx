@@ -61,7 +61,6 @@ export default async function ClientMessageDetailPage({
             <span className="portal-eyebrow">{ticket.public_ref}</span>
             <h1>{ticket.subject}</h1>
           </div>
-          <AttentionPill tone={attention.tone} label={attention.label} />
         </header>
 
         <div className={styles.clientDetailGrid}>

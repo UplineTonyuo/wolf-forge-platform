@@ -74,6 +74,23 @@ reset role;
 select is((select count(*) from cron.job where jobname='wf-ticket-calls-push-recovery-v1' and schedule='10 seconds'),1::bigint,
  'bounded no-browser recovery is provisioned once');
 select pg_temp.actor('1704');
+-- Disabled/expired registrations still occupy retained storage; receipts survive.
+create temporary table delivery_receipt_before as select to_jsonb(d) receipt from private.ticket_call_push_deliveries d;
+insert into private.ticket_call_push_devices(profile_id,tenant_id,session_id,endpoint,origin,enabled,expires_at)
+ select '20000000-0000-4000-8000-000000001704','f0f0f0f0-0000-4000-8000-000000001701',
+ '33000000-0000-4000-8000-000000001704','https://fcm.googleapis.com/retained-fixture-'||n,
+ 'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',false,now()-interval '1 day'
+ from generate_series(1,19) n;
+set local role authenticated;
+select throws_ok($q$select public.app_set_my_call_push_subscription('https://fcm.googleapis.com/retained-overflow',
+ 'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',true)$q$,'WF429','Device history limit reached','disabled and expired devices count toward retained-row cap');
+select ok(public.app_set_my_call_push_subscription('https://fcm.googleapis.com/call-device-test',
+ 'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',true),'same endpoint can re-enable at retained cap');
+select ok(public.app_set_my_call_push_subscription('https://fcm.googleapis.com/call-device-test',
+ 'https://wolf-forge-platform-callstest-wolf-forge.vercel.app',false),'disable stays available at retained cap');
+reset role;
+select is((select count(*) from private.ticket_call_push_devices where profile_id='20000000-0000-4000-8000-000000001704'),20::bigint,'fresh endpoints cannot accumulate beyond cap');
+select ok(not exists(select 1 from delivery_receipt_before b where not exists(select 1 from private.ticket_call_push_deliveries d where to_jsonb(d)=b.receipt)),'retained limit preserves delivery receipts exactly');
 update auth.sessions set not_after=now()-interval '1 second' where id='33000000-0000-4000-8000-000000001704';
 set local role authenticated;
 select throws_ok($q$select public.app_ticket_call_current()$q$,'42501','Active session required','expired session cannot read call');

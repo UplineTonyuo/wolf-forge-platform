@@ -1,7 +1,7 @@
 "use client";
 import { createContext,useContext,useEffect,useRef,useState,useSyncExternalStore,type ReactNode } from "react";
 import { z } from "zod";
-import { CallController } from "./call-controller";
+import { CallController,callTimeLimitReached } from "./call-controller";
 import { CallMedia,emptyMedia } from "./call-media";
 import { CallScreen } from "./call-screen";
 import { connectCallSignals } from "./call-signals";
@@ -17,7 +17,7 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
  const [mediaState,setMediaState]=useState(emptyMedia);const [media]=useState(()=>new CallMedia(setMediaState));
  const [now,setNow]=useState(0);const audio=useRef<HTMLAudioElement>(null);const [playBlocked,setPlayBlocked]=useState(false);
  const [ringBlocked,setRingBlocked]=useState(false);const resumeRing=useRef(()=>{});
- const call=state.call;const callId=call?.id,callState=call?.state,expiresAt=call?.expiresAt,acceptedAt=call?.acceptedAt;
+ const call=state.call;const callId=call?.id,callState=call?.state,expiresAt=call?.expiresAt,acceptedAt=call?.acceptedAt,durationPolicy=call?.durationPolicy;
  const ringDeadline=call?.ringDeadline;const incoming=callState==="ringing"&&call?.calleeId===profileId;
  const callMode=call?.mode,callerId=call?.callerId,calleeId=call?.calleeId;
  const ready=!!callId&&!!callState&&!["ringing","ending","ended"].includes(callState);
@@ -47,9 +47,10 @@ export function InboxCallProvider({profileId,children,notificationSoundEnabled=t
   timer=setTimeout(run,delay);return()=>{stopped=true;clearTimeout(timer);};
  },[controller,callId,callState,mediaState.peerPresent]);
  useEffect(()=>{
-  if(!callId||!expiresAt||callState==="ended")return;const tick=()=>{const n=Date.now();setNow(n);if(n>=Date.parse(expiresAt)||callState==="ringing"&&ringDeadline&&n>=Date.parse(ringDeadline)||acceptedAt&&callState!=="active"&&n>=Date.parse(acceptedAt)+45000)controller.expire();};
+  if(!callId||!expiresAt||!callState||callState==="ended")return;const tick=()=>{const n=Date.now();setNow(n);if(callTimeLimitReached({state:callState,durationPolicy,expiresAt,acceptedAt:acceptedAt??null,ringDeadline:ringDeadline??null},n))controller.expire();};
   tick();const timer=setInterval(tick,1000);return()=>clearInterval(timer);
- },[controller,callId,expiresAt,acceptedAt,callState,ringDeadline]);
+ },[controller,callId,expiresAt,acceptedAt,callState,ringDeadline,durationPolicy]);
+ useEffect(()=>{if(mediaState.peerPresent)void controller.confirmPresence();},[controller,callId,mediaState.peerPresent]);
  useEffect(()=>{
   if(!incoming||!notificationSoundEnabled||!ringDeadline)return;
   const ringtone=startCallRingtone(Date.parse(ringDeadline),setRingBlocked);resumeRing.current=ringtone.resume;

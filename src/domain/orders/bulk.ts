@@ -1,4 +1,5 @@
-import { toClientSafeError } from "../../lib/errors/application-error";
+import { z } from "zod";
+import { ValidationError, toClientSafeError } from "../../lib/errors/application-error";
 
 export type ProjectOutcome = {
   id: string;
@@ -19,6 +20,19 @@ export type ProjectBulkResult = {
 
 export const unavailableProjectLabel = "Unavailable project";
 
+// Internal request bound: each selected Project can cause a separate database call.
+export const projectBatchSizeLimit = 50;
+const projectBatchIdsSchema = z.array(z.uuid()).max(projectBatchSizeLimit);
+
+export function parseProjectBatchIds(input: unknown): string[] {
+  if (!Array.isArray(input) || input.length > projectBatchSizeLimit) {
+    throw new ValidationError("Choose up to 50 projects at a time.");
+  }
+  const parsed = projectBatchIdsSchema.safeParse(input);
+  if (!parsed.success) throw new ValidationError("Choose valid projects and try again.");
+  return Array.from(new Set(parsed.data));
+}
+
 /** Translates a service error into copy that never leaks database detail. */
 export function describeProjectError(error: unknown, validationMessage: string): string {
   const safe = toClientSafeError(error);
@@ -29,10 +43,16 @@ export function describeProjectError(error: unknown, validationMessage: string):
 }
 
 export function failedProjectBatch(
-  orderIds: string[],
+  orderIds: unknown,
   error: string,
 ): ProjectBulkResult {
-  const unique = Array.from(new Set(orderIds.filter(Boolean)));
+  let unique: string[];
+  try {
+    unique = parseProjectBatchIds(orderIds);
+  } catch {
+    // Reject the request as one failure; never reflect malformed or unbounded input.
+    unique = ["request"];
+  }
   return {
     attempted: unique.length,
     succeeded: [],

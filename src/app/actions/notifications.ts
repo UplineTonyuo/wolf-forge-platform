@@ -5,6 +5,7 @@ import {
   getInternalContext,
 } from "../../lib/supabase/next-server";
 import { uuidSchema } from "../../domain/shared";
+import { z } from "zod";
 
 export type NotificationCategory =
   | "project"
@@ -34,15 +35,25 @@ export type WalletNotificationItem = {
   readAt: string | null;
 };
 
+export type NotificationUnreadCounts = {
+  withoutTickets: number;
+  withoutProjects: number;
+  withoutConversations: number;
+};
+
 export type WalletNotificationResult =
   | {
       ok: true;
       notifications: WalletNotificationItem[];
+      unreadCount?: number;
+      unreadCounts?: NotificationUnreadCounts;
     }
   | {
       ok: false;
       error: string;
       notifications: [];
+      code?: "OPENING_EXPIRED";
+      serverTime?: string;
     };
 
 type NotificationRpcRow = {
@@ -111,25 +122,9 @@ export async function getWalletNotificationsAction(): Promise<
     const context =
       await getInternalContext();
 
-    const result =
-      await context.client.rpc(
-        "app_list_my_notifications",
-        {
-          p_limit: 50,
-        },
-      );
-
-    if (result.error) {
-      return failure();
-    }
-
-    return {
-      ok: true,
-      notifications:
-        normalizeRows(
-          result.data,
-        ),
-    };
+    const result = await context.client.rpc("app_list_my_notifications", { p_limit: 50 });
+    if (result.error) return failure();
+    return { ok: true, notifications: normalizeRows(result.data) };
   } catch {
     return failure();
   }
@@ -142,25 +137,7 @@ export async function getClientNotificationsAction(): Promise<
     const context =
       await getClientContext();
 
-    const result =
-      await context.client.rpc(
-        "app_list_my_notifications",
-        {
-          p_limit: 50,
-        },
-      );
-
-    if (result.error) {
-      return failure();
-    }
-
-    return {
-      ok: true,
-      notifications:
-        normalizeRows(
-          result.data,
-        ),
-    };
+    return await clientNotificationFeed(context.client);
   } catch {
     return failure();
   }
@@ -229,6 +206,35 @@ export async function markAllClientNotificationsReadAction(): Promise<void> {
   } catch {
     // Best effort.
   }
+}
+
+type NotificationClient = Awaited<ReturnType<typeof getClientContext>>["client"];
+async function clientNotificationFeed(client: NotificationClient): Promise<WalletNotificationResult> {
+  const result = await client.rpc("app_client_notification_feed");
+  if (result.error) return failure();
+  const count=z.number().int().nonnegative();
+  const feed = z.object({ notifications: z.array(z.unknown()).max(50), unreadCount: count,
+    unreadCounts:z.object({withoutTickets:count,withoutProjects:count,withoutConversations:count}).strict().optional(),
+  }).refine(value=>!value.unreadCounts||Object.values(value.unreadCounts).every(count=>count<=value.unreadCount)).parse(result.data);
+  return { ok: true, notifications: normalizeRows(feed.notifications), unreadCount: feed.unreadCount,
+    ...(feed.unreadCounts ? {unreadCounts:feed.unreadCounts} : {}),
+  };
+}
+
+export async function markOpenedClientNotificationsReadAction(value: unknown): Promise<WalletNotificationResult> {
+  const parsed = z.object({ requestId: uuidSchema, requestedAt: z.iso.datetime({ offset: true }) }).strict().safeParse(value);
+  if (!parsed.success) return failure();
+  try {
+    const context = await getClientContext();
+    const result = await context.client.rpc("app_open_client_notifications", { p_request_id: parsed.data.requestId, p_requested_at: parsed.data.requestedAt });
+    if (result.error?.code === "22023" && result.error.message === "Opening request expired or invalid") {
+      return {ok:false,notifications:[],error:"This opening expired. Mark the current notifications read to continue.",code:"OPENING_EXPIRED",serverTime:new Date().toISOString()};
+    }
+    if (result.error) return failure();
+    const receipt = z.object({ requestId: uuidSchema, snapshotAt: z.iso.datetime({ offset: true }), readCount: z.number().int().nonnegative() }).parse(result.data);
+    if (receipt.requestId !== parsed.data.requestId) return failure();
+    return await clientNotificationFeed(context.client);
+  } catch { return failure(); }
 }
 
 export async function setClientConversationPresenceAction(

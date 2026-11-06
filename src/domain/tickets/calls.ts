@@ -3,12 +3,14 @@ import { z } from "zod";
 const id = z.uuid();
 export const callOutcome = z.enum(["answered", "declined", "missed", "expired", "busy", "refused"]);
 export const ticketCall = z.object({
-  id, ticketId: id, callerId: id, calleeId: id.nullable(),
+  id, ticketId: id.nullable(), orderId: id.nullable().optional(), callerId: id, calleeId: id.nullable(),
   mode: z.enum(["audio", "video"]), direction: z.enum(["client_to_team", "team_to_client"]),
   state: z.enum(["ringing", "accepted", "connecting", "active", "ending", "ended"]),
   requestedAt: z.iso.datetime({ offset: true }), ringDeadline: z.iso.datetime({ offset: true }).nullable(),
   acceptedAt: z.iso.datetime({ offset: true }).nullable(), answeredAt: z.iso.datetime({ offset: true }).nullable(),
   endedAt: z.iso.datetime({ offset: true }).nullable(), expiresAt: z.iso.datetime({ offset: true }),
+  durationPolicy: z.enum(["fixed", "manual"]).optional(),
+  budgetWarning: z.union([z.literal(75), z.literal(90), z.literal(100)]).nullable().optional(),
   outcome: callOutcome.nullable(), reason: z.string().max(100).nullable(), version: z.number().int().positive(),
   connectedSeconds: z.number().nonnegative(), participantSeconds: z.number().nonnegative(),
   reconciled: z.boolean(), message: z.string().max(200).nullable(),
@@ -26,11 +28,11 @@ export type CallHistoryEntry = z.infer<typeof callHistoryEntry>;
 
 export const callAvailability = z.object({
   enabled: z.boolean(), profileId: id, accountClass: z.enum(["internal", "client"]),
-  call: ticketCall.nullable(), ticketId: id.nullable(),
+  call: ticketCall.nullable(), ticketId: id.nullable(), orderId: id.nullable().optional(),
   peer: callPerson.nullable(),
   candidates: z.array(callCandidate).max(100).optional(),
 }).strict().refine(value => !value.call ||
-  ((value.profileId === value.call.callerId || value.profileId === value.call.calleeId) && value.ticketId === value.call.ticketId));
+  ((value.profileId === value.call.callerId || value.profileId === value.call.calleeId) && value.ticketId === value.call.ticketId && (value.orderId ?? null) === (value.call.orderId ?? null)));
 export type CallAvailability = z.infer<typeof callAvailability>;
 
 export const callRequest = z.object({
@@ -38,6 +40,7 @@ export const callRequest = z.object({
   mode: z.enum(["audio", "video"]),
   recipient_id: id.optional(),
 }).strict();
+export const orderCallRequest = callRequest.omit({ ticket_id: true }).extend({ order_id: id });
 export const callCommand = z.object({
   action: z.enum(["status", "accept", "decline", "cancel", "end"]), call_id: id,
   device_id: id.optional(),
@@ -46,12 +49,16 @@ export const callSettings = z.object({
   action: z.literal("settings"), enabled: z.boolean(), fallback_profile_id: id.nullable(),
   monthly_minutes: z.number().int().min(1).max(5400),
 }).strict();
-export const callMutation = z.union([callRequest, callCommand, callSettings]);
+export const callMutation = z.union([callRequest, orderCallRequest, callCommand, callSettings]);
 export const callRead = z.union([
   z.object({ action: z.literal("prepare"), ticket_id: id }).strict(),
+  z.object({ action: z.literal("prepare"), order_id: id }).strict(),
+  z.object({ action: z.literal("current"), order_id: id }).strict(),
   z.object({ action: z.literal("current"), ticket_id: id.optional(), call_id: id.optional() }).strict()
     .refine(value => !value.ticket_id || !value.call_id),
   z.object({ action: z.literal("history"), ticket_id: id, before: z.iso.datetime({ offset: true }).optional(), before_id: id.optional() })
+    .strict().refine(value => (value.before === undefined) === (value.before_id === undefined)),
+  z.object({ action: z.literal("history"), order_id: id, before: z.iso.datetime({ offset: true }).optional(), before_id: id.optional() })
     .strict().refine(value => (value.before === undefined) === (value.before_id === undefined)),
   z.object({ action: z.literal("summary"), month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-01$/) }).strict(),
 ]);

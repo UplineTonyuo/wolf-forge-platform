@@ -10,6 +10,6 @@ export default async function CallEntry({params}:{params:Promise<{callId:string}
  if(context.actor.support)return <p>Return to your administrator account before opening a call.</p>;
  const value=await readTicketCalls(context.client,{action:"current",call_id:callId}).catch(()=>null);
  const result=callAvailability.safeParse(value);
- if(!result.success||!result.data.call||!result.data.ticketId)return <p>This call is no longer available. Open your Inbox to continue.</p>;
- redirect(callConversationPath(result.data.accountClass,result.data.ticketId,callId));
+ if(!result.success||!result.data.call||(!result.data.ticketId&&!result.data.orderId))return <p>This call is no longer available. Open your Inbox to continue.</p>;
+ redirect(callConversationPath(result.data.accountClass,result.data.ticketId,callId,result.data.orderId));
 }

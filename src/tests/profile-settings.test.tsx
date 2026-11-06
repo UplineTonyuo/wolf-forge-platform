@@ -482,6 +482,28 @@ describe("change password dialog", () => {
     expect(visibleDialog.innerHTML).not.toMatch(/gotrue|supabase|auth\/v1|pgrst/i);
   });
 
+  it("keeps a changed-password revocation warning visible without offering another update", async () => {
+    const changedWithWarning = {
+      error: null,
+      fieldErrors: {},
+      changedAt: "2026-08-18T01:00:00.000Z",
+      warning: "Your password was changed, but signing out other devices could not be confirmed. Sign out of those devices manually.",
+    };
+    vi.mocked(changeMyPasswordAction).mockResolvedValue(changedWithWarning);
+
+    const dialog = await openDialog();
+    fillPasswords(dialog);
+    fireEvent.click(within(dialog).getByRole("button", { name: /update password/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(changedWithWarning.warning);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByText("Password updated")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /update password/i })).toBeDisabled();
+    expect(within(screen.getByRole("dialog")).getByLabelText("Current password")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
   it("associates a field error with the field it belongs to", async () => {
     vi.mocked(changeMyPasswordAction).mockResolvedValue({
       error: "Check the highlighted fields.",

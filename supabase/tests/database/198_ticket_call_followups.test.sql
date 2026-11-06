@@ -137,7 +137,7 @@ reset role;
 update private.ticket_calls set ring_deadline=clock_timestamp()-interval '1 second' where id=pg_temp.call_id('1984');
 select is(private.process_ticket_call_deadlines(),1,'unanswered invitation becomes missed');
 select is(private.process_ticket_call_deadlines(),0,'deadline processing remains idempotent');
-select is((select href from public.notifications where event_key='ticket-call-missed:'||pg_temp.call_id('1984')::text),'/tickets/e1700000-0000-4000-8000-000000001701?inbox=tickets&ticket=e1700000-0000-4000-8000-000000001701','missed team notification opens actual Inbox conversation');
+select is((select href from public.notifications where event_key='ticket-call-missed:'||pg_temp.call_id('1984')::text),'/tickets/e1700000-0000-4000-8000-000000001701?inbox=tickets&ticket=e1700000-0000-4000-8000-000000001701&call='||pg_temp.call_id('1984')::text,'missed team notification opens actual Inbox conversation and exact call');
 -- Independent fixtures: ended invitations retain their immutable budget holds.
 -- Restore setup rather than weakening limits or editing their deadlines.
 rollback to savepoint call_authority_scenarios;
@@ -163,7 +163,7 @@ set local role authenticated;
 select public.app_ticket_call_command('cancel',pg_temp.call_id('1988'));
 reset role;
 select is((select outcome from private.ticket_calls where id=pg_temp.call_id('1988')),'missed','deadline-triggered cancel is missed, not a user cancellation');
-select is((select href from public.notifications where event_key='ticket-call-missed:'||pg_temp.call_id('1988')::text),'/account/messages/e1700000-0000-4000-8000-000000001701','missed client notification opens actual conversation');
+select is((select href from public.notifications where event_key='ticket-call-missed:'||pg_temp.call_id('1988')::text),'/account/messages/e1700000-0000-4000-8000-000000001701?call='||pg_temp.call_id('1988')::text,'missed client notification opens actual conversation and exact call');
 select pg_temp.actor(); set local role authenticated;
 select ok((public.app_ticket_call_history('e1700000-0000-4000-8000-000000001701')->0) ?& array['caller','callee','outcome','reason','mode','requestedAt'],'client history contains authoritative named call records');
 reset role;

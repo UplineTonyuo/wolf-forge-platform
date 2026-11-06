@@ -22,6 +22,10 @@ insert into auth.sessions(id,user_id,aal,not_after)
 select ('c1740000-0000-4000-8000-00000000000'||n)::uuid,('b1740000-0000-4000-8000-00000000000'||n)::uuid,'aal1',now()+interval '1 day'
 from generate_series(1,5)n;
 create temp table support174_ids(label text primary key,id uuid);
+insert into public.notifications(recipient_profile_id,tenant_id,audience,category,title,body,href,event_key)
+values
+('b1740000-0000-4000-8000-000000000002','b1740000-0000-4000-8000-000000000010','client','client','Synthetic support notification','Synthetic activity','/account','support174:target'),
+('b1740000-0000-4000-8000-000000000004','b1740000-0000-4000-8000-000000000011','client','client','Synthetic foreign notification','Synthetic activity','/account','support174:foreign');
 grant all on support174_ids to authenticated;
 create function pg_temp.support_actor(n integer default 1) returns void language sql as $$
 select set_config('request.jwt.claim.sub','',true);
@@ -52,6 +56,8 @@ select pg_temp.support_request();
 select throws_ok($q$select public.app_get_client_support_context()$q$,'42501',null,'proof refuses when hook is absent');
 select throws_ok($q$select private.current_tenant_id()$q$,'42501',null,'tenant guard refuses missing hook instead of compatibility fallback');
 select throws_ok($q$select public.app_mark_all_notifications_read()$q$,'42501',null,'ordinary write cannot silently act as owner without hook');
+select throws_ok($q$select public.app_client_notification_feed()$q$,'42501',null,'notification feed refuses missing support hook');
+select throws_ok($q$select public.app_open_client_notifications('71000000-0000-4000-8000-000000002064',now())$q$,'42501',null,'notification opening refuses missing support hook');
 select throws_ok($q$select * from public.app_get_my_profile()$q$,'42501',null,'legacy profile RPC refuses missing hook');
 select throws_ok($q$select * from public.app_get_wf_card_settings()$q$,'42501',null,'global WF settings RPC refuses missing hook');
 select throws_ok($q$select id from public.profiles limit 1$q$,'42501',null,'direct profile GET refuses missing hook through restrictive guard');
@@ -60,6 +66,21 @@ select is(auth.uid(),'b1740000-0000-4000-8000-000000000002'::uuid,'effective sub
 select is(auth.jwt()->>'session_id','c1740000-0000-4000-8000-000000000001','original session binding is retained');
 select is(public.app_get_client_support_context()->>'administratorId','b1740000-0000-4000-8000-000000000001','proof retains actual administrator');
 select is((select profile_id from public.app_get_my_profile()),'b1740000-0000-4000-8000-000000000002'::uuid,'self-profile uses target client');
+select pg_temp.support_request('/rpc/app_client_notification_feed','POST');
+select lives_ok($q$select public.app_apply_client_support_context()$q$,'notification feed accepts valid support capability');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,1,'support feed is limited to the selected client and Tenant');
+select pg_temp.support_request('/rpc/app_open_client_notifications','POST');
+select lives_ok($q$select public.app_apply_client_support_context()$q$,'notification opening accepts valid support capability');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002064',now())->>'readCount')::int,1,'support opening acknowledges the selected-client snapshot');
+select is((public.app_open_client_notifications('71000000-0000-4000-8000-000000002064',now())->>'readCount')::int,1,'support opening replays its original receipt');
+select is((public.app_client_notification_feed()->>'unreadCount')::int,0,'support badge reflects the acknowledged snapshot');
+reset role;
+select ok((select read_at is null from public.notifications where event_key='support174:foreign'),'support opening leaves foreign notification unread');
+set local role authenticated;
+select pg_temp.support_request('/rpc/app_open_client_notifications','POST',p_n=>5);
+select throws_ok($q$select public.app_apply_client_support_context()$q$,'42501',null,'notification opening rejects another administrator session');
+select pg_temp.support_request('/rpc/app_client_notification_feed','POST',p_tenant=>'b1740000-0000-4000-8000-000000000011');
+select throws_ok($q$select public.app_apply_client_support_context()$q$,'42501',null,'notification feed rejects a foreign Tenant selector');
 select pg_temp.support_request('/rpc/app_unreviewed_future_action','POST');
 select throws_ok($q$select public.app_apply_client_support_context()$q$,'42501',null,'future API operations require explicit review');
 select pg_temp.support_request('/profiles','PATCH');

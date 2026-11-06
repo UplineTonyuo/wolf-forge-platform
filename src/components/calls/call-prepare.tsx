@@ -8,14 +8,15 @@ import type { CallController } from "./call-controller";
 import { LocalCallPreview,type CallDevicePreferences } from "./call-preview";
 import { Portrait,VideoTrack } from "./call-screen";
 import styles from "./calls.module.css";
-export function CallPrepare({ticketId,mode,controller,onClose}:{ticketId:string;mode:"audio"|"video";controller:CallController;onClose:()=>void}){
+export function CallPrepare({ticketId,order=false,mode,controller,onClose}:{ticketId:string;order?:boolean;mode:"audio"|"video";controller:CallController;onClose:()=>void}){
  const [preview]=useState(()=>new LocalCallPreview());const [availability,setAvailability]=useState<CallAvailability|null>(null);
  const recipientGroup=useId();const [recipient,setRecipient]=useState("");
  const [stream,setStream]=useState<MediaStream|null>(null),[devices,setDevices]=useState<MediaDeviceInfo[]>([]);
  const [choices,setChoices]=useState<CallDevicePreferences>({}),[busy,setBusy]=useState(false),[starting,setStarting]=useState(false),[error,setError]=useState(""),[retry,setRetry]=useState(0);
- useEffect(()=>{let current=true;void controller.prepare(ticketId).then(data=>{if(current){setAvailability(data);setRecipient(data.accountClass==="client"&&data.candidates?.length===1?data.candidates[0]!.profileId:"");}}).catch(()=>{if(current)setError("Could not confirm who is available. Retry before calling.");});return()=>{current=false;preview.stop();};},[controller,ticketId,preview,retry]);
+ useEffect(()=>{let current=true;void (order?controller.prepare(ticketId,true):controller.prepare(ticketId)).then(data=>{if(current){setAvailability(data);setRecipient(data.candidates?.length===1?data.candidates[0]!.profileId:"");}}).catch(()=>{if(current)setError("Could not confirm who is available. Retry before calling.");});return()=>{current=false;preview.stop();};},[controller,ticketId,order,preview,retry]);
  const candidates=availability?.candidates??[];
- const peer=availability?.accountClass==="client"?candidates.find(person=>person.profileId===recipient):availability?.peer;
+ const selecting=availability?.accountClass==="client"||Boolean(order&&availability?.candidates);
+ const peer=selecting?candidates.find(person=>person.profileId===recipient):availability?.peer;
  const check=async(next=choices)=>{
   setBusy(true);setError("");setStream(null);
   try{const value=await preview.start(mode,next);if(value){setStream(value);setChoices(next);setDevices(await navigator.mediaDevices.enumerateDevices());}}
@@ -24,16 +25,16 @@ export function CallPrepare({ticketId,mode,controller,onClose}:{ticketId:string;
  };
  const cancel=()=>{preview.stop();if(starting)void controller.end();onClose();};
  const ready=!!stream?.getAudioTracks().some(t=>t.readyState==="live")&&(mode==="audio"||!!stream.getVideoTracks().some(t=>t.readyState==="live"));
- const start=async()=>{if(!ready||busy||starting||!peer)return;setStarting(true);preview.stop();setStream(null);await controller.request(ticketId,mode,choices,recipient||undefined);onClose();};
+ const start=async()=>{if(!ready||busy||starting||!peer)return;setStarting(true);preview.stop();setStream(null);await controller.request(ticketId,mode,choices,recipient||undefined,order);onClose();};
  return <PortalDialog open onClose={cancel} title={`Start ${mode==="audio"?"voice":"video"} call`} description="Check your devices before ringing" size="wide" layer="call" closeOnBackdrop={false} showClose>
   <div className={styles.screen}>
-   {availability?.accountClass==="client"?<fieldset className={styles.recipients} disabled={starting}>
-    <legend>Choose one team member</legend>
-    <p>People who saved this Ticket to their Inbox and can currently reply.</p>
+   {selecting?<fieldset className={styles.recipients} disabled={starting}>
+    <legend>{availability?.accountClass==="client"?"Choose one team member":"Choose one client"}</legend>
+    <p>{order?"Eligible participants who can reply in this order conversation.":"People who saved this Ticket to their Inbox and can currently reply."}</p>
     {candidates.length?candidates.map(person=><label key={person.profileId} className={styles.recipient}>
      <input type="radio" name={recipientGroup} value={person.profileId} checked={recipient===person.profileId} onChange={()=>setRecipient(person.profileId)}/>
      <Portrait name={person.name} url={person.avatarUrl}/><span><strong>{person.name}</strong><small>{person.role}</small></span>
-    </label>):<p role="status">No eligible team member has this Ticket in their Inbox. Please send a message instead.</p>}
+    </label>):<p role="status">{order?"No eligible participant is available.":"No eligible team member has this Ticket in their Inbox."} Please send a message instead.</p>}
    </fieldset>:<div className={styles.person}><Portrait name={peer?.name??"Conversation participant"} url={peer?.avatarUrl}/><h2>{peer?.name??"Checking conversation…"}</h2>{peer?.role?<p>{peer.role}</p>:null}</div>}
    <p className={styles.note}>{mode==="audio"?"Voice only · Your camera stays off":"Video call · Private conversation"}</p>
    {stream&&mode==="video"?<div className={styles.stage}><VideoTrack track={stream.getVideoTracks()[0]??null} local/></div>:null}

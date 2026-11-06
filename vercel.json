@@ -3,11 +3,19 @@
     "deploymentEnabled": {
       "codex/woad-live-calls-20261026": false,
       "codex/woad-ticket-call-followups-20261104": false,
+      "codex/spp-security-fixes-20261104": false,
+      "codex/woad-orders-calls-ux-20261104": false,
+      "codex/woad-integrated-validation-20261105": false,
       "codex/woad-navigation-performance-release-20261106": false,
-      "codex/woad-client-tickets-performance-20261106": false
+      "codex/woad-client-tickets-performance-20261106": false,
+      "codex/woad-call-duration-20261106": false
     }
   },
   "crons": [
+    {
+      "path": "/api/internal/ticket-call-maintenance",
+      "schedule": "*/5 * * * *"
+    },
     {
       "path": "/api/internal/team-voice-cleanup",
       "schedule": "17 3 * * *"

@@ -27,6 +27,31 @@ it("does no provider work when admission is refused", async () => {
   await expect(prepareTicketCallMedia(user, trusted, provider, id, actor)).rejects.toThrow();
   expect(provider.readRoom).not.toHaveBeenCalled(); expect(provider.createRoom).not.toHaveBeenCalled();
 });
+it("does no room lookup or completion for a ready room when join is exhausted", async () => {
+  user.rpc.mockImplementation((_name, args) => Promise.resolve(args.p_action === "setup"
+    ? { data: { ...claim(), created: false, ready: true }, error: null }
+    : { data: null, error: { code: "42501", message: "Call unavailable" } }));
+  await expect(prepareTicketCallMedia(user, trusted, provider, id, actor)).rejects.toThrow();
+  expect(provider.readRoom).not.toHaveBeenCalled();
+  expect(provider.createRoom).not.toHaveBeenCalled();
+  expect(provider.createToken).not.toHaveBeenCalled();
+  expect(trusted.rpc).not.toHaveBeenCalled();
+});
+it("joins a durably verified ready room without repeating room verification", async () => {
+  const reserved = { ...claim(), created: false, ready: true };
+  user.rpc.mockImplementation((_name, args) => Promise.resolve({ data: args.p_action === "setup" ? reserved
+    : args.p_action === "join" ? { ...reserved, participantId: actor } : { state: "connecting" }, error: null }));
+  expect((await prepareTicketCallMedia(user, trusted, provider, id, actor)).token).toBe("aaa.bbb.ccc");
+  expect(provider.readRoom).not.toHaveBeenCalled();
+  expect(trusted.rpc).not.toHaveBeenCalled();
+});
+it("throttled setup retries never reach a provider, including claimed rooms", async () => {
+  user.rpc.mockResolvedValue({ data: null, error: { code: "WF429", message: "rate limit exceeded" } });
+  for (let n = 0; n < 20; n++) await expect(prepareTicketCallMedia(user, trusted, provider, id, actor)).rejects.toMatchObject({ code: "RATE_LIMITED" });
+  expect(provider.readRoom).not.toHaveBeenCalled();
+  expect(provider.createRoom).not.toHaveBeenCalled();
+  expect(provider.createToken).not.toHaveBeenCalled();
+});
 it("reconciles creation uncertainty without a second POST", async () => {
   provider.createRoom.mockRejectedValue(new Error("uncertain"));
   await prepareTicketCallMedia(user, trusted, provider, id, actor);
@@ -58,6 +83,14 @@ it("requires a persisted cleanup receipt even after room absence", async () => {
 it("validates bounded trusted evidence before the database", async () => {
   await expect(ingestTicketCallEvidence(trusted, { account: "other" })).rejects.toThrow();
   expect(trusted.rpc).not.toHaveBeenCalled();
+});
+it("manual calls keep short-lived join tokens without active-media ejection",async()=>{
+ const reserved={...claim(),durationPolicy:"manual",expiresAt:new Date(Date.now()+120000).toISOString()};
+ user.rpc.mockImplementation((_name,args)=>Promise.resolve({data:args.p_action==="setup"?reserved:args.p_action==="join"?{...reserved,participantId:actor}:{state:"active"},error:null}));
+ provider.readRoom.mockResolvedValue({name:reserved.roomName,url:`https://wolfforge.daily.co/${reserved.roomName}`,privacy:"private",config:callRoomProperties(Math.floor(Date.parse(reserved.expiresAt)/1000),"manual")});
+ await prepareTicketCallMedia(user,trusted,provider,id,actor);
+ expect(provider.createToken).toHaveBeenCalledWith(expect.objectContaining({eject_at_token_exp:false,exp:Math.floor(Date.parse(reserved.expiresAt)/1000)}));
+ expect(provider.createRoom.mock.calls[0]![1]).not.toHaveProperty("exp");
 });
 it("validates the account snapshot before trusted reconciliation", async () => {
   const snapshot = { account: "wolfforge", month: "2026-10-01", unmappedSeconds: 120, observedAt: "2026-10-29T00:00:00Z" };

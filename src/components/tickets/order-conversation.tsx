@@ -9,6 +9,8 @@ import { TicketConversation } from "./ticket-conversation";
 import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
 import type { OrderReplyTarget } from "./order-message-actions";
 import styles from "./tickets.module.css";
+import { OrderCallControls } from "./ticket-call-controls";
+import { useTicketCallHistory } from "./use-ticket-call-history";
 
 export function OrderConversation({
   orderId,
@@ -30,6 +32,7 @@ export function OrderConversation({
   headerActions?: ReactNode;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const history = useTicketCallHistory(orderId, true);
   const optimistic = useOptimisticTicketMessages(messages, { mode: "admin", viewerProfileId });
 
   return (
@@ -42,6 +45,9 @@ export function OrderConversation({
         sourceLabel={heading}
         hideInternalNotes
         headerActions={headerActions}
+        callControls={<OrderCallControls orderId={orderId} disabled={!canReply || repliesDisabled} />}
+        callHistory={history.entries}
+        historyControls={history.error ? <p role="status">{history.error} {history.retryable ? <button type="button" disabled={history.busy} onClick={() => void history.load()}>Retry call history</button> : null}</p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
         forwardDestinations={destinations}
         onReply={canReply && !repliesDisabled ? setReplyTo : undefined}
         canReact={canReply}

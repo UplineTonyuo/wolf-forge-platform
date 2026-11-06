@@ -12,6 +12,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("../lib/supabase/next-server", () => ({
   getInternalContext: async () => ({
     actor: { id: "20000000-0000-4000-8000-000000003603" },
+    user: { projects: { create: true, edit: true, assign: true, archive: true } },
     services: {
       permissions: { requireModuleAccess: mocks.requireModuleAccess },
       orders: mocks,

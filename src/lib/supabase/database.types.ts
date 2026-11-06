@@ -5863,6 +5863,26 @@ export type Database = {
           updated_at: string
         }[]
       }
+      app_list_client_manager_options: {
+        Args: never
+        Returns: { id: string; name: string }[]
+      }
+      app_client_notification_feed: {
+        Args: never
+        Returns: Json
+      }
+      app_open_client_notifications: {
+        Args: { p_request_id: string; p_requested_at: string }
+        Returns: Json
+      }
+      app_assign_client_manager: {
+        Args: { p_company_id: string; p_manager_profile_id: string }
+        Returns: string
+      }
+      app_list_client_manager_assignments: {
+        Args: never
+        Returns: { company_id: string; manager_profile_id: string; manager_name: string }[]
+      }
       app_list_due_subscription_work: {
         Args: { p_limit?: number }
         Returns: {

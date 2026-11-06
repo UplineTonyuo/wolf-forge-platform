@@ -8,6 +8,8 @@ import { TicketConversation } from "./ticket-conversation";
 import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
 import type { OrderReplyTarget } from "./order-message-actions";
+import { OrderCallControls } from "./ticket-call-controls";
+import { useTicketCallHistory } from "./use-ticket-call-history";
 
 /**
  * The client Project conversation. It renders through the same `orderChat`
@@ -30,6 +32,7 @@ export function ProjectConversation({
   repliesDisabled: boolean;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const history = useTicketCallHistory(orderId, true);
   const optimistic = useTicketConversationMessages({ projectId: orderId, serverMessages: messages, mode: "client", viewerProfileId });
   useClientConversationPresence("project", orderId, !optimistic.unavailable);
 
@@ -46,6 +49,9 @@ export function ProjectConversation({
       <TicketConversation
         orderChat
         clientView
+        callControls={<OrderCallControls orderId={orderId} disabled={repliesDisabled} />}
+        callHistory={history.entries}
+        historyControls={history.error ? <p role="status">{history.error} {history.retryable ? <button type="button" disabled={history.busy} onClick={() => void history.load()}>Retry call history</button> : null}</p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
         viewerProfileId={viewerProfileId}
         messages={optimistic.messages}
         heading={heading}

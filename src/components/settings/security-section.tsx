@@ -57,7 +57,7 @@ export function SecuritySection({
             <strong>Password</strong>
             <span>
               Keep your account protected with a strong password. Changing it
-              signs out your other devices.
+              also requests sign-out on your other devices.
             </span>
           </div>
 

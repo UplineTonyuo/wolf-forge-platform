@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 const json = (body: unknown, status = 200) => Response.json(body, { status, headers: { "Cache-Control": "private, no-store, max-age=0" } });
 function failure(error: unknown) {
   const code = error && typeof error === "object" && "code" in error ? error.code : null;
-  return json({ ok: false, error: "This call is unavailable. Check your access, connection or call usage limit." },
+  return json({ ok: false, code: code === "PERMISSION_DENIED" || code === "RATE_LIMITED" ? code : "CALL_SERVICE_UNAVAILABLE", error: "This call is unavailable. Check your access, connection or call usage limit." },
     code === "PERMISSION_DENIED" ? 403 : code === "RATE_LIMITED" ? 429 : 503);
 }
 export async function GET(request: Request) {
@@ -23,8 +23,8 @@ export async function GET(request: Request) {
   if (!input.success) return json({ ok: false }, 400);
   try {
     const context = await getVerifiedSessionContext();
-    if (!context) return json({ ok: false }, 401);
-    if (context.actor?.support) return json({ ok: false }, 403);
+    if (!context) return json({ ok: false, code: "NOT_AUTHENTICATED" }, 401);
+    if (context.actor?.support) return json({ ok: false, code: "SUPPORT_MODE" }, 403);
     const data = await readTicketCalls(context.client, input.data);
     return json({ ok: true, data: input.data.action === "current" || input.data.action === "prepare" ? { ...data, enabled: Boolean(readDailyCallConfig()) && "enabled" in data && data.enabled } : data });
   } catch (error) { return failure(error); }
@@ -39,10 +39,10 @@ async function mutate(request: Request, ending = false) {
   if (!input.success) return json({ ok: false }, 400);
   try {
     const context = await getVerifiedSessionContext();
-    if (!context) return json({ ok: false }, 401);
-    if (context.actor?.support) return json({ ok: false }, 403);
+    if (!context) return json({ ok: false, code: "NOT_AUTHENTICATED" }, 401);
+    if (context.actor?.support) return json({ ok: false, code: "SUPPORT_MODE" }, 403);
     if (!ending && "action" in input.data && ["request", "accept"].includes(input.data.action) && !readDailyCallConfig()) {
-      return json({ ok: false, error: "Calling is unavailable." }, 503);
+      return json({ ok: false, code: "CALLING_DISABLED", error: "Calling is unavailable." }, 503);
     }
     return json({ ok: true, data: ending
       ? await endTicketCall(context.client, (input.data as { ticket_id: string }).ticket_id, (input.data as { call_id: string }).call_id)

@@ -1,7 +1,7 @@
-.tasks { display: grid; gap: 16px; }
-.empty { margin: 0; color: var(--wf-text-muted); line-height: 1.5; }
+.tasks { display: grid; gap: 16px; min-width: 0; padding: 16px; }
+.empty { margin: 0; color: var(--wf-text-muted); line-height: 1.5; max-width: 65ch; overflow-wrap: anywhere; text-wrap: pretty; }
 .titleField { display: grid; flex: 1 1 240px; gap: 6px; min-width: 0; color: var(--wf-navy); font-size: 13px; font-weight: 600; }
-.titleField input { width: 100%; font-weight: 400; }
+.titleField input { width: 100%; box-sizing: border-box; font-weight: 400; }
 .tasks .create { align-items: flex-end; }
 .row { display: grid; gap: 12px; padding-block: 16px; border-bottom: 1px solid var(--wf-border); }
 .identity { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
@@ -13,4 +13,11 @@
 .tasks button:disabled { opacity: .5; cursor: default; }
 .tasks button:focus-visible, .tasks input:focus-visible { outline: 2px solid var(--wf-gold); outline-offset: 2px; }
 .tasks svg { width: 16px; height: 16px; }
-.tasks input { flex: 1 1 180px; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--wf-border); border-radius: 6px; font: inherit; }
+.tasks input { box-sizing: border-box; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--wf-border); border-radius: 6px; font: inherit; }
+.rename input { flex: 1 1 180px; }
+@media (max-width: 480px) {
+  .tasks { padding: 12px; }
+  .create { align-items: stretch; }
+  .titleField { flex-basis: 100%; }
+  .create button { width: 100%; }
+}
