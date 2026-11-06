@@ -1,6 +1,11 @@
 import { callAvailability, ticketCall, type CallAvailability, type TicketCall } from "../../domain/tickets/calls";
 import { randomUuid } from "../../lib/random-uuid";
 import type { CallDevicePreferences } from "./call-preview";
+export function callTimeLimitReached(call:Pick<TicketCall,"state"|"durationPolicy"|"expiresAt"|"acceptedAt"|"ringDeadline">,now:number){
+ return call.state!=="ended"&&((!(call.durationPolicy==="manual"&&call.state==="active")&&now>=Date.parse(call.expiresAt))||
+  (call.state==="ringing"&&!!call.ringDeadline&&now>=Date.parse(call.ringDeadline))||
+  (!!call.acceptedAt&&call.state!=="active"&&now>=Date.parse(call.acceptedAt)+45000));
+}
 export type CallState={call:TicketCall|null;peer:CallAvailability["peer"];busy:boolean;error:string;minimized:boolean;canJoin:boolean;joinAttempt:number};
 export class CallController{
  private state:CallState={call:null,peer:null,busy:false,error:"",minimized:false,canJoin:false,joinAttempt:0};

@@ -10,9 +10,9 @@ export function readDailyCallConfig(env: NodeJS.ProcessEnv = process.env) {
   return { key, origin: DAILY_CALL_ORIGIN };
 }
 
-export function callRoomProperties(expiresAt: number) {
+export function callRoomProperties(expiresAt: number, policy: "fixed" | "manual" = "fixed") {
   return {
-    exp: expiresAt, eject_at_room_exp: true, max_participants: 2,
+    ...(policy === "fixed" ? { exp: expiresAt } : {}), eject_at_room_exp: policy === "fixed", max_participants: 2,
     enforce_unique_user_ids: true, enable_prejoin_ui: true,
     enable_screenshare: false, enable_chat: false, enable_recording: false,
     enable_live_captions_ui: false, enable_transcription_storage: false,
@@ -20,13 +20,16 @@ export function callRoomProperties(expiresAt: number) {
   };
 }
 
-export function verifiedCallRoom(value: unknown, name: string, expiresAt: number) {
+export function verifiedCallRoom(value: unknown, name: string, expiresAt: number, policy: "fixed" | "manual" = "fixed") {
   if (!value || typeof value !== "object") return false;
   const room = value as Record<string, unknown>;
   if (room.name !== name || room.url !== `${DAILY_CALL_ORIGIN}/${name}` || room.privacy !== "private" ||
     !room.config || typeof room.config !== "object") return false;
   const config = room.config as Record<string, unknown>;
-  if (config.exp !== expiresAt || config.eject_at_room_exp !== true || config.max_participants !== 2 ||
+  const lifetimeSafe = policy === "fixed" ? config.exp === expiresAt && config.eject_at_room_exp === true
+    : (config.exp === undefined || config.exp === null) && config.eject_at_room_exp === false &&
+      (config.eject_after_elapsed === undefined || config.eject_after_elapsed === null);
+  if (!lifetimeSafe || config.max_participants !== 2 ||
     config.enforce_unique_user_ids !== true || config.enable_screenshare !== false ||
     (config.enable_recording !== false && config.enable_recording !== "") ||
     !config.permissions || typeof config.permissions !== "object" ||

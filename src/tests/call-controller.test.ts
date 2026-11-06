@@ -1,5 +1,14 @@
 import { expect,it,vi } from "vitest";
 import { CallController } from "../components/calls/call-controller";
+import { callTimeLimitReached } from "../components/calls/call-controller";
+it('expires fixed and setup deadlines but keeps authorized manual active calls open beyond two hours',()=>{
+ const start=Date.parse('2026-11-06T12:00:00Z');
+ const clock={state:'active' as const,expiresAt:new Date(start+900000).toISOString(),acceptedAt:new Date(start).toISOString(),ringDeadline:null,durationPolicy:'manual' as const};
+ expect(callTimeLimitReached(clock,start+7200000)).toBe(false);
+ expect(callTimeLimitReached({...clock,durationPolicy:'fixed'},start+900000)).toBe(true);
+ expect(callTimeLimitReached({...clock,state:'connecting'},start+45000)).toBe(true);
+ expect(callTimeLimitReached({...clock,state:'ringing',acceptedAt:null,ringDeadline:new Date(start+40000).toISOString()},start+40000)).toBe(true);
+});
 import type { TicketCall } from "../domain/tickets/calls";
 const id="71000000-0000-4000-8000-000000000001";
 const peer="71000000-0000-4000-8000-000000000002",old="71000000-0000-4000-8000-000000000003";

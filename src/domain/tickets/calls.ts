@@ -9,6 +9,8 @@ export const ticketCall = z.object({
   requestedAt: z.iso.datetime({ offset: true }), ringDeadline: z.iso.datetime({ offset: true }).nullable(),
   acceptedAt: z.iso.datetime({ offset: true }).nullable(), answeredAt: z.iso.datetime({ offset: true }).nullable(),
   endedAt: z.iso.datetime({ offset: true }).nullable(), expiresAt: z.iso.datetime({ offset: true }),
+  durationPolicy: z.enum(["fixed", "manual"]).optional(),
+  budgetWarning: z.union([z.literal(75), z.literal(90), z.literal(100)]).nullable().optional(),
   outcome: callOutcome.nullable(), reason: z.string().max(100).nullable(), version: z.number().int().positive(),
   connectedSeconds: z.number().nonnegative(), participantSeconds: z.number().nonnegative(),
   reconciled: z.boolean(), message: z.string().max(200).nullable(),

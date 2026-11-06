@@ -28,14 +28,17 @@ export function CallScreen({state,controller,media,mediaState,now,playBlocked=fa
  const deadline=call.state==="ringing"?call.ringDeadline??call.expiresAt:call.expiresAt;
  const remaining=now?Math.max(0,Math.ceil((Date.parse(deadline)-now)/1000)):call.state==="ringing"?40:900;
  const clock=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,"0")}`;
- const elapsed=now&&mediaState.connectedAt?Math.max(0,Math.floor((now-mediaState.connectedAt)/1000)):null;
+ const manual=call.durationPolicy==="manual";const started=call.answeredAt?Date.parse(call.answeredAt):manual?null:mediaState.connectedAt;
+ const elapsed=now&&started&&Number.isFinite(started)?Math.max(0,Math.floor((now-started)/1000)):null;
+ const elapsedClock=elapsed===null?null:`${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,"0")}`;
  const deviceMenu=async()=>{try{setDevices(await navigator.mediaDevices.enumerateDevices());}catch{controller.error("Device list unavailable. Check your browser permissions.");}};
  return <>
-  {state.minimized&&!ended&&!incoming?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{clock}</strong></button>:null}
+  {state.minimized&&!ended&&!incoming?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{manual?elapsedClock??"Connecting…":clock}</strong></button>:null}
   <PortalDialog open={incoming||!state.minimized} onClose={incoming?()=>{void controller.command("decline");}:controller.close} title={call.mode==="audio"?"Voice call":"Video call"} description={incoming?"Incoming call · Escape to decline":"Wolf Forge · Private conversation"} size={incoming?"default":"wide"} layer="call" closeOnBackdrop={false} showClose={ended}
    headerAction={!ended&&!incoming?<button type="button" className={styles.minimize} aria-label="Minimize call" onClick={()=>controller.minimize()}><Minimize2 aria-hidden="true"/></button>:undefined}>
    <div className={styles.screen} data-incoming={incoming||undefined}>
-    <div className={styles.status}><span className={connected?styles.live:styles.dot}/><span role="status">{status}</span>{elapsed!==null?<span>{Math.floor(elapsed/60)}:{String(elapsed%60).padStart(2,"0")} elapsed</span>:null}{!ended?<span className={styles.clock}>{clock} {incoming?"to answer":"left"}</span>:null}</div>
+    <div className={styles.status}><span className={connected?styles.live:styles.dot}/><span role="status">{status}</span>{elapsedClock!==null?<span>{elapsedClock} elapsed</span>:null}{!ended&&(!manual||call.state==="ringing")?<span className={styles.clock}>{clock} {incoming?"to answer":"left"}</span>:null}</div>
+    {!ended&&call.budgetWarning?<p className={styles.note} role="status" key={call.budgetWarning}>{call.budgetWarning===100?"Monthly call allowance reached. This call can continue; new calls are blocked.":`Monthly call allowance is at least ${call.budgetWarning}% used. This call can continue.`}</p>:null}
     <div className={styles.stage} data-video={!!mediaState.remoteVideo}>
      {call.mode==="video"&&mediaState.remoteVideo?<VideoTrack track={mediaState.remoteVideo}/>:<div className={styles.person}><Portrait key={`${name}:${state.peer?.avatarUrl}`} name={name} url={state.peer?.avatarUrl}/><h2>{name}</h2>{state.peer?.role?<p>{state.peer.role}</p>:null}<p>{call.mode==="audio"?"Voice only · Camera stays off":!ended?"Camera will appear when connected":""}</p></div>}
      {call.mode==="video"&&mediaState.localVideo?<div className={styles.preview}><VideoTrack track={mediaState.localVideo} local/><span>You</span></div>:null}
