@@ -1,9 +1,13 @@
--- Isolated fixture database only. The production PostgREST role preloads safeupdate.
+-- Isolated fixture database only. Loading the library requires the local native administrator.
+\connect - supabase_admin
 begin;
+set local role postgres;
 select no_plan();
 \ir ../fixtures/ticket_calls.inc
+reset role;
 load 'safeupdate';
 set local safeupdate.enabled=1;
+set local role postgres;
 select is(current_setting('safeupdate.enabled'),'on','the real safeupdate library is enabled');
 select throws_ok($q$update private.ticket_call_environment set manual_maintenance_at=clock_timestamp()$q$,
  '21000','UPDATE requires a WHERE clause','the production safety guard rejects the original unqualified update');
