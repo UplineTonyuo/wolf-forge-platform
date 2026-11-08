@@ -2,7 +2,7 @@
 
 Branch: `codex/woad-monthly-report-gate-20261108`. Original baseline: `0b8cba2ce3350e3d611bf3a56da4ea086e71d199`; explicit-work-month correction starts from `bbd26e5`.
 
-This candidate is not deployed. No hosted migration, local Docker startup or real account/customer change occurred. The reviewed CI harness may be pushed only to this task branch, whose Vercel deployment is explicitly disabled. Both migrations remain **unapplied**, in this order:
+This candidate is not deployed. Reviewed candidate `edbc9e88bba6076a290629bfc48774c92a2a20a4` is pushed on this task branch, whose Vercel deployment is explicitly disabled. No hosted migration, local Docker startup or real account/customer change occurred. Both migrations remain **unapplied**, in this order:
 
 `supabase/migrations/20261108080017_monthly_report_completion_gate.sql`
 
@@ -20,7 +20,27 @@ This candidate is not deployed. No hosted migration, local Docker startup or rea
 
 ## Verification
 
-### Approved CI harness implementation — 2026-11-09, runtime blocked before dispatch
+### Current preflight — 2026-11-09 local / 2026-11-08 22:39:29 UTC, stopped for included compute
+
+The owner supplied the coordinator's authenticated Packages inventory receipt and authorized the previously unused single attempt only if all refreshed gates pass. Read-only receipt: `C:/Users/TrojanNiAnton/Documents/Codex/2026-10-20/continue-the-wolf-forge-spp-project/outputs/monthly-report-completion-20261109/packages-storage-verification.json`; SHA256 `0e42d1370ef0cceb4f87cadf5f8d3c76be8eda28bd6aaa38480d76798c4c657f`. It records signed-in `UplineTonyuo`, unfiltered "Your Packages", zero packages and the onboarding empty state at `2026-11-08T22:12:17.8442803Z`; no account, scope or billing setting was changed. This resolves the prior inventory blocker, without treating the receipt as a compute or billing guarantee.
+
+Original owning session `01a1bb87-8fa2-7e12-b9f3-46c80c4b3752` is the sole active matching task. Branch, clean starting HEAD and remote head all verified at `edbc9e88bba6076a290629bfc48774c92a2a20a4`. Configured Global OS/canonical memory, repository instructions and this handoff were reread; canonical vault notes remain read-only. No source, harness, workflow, Vercel config, dependency or SQL change is needed for this preflight. Only this handoff and the plan are updated locally; the remote reviewed candidate remains `edbc9e8`.
+
+Fresh read-only connected GitHub checks, all successful and complete:
+
+- `GITHUB_GET_THE_AUTHENTICATED_USER {}` confirms `UplineTonyuo`, plan `free`.
+- `GITHUB_LIST_REPOSITORIES_FOR_THE_AUTHENTICATED_USER {type:owner,per_page:100,page:1}` returns 18 owned repositories, fewer than one full page. For each, `GITHUB_LIST_ARTIFACTS_FOR_A_REPOSITORY {owner:UplineTonyuo,repo:<owned repo>,per_page:100,page:1}` returns an artifact count equal to `total_count`. Total retained inventory: **13 artifacts / 90,197 bytes**. No artifact contents were downloaded. With receipt-confirmed zero Packages and this run's maximum 20 MiB, inventory is **21,061,717 bytes**, below the documented 500-MiB Free pooled allowance. **Storage inventory gate PASSED**; accrued storage is not substituted for current inventory.
+- `GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY` with `status:in_progress` and `status:queued`, `per_page:100,page:1`, for each of the 11 private owned repositories returns no runs. This repository's additional `waiting/pending/requested` lists are empty. The combined 43 storage/run queries report no incomplete pages or active/queued competitor. **Observed competing-run gate PASSED**. No unrelated run was canceled.
+- November account summary was refreshed twice using `GITHUB_GET_GITHUB_BILLING_USAGE_SUMMARY_FOR_USER {username:UplineTonyuo,year:2026,month:11}`. Both report `actions_linux` **2,025 minutes**, rate **$0.006/minute**, gross **$12.15**, discount **$12.15**, net **$0**; storage **5.008363103 GB-hours**, also net $0. GitHub's current official billing reference lists Free included compute **$12/month** (2,000 standard Linux minutes at this rate), versus this attempt's required **$0.390 / 65 minutes**. Gross reported usage now exceeds that standard allowance. The net-zero/discount field does not prove another $0.390 of included balance or authorize paid usage. **Included-compute gate BLOCKED: sufficient remaining included compute is not established.** No additional credits were verified or purchased. Reference: https://docs.github.com/en/billing/concepts/product-billing/github-actions#included-compute-usage-and-storage.
+- Final lane-specific `GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY {owner:UplineTonyuo,repo:wolf-forge-platform,branch:codex/woad-monthly-report-gate-20261108,event:workflow_dispatch,per_page:100,page:1}` returns `total_count:0`, empty runs.
+
+Decision: obey the owner's stop condition. **No dispatch mutation was called; zero attempts used, zero automatic retries, no paid usage or purchase by this lane.** No database target or app process was started. **Database acceptance BLOCKED; production build BLOCKED; authenticated browser QA BLOCKED**, all still unexecuted. Earlier unit/lint/component evidence remains historical. Candidate migrations remain unapplied everywhere by this lane, and there is no WOAD deployment/release-ready claim.
+
+Documentation verification: reread both modified files, `git diff --cached --check` passed, implementation/workflow/SQL diff against `edbc9e8` is empty, and `npm.cmd run security:secrets` exited 0 with **0 findings / 2,371 tracked files**. No runtime guard/unit/build/database/browser check was rerun merely for this documentation update. This evidence update is committed locally only; no additional push is needed to run the unchanged remote candidate once the compute gate passes.
+
+Next prerequisite: verifiably available included compute covering all 65 minutes, after allowance replenishment or independently verified included credits, without a purchase. Then refresh storage and competing runs again and dispatch the single already-authorized attempt against exact remote candidate `edbc9e8` using the plan payload. An ambiguous dispatch must be reconciled, never retried blindly. All requested DB/build/browser phases must pass before separately authorized WOAD migration-first rollout.
+
+### Historical approved CI harness implementation — 2026-11-09, runtime blocked before dispatch
 
 Owner approved the concrete isolated plan, including a genuine late-period browser case using actual dates, a branch-only push and exactly one conditional validation attempt. Budget remains one standard `ubuntu-24.04` job capped at 60 minutes plus 5 minutes cancellation reserve, maximum 65 runner-minutes. No automatic retries, PR, paid usage, deployment, production migration or vault write.
 
