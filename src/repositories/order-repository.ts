@@ -5,7 +5,7 @@ import { clientOrderStartSchema } from "../domain/orders/client-start";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { OrderResponseState, ProjectRelationRow, ProjectTaskFact } from "../domain/orders/projections";
 import type { CreateOrderInput, UpdateOrderInput } from "../domain/orders/schema";
-import type { ReportExceptionInput } from "../domain/reporting/order-completion";
+import type { ReportCompletionScope, ReportExceptionInput } from "../domain/reporting/order-completion";
 import type { OrderRow } from "../lib/supabase/database-rows";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { ListOrdersFilter, UserMutationClient } from "./types";
@@ -209,6 +209,18 @@ export class OrderRepository {
     return unwrapOne(await this.client.rpc("app_assign_order", {
       p_order_id: id,
       p_assigned_to_profile_id: profileId ?? undefined,
+    }), "Order") as OrderRow;
+  }
+
+  async setReportingMonth(id: string, input: ReportCompletionScope): Promise<OrderRow> {
+    return unwrapOne(await this.client.rpc("app_set_order_reporting_month", {
+      p_order_id: id, p_service_id: input.serviceId, p_reporting_period_month: input.reportingPeriodMonth,
+    }), "Order") as OrderRow;
+  }
+
+  async completeForReportingMonth(id: string, input: ReportCompletionScope): Promise<OrderRow> {
+    return unwrapOne(await this.client.rpc("app_complete_order_for_reporting_month", {
+      p_order_id: id, p_service_id: input.serviceId, p_reporting_period_month: input.reportingPeriodMonth,
     }), "Order") as OrderRow;
   }
 

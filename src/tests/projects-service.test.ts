@@ -22,6 +22,7 @@ async function verifiedActor() {
 
 function relationRow(id: string, overrides: Partial<ProjectRelationRow> = {}): ProjectRelationRow {
   return {
+    reporting_period_month: null,
     id,
     order_number: 42,
     company_id: companyId,

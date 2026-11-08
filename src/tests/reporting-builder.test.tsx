@@ -1036,6 +1036,20 @@ describe("starting a report", () => {
     })));
   });
 
+  it("creates a November draft from completion prefill even when opened in December", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-12-15T12:00:00Z"));
+    try {
+      render(<NewReportForm clients={clients} prefill={{ companyId: clients[0]!.id, serviceId: reportingServiceIds.gmbManagement, reportingPeriodMonth: "2026-11-01" }} initialChoices={[{
+        serviceId: reportingServiceIds.gmbManagement, serviceName: "GMB/GBP Management", subscriptionId: null, subscriptionStatus: null,
+      }]} />);
+      expect(screen.getByText("November 2026")).toBeInTheDocument();
+      expect(createServiceReportDraftAction).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: "Start guided report" }));
+      await vi.waitFor(() => expect(createServiceReportDraftAction).toHaveBeenCalledWith(expect.objectContaining({ reportingPeriodMonth: "2026-11-01" })));
+    } finally { vi.useRealTimers(); }
+  });
+
   it("starts with one focused client decision", () => {
     render(<NewReportForm clients={clients} />);
     expect(screen.getByRole("heading", { name: "Choose the client" })).toBeInTheDocument();

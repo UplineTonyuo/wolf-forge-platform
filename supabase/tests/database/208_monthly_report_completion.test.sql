@@ -19,12 +19,13 @@ insert into public.companies(id,name) values
  ('d0208000-0000-4000-8000-000000000002','Another Reporting QA client'),
  ('d0208000-0000-4000-8000-000000000003','No owned Services');
 insert into public.services(id,name) values('d1208000-0000-4000-8000-000000000001','GMB named ordinary Service');
-insert into public.orders(id,company_id,service_id,title,status,started_at,assigned_to_profile_id)
+insert into public.orders(id,company_id,service_id,title,status,started_at,reporting_period_month,assigned_to_profile_id)
 select ('d3208000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,
  case when n=4 then 'd0208000-0000-4000-8000-000000000002'::uuid else 'd0208000-0000-4000-8000-000000000001'::uuid end,
  case when n=3 then 'd1208000-0000-4000-8000-000000000001'::uuid
    when n=5 then '5f000000-0000-4000-8000-000000000546'::uuid else '5f000000-0000-4000-8000-000000000318'::uuid end,
  'Report gate order '||n,'working',case when n=6 then '2026-11-01T00:00:00+08'::timestamptz else '2026-10-01T00:00:00+08'::timestamptz end,
+ case when n=6 then '2026-11-01'::date else '2026-10-01'::date end,
  '20000000-0000-4000-8000-000000002083'
 from generate_series(1,6) n;
 insert into public.orders(company_id,service_id,title,status,archived_at) values
@@ -107,9 +108,9 @@ select ok((select reason='Client waived this month' and actor_profile_id='200000
 
 -- Raw/multirow writes must fail even when bypassing the presentation and RPC.
 select pg_temp.act(1);
-select throws_ok($$update public.orders set started_at='2026-11-01T00:00:00+08' where id='d3208000-0000-4000-8000-000000000002'$$,'WF431',null,'an exception does not unlock a later month on the same order');
-insert into public.orders(id,company_id,service_id,title,status,started_at)
-values('d3208000-0000-4000-8000-000000000008','d0208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000318','Another October order','working','2026-10-01T00:00:00+08');
+select throws_ok($$update public.orders set reporting_period_month='2026-11-01' where id='d3208000-0000-4000-8000-000000000002'$$,'WF431',null,'an exception does not unlock a later work month on the same order');
+insert into public.orders(id,company_id,service_id,title,status,started_at,reporting_period_month)
+values('d3208000-0000-4000-8000-000000000008','d0208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000318','Another October order','working','2026-10-01T00:00:00+08','2026-10-01');
 select throws_ok($$update public.orders set status='complete',completed_at=now() where id='d3208000-0000-4000-8000-000000000008'$$,'WF431',null,'an exception does not unlock another order in the same month');
 select throws_ok($$update public.orders set status='complete',completed_at=now() where id='d3208000-0000-4000-8000-000000000006'$$,'WF431',null,'exception does not unlock a future month/order via direct update');
 select throws_ok($$update public.orders set status='complete',completed_at=now() where id in ('d3208000-0000-4000-8000-000000000005','d3208000-0000-4000-8000-000000000006')$$,'WF431',null,'multirow completion cannot bypass the gate');
@@ -128,8 +129,8 @@ select is((select reason from private.order_report_exceptions where order_id='d3
 -- Completed paid purchases remain owned even without a subscription. Create
 -- the completion through the real gate, then add isolated billing provenance.
 select pg_temp.act(1);
-insert into public.orders(id,company_id,service_id,title,status,started_at)
-values('d3208000-0000-4000-8000-000000000007','d0208000-0000-4000-8000-000000000003','5f000000-0000-4000-8000-000000000318','Historical paid GMB order','working','2026-10-01T00:00:00+08');
+insert into public.orders(id,company_id,service_id,title,status,started_at,reporting_period_month)
+values('d3208000-0000-4000-8000-000000000007','d0208000-0000-4000-8000-000000000003','5f000000-0000-4000-8000-000000000318','Historical paid GMB order','working','2026-10-01T00:00:00+08','2026-10-01');
 insert into public.client_reports(company_id,service_id,report_lane,package_label,title,sent_by_profile_id,status,sent_at,reporting_period_month)
 values('d0208000-0000-4000-8000-000000000003','5f000000-0000-4000-8000-000000000318','gmb_management','QA','Historical paid report','20000000-0000-4000-8000-000000002081','sent',now(),'2026-10-01');
 select public.app_change_order_status('d3208000-0000-4000-8000-000000000007','complete');
@@ -142,8 +143,8 @@ values('d6208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000
 select pg_temp.act(1);
 select is((select count(*) from public.app_list_reporting_service_options('d0208000-0000-4000-8000-000000000003',array['5f000000-0000-4000-8000-000000000318'::uuid]) where subscription_id is null),1::bigint,'completed paid purchase owns the Service without any subscription');
 
-insert into public.orders(id,company_id,service_id,title,status,started_at)
-select ('d3208000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'d0208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000318','September exception '||n,'working','2026-09-01T00:00:00+08'::timestamptz
+insert into public.orders(id,company_id,service_id,title,status,started_at,reporting_period_month)
+select ('d3208000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'d0208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000318','September exception '||n,'working','2026-09-01T00:00:00+08'::timestamptz,'2026-09-01'::date
 from generate_series(9,10) n;
 select is((select status from public.app_complete_order_without_report('d3208000-0000-4000-8000-000000000009','5f000000-0000-4000-8000-000000000318','2026-09-01','Owner waiver')),'complete','Owner may record an exact-scoped exception');
 select pg_temp.act(5);

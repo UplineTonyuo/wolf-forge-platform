@@ -4,6 +4,7 @@ import { runProjectBatch } from "../domain/orders/bulk";
 import { reportingServiceIds } from "../domain/reporting/service-profiles";
 import { changeOrderStatusSchema } from "../domain/orders/schema";
 import { OrderRepository } from "../repositories/order-repository";
+import { orderReportRequirementSchema, reportSetupScopeSchema } from "../domain/reporting/order-completion";
 import type { UserMutationClient } from "../repositories/types";
 
 const scope = {
@@ -16,6 +17,20 @@ const scope = {
 };
 
 describe("monthly report completion boundary", () => {
+  it("accepts an unset work month in a requirement, but never in builder prefill", () => {
+    expect(orderReportRequirementSchema.safeParse({ ...scope, reportingPeriodMonth: null }).success).toBe(true);
+    expect(reportSetupScopeSchema.safeParse({ ...scope, reportingPeriodMonth: null }).success).toBe(false);
+  });
+
+  it("records and completes only the explicitly selected November scope", async () => {
+    const rpc = vi.fn(async () => ({ data: { id: scope.orderId, status: "working" }, error: null }));
+    const repository = new OrderRepository({ rpc } as unknown as UserMutationClient);
+    const period = { serviceId: scope.serviceId, reportingPeriodMonth: "2026-11-01" };
+    await repository.setReportingMonth(scope.orderId, period);
+    await repository.completeForReportingMonth(scope.orderId, period);
+    expect(rpc).toHaveBeenNthCalledWith(1, "app_set_order_reporting_month", { p_order_id: scope.orderId, p_service_id: scope.serviceId, p_reporting_period_month: "2026-11-01" });
+    expect(rpc).toHaveBeenNthCalledWith(2, "app_complete_order_for_reporting_month", { p_order_id: scope.orderId, p_service_id: scope.serviceId, p_reporting_period_month: "2026-11-01" });
+  });
   it("preserves the authoritative scope in each failed bulk outcome", async () => {
     const error = mapDatabaseError({ code: "WF431", details: JSON.stringify(scope) });
     const result = await runProjectBatch([scope.orderId], () => "GMB order", async () => { throw error; }, "Rejected");

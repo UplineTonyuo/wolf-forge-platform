@@ -12,7 +12,7 @@ import {
 } from "../../domain/orders/bulk";
 import { orderPriorities, orderStatuses, type OrderStatus } from "../../domain/orders/schema";
 import { uuidSchema } from "../../domain/shared";
-import { reportExceptionSchema, type ReportExceptionInput } from "../../domain/reporting/order-completion";
+import { reportCompletionScopeSchema, reportExceptionSchema, type ReportCompletionScope, type ReportExceptionInput } from "../../domain/reporting/order-completion";
 import { PermissionDeniedError, ValidationError, toClientSafeError } from "../../lib/errors/application-error";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
@@ -274,6 +274,17 @@ export async function changeProjectStatusAction(
   status: string,
 ): Promise<ProjectBulkResult> {
   return bulkChangeProjectStatusAction([orderId], status);
+}
+
+export async function completeProjectForReportingMonthAction(orderId: string, input: ReportCompletionScope): Promise<ProjectBulkResult> {
+  const parsed = reportCompletionScopeSchema.safeParse(input);
+  if (!parsed.success) return failedProjectBatch([orderId], "Choose the month this work covers.");
+  const context = await getInternalContext();
+  return runProjectAction([orderId], context.user.projects.edit, "That reporting month or completion was rejected.", async (id) => {
+    // Keep the explicit choice if the report is missing; completion rechecks its exact scope.
+    await context.services.orders.setReportingMonth(id, parsed.data, context.actor);
+    return context.services.orders.completeForReportingMonth(id, parsed.data, context.actor);
+  });
 }
 
 export async function completeProjectWithoutReportAction(orderId: string, input: ReportExceptionInput): Promise<ProjectBulkResult> {
