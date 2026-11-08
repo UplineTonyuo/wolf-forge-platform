@@ -90,6 +90,7 @@ export class OrderService {
     const orderId = parseInput(uuidSchema, id);
     const requested = parseInput(changeOrderStatusSchema, input);
     requireVerifiedActor(actor);
+    if (requested.reportException) return this.dependencies.repository.completeWithoutReport(orderId, requested.reportException);
     return this.dependencies.repository.changeStatus(orderId, requested.status);
   }
 

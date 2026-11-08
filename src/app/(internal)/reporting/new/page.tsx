@@ -5,6 +5,8 @@ import { DataError } from "../../../../components/ui/list-states";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
+import { listReportServiceChoicesAction } from "../../../actions/reporting";
+import { reportSetupScopeSchema } from "../../../../domain/reporting/order-completion";
 
 export const metadata: Metadata = { title: "New report" };
 
@@ -19,7 +21,7 @@ export const metadata: Metadata = { title: "New report" };
  * account without reports.send should be told at the door rather than after
  * filling in a whole report.
  */
-export default async function NewReportPage() {
+export default async function NewReportPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { user, services } = await getInternalContext();
 
   let clients: { id: string; name: string }[] = [];
@@ -38,13 +40,23 @@ export default async function NewReportPage() {
 
   if (denied || !user.reporting.send) redirect("/reporting");
 
+  const query = await searchParams;
+  const hasPrefill = query.companyId !== undefined || query.serviceId !== undefined || query.reportingPeriodMonth !== undefined;
+  const scope = hasPrefill ? reportSetupScopeSchema.safeParse(query) : null;
+  const prefill = scope?.success ? scope.data : undefined;
+  const options = prefill ? await listReportServiceChoicesAction({ companyId: prefill.companyId }) : null;
+  if (hasPrefill && (!prefill || !clients.some((client) => client.id === prefill.companyId)
+    || !options?.ok || !options.choices.some((choice) => choice.serviceId === prefill.serviceId))) {
+    loadError = "This client, Service or reporting month is unavailable. Return to Reporting and choose an eligible Service.";
+  }
+
   return (
     <PageFrame
       title="New report"
       description="Choose the client, then the Service. The recurring report opens as a guided saved draft."
       narrow
     >
-      {loadError ? <DataError message={loadError} /> : <NewReportForm clients={clients} />}
+      {loadError ? <DataError message={loadError} /> : <NewReportForm clients={clients} prefill={prefill} initialChoices={options?.ok ? options.choices : []} />}
     </PageFrame>
   );
 }

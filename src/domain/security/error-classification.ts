@@ -56,6 +56,7 @@ export function classifyApplicationErrorCode(code: ApplicationErrorCode): Failur
     case "NOT_FOUND":
     case "CONFLICT":
     case "SLOW_MODE_ACTIVE":
+    case "REPORT_REQUIRED":
       return "expected";
     case "PERMISSION_DENIED":
     case "RATE_LIMITED":

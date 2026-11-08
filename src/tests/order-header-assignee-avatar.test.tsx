@@ -7,11 +7,12 @@ import { OrderHeaderControls } from "../components/projects/order-header-control
 
 const refresh = vi.fn();
 const assignProjectAction = vi.fn();
+const changeProjectStatusAction = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 vi.mock("../app/actions/orders", () => ({
   assignProjectAction: (...args: unknown[]) => assignProjectAction(...args),
-  changeProjectStatusAction: vi.fn(),
+  changeProjectStatusAction: (...args: unknown[]) => changeProjectStatusAction(...args),
   archiveProjectAction: vi.fn(),
 }));
 
@@ -23,6 +24,7 @@ const people = [
   { id: qaId, name: "QA Local", avatarUrl: null },
 ];
 const capabilities = { create: true, edit: true, assign: true, archive: true };
+const completionRequirement = { orderId, companyId: "30000000-0000-4000-8000-000000000001", serviceId: "5f000000-0000-4000-8000-000000000318", serviceName: "GMB/GBP Management", reportingPeriodMonth: "2026-10-01", canRecordException: true };
 
 function renderControls(assigneeId: string | null) {
   return render(
@@ -39,6 +41,7 @@ function renderControls(assigneeId: string | null) {
 beforeEach(() => {
   refresh.mockReset();
   assignProjectAction.mockReset();
+  changeProjectStatusAction.mockReset();
   assignProjectAction.mockResolvedValue({ succeeded: [orderId], failed: [] });
 });
 afterEach(cleanup);
@@ -73,5 +76,29 @@ describe("Order header assignee avatars", () => {
 
     await waitFor(() => expect(assignProjectAction).toHaveBeenCalledExactlyOnceWith(orderId, qaId));
     expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it("opens the report gate from the header status control", async () => {
+    changeProjectStatusAction.mockResolvedValue({ attempted: 1, succeeded: [], failed: [{ id: orderId, label: "GMB order", completionRequirement }] });
+    renderControls(null);
+    fireEvent.click(screen.getByRole("button", { name: /^Status:/u }));
+    fireEvent.click(screen.getByRole("option", { name: "Complete" }));
+    expect(await screen.findByRole("dialog", { name: "Monthly report required" })).toHaveTextContent("October 2026");
+    expect(changeProjectStatusAction).toHaveBeenCalledWith(orderId, "complete");
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("opens the same gate from detail Actions and returns focus to its launcher", async () => {
+    changeProjectStatusAction.mockResolvedValue({ attempted: 1, succeeded: [], failed: [{ id: orderId, label: "GMB order", completionRequirement }] });
+    renderControls(null);
+    const launcher = screen.getByRole("button", { name: "Open project actions" });
+    fireEvent.click(launcher);
+    fireEvent.click(await screen.findByRole("button", { name: /^Change status/u }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Complete/u }));
+    await screen.findByRole("dialog", { name: "Monthly report required" });
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Monthly report required", hidden: true })).not.toBeInTheDocument());
+    expect(launcher).toHaveFocus();
+    expect(refresh).not.toHaveBeenCalled();
   });
 });

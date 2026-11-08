@@ -1,10 +1,12 @@
 import { z } from "zod";
-import { ValidationError, toClientSafeError } from "../../lib/errors/application-error";
+import { OrderReportRequiredError, ValidationError, toClientSafeError } from "../../lib/errors/application-error";
+import type { OrderReportRequirement } from "../reporting/order-completion";
 
 export type ProjectOutcome = {
   id: string;
   label: string;
   error?: string;
+  completionRequirement?: OrderReportRequirement;
 };
 
 /**
@@ -80,7 +82,9 @@ export async function runProjectBatch(
       await operation(orderId);
       result.succeeded.push({ id: orderId, label });
     } catch (error) {
-      result.failed.push({ id: orderId, label, error: describeProjectError(error, validationMessage) });
+      result.failed.push({ id: orderId, label, error: describeProjectError(error, validationMessage),
+        ...(error instanceof OrderReportRequiredError ? { completionRequirement: error.completionRequirement } : {}),
+      });
     }
   }
 

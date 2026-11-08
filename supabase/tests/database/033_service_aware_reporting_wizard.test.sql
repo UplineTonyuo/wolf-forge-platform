@@ -170,8 +170,8 @@ select is(
      array['5f000000-0000-4000-8000-000000000318'::uuid]
    )
    where subscription_id is null),
-  1::bigint,
-  'standalone GMB Management remains available as an explicit catalogue fallback'
+  0::bigint,
+  'unowned standalone GMB Management is absent without a catalogue fallback'
 );
 
 select is(
@@ -456,18 +456,17 @@ select is(
      null
    )),
   0::bigint,
-  'subscription completion does not leak into the explicit fallback scope'
+  'subscription completion does not leak into the order-only scope'
 );
 
-select is(
-  (select count(*)
-   from public.app_list_reported_one_time_deliverables(
+select throws_ok(
+  $$select * from public.app_list_reported_one_time_deliverables(
      'a2000000-0000-0000-0000-000000000001',
      '5f000000-0000-4000-8000-000000000124',
      null
-   )),
-  0::bigint,
-  'one-time state is isolated by Service identity'
+   )$$,
+  '42501', null,
+  'one-time state for an unowned Service is denied'
 );
 
 set local "request.jwt.claim.sub" = 'a1000000-0000-0000-0000-000000000002';

@@ -4845,6 +4845,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      app_complete_order_without_report: {
+        Args: { p_order_id: string; p_service_id: string; p_reporting_period_month: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
       app_change_order_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: {

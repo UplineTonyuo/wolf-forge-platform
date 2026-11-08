@@ -50,6 +50,8 @@ import type {
 } from "./projects-workspace";
 
 import styles from "./project-detail-actions.module.css";
+import { OrderCompletionGate } from "./order-completion-gate";
+import type { ProjectOutcome } from "../../domain/orders/bulk";
 
 
 type LauncherView =
@@ -113,6 +115,8 @@ export function ProjectDetailActions({
   capabilities: ProjectCapabilities;
 }) {
   const router = useRouter();
+  const [completionFailures, setCompletionFailures] = useState<ProjectOutcome[]>([]);
+  const launcherRef = useRef<HTMLButtonElement>(null);
   const push = useRouteTransitionPush();
 
   const [
@@ -330,6 +334,7 @@ export function ProjectDetailActions({
     nextStatus: OrderStatus,
   ) {
     if (busy) return;
+    setCompletionFailures([]);
 
     setBusy(true);
     setError(null);
@@ -345,6 +350,12 @@ export function ProjectDetailActions({
         result.succeeded.length ===
         0
       ) {
+        if (result.failed.some((entry) => entry.completionRequirement)) {
+          setCompletionFailures(result.failed);
+          setMounted(false);
+          setClosing(false);
+          setView("menu");
+        }
         setError(
           describeFailure(result),
         );
@@ -1099,6 +1110,7 @@ export function ProjectDetailActions({
           styles.launcher
         }
         aria-label="Open project actions"
+        ref={launcherRef}
         aria-haspopup="menu"
         aria-expanded={
           mounted &&
@@ -1122,6 +1134,7 @@ export function ProjectDetailActions({
       </button>
 
       {overlay}
+      {completionFailures.length > 0 ? <OrderCompletionGate failures={completionFailures} onDismiss={() => launcherRef.current?.focus()} onCompleted={() => { setError(null); setCompletionFailures([]); router.refresh(); }} /> : null}
     </div>
   );
 }

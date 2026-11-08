@@ -378,6 +378,21 @@ describe("Projects action controls", () => {
     expect(screen.getByText("0 selected")).toBeTruthy();
   });
 
+  it("opens the same report gate for a blocked bulk completion", async () => {
+    const row = rows[0]!;
+    bulkChangeProjectStatusAction.mockResolvedValue({ attempted: 3, succeeded: [], failed: [{
+      id: row.id, label: "GMB order", error: "A published report is required.",
+      completionRequirement: { orderId: row.id, companyId: "30000000-0000-4000-8000-000000000001", serviceId: "5f000000-0000-4000-8000-000000000318", serviceName: "GMB/GBP Management", reportingPeriodMonth: "2026-10-01", canRecordException: true },
+    }] });
+    renderWorkspace();
+    fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
+    requestBulkAction("status");
+    fireEvent.change(screen.getByLabelText(/New status/u), { target: { value: "complete" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect((await screen.findByRole("dialog", { name: "Monthly report required" })).textContent).toContain("October 2026");
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
   it("reports a partial bulk failure honestly and keeps the failed rows selected", async () => {
     bulkArchiveProjectsAction.mockResolvedValue({
       attempted: 3,

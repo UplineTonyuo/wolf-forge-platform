@@ -63,11 +63,11 @@ insert into public.client_reports (id, tenant_id, company_id, service_id, report
   package_label, title, sent_by_profile_id, status, sent_at, reporting_period_month)
 values
   ('59b10000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001',
-   '30000000-0000-0000-0000-000000000981', '59b00000-0000-0000-0000-000000000001', 'seo_package',
+   '30000000-0000-0000-0000-000000000981', null, 'seo_package',
    'WF package', 'WF secret draft', '20000000-0000-0000-0000-000000000981', 'draft', null,
    (date_trunc('month', now() at time zone 'Asia/Manila') - interval '1 month')::date),
   ('59b10000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-0000000009b1',
-   '30000000-0000-0000-0000-000000000982', '59b00000-0000-0000-0000-000000000002', 'seo_package',
+   '30000000-0000-0000-0000-000000000982', null, 'seo_package',
    'B package', 'B secret draft', '20000000-0000-0000-0000-000000000982', 'draft', null,
    (date_trunc('month', now() at time zone 'Asia/Manila') - interval '1 month')::date);
 
@@ -211,8 +211,8 @@ select throws_ok($$select public.app_create_report_draft(gen_random_uuid(),
 select is(
   (select array_agg(service_id::text) from public.app_list_reporting_service_options('30000000-0000-0000-0000-000000000981',
     array['59b00000-0000-0000-0000-000000000001'::uuid, '59b00000-0000-0000-0000-000000000002'::uuid])),
-  array['59b00000-0000-0000-0000-000000000001'],
-  'A -> A: reporting Service options for a WF Client never include a Tenant B Service id'
+  null::text[],
+  'unsupported or unowned Services never appear, including another Tenant''s Service'
 );
 
 -- -----------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import {
 } from "../../domain/orders/bulk";
 import { orderPriorities, orderStatuses, type OrderStatus } from "../../domain/orders/schema";
 import { uuidSchema } from "../../domain/shared";
+import { reportExceptionSchema, type ReportExceptionInput } from "../../domain/reporting/order-completion";
 import { PermissionDeniedError, ValidationError, toClientSafeError } from "../../lib/errors/application-error";
 import { getInternalContext } from "../../lib/supabase/next-server";
 
@@ -273,6 +274,15 @@ export async function changeProjectStatusAction(
   status: string,
 ): Promise<ProjectBulkResult> {
   return bulkChangeProjectStatusAction([orderId], status);
+}
+
+export async function completeProjectWithoutReportAction(orderId: string, input: ReportExceptionInput): Promise<ProjectBulkResult> {
+  const parsed = reportExceptionSchema.safeParse(input);
+  if (!parsed.success) return failedProjectBatch([orderId], "Enter a reason between 1 and 1,000 characters and a valid report scope.");
+  const context = await getInternalContext();
+  return runProjectAction([orderId], context.user.projects.edit, "That completion exception was rejected.", (id) =>
+    context.services.orders.changeStatus(id, { status: "complete", reportException: parsed.data }, context.actor),
+  );
 }
 
 export async function assignProjectAction(

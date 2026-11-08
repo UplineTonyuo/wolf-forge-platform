@@ -1,5 +1,6 @@
 export type ApplicationErrorCode =
   | "VALIDATION_ERROR"
+  | "REPORT_REQUIRED"
   | "NOT_FOUND"
   | "PERMISSION_DENIED"
   | "CONFLICT"
@@ -44,6 +45,12 @@ export class ValidationError extends ApplicationError {
   constructor(message: string, cause?: unknown) {
     super("VALIDATION_ERROR", message, { cause });
     this.name = "ValidationError";
+  }
+}
+
+export class OrderReportRequiredError extends ApplicationError {
+  constructor(readonly completionRequirement: import("../../domain/reporting/order-completion").OrderReportRequirement, cause?: unknown) {
+    super("REPORT_REQUIRED", "A published report is required for this Service and reporting month.", { cause });
   }
 }
 

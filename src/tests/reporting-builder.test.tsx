@@ -1023,6 +1023,19 @@ describe("starting a report", () => {
     { id: "3f2504e0-4f89-41d3-9a0c-0305e82c3303", name: "Southgate Legal" },
   ];
 
+  it("prefills client, owned Service and reporting month without completing an order", async () => {
+    render(<NewReportForm clients={clients} prefill={{ companyId: clients[0]!.id, serviceId: reportingServiceIds.gmbManagement, reportingPeriodMonth: "2026-10-01" }} initialChoices={[{
+      serviceId: reportingServiceIds.gmbManagement, serviceName: "GMB/GBP Management", subscriptionId: null, subscriptionStatus: null,
+    }]} />);
+    expect(screen.getByRole("heading", { name: "Choose the Service" })).toBeInTheDocument();
+    expect(screen.getByText("October 2026")).toBeInTheDocument();
+    expect(createServiceReportDraftAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Start guided report" }));
+    await vi.waitFor(() => expect(createServiceReportDraftAction).toHaveBeenCalledWith(expect.objectContaining({
+      companyId: clients[0]!.id, serviceId: reportingServiceIds.gmbManagement, reportingPeriodMonth: "2026-10-01",
+    })));
+  });
+
   it("starts with one focused client decision", () => {
     render(<NewReportForm clients={clients} />);
     expect(screen.getByRole("heading", { name: "Choose the client" })).toBeInTheDocument();
@@ -1076,7 +1089,7 @@ describe("starting a report", () => {
     }));
   });
 
-  it("labels the safe catalogue fallback without fabricating ownership", async () => {
+  it("offers an owned order Service without requiring a subscription", async () => {
     listReportServiceChoicesAction.mockResolvedValueOnce({
       ok: true,
       fallback: true,
@@ -1095,10 +1108,9 @@ describe("starting a report", () => {
     fireEvent.click(await screen.findByRole("option", { name: "Southgate Legal" }));
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByText(/does not create or imply a client subscription/u))
-      .toBeInTheDocument();
-    const fallbackChoice = screen.getByRole("button", { name: /GMB\/GBP Management/u });
-    expect(fallbackChoice).toHaveTextContent("no subscription attached");
+    const fallbackChoice = await screen.findByRole("button", { name: /GMB\/GBP Management/u });
+    expect(fallbackChoice).toHaveTextContent("Purchased or in-progress order");
+    expect(screen.queryByText(/catalogue|fallback/iu)).not.toBeInTheDocument();
 
     fireEvent.click(fallbackChoice);
     fireEvent.click(screen.getByRole("button", { name: "Start guided report" }));
@@ -1107,6 +1119,16 @@ describe("starting a report", () => {
       serviceId: reportingServiceIds.gmbManagement,
       subscriptionId: null,
     }));
+  });
+
+  it("explains when the client has no owned supported Services", async () => {
+    listReportServiceChoicesAction.mockResolvedValueOnce({ ok: true, fallback: false, choices: [] });
+    render(<NewReportForm clients={clients} />);
+    fireEvent.focus(screen.getByRole("combobox", { name: "Client" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Northgate Dental" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(await screen.findByText(/No purchased or in-progress Reporting Services/iu)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start guided report" })).toBeDisabled();
   });
 
   it("creates a guided draft from the selected stable Service identity", async () => {
