@@ -8,6 +8,14 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      monthly_report_acceptance:
+        description: Run only the isolated monthly-report acceptance job
+        type: boolean
+        default: false
+      expected_sha:
+        description: Exact reviewed commit SHA required by monthly-report acceptance
+        type: string
+        default: ""
       database_only:
         description: Recheck SQL and secrets after a test-only database correction
         type: boolean
@@ -28,12 +36,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: security-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ inputs.monthly_report_acceptance && 'monthly-report-acceptance' || format('security-{0}', github.ref) }}
+  cancel-in-progress: ${{ !inputs.monthly_report_acceptance }}
 
 jobs:
   typecheck:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only && !inputs.monthly_report_acceptance) }}
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -49,7 +57,7 @@ jobs:
       - run: npx next typegen && npm run typecheck
 
   lint:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only && !inputs.monthly_report_acceptance) }}
     name: static lint boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -63,7 +71,7 @@ jobs:
       - run: npm run lint
 
   build:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.monthly_report_acceptance) }}
     name: compiled app and PDF font trace
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -97,7 +105,7 @@ jobs:
         run: npx supabase stop --no-backup
 
   tests:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only && !inputs.monthly_report_acceptance) }}
     name: JavaScript and TypeScript tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -114,7 +122,7 @@ jobs:
         run: npm test
 
   database:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.call_acceptance_only }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.call_acceptance_only && !inputs.monthly_report_acceptance) }}
     name: local Supabase pgTAP and RLS tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -149,7 +157,7 @@ jobs:
         run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only && !inputs.monthly_report_acceptance) }}
     name: production dependency vulnerabilities
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -164,6 +172,7 @@ jobs:
         run: npm run audit:deps
 
   secrets:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.monthly_report_acceptance }}
     name: repository and history secret scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -200,3 +209,120 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: tracked-file secret scanner (redacted by construction)
         run: npm run security:secrets
+
+  monthly_report_acceptance:
+    name: isolated monthly-report database, build and authenticated browser acceptance
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.monthly_report_acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      NODE_OPTIONS: --max-old-space-size=3072
+      NEXT_TELEMETRY_DISABLED: "1"
+      SENTRY_URL: http://127.0.0.1:1
+      SENTRY_DISABLE_UPDATE_CHECK: "true"
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      DATABASE_ONLY: ${{ inputs.database_only }}
+      CALL_ACCEPTANCE: ${{ inputs.call_acceptance }}
+      CALL_ACCEPTANCE_ONLY: ${{ inputs.call_acceptance_only }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: verify exact source, branch and isolated dispatch mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "UplineTonyuo/wolf-forge-platform"
+          test "$GITHUB_REF_NAME" = "codex/woad-monthly-report-gate-20261108"
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$GITHUB_RUN_ATTEMPT" = "1"
+          test "$DATABASE_ONLY" = "false"
+          test "$CALL_ACCEPTANCE" = "false"
+          test "$CALL_ACCEPTANCE_ONLY" = "false"
+          git merge-base --is-ancestor ce54eeebfeea4f594b11ee2a5e1a61174b86a032 HEAD
+          git diff --exit-code ce54eeebfeea4f594b11ee2a5e1a61174b86a032 HEAD -- src supabase package.json package-lock.json next.config.ts
+          test -z "${SUPABASE_ACCESS_TOKEN:-}"
+          test -z "${DATABASE_URL:-}"
+          test -z "${SUPABASE_URL:-}"
+          test -z "${SUPABASE_SECRET_KEY:-}"
+          test -z "${VERCEL_TOKEN:-}"
+          test -z "${LOCAL_UI_QA_BYPASS:-}"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: install committed dependencies without lifecycle scripts
+        timeout-minutes: 8
+        run: npm ci --ignore-scripts
+      - name: verify acceptance harness boundaries and tracked secrets
+        run: |
+          node --test scripts/qa/monthly-report-acceptance.test.mjs
+          npm run security:secrets
+      # Build before starting Docker services to preserve the 5.5-GiB RAM guard.
+      - name: build the actual production app under the existing RAM guard
+        id: build
+        timeout-minutes: 25
+        shell: bash
+        env:
+          SUPABASE_URL: http://127.0.0.1:1
+          SUPABASE_PUBLISHABLE_KEY: build-only-nonsecret-placeholder
+        run: |
+          set -euo pipefail
+          free_kib=$(awk '$1=="MemAvailable:" {print $2; found=1} END {if(!found) exit 1}' /proc/meminfo)
+          test "$free_kib" -ge 5767168
+          npm run build
+          node scripts/qa/assert-pdf-font-trace.mjs
+      - name: create and verify this runner's disposable baseline; apply only the two candidate migrations
+        id: bootstrap
+        timeout-minutes: 10
+        run: node scripts/qa/monthly-report-acceptance.mjs bootstrap
+      - name: focused then complete database acceptance and advisors
+        id: database
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/supabase test db --local \
+            supabase/tests/database/033_service_aware_reporting_wizard.test.sql \
+            supabase/tests/database/098_tenant_report_authorization.test.sql \
+            supabase/tests/database/208_monthly_report_completion.test.sql \
+            supabase/tests/database/209_explicit_order_reporting_month.test.sql
+          npm run test:db
+          npm run lint:db
+          ./node_modules/.bin/supabase db advisors --local --type all --level info --fail-on error
+      - name: separate-session monthly-report races and persisted-state assertions
+        id: races
+        timeout-minutes: 8
+        run: node scripts/qa/monthly-report-concurrency.mjs
+      - name: install the committed Playwright browser on this runner only
+        timeout-minutes: 5
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: actual compiled app, real synthetic Auth, actions, database and client portal
+        id: browser
+        timeout-minutes: 15
+        run: node scripts/qa/monthly-report-acceptance.mjs browser
+      - name: validate sanitized evidence and its 20-MiB limit
+        id: evidence
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          BOOTSTRAP_OUTCOME: ${{ steps.bootstrap.outcome }}
+          DATABASE_OUTCOME: ${{ steps.database.outcome }}
+          RACES_OUTCOME: ${{ steps.races.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser.outcome }}
+        run: node scripts/qa/monthly-report-acceptance.mjs evidence
+      - name: upload only sanitized synthetic evidence for one day
+        if: ${{ always() && steps.evidence.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: monthly-report-acceptance-${{ github.run_id }}-${{ github.sha }}
+          path: artifacts/monthly-report-sanitized/
+          if-no-files-found: ignore
+          retention-days: 1
+      - name: stop only this run's owned app and disposable backend
+        if: always()
+        timeout-minutes: 3
+        run: node scripts/qa/monthly-report-acceptance.mjs cleanup

@@ -2,7 +2,7 @@
 
 Branch: `codex/woad-monthly-report-gate-20261108`. Original baseline: `0b8cba2ce3350e3d611bf3a56da4ea086e71d199`; explicit-work-month correction starts from `bbd26e5`.
 
-This is a local implementation. No push, deployment, hosted migration, Docker startup or real account/customer change occurred. Both migrations are **unapplied**, in this order:
+This candidate is not deployed. No hosted migration, local Docker startup or real account/customer change occurred. The reviewed CI harness may be pushed only to this task branch, whose Vercel deployment is explicitly disabled. Both migrations remain **unapplied**, in this order:
 
 `supabase/migrations/20261108080017_monthly_report_completion_gate.sql`
 
@@ -20,7 +20,43 @@ This is a local implementation. No push, deployment, hosted migration, Docker st
 
 ## Verification
 
-### Validation continuation — 2026-11-09, local checks blocked; isolated CI proposed
+### Approved CI harness implementation — 2026-11-09, runtime blocked before dispatch
+
+Owner approved the concrete isolated plan, including a genuine late-period browser case using actual dates, a branch-only push and exactly one conditional validation attempt. Budget remains one standard `ubuntu-24.04` job capped at 60 minutes plus 5 minutes cancellation reserve, maximum 65 runner-minutes. No automatic retries, PR, paid usage, deployment, production migration or vault write.
+
+Starting ownership/branch/clean HEAD `b277e8894dc432413ebe716c4223ded1db3abf19` were verified in the original owning session. Application source, dependencies, Next configuration and SQL are unchanged from `ce54eeebfeea4f594b11ee2a5e1a61174b86a032`. Active changes are `.github/workflows/security.yml`, the exact branch exclusion in `vercel.json`, four `scripts/qa/monthly-report-*.mjs` harness/test files and this handoff/plan. The earlier documentary patch is historical proposal evidence; the active workflow is authoritative now.
+
+Harness behavior reviewed locally:
+
+- Manual exact-branch/SHA/first-attempt guard; seven ordinary security jobs excluded only for this dispatch mode. Build runs first under the unchanged 5.5-GiB RAM guard, before Supabase or Chromium. No app auth bypass, mocked RPC, send-window permission grant, clock change or deployment step.
+- Fresh per-run project `monthly-${GITHUB_RUN_ID}-1`, loopback-only API/database, exact container ID/label/volume/config and empty synthetic-only baseline. Temporarily holds the two hashed candidate migrations, starts the prior baseline, checks every migration-ledger source fingerprint, then restores/applies the two candidate files in order. All existing database commands explicitly use `--local`.
+- Focused SQL033/098/208/209, full `npm run test:db`, `npm run lint:db`, local advisors, then physically separate psql session races with observed lock waits and persisted status/month/evidence/audit assertions.
+- Actual production Next server behind owned loopback HTTPS, genuine synthetic password Auth for Owner/Admin/Manager/Client/Staff and unrelated Client, real server actions/RPC/database/client portal. Browser dates are actual wall-clock dates; prior-year November work begins in October. Literal December examples remain SQL fixtures and are never labeled observed December browser evidence. Existing bulk event seam triggers the real bulk action; no launcher is added.
+- Seven responsive widths, keyboard/focus, error/retry, exact scoped exceptions, revoked access and protected task/historical/report/billing fingerprints. Only allowlisted synthetic PNG/JSON evidence, maximum 20 MiB, retention one day. Raw logs, HAR, sessions, credentials and environment files cannot be uploaded. Cleanup rechecks exact CLI target before stopping its owned backend; ambiguous partial startup is refused.
+
+Executed lightweight checks (not runtime acceptance):
+
+```text
+node --test scripts/qa/monthly-report-acceptance.test.mjs  # 7 passed, 0 failed
+node --check scripts/qa/monthly-report-acceptance.mjs
+node --check scripts/qa/monthly-report-browser.mjs
+node --check scripts/qa/monthly-report-concurrency.mjs
+node node_modules/eslint/bin/eslint.js scripts/qa/monthly-report-acceptance.mjs scripts/qa/monthly-report-browser.mjs scripts/qa/monthly-report-concurrency.mjs scripts/qa/monthly-report-acceptance.test.mjs
+npm.cmd run security:secrets  # exit 0, 0 findings / 2,371 tracked files
+git diff --check
+```
+
+All four syntax checks and targeted ESLint exited 0. YAML assertions verified exactly one standard Linux monthly job capped at 60 minutes and exclusion of all seven ordinary jobs. JSON comparison verified only this task's Vercel branch exclusion was added; existing exclusions/crons match the prior commit. The immutable source/dependency/SQL diff against `ce54eee` is empty. Full TypeScript/lint/unit checks listed below remain historical; the new code is JavaScript and its targeted checks above are fresh. The initial Windows `npm` PowerShell shim was execution-policy blocked before the scanner started; `npm.cmd` ran the same supported script successfully, without changing policy.
+
+Observed red/green: missing harness module initially failed, then six guards passed; new exact CLI-target guard failed for missing export, then seven passed after implementation. Independent read-only source review found and corrected harness-only defects: report fixture needed a qualifying order first; completion-first race writers needed authorized RPCs; the foreign-Tenant order needed a same-Tenant Service; unrelated Client reads needed actual empty-result assertions; cleanup needed to recheck CLI configuration. No new application defect is claimed. Runtime compatibility of fixtures/races/selectors remains unverified.
+
+Allowance/storage read-only snapshot at approximately 2026-11-08 21:24–21:30 UTC, refreshed before the authorized branch push: November account compute 1,924 Linux minutes, gross/discount $11.544, net $0; calculated headroom $0.456 = 76 standard Linux minutes, not reserved. This repository's in-progress/queued/waiting/pending/requested run lists each returned total_count 0 and an empty array (complete first pages). Complete artifact metadata across all 18 owned repositories returned 13 artifacts totaling **90,197 bytes**, all in this repository; no artifact contents were downloaded. GitHub's included 500-MiB storage is pooled with Packages. Every private Packages metadata query returned HTTP403: `You need at least read:packages scope to list packages.` Refreshed accrued 5.004829418 GB-hours is not instantaneous storage proof. Therefore combined storage headroom is **unverifiable** and the owner-required execution gate is closed. No connector scope, budget or billing setting was changed. The existing Sunday 22:00 UTC security schedule is another possible competing usage source; refresh all usage/run checks rather than reserving this snapshot.
+
+**Database checks: BLOCKED. Production build: BLOCKED. Authenticated QA: BLOCKED. Zero CI attempts dispatched; the one conditional attempt remains unused.** No database target was created, no migration applied, no authenticated browser run or heavy local process started. Do not call the candidate release-ready. Before dispatch, obtain verifiable combined storage headroom (at least this run's bounded 20-MiB evidence plus current retained usage), refresh included compute (at least 65 standard Linux minutes) and verify no conflicting runs. Use the exact reviewed pushed SHA with the payload in the plan. Do not retry a failed/ambiguous dispatch; reconcile run history first. Any additional attempt needs fresh authorization.
+
+Final commit, push verification, final local guard/secret results and remaining rollout gates are recorded in the delivery report. Canonical notes remain read-only; the steward proposal below remains unapplied.
+
+### Historical preparation — 2026-11-09, local checks blocked; isolated CI proposed
 
 Original owning session and clean `ce54eeebfeea4f594b11ee2a5e1a61174b86a032` were verified before any write. Configured Global OS, canonical memory and this handoff were reread; vault notes remain read-only. No local PostgreSQL/Docker process, Docker engine pipe, relevant Supabase listener, real `.env` configuration or synthetic credentials were found. The owner confirmed that no disposable backend is assigned, virtualization is disabled and Docker is unavailable. Local available RAM was 1.11 GiB at inventory (owner reported 0.88 GiB); later lightweight preparation observed 2.34 GiB. Every observation is below the unchanged 5.5-GiB guard. No build, database command against a target, migration or authenticated browser run was attempted.
 

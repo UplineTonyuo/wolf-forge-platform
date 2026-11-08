@@ -112,6 +112,8 @@ For each case read exact order status/month/service, exception order/client/Tena
 
 ## Approval and release gates
 
+**Approval received 2026-11-09:** implement/review the harness, commit/push this exact task branch with its Vercel exclusion, and dispatch exactly one attempt only after fresh included compute/storage/no-conflict proof. The actual-date late-period browser invariant is accepted; December remains literal SQL evidence. The harness is now implemented in `scripts/qa/monthly-report-{acceptance,concurrency,browser}.mjs` with boundary tests. Runtime acceptance remains blocked before dispatch: the connector can enumerate Actions artifact metadata but private Packages metadata returns HTTP403 for missing `read:packages`; pooled instantaneous storage headroom cannot be proven. Do not infer current headroom from accrued GB-hours. See the handoff for exact local checks and the reviewed harness corrections.
+
 After this plan is approved: implement the proposed harness/patch locally, run lightweight guard/syntax checks, obtain source review, and commit the reviewed candidate in this same lane. Before any push, its branch-specific Vercel exclusion must be present; do not open a PR. Immediately refresh allowance/storage/run checks. Only an explicitly approved push and **one** manual `security.yml` run on that exact branch/SHA may follow. No automatic rerun, purchase, deployment, production migration or vault write.
 
 Planned dispatch payload, **not sent**:
