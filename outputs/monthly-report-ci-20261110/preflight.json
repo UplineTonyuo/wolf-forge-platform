@@ -1,0 +1,475 @@
+{
+  "checkedAtUtc": "2026-11-09T17:06:57.021172+00:00",
+  "checks": [
+    {
+      "kind": "artifacts",
+      "repo": "anthony-ai-factory",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "bigballerclub.co",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "bigballerclub.xyz",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "captionforge-",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "captionforgeversion2",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "Forgatime",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "forget-that-shit",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "forget-that-shit",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "forget-that-shit",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "gstack-automation",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "gstack-automation",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "gstack-automation",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "jones-operations-os",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "jones-operations-os",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "jones-operations-os",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "lord-anthony-site",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "lord-anthony-site",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "lord-anthony-site",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "mj-lopez-crm",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "mj-lopez-crm",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "mj-lopez-crm",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "RojanCRM",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "RojanCRM",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "RojanCRM",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "sb-lead-community-app",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "sb-lead-community-app",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "sb-lead-community-app",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "secondbrain",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "artifacts",
+      "repo": "williams-treasure-crm",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "williams-treasure-crm",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "williams-treasure-crm",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "wolf-forge-ops-automator",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-ops-automator",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-ops-automator",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "wolf-forge-platform",
+      "status": null,
+      "total": 13,
+      "returned": 13,
+      "complete": true,
+      "bytes": 90197,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-platform",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-platform",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "artifacts",
+      "repo": "wolf-forge-white-label-recovery-20261009",
+      "status": null,
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": 0,
+      "runs": null
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-white-label-recovery-20261009",
+      "status": "in_progress",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-white-label-recovery-20261009",
+      "status": "queued",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-platform",
+      "status": "waiting",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-platform",
+      "status": "pending",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    },
+    {
+      "kind": "runs",
+      "repo": "wolf-forge-platform",
+      "status": "requested",
+      "total": 0,
+      "returned": 0,
+      "complete": true,
+      "bytes": null,
+      "runs": []
+    }
+  ],
+  "artifactBytes": 90197,
+  "artifactCount": 13,
+  "sessionOwner": "01a1c143-e6a6-7002-96b1-0770657089d7",
+  "previousOwnerStatus": "notLoaded; latest turn completed",
+  "remoteSha": "edbc9e88bba6076a290629bfc48774c92a2a20a4",
+  "localHead": "e5ac97134eb6c2c30220839f3b0eed2e7263b8f7",
+  "compute": {
+    "runner": "ubuntu-24.04 standard x64",
+    "rateUsdPerMinute": 0.006,
+    "jobTimeoutMinutes": 60,
+    "cancellationReserveMinutes": 5,
+    "maxRunnerMinutes": 65,
+    "ceilingUsd": 0.39,
+    "source": "https://docs.github.com/en/billing/reference/actions-runner-pricing"
+  },
+  "accountUsageBefore": {
+    "minutes": 2049,
+    "grossUsd": 12.294,
+    "discountUsd": 12.288,
+    "netUsd": 0.006
+  },
+  "packages": {
+    "count": 0,
+    "checkedAtUtc": "2026-11-08T22:12:17.8442803Z",
+    "source": "owner-verified receipt; current API refresh requires read:packages; Chrome refresh not approved",
+    "receiptSha256": "0e42d1370ef0cceb4f87cadf5f8d3c76be8eda28bd6aaa38480d76798c4c657f"
+  },
+  "branchPriorDispatchCount": 0,
+  "authorization": "Exactly one dispatch; up to USD 0.39 paid compute; no retries, push, PR, merge, deployment, production or vault mutation",
+  "payload": {
+    "ref": "codex/woad-monthly-report-gate-20261108",
+    "inputs": {
+      "monthly_report_acceptance": "true",
+      "expected_sha": "edbc9e88bba6076a290629bfc48774c92a2a20a4",
+      "database_only": "false",
+      "call_acceptance": "false",
+      "call_acceptance_only": "false"
+    }
+  },
+  "mutationStatus": "Prepared, not dispatched"
+}

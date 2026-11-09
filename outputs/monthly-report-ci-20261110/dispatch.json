@@ -1,0 +1,20 @@
+{
+  "calledExactlyOnce": true,
+  "transport": "successful",
+  "logId": "log_nQCioPTVJYdL",
+  "reconciledRun": 42661846478,
+  "attempt": 1,
+  "createdAtUtc": "2026-11-09T17:09:30Z",
+  "finalStatus": "completed",
+  "conclusion": "failure",
+  "payload": {
+    "ref": "codex/woad-monthly-report-gate-20261108",
+    "inputs": {
+      "monthly_report_acceptance": "true",
+      "expected_sha": "edbc9e88bba6076a290629bfc48774c92a2a20a4",
+      "database_only": "false",
+      "call_acceptance": "false",
+      "call_acceptance_only": "false"
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 Branch: `codex/woad-monthly-report-gate-20261108`. Original baseline: `0b8cba2ce3350e3d611bf3a56da4ea086e71d199`; explicit-work-month correction starts from `bbd26e5`.
 
-This candidate is not deployed. Reviewed candidate `edbc9e88bba6076a290629bfc48774c92a2a20a4` is pushed on this task branch, whose Vercel deployment is explicitly disabled. No hosted migration, local Docker startup or real account/customer change occurred. Both migrations remain **unapplied**, in this order:
+This candidate is not deployed. Reviewed candidate `edbc9e88bba6076a290629bfc48774c92a2a20a4` is pushed on this task branch, whose Vercel deployment is explicitly disabled. No hosted migration, local Docker startup or real account/customer change occurred. Both migrations remain **unapplied to hosted databases**; they were applied only to run `42661846478`'s disposable runner-owned database, which was cleaned up successfully. Required order:
 
 `supabase/migrations/20261108080017_monthly_report_completion_gate.sql`
 
@@ -19,6 +19,46 @@ This candidate is not deployed. Reviewed candidate `edbc9e88bba6076a290629bfc487
 - Existing task percentages, invoices, subscriptions, reports, completed-order history and the All statuses filter retain their behavior.
 
 ## Verification
+
+### Authorized paid-compute continuation — 2026-11-10 Singapore / 2026-11-09 UTC
+
+Owner authorization supersedes the included-compute-only gate for exactly one existing `security.yml` dispatch against `edbc9e88bba6076a290629bfc48774c92a2a20a4`, allowing at most **$0.39 compute**. No purchase, settings change, retry, push, PR/merge, deployment, production migration or canonical vault write is authorized. Local documentation HEAD `e5ac971` is not pushed.
+
+Session `01a1c143-e6a6-7002-96b1-0770657089d7` continues the completed prior owner's task; the earlier matching sessions are not loaded/running. Clean branch/HEAD and exact remote candidate were verified. Remote workflow retains one standard `ubuntu-24.04` monthly job with 60-minute timeout, no matrix/retry, seven excluded ordinary jobs, 5.5-GiB build RAM guard, runner-owned disposable database, genuine synthetic Auth, sanitized bounded evidence and owned cleanup. The remote candidate disables Vercel deployment for this branch.
+
+Current official standard Linux price is **$0.006/minute**; all 65 minutes paid would cost **$0.390**, including five cancellation-reserve minutes. Account-wide usage before this attempt is **2,049 minutes / $12.294 gross / $12.288 discount / $0.006 net**; these are unrelated preexisting account totals, not this job's cost. No billing setting was changed. Source: https://docs.github.com/en/billing/reference/actions-runner-pricing.
+
+At `2026-11-09T17:06:57Z`, all 43 complete storage/run queries succeeded: 18 owned repositories retain **13 artifacts / 90,197 bytes**; all 11 private repositories have no active/queued workflow, and this repository has no waiting/pending/requested run. The existing owner-verified zero-Packages receipt remains dated `2026-11-08T22:12:17Z`; a refresh via API requires missing `read:packages` scope, and automatic approval rejected the read-only Chrome refresh (`Computer Use was not approved to use Google Chrome`). No scope/access change or alternate UI access was attempted. Receipt plus refreshed artifacts and the maximum 20-MiB upload totals **21,061,717 bytes**, below the 500-MiB allowance. Accrued GB-hours are not substituted for inventory.
+
+Final pre-dispatch history was empty. **Exactly one dispatch was called and reconciled to run [42661846478](https://github.com/UplineTonyuo/wolf-forge-platform/actions/runs/42661846478), attempt 1**, created `2026-11-09T17:09:30Z`, exact SHA `edbc9e88bba6076a290629bfc48774c92a2a20a4`. It completed **FAILURE** at `2026-11-09T17:16:00Z`. Final branch-specific history contains exactly this one run and attempt. **The authorization is consumed; no second dispatch/rerun is authorized.** Exact payload/preflight evidence: `outputs/monthly-report-ci-20261110/preflight.json`; dispatch receipt: `outputs/monthly-report-ci-20261110/dispatch.json`; measured outcomes: `outputs/monthly-report-ci-20261110/result.json`.
+
+| Phase | Verified result |
+| --- | --- |
+| Isolation/source guards | PASS; only the intended monthly job received a runner; seven ordinary jobs skipped; correct SHA/ref and first attempt |
+| Harness boundaries / tracked secrets | PASS: 7/7 guard tests; 0 findings across 2,371 tracked files |
+| Production build / PDF trace | PASS, `17:10:32–17:12:56Z`; unchanged 5.5-GiB RAM guard; all seven PDF font assets verified |
+| Disposable backend / candidate migrations | PASS, `17:12:56–17:15:26Z`; project `monthly-42661846478-1`; 221 migrations; only the two candidate versions applied in order and prior ledger source hashes preserved. Private evidence, anonymous denial, explicit month and empty search-path checks passed |
+| Focused database tests | **FAIL**, exit 1, four files / 151 observed assertions. SQL033 PASS (33); SQL098 fails assertion 24 of 53; SQL208 aborts after 36 passed assertions; SQL209 PASS (29) |
+| Full database suite / lint / advisors | **NOT RUN**: focused command failed under `set -euo pipefail` |
+| Physical races | **SKIPPED** after database failure |
+| Genuine authenticated browser acceptance | **SKIPPED** after database failure; no actual late-period browser case was observed |
+| Sanitized evidence / upload | PASS: two JSON files, 871 uncompressed bytes, 811-byte ZIP, one-day retention |
+| Owned cleanup | PASS at `17:15:53Z`; exact run-owned disposable backend stopped, held files/config restored; no hosted target |
+
+Verified blockers, preserved without changing assertions or guards:
+
+- `supabase/tests/database/098_tenant_report_authorization.test.sql:251`, assertion 24 (`B -> B: Tenant B admin reads a Tenant B Client's deliverables ledger`) raises **42501 / Client does not own this Reporting Service** through `private.validate_report_service_selection`. This is an acceptance failure; the run does not establish a product fix or authorize weakening ownership checks.
+- `supabase/tests/database/208_monthly_report_completion.test.sql:142` inserts an invoice item after creating its invoice directly as `paid`; `private.protect_invoice_item_history` raises **issued invoice items are immutable**. The file exits 3 with no final TAP plan. Its 36 passing assertions do not make the incomplete suite pass.
+
+Calendar evidence: SQL209's literal October/November/December fixtures passed. The authenticated browser phase never ran, so no real late-publication date or December browser observation is claimed.
+
+Runner job `129315176995` ran **17:09:35–17:15:54Z, 379 seconds / 6m19s**; workflow wall time was **390 seconds / 6m30s**. Whole-minute rounding estimates **7 runner-minutes × $0.006 = $0.042 if fully paid**, below the $0.39 ceiling. The timing endpoint currently reports zero billable milliseconds, and the immediate post-run account summary is unchanged at 2,049 minutes / $12.294 gross / $0.006 net. Neither is treated as a settled zero-cost invoice: this job's cost remains an estimate, separate from those preexisting account-wide totals. Billing settings did not block runner execution and were not changed.
+
+Sanitized artifact `13695262575` downloaded and ZIP SHA256 matched **620f0a73116497c863346b431ef91ad22ad98d48d3b54c6e831f73a5562bd8ca**; expires `2026-11-10T17:15:31Z`. Retained local evidence: `outputs/monthly-report-ci-20261110/{sanitized-evidence.zip,failure-evidence.txt,result.json}`. Only selected credential-free failure/build/guard/cleanup log excerpts were saved; no raw server/Supabase logs or credentials were persisted.
+
+**Stopped after the failed authorized attempt. Not release-ready.** No source, harness, workflow, Vercel config, dependency or SQL assertion was changed. The two database failures require a separately reviewed correction and new CI-attempt authorization before runtime validation can continue. WOAD, production databases, real clients, William, RojanCRM and canonical vault notes remain untouched.
+
+Resolved startup paths (read-only): Global OS `C:/Users/TrojanNiAnton/Downloads/Anthony OS-20261009T175758Z-1-001/Anthony OS/10 Templates/Coding Agent OS/CODING AGENT OPERATING SYSTEM.md`; memory `C:/Users/TrojanNiAnton/Downloads/Anthony OS-20261009T175758Z-1-001/Anthony OS/02 Projects/Wolf Forge Platform/AI Memory`. The configured recovery repository remains a different remote. Historical WL-2.33 `4215269` and unfinished WL-2.34 `9a99cd0` were verified without implementation. Canonical notes contain no current monthly-report acceptance result; this repository handoff is authoritative for this lane. Unrelated merged/dirty worktrees were observed and preserved. No Graphify query was needed for these exact named validation files.
 
 ### Current preflight — 2026-11-09 local / 2026-11-08 22:39:29 UTC, stopped for included compute
 

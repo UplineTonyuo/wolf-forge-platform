@@ -1,0 +1,57 @@
+2026-11-09T17:10:31.9289743Z ✔ target refuses hosted, credential-bearing API and noncanonical destinations (0.427684ms)
+2026-11-09T17:10:31.9292103Z ✔ ledger must match every expected version and preserve prior source hashes (1.358796ms)
+2026-11-09T17:10:31.9293463Z ✔ cleanup refuses a different container, volume, project or binding (0.327123ms)
+2026-11-09T17:10:31.9298632Z ✔ evidence admits only bounded named summaries and PNG screenshots (0.308737ms)
+2026-11-09T17:10:31.9301082Z ✔ CLI mutation target must be the one exact journaled project declaration (0.707817ms)
+2026-11-09T17:10:31.9302488Z ✔ late browser period uses a genuine earlier work period, with no clock mutation (0.221886ms)
+2026-11-09T17:10:31.9360477Z ℹ tests 7
+2026-11-09T17:10:31.9361518Z ℹ suites 0
+2026-11-09T17:10:31.9362228Z ℹ pass 7
+2026-11-09T17:10:31.9362954Z ℹ fail 0
+2026-11-09T17:10:31.9363724Z ℹ cancelled 0
+2026-11-09T17:10:31.9364250Z ℹ skipped 0
+2026-11-09T17:10:31.9365007Z ℹ todo 0
+2026-11-09T17:10:31.9365574Z ℹ duration_ms 98.653052
+2026-11-09T17:10:32.0244386Z
+2026-11-09T17:10:32.0248206Z > wolf-forge-platform@1.0.0 security:secrets
+2026-11-09T17:10:32.0249550Z > tsx scripts/security/scan-secrets.ts
+2026-11-09T17:10:32.0250280Z
+2026-11-09T17:10:32.5534089Z secret scan: 0 findings across 2371 tracked files
+2026-11-09T17:12:56.4726275Z PDF route packages all seven verified font assets.
+2026-11-09T17:15:26.0955280Z {"phase":"bootstrap","status":"passed","checks":3}
+2026-11-09T17:15:29.7476409Z supabase/tests/database/033_service_aware_reporting_wizard.test.sql .. ok
+2026-11-09T17:15:29.9274018Z supabase/tests/database/098_tenant_report_authorization.test.sql .....
+2026-11-09T17:15:29.9275850Z # Failed test 24: "B -> B: Tenant B admin reads a Tenant B Client's deliverables ledger"
+2026-11-09T17:15:29.9276933Z #     died: 42501: Client does not own this Reporting Service
+2026-11-09T17:15:29.9277666Z #         CONTEXT:
+2026-11-09T17:15:29.9278597Z #             PL/pgSQL function private.validate_report_service_selection(uuid,uuid,uuid) line 18 at RAISE
+2026-11-09T17:15:29.9279701Z #             SQL statement "SELECT private.validate_report_service_selection(
+2026-11-09T17:15:29.9280710Z #                 p_company_id, p_service_id, p_subscription_id
+2026-11-09T17:15:29.9281234Z #               )"
+2026-11-09T17:15:29.9281902Z #             PL/pgSQL function public.app_list_reported_one_time_deliverables(uuid,uuid,uuid) line 6 at PERFORM
+2026-11-09T17:15:29.9283337Z #             SQL statement "select * from public.app_list_reported_one_time_deliverables('30000000-0000-0000-0000-000000000982',
+2026-11-09T17:15:29.9284154Z #                 '59b00000-0000-0000-0000-000000000002', null)"
+2026-11-09T17:15:29.9284899Z #             PL/pgSQL function lives_ok(text,text) line 14 at EXECUTE
+2026-11-09T17:15:29.9285496Z # Looks like you failed 1 test of 53
+2026-11-09T17:15:29.9285996Z Failed 1/53 subtests
+2026-11-09T17:15:30.2467823Z psql:supabase/tests/database/208_monthly_report_completion.test.sql:142: ERROR:  issued invoice items are immutable
+2026-11-09T17:15:30.2470875Z CONTEXT:  PL/pgSQL function private.protect_invoice_item_history() line 31 at RAISE
+2026-11-09T17:15:30.2502140Z supabase/tests/database/208_monthly_report_completion.test.sql .......
+2026-11-09T17:15:30.2513818Z Dubious, test returned 3 (wstat 768, 0x300)
+2026-11-09T17:15:30.2515274Z All 36 subtests passed
+2026-11-09T17:15:30.4632768Z supabase/tests/database/209_explicit_order_reporting_month.test.sql .. ok
+2026-11-09T17:15:30.4638126Z
+2026-11-09T17:15:30.4645553Z Test Summary Report
+2026-11-09T17:15:30.4646391Z -------------------
+2026-11-09T17:15:30.4656664Z supabase/tests/database/098_tenant_report_authorization.test.sql   (Wstat: 0 Tests: 53 Failed: 1)
+2026-11-09T17:15:30.4665836Z   Failed test:  24
+2026-11-09T17:15:30.4672442Z supabase/tests/database/208_monthly_report_completion.test.sql     (Wstat: 768 (exited 3) Tests: 36 Failed: 0)
+2026-11-09T17:15:30.4678187Z   Non-zero exit status: 3
+2026-11-09T17:15:30.4683636Z   Parse errors: No plan found in TAP output
+2026-11-09T17:15:30.4689333Z Files=4, Tests=151,  1 wallclock secs ( 0.04 usr  0.01 sys +  0.03 cusr  0.02 csys =  0.10 CPU)
+2026-11-09T17:15:30.4695335Z Result: FAIL
+2026-11-09T17:15:31.0551085Z error running container: exit 1
+2026-11-09T17:15:31.0552813Z Try rerunning the command with --debug to troubleshoot the error.
+2026-11-09T17:15:31.0679322Z ##[error]Process completed with exit code 1.
+2026-11-09T17:15:31.1834180Z {"phase":"evidence","status":"passed","files":2,"bytes":871}
+2026-11-09T17:15:53.0562942Z {"phase":"cleanup","status":"passed","ownedProject":"monthly-42661846478-1"}

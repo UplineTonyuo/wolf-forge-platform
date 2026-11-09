@@ -1,0 +1,166 @@
+{
+  "runUrl": "https://github.com/UplineTonyuo/wolf-forge-platform/actions/runs/42661846478",
+  "runId": 42661846478,
+  "sha": "edbc9e88bba6076a290629bfc48774c92a2a20a4",
+  "attempt": 1,
+  "status": "completed",
+  "conclusion": "failure",
+  "job": {
+    "id": 129315176995,
+    "runner": "GitHub Actions 1000002389",
+    "labels": [
+      "ubuntu-24.04"
+    ],
+    "startedAt": "2026-11-09T17:09:35Z",
+    "completedAt": "2026-11-09T17:15:54Z",
+    "durationSeconds": 379
+  },
+  "computeEstimate": {
+    "rateUsdPerMinute": 0.006,
+    "roundedMinutes": 7,
+    "estimatedAllPaidUsd": 0.042,
+    "ceilingUsd": 0.39,
+    "usageApi": {
+      "billableTotalMs": 0,
+      "workflowDurationMs": 390000,
+      "interpretation": "Zero billable values are not treated as settled invoice evidence; account summary unchanged immediately after run."
+    }
+  },
+  "phases": {
+    "buildAndPdf": "passed",
+    "bootstrap": "passed",
+    "focusedDatabase": "failed",
+    "fullDatabase": "not run",
+    "databaseLint": "not run",
+    "databaseAdvisors": "not run",
+    "physicalRaces": "skipped",
+    "authenticatedBrowser": "skipped",
+    "evidence": "passed",
+    "cleanup": "passed"
+  },
+  "failures": [
+    {
+      "file": "supabase/tests/database/098_tenant_report_authorization.test.sql",
+      "line": 251,
+      "test": 24,
+      "sqlstate": "42501",
+      "message": "Client does not own this Reporting Service"
+    },
+    {
+      "file": "supabase/tests/database/208_monthly_report_completion.test.sql",
+      "line": 142,
+      "message": "issued invoice items are immutable",
+      "assertionsPassedBeforeAbort": 36
+    }
+  ],
+  "tests": {
+    "focusedFiles": 4,
+    "observedAssertions": 151,
+    "result": "FAIL",
+    "sql033": "PASS (33)",
+    "sql098": "FAIL (1 of 53)",
+    "sql208": "ABORT (36 assertions passed, no final TAP plan)",
+    "sql209": "PASS (29)"
+  },
+  "artifact": {
+    "id": 13695262575,
+    "zipBytes": 811,
+    "sanitizedBytes": 871,
+    "files": 2,
+    "sha256": "620f0a73116497c863346b431ef91ad22ad98d48d3b54c6e831f73a5562bd8ca",
+    "expiresAtUtc": "2026-11-10T17:15:31Z"
+  },
+  "otherJobs": [
+    {
+      "name": "static lint boundary",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "local Supabase pgTAP and RLS tests",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "TypeScript compile boundary",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "repository and history secret scan",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "compiled app and PDF font trace",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "JavaScript and TypeScript tests",
+      "conclusion": "skipped",
+      "runner": null
+    },
+    {
+      "name": "production dependency vulnerabilities",
+      "conclusion": "skipped",
+      "runner": null
+    }
+  ],
+  "finalHistory": [
+    {
+      "tool": "GITHUB_GET_GITHUB_BILLING_USAGE_SUMMARY_FOR_USER",
+      "success": true,
+      "data": {
+        "timePeriod": {
+          "month": 11,
+          "year": 2026
+        },
+        "usageItems": [
+          {
+            "discountAmount": 12.288,
+            "discountQuantity": 2048,
+            "grossAmount": 12.294,
+            "grossQuantity": 2049,
+            "netAmount": 0.006,
+            "netQuantity": 1,
+            "pricePerUnit": 0.006,
+            "product": "Actions",
+            "sku": "actions_linux",
+            "unitType": "minutes"
+          },
+          {
+            "discountAmount": 0.001704213,
+            "discountQuantity": 5.071969433,
+            "grossAmount": 0.001704213,
+            "grossQuantity": 5.071969433,
+            "netAmount": 0,
+            "netQuantity": 0,
+            "pricePerUnit": 0.00033602,
+            "product": "Actions",
+            "sku": "actions_storage",
+            "unitType": "gigabyte-hours"
+          }
+        ],
+        "user": "UplineTonyuo"
+      }
+    },
+    {
+      "tool": "GITHUB_LIST_WORKFLOW_RUNS_FOR_A_REPOSITORY",
+      "success": true,
+      "data": {
+        "total_count": 1,
+        "runs": [
+          {
+            "id": 42661846478,
+            "sha": "edbc9e88bba6076a290629bfc48774c92a2a20a4",
+            "status": "completed",
+            "conclusion": "failure",
+            "attempt": 1
+          }
+        ]
+      }
+    }
+  ],
+  "nextAction": "Stop. No retry or rerun authorized. Failed database checks require a separately reviewed correction and new attempt authorization. Not release-ready."
+}
