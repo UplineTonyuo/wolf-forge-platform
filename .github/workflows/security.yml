@@ -243,8 +243,8 @@ jobs:
           test "$DATABASE_ONLY" = "false"
           test "$CALL_ACCEPTANCE" = "false"
           test "$CALL_ACCEPTANCE_ONLY" = "false"
-          git merge-base --is-ancestor ce54eeebfeea4f594b11ee2a5e1a61174b86a032 HEAD
-          git diff --exit-code ce54eeebfeea4f594b11ee2a5e1a61174b86a032 HEAD -- src supabase package.json package-lock.json next.config.ts
+          git merge-base --is-ancestor 91406d53b8139ec8fdb7d5f0f3c7a5f5ced969d3 HEAD
+          git diff --exit-code 91406d53b8139ec8fdb7d5f0f3c7a5f5ced969d3 HEAD -- src supabase package.json package-lock.json next.config.ts
           test -z "${SUPABASE_ACCESS_TOKEN:-}"
           test -z "${DATABASE_URL:-}"
           test -z "${SUPABASE_URL:-}"
