@@ -55,8 +55,19 @@ values
 
 insert into public.services (id, tenant_id, name)
 values
-  ('59b00000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'WF Authz Service'),
-  ('59b00000-0000-0000-0000-000000000002', 'f0f0f0f0-0000-4000-8000-0000000009b1', 'B Authz Service');
+  ('59b00000-0000-0000-0000-000000000001', 'f0f0f0f0-0000-4000-8000-000000000001', 'WF Authz Service');
+
+-- Rehome a supported Reporting profile within this rolled-back fixture and
+-- establish the Tenant B Client's ownership through current work.
+update public.services
+set tenant_id = 'f0f0f0f0-0000-4000-8000-0000000009b1',
+    folder_id = null,
+    assigned_to_profile_id = null
+where id = '5f000000-0000-4000-8000-000000000555';
+
+insert into public.orders (tenant_id, company_id, service_id, title, status)
+values ('f0f0f0f0-0000-4000-8000-0000000009b1', '30000000-0000-0000-0000-000000000982',
+  '5f000000-0000-4000-8000-000000000555', 'B Authz Reporting work', 'working');
 
 -- Previous period; admins are outside its send window, owners send anytime.
 insert into public.client_reports (id, tenant_id, company_id, service_id, report_lane,
@@ -199,10 +210,10 @@ select throws_ok($$select public.app_send_report_draft(gen_random_uuid(), '59b10
 select throws_ok($$select public.app_discard_report_draft('59b10000-0000-0000-0000-000000000002')$$,
   '42501', 'report access is denied', 'A -> B: WF admin cannot discard a Tenant B draft');
 select throws_ok($$select * from public.app_list_reporting_service_options('30000000-0000-0000-0000-000000000982',
-    array['59b00000-0000-0000-0000-000000000002'::uuid])$$,
+    array['5f000000-0000-4000-8000-000000000555'::uuid])$$,
   '23503', 'active client company is required', 'A -> B: WF admin cannot list a Tenant B Client''s reporting Services');
 select throws_ok($$select * from public.app_list_reported_one_time_deliverables('30000000-0000-0000-0000-000000000982',
-    '59b00000-0000-0000-0000-000000000002', null)$$,
+    '5f000000-0000-4000-8000-000000000555', null)$$,
   '23503', 'active client company is required', 'A -> B: WF admin cannot read a Tenant B Client''s deliverables ledger');
 select throws_ok($$select public.app_create_report_draft(gen_random_uuid(),
     (select payload from authz_payload where name = 'b-draft'))$$,
@@ -210,7 +221,7 @@ select throws_ok($$select public.app_create_report_draft(gen_random_uuid(),
 
 select is(
   (select array_agg(service_id::text) from public.app_list_reporting_service_options('30000000-0000-0000-0000-000000000981',
-    array['59b00000-0000-0000-0000-000000000001'::uuid, '59b00000-0000-0000-0000-000000000002'::uuid])),
+    array['59b00000-0000-0000-0000-000000000001'::uuid, '5f000000-0000-4000-8000-000000000555'::uuid])),
   null::text[],
   'unsupported or unowned Services never appear, including another Tenant''s Service'
 );
@@ -247,7 +258,7 @@ select ok(
 );
 
 select lives_ok($$select * from public.app_list_reported_one_time_deliverables('30000000-0000-0000-0000-000000000982',
-    '59b00000-0000-0000-0000-000000000002', null)$$,
+    '5f000000-0000-4000-8000-000000000555', null)$$,
   'B -> B: Tenant B admin reads a Tenant B Client''s deliverables ledger');
 
 select throws_ok($$select public.app_get_internal_report('59b10000-0000-0000-0000-000000000001')$$,

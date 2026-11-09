@@ -136,10 +136,12 @@ values('d0208000-0000-4000-8000-000000000003','5f000000-0000-4000-8000-000000000
 select public.app_change_order_status('d3208000-0000-4000-8000-000000000007','complete');
 select is((select count(*) from public.app_list_reporting_service_options('d0208000-0000-4000-8000-000000000003',array['5f000000-0000-4000-8000-000000000318'::uuid])),0::bigint,'completed work alone is not current ownership');
 select set_config('request.jwt.claim.sub','',true);
-insert into public.invoices(id,company_id,status,invoice_number,issued_at,subtotal_cents,total_cents,created_by_profile_id,updated_by_profile_id)
-values('d6208000-0000-4000-8000-000000000001','d0208000-0000-4000-8000-000000000003','paid',2089001,now(),100,100,'20000000-0000-4000-8000-000000002081','20000000-0000-4000-8000-000000002081');
+insert into public.invoices(id,company_id,status,subtotal_cents,total_cents,created_by_profile_id,updated_by_profile_id)
+values('d6208000-0000-4000-8000-000000000001','d0208000-0000-4000-8000-000000000003','draft',100,100,'20000000-0000-4000-8000-000000002081','20000000-0000-4000-8000-000000002081');
 insert into public.invoice_items(invoice_id,service_id,order_id,position,name,quantity,unit_price_cents,fulfillment_status)
 values('d6208000-0000-4000-8000-000000000001','5f000000-0000-4000-8000-000000000318','d3208000-0000-4000-8000-000000000007',0,'Purchased GMB',1,100,'provisioned');
+update public.invoices set status='paid',invoice_number=2089001,issued_at=now()
+where id='d6208000-0000-4000-8000-000000000001';
 select pg_temp.act(1);
 select is((select count(*) from public.app_list_reporting_service_options('d0208000-0000-4000-8000-000000000003',array['5f000000-0000-4000-8000-000000000318'::uuid]) where subscription_id is null),1::bigint,'completed paid purchase owns the Service without any subscription');
 

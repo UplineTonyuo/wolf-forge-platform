@@ -20,6 +20,17 @@ This candidate is not deployed. Reviewed candidate `edbc9e88bba6076a290629bfc487
 
 ## Verification
 
+### Local fixture corrections — 2026-11-10, no CI rerun
+
+Owner authorized only the two demonstrated failures from run `42661846478`, review and a local commit. No push, CI dispatch/rerun, production migration or WOAD deployment is authorized. These small fixture corrections do not require a new design or implementation plan.
+
+- **SQL208:** the fixture previously created its invoice directly as `paid`, then inserted an item. The existing `private.protect_invoice_item_history` correctly rejects inserts after draft status. Create an unnumbered, unissued `draft`, insert the same provisioned item, then set `paid`, invoice number and `issued_at`. The final ownership scenario and all 44 original assertions remain unchanged. No invoice-history trigger or protection was changed.
+- **SQL098:** the former arbitrary Tenant B Service UUID was outside the supported Reporting profiles and had no subscription, current work or paid/provisioned purchase. It was not a legitimate owned-Service read under the candidate's existing contract. Within the rolled-back fixture, rehome supported catalog Service `5f000000-0000-4000-8000-000000000555` to Tenant B, clear its Wolf Forge folder/assignee links and add a same-Tenant, same-Client `working` order. Use that identity in the existing positive read and foreign-workspace denial assertions. All 53 original assertions, expected errors and outcomes remain intact; no validator or access guard changed.
+
+Fresh verification: source comparison against `785dd643e7b1c5f3ac5f835a048cb4d7fdd620dd` confirms all **53 + 44** original assertions/expectations are retained (only the Tenant B Service identity changes), and both files retain transaction rollback. `git diff --check` passes; tracked secret scan reports **0 findings across 2,375 files**. Independent read-only source review found no changes required, checking the seeded Service, ownership branch, Tenant-relative constraints, invoice CHECKs/history trigger and handoff. Application source, migrations, workflow, dependencies and runtime guards are unchanged. The pre-correction failures are the recorded CI evidence below, not a new local execution.
+
+**Runtime SQL remains unverified for this correction:** no disposable backend is running, both Docker engine pipes are absent, and no local PostgreSQL executable is available in the inspected command/installation paths. No database, build or browser process was started and no tool was installed. The prior CI failure is preserved; no new acceptance pass or release-ready claim is made. Another push/CI attempt requires separate owner authorization. Canonical vault notes, WOAD, production databases, real clients, William and RojanCRM remain untouched.
+
 ### Authorized paid-compute continuation — 2026-11-10 Singapore / 2026-11-09 UTC
 
 Owner authorization supersedes the included-compute-only gate for exactly one existing `security.yml` dispatch against `edbc9e88bba6076a290629bfc48774c92a2a20a4`, allowing at most **$0.39 compute**. No purchase, settings change, retry, push, PR/merge, deployment, production migration or canonical vault write is authorized. Local documentation HEAD `e5ac971` is not pushed.
