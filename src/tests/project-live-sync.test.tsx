@@ -27,7 +27,7 @@ const { ProjectConversation } = await import("../components/tickets/project-conv
 const { useTicketLiveSync } = await import("../components/tickets/use-ticket-live-sync");
 const PROJECT = "20000000-0000-4000-8000-000000000001";
 const OTHER = "20000000-0000-4000-8000-000000000002";
-const initial = [{ id: "one", body: "Existing synthetic message", attachments: [], reactions: [] }] as unknown as TicketDetailMessage[];
+const initial = [{ id: "one", ticket_id: PROJECT, body: "Existing synthetic message", created_at:"2026-11-10T00:00:00Z", author_type:"client", author_profile_id:"client",author_name:"Synthetic Client",author_avatar_url:null,message_kind:"reply",visibility:"client",attachments: [], reactions: [] }] as TicketDetailMessage[];
 
 function response(data: unknown, status = 200) {
   return { status, json: async () => status === 200 ? { ok: true, data } : { ok: false, code: "PERMISSION_DENIED" } } as Response;

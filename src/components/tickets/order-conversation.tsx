@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toggleOrderMessageReactionAction } from "../../app/actions/tickets";
 import type { TeamConversationView } from "../../domain/team/projections";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
-import { TicketConversation } from "./ticket-conversation";
-import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
+import { OrderConversationPanel } from "./order-conversation-panel";
+import { useOrderConversationMessages } from "./use-order-conversation-messages";
+import type { OrderPageInfo } from "../../domain/orders/conversation-page";
 import type { OrderReplyTarget } from "./order-message-actions";
-import styles from "./tickets.module.css";
 import { OrderCallControls } from "./ticket-call-controls";
 import { useTicketCallHistory } from "./use-ticket-call-history";
 
-export function OrderConversation({
+function OrderConversationBody({
   orderId,
   heading,
   messages,
@@ -21,6 +21,7 @@ export function OrderConversation({
   canReply,
   repliesDisabled,
   headerActions,
+  initialPage,
 }: {
   orderId: string;
   heading: string;
@@ -30,32 +31,21 @@ export function OrderConversation({
   canReply: boolean;
   repliesDisabled: boolean;
   headerActions?: ReactNode;
+  initialPage?: OrderPageInfo;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
-  const history = useTicketCallHistory(orderId, true);
-  const optimistic = useOptimisticTicketMessages(messages, { mode: "admin", viewerProfileId });
+  const optimistic = useOrderConversationMessages({orderId,serverMessages:messages,initialPage,mode:"admin",viewerProfileId});
+  const history = useTicketCallHistory(orderId, true,{entries:optimistic.calls,onPage:optimistic.addCalls,onClear:optimistic.clearCalls,resetKey:optimistic.latestRevision});
+  useEffect(()=>{if(optimistic.unavailable)queueMicrotask(()=>setReplyTo(null))},[optimistic.unavailable]);
+  if(optimistic.unavailable)return <p role="alert">This conversation is unavailable.</p>;
 
   return (
-    <div className={styles.orderConversationSurface}>
-      <TicketConversation
-        orderChat
-        viewerProfileId={viewerProfileId}
-        messages={optimistic.messages}
-        heading={heading}
-        sourceLabel={heading}
-        hideInternalNotes
-        headerActions={headerActions}
-        callControls={<OrderCallControls orderId={orderId} disabled={!canReply || repliesDisabled} />}
-        callHistory={history.entries}
-        historyControls={history.error ? <p role="status">{history.error} {history.retryable ? <button type="button" disabled={history.busy} onClick={() => void history.load()}>Retry call history</button> : null}</p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
-        forwardDestinations={destinations}
-        onReply={canReply && !repliesDisabled ? setReplyTo : undefined}
-        canReact={canReply}
-        onToggleReaction={(messageId, reactionCode) =>
-          toggleOrderMessageReactionAction(orderId, messageId, reactionCode)
-        }
-        onRetryMessage={(message) => void optimistic.retry(message.requestId ?? "")}
-      />
+    <OrderConversationPanel conversation={optimistic} renderer={{viewerProfileId,heading,sourceLabel:heading,hideInternalNotes:true,headerActions,
+      callControls:<OrderCallControls orderId={orderId} disabled={!canReply||repliesDisabled}/>,
+      historyControls:history.error?<p role="status">{history.error} {history.retryable?<button type="button" disabled={history.busy} onClick={()=>void history.load()}>Retry call history</button>:null}</p>:history.more||optimistic.hasEvictedEarlierCalls?<button type="button" disabled={history.busy} onClick={()=>void history.load(true)}>Earlier calls</button>:null,
+      forwardDestinations:destinations,onReply:canReply&&!repliesDisabled?setReplyTo:undefined,canReact:canReply,
+      onToggleReaction:async(messageId,reactionCode)=>{const result=await toggleOrderMessageReactionAction(orderId,messageId,reactionCode);if(result.ok)optimistic.wake();return result},
+      onRetryMessage:message=>void optimistic.retry(message.requestId??"")}}>
       {canReply ? (
         <TicketComposer
           target={{ kind: "order", orderId }}
@@ -67,6 +57,10 @@ export function OrderConversation({
           optimistic={{ onSend: optimistic.addOptimistic, onSettled: optimistic.settle }}
         />
       ) : null}
-    </div>
+    </OrderConversationPanel>
   );
+}
+
+export function OrderConversation(props:Parameters<typeof OrderConversationBody>[0]) {
+  return <OrderConversationBody key={`${props.orderId}:${props.viewerProfileId}:${props.initialPage?.source??""}`} {...props}/>;
 }

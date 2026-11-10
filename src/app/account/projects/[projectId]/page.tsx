@@ -4,7 +4,7 @@ import type { ClientOrderStartState } from "../../../../domain/orders/client-sta
 import { notFound, redirect } from "next/navigation";
 import { ClientProjectDetail } from "../../../../components/account/projects/client-projects";
 import type { ClientProjectView } from "../../../../domain/orders/client-projections";
-import type { TicketDetail } from "../../../../domain/tickets/schema";
+import type { OrderConversationPage } from "../../../../domain/orders/conversation-page";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { getClientContext } from "../../../../lib/supabase/next-server";
 import { readClientAssignments } from "../../../../lib/supabase/client-portal-data";
@@ -23,7 +23,7 @@ export default async function ClientProjectDetailPage({
   const { services, user } = await getClientContext();
 
   let project: ClientProjectView | null = null;
-  let conversation: TicketDetail | null = null;
+  let conversation: OrderConversationPage | null = null;
   let denied = false;
   let missing = false;
   let startState: ClientOrderStartState | null = null;
@@ -33,7 +33,7 @@ export default async function ClientProjectDetailPage({
     await services.permissions.requireModuleAccess("portal_projects");
     [project, conversation] = await Promise.all([
       services.projects.getClientProject(projectId),
-      services.tickets.getForOrder(projectId),
+      services.tickets.getOrderPage(projectId),
       services.projects.getClientStartState(projectId).then((state) => { startState = state; }).catch(() => { startError = true; }),
     ]);
   } catch (error) {

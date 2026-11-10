@@ -2,6 +2,7 @@ import type {
   AssignTicketInput,
   CreateTicketInput,
   TicketDetail,
+  TicketDetailMessage,
   TicketAttachmentSubmission,
   TicketAttachmentTarget,
   TicketForwardToTeamInput,
@@ -17,10 +18,30 @@ import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { Json } from "../lib/supabase/database.types";
 import type { TicketMessageRow, TicketRow } from "../lib/supabase/database-rows";
 import { unwrapOne } from "../lib/supabase/repository-helpers";
+import type { OrderConversationPage, OrderPageRequest } from "../domain/orders/conversation-page";
 import type { UserMutationClient } from "./types";
 
 export class TicketRepository {
   constructor(private readonly client: UserMutationClient) {}
+
+  async getOrderPage(orderId: string, input: OrderPageRequest = {}): Promise<OrderConversationPage> {
+    const result = await this.client.rpc("app_get_order_conversation_page", {
+      p_order_id: orderId,
+      p_direction: input.direction ?? "latest",
+      p_cursor: input.cursor ?? null,
+      p_retained_ids: input.retainedIds ?? [],
+      p_fingerprint: input.fingerprint ?? null,
+      p_request_ids: input.requestIds ?? [],
+    });
+    if (result.error) throw mapDatabaseError(result.error, "Order conversation");
+    return result.data as OrderConversationPage;
+  }
+
+  async getOrderNotes(orderId: string): Promise<TicketDetailMessage[]> {
+    const result = await this.client.rpc("app_get_order_conversation_notes", { p_order_id: orderId });
+    if (result.error) throw mapDatabaseError(result.error, "Order notes");
+    return result.data as TicketDetailMessage[];
+  }
 
   async getForOrder(orderId: string): Promise<TicketDetail | null> {
     const result = await this.client.rpc("app_get_order_conversation", { p_order_id: orderId });

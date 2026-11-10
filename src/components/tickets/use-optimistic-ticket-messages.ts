@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   sendTicketComposerAction,
   type TicketComposerActionInput,
@@ -29,7 +29,7 @@ type PendingEntry = TicketDetailMessage & { draft: OptimisticTicketDraft };
  */
 export function useOptimisticTicketMessages(
   serverMessages: TicketDetailMessage[],
-  options: { mode: "admin" | "client"; viewerProfileId?: string | null },
+  options: { mode: "admin" | "client"; viewerProfileId?: string | null; confirmation?: "request-id"; onRetryAccepted?: () => void },
 ) {
   const router = useRouter();
   const [pending, setPending] = useState<PendingEntry[]>([]);
@@ -40,10 +40,13 @@ export function useOptimisticTicketMessages(
     if (prevServerMessages.current === serverMessages) return;
     prevServerMessages.current = serverMessages;
     if (!awaitingRefresh.current.size) return;
-    const settledIds = awaitingRefresh.current;
-    awaitingRefresh.current = new Set();
+    const settledIds = options.confirmation === "request-id"
+      ? new Set(serverMessages.flatMap(message => message.requestId ? [message.requestId] : []))
+      : awaitingRefresh.current;
+    if (options.confirmation === "request-id") settledIds.forEach(id => awaitingRefresh.current.delete(id));
+    else awaitingRefresh.current = new Set();
     setPending((current) => current.filter((message) => !settledIds.has(message.requestId ?? "")));
-  }, [serverMessages]);
+  }, [serverMessages, options.confirmation]);
 
   function addOptimistic(draft: OptimisticTicketDraft) {
     const now = new Date().toISOString();
@@ -119,13 +122,24 @@ export function useOptimisticTicketMessages(
       }
 
       settle(requestId, true);
-      router.refresh();
+      if (options.onRetryAccepted) options.onRetryAccepted();
+      else router.refresh();
     } catch {
       settle(requestId, false);
     }
   }
 
-  const messages = useMemo(() => [...serverMessages, ...pending], [serverMessages, pending]);
+  const messages = useMemo(() => {
+    const confirmed=options.confirmation==="request-id"?new Set(serverMessages.flatMap(message=>message.requestId?[message.requestId]:[])):null;
+    return [...serverMessages,...pending.filter(message=>!confirmed?.has(message.requestId??""))];
+  }, [serverMessages, pending, options.confirmation]);
 
-  return { messages, addOptimistic, settle, retry };
+  const confirm = useCallback((ids: string[]) => {
+    if (!ids.length) return;
+    const confirmed = new Set(ids);
+    ids.forEach(id=>awaitingRefresh.current.delete(id));
+    setPending(previous=>previous.filter(message=>!confirmed.has(message.requestId??"")));
+  },[]);
+  const clear = useCallback(()=>{awaitingRefresh.current.clear();setPending([])},[]);
+  return { messages, addOptimistic, settle, retry, confirm, clear, pendingRequestIds: pending.map(message=>message.requestId!).filter(Boolean) };
 }

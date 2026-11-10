@@ -24,7 +24,7 @@ export default async function OrderDetailsPage({
       context.services.orders.get(orderId),
       context.services.tasks.listForOrder(orderId),
       context.services.catalog.listAssignees(),
-      context.user.tickets.view ? context.services.tickets.getForOrder(orderId) : Promise.resolve(null),
+      context.user.tickets.view ? context.services.tickets.getOrderPage(orderId) : Promise.resolve(null),
       context.user.teamMessaging.use ? context.services.team.listConversations() : Promise.resolve([]),
     ]);
 
@@ -37,7 +37,7 @@ export default async function OrderDetailsPage({
       ? conversationTicket.status === "closed" || Boolean(conversationTicket.archived_at)
       : false;
     const conversationMessages = conversation?.messages ?? [];
-    const internalNotes = conversationMessages.filter((message) => message.message_kind === "internal_note");
+    const internalNotes = context.user.tickets.internalNotes && legacyTicket ? await context.services.tickets.getOrderNotes(orderId) : [];
 
     return (
       <>
@@ -66,6 +66,7 @@ export default async function OrderDetailsPage({
             orderId={orderId}
             viewerProfileId={context.user.id}
             messages={conversationMessages}
+            initialPage={conversation?.page}
             heading={`Project #${order.order_number}`}
             destinations={legacyTicket ? toTeamConversationViews(teamConversations) : []}
             canReply={context.user.tickets.reply}

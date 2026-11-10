@@ -1039,7 +1039,7 @@ describe("Order chat optimistic send", () => {
     expect(screen.getAllByText("On it now.")).toHaveLength(1);
 
     const canonical: TicketDetailMessage = {
-      id: "m-real", ticket_id: ticket.ticket_id, author_profile_id: "me", author_name: "William", author_avatar_url: null,
+      id: "m-real", requestId:vi.mocked(actions.sendTicketComposerAction).mock.calls[0]![0].requestId, ticket_id: ticket.ticket_id, author_profile_id: "me", author_name: "William", author_avatar_url: null,
       author_type: "internal", message_kind: "reply", visibility: "client", body: "On it now.", created_at: "2026-08-14T09:00:00Z", attachments: [],
     };
     rerender(

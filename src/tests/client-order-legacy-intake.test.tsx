@@ -12,7 +12,7 @@ vi.mock("../app/actions/forms-visibility", () => ({ loadFormsVisibility: mocks.v
 vi.mock("../lib/supabase/client-portal-data", () => ({ readClientAssignments: mocks.assignments }));
 vi.mock("../lib/supabase/next-server", () => ({ getClientContext: async () => ({
   user: { id: "client", modules },
-  services: { permissions: { requireModuleAccess: mocks.require }, projects: { getClientProject: mocks.project, getClientStartState: mocks.start }, tickets: { getForOrder: async () => null } },
+  services: { permissions: { requireModuleAccess: mocks.require }, projects: { getClientProject: mocks.project, getClientStartState: mocks.start }, tickets: { getOrderPage: async () => null } },
 }) }));
 beforeEach(() => {
   vi.resetAllMocks();

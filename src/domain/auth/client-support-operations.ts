@@ -11,7 +11,7 @@ export const CLIENT_SUPPORT_RPCS = [
   "app_submit_form", "app_get_intake_follow_up", "app_get_intake_draft", "app_save_intake_draft",
   "app_capture_intake_secret",
   "app_prepare_intake_file", "app_finish_intake_file", "app_get_intake_file", "app_get_form_submission_pdf", "app_get_form_submission",
-  "app_list_ticket_summaries", "app_get_ticket_detail_with_avatars", "app_get_order_conversation",
+  "app_list_ticket_summaries", "app_get_ticket_detail_with_avatars", "app_get_order_conversation", "app_get_order_conversation_page",
   "app_send_order_message", "app_reply_to_order_message", "app_toggle_order_message_reaction", "app_reply_to_ticket", "app_reply_to_ticket_message", "app_toggle_ticket_message_reaction",
   "app_create_ticket", "app_prepare_ticket_attachment", "app_send_ticket_message_with_attachment",
   "app_get_ticket_attachment_download", "app_set_client_conversation_presence",
