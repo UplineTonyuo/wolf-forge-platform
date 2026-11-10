@@ -12,10 +12,19 @@ import {
 } from "../domain/tickets/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
 import { TicketRepository } from "../repositories/ticket-repository";
+import { orderPageInputSchema } from "../domain/orders/conversation-page";
 import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
 
 export class TicketService {
   constructor(private readonly dependencies: ServiceDependencies<TicketRepository>) {}
+
+  getOrderPage(orderId: unknown, input: unknown = {}) {
+    return this.dependencies.repository.getOrderPage(parseInput(uuidSchema, orderId), parseInput(orderPageInputSchema, input));
+  }
+
+  getOrderNotes(orderId: unknown) {
+    return this.dependencies.repository.getOrderNotes(parseInput(uuidSchema, orderId));
+  }
 
   getForOrder(orderId: unknown) {
     return this.dependencies.repository.getForOrder(parseInput(uuidSchema, orderId));

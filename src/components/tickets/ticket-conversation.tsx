@@ -11,6 +11,8 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
+  type UIEventHandler,
 } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -39,6 +41,12 @@ import styles from "./tickets.module.css";
 import type { TicketMutationResult } from "../../app/actions/tickets";
 import { OrderMessageActions, type OrderReplyTarget } from "./order-message-actions";
 import { useBrowserTimeZone } from "../../lib/use-browser-time-zone";
+import { compareConversationTime } from "../../domain/orders/conversation-page";
+
+type TranscriptOptions = { ref: RefObject<HTMLDivElement | null>; onScroll: UIEventHandler<HTMLDivElement>; controls: ReactNode; jump: ReactNode };
+function TranscriptFrame({enabled,scrollRef,onScroll,children}:{enabled:boolean;scrollRef?:RefObject<HTMLDivElement|null>;onScroll?:UIEventHandler<HTMLDivElement>;children:ReactNode}) {
+  return enabled?<div ref={scrollRef} onScroll={onScroll} className={styles.transcriptScroll} role="region" aria-label="Message history" tabIndex={0}>{children}</div>:<>{children}</>;
+}
 
 function renderTicketInline(
   text: string,
@@ -546,6 +554,7 @@ export function TicketConversation({
   canReact = false,
   onToggleReaction,
   onRetryMessage,
+  transcript,
 }: {
   messages:
     TicketDetailMessage[];
@@ -565,6 +574,7 @@ export function TicketConversation({
   /** Acting context for reactions; defaults to the staff server action. */
   onToggleReaction?: (messageId: string, reactionCode: string) => Promise<TicketMutationResult>;
   onRetryMessage?: (message: TicketDetailMessage) => void;
+  transcript?: TranscriptOptions;
 }) {
   const timeZone = useBrowserTimeZone();
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
@@ -598,12 +608,12 @@ export function TicketConversation({
   const threadEntries = [
     ...visibleMessages.map(message => ({ kind: "message" as const, message, at: message.created_at, id: message.id })),
     ...callHistory.map(call => ({ kind: "call" as const, call, at: call.requestedAt, id: call.id })),
-  ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.id.localeCompare(b.id));
+  ].sort((a, b) => compareConversationTime(a.at,b.at) || a.id.localeCompare(b.id) || a.kind.localeCompare(b.kind));
 
   return (
     <section
       className={
-        `${styles.conversation}${orderChat ? ` ${styles.orderChat}` : ""}`
+        `${styles.conversation}${orderChat ? ` ${styles.orderChat}` : ""}${transcript ? ` ${styles.boundedTranscript}` : ""}`
       }
       data-client-view={clientView || undefined}
       aria-label="Conversation"
@@ -634,6 +644,8 @@ export function TicketConversation({
         ) : null}
       </header>
 
+      {transcript?.controls}
+      <TranscriptFrame enabled={Boolean(transcript)} scrollRef={transcript?.ref} onScroll={transcript?.onScroll}>
       {historyControls}
       {threadEntries.length ===
       0 ? (
@@ -728,6 +740,7 @@ export function TicketConversation({
               return (
                 <li
                   key={message.id}
+                  data-timeline-id={message.id}
                   data-side={renderedSide}
                   data-grouped={orderChat && grouped ? "true" : undefined}
                   data-own={orderChat && ownMessage ? "true" : undefined}
@@ -816,6 +829,8 @@ export function TicketConversation({
                             {message.reply_source_available !== false && message.reply_source_attachment?.is_image ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
+                                loading={transcript ? "lazy" : undefined}
+                                decoding="async"
                                 src={`/api/ticket-attachments/${message.reply_source_attachment.id}`}
                                 alt=""
                                 className={styles.messageReplyThumbnail}
@@ -869,6 +884,10 @@ export function TicketConversation({
                                       {/* eslint-disable-next-line @next/next/no-img-element -- authenticated per-message download route, not a static-optimizable asset */}
                                       <img
                                         className={styles.attachmentImage}
+                                        loading={transcript ? "lazy" : undefined}
+                                        decoding="async"
+                                        width={transcript ? 320 : undefined}
+                                        height={transcript ? 200 : undefined}
                                         src={attachmentUrl}
                                         alt={attachment.original_name}
                                       />
@@ -903,6 +922,7 @@ export function TicketConversation({
 
                         {orderChat && !message.pending && !message.failed ? (
                           <OrderMessageActions
+                            portalMenu={Boolean(transcript)}
                             message={{
                               messageId: message.id,
                               ticketId: message.ticket_id,
@@ -958,6 +978,8 @@ export function TicketConversation({
           )}
         </ol>
       )}
+      </TranscriptFrame>
+      {transcript?.jump}
       {lightbox ? (
         <ImageLightbox
           src={lightbox.src}

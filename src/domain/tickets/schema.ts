@@ -5,6 +5,7 @@ import type {
   TicketRow,
 } from "../../lib/supabase/database-rows";
 import { nonBlankTextSchema, uuidSchema } from "../shared";
+import { orderPageInputSchema } from "../orders/conversation-page";
 import {
   teamReactionCodeSchema,
   type TeamMessageReactionRow,
@@ -95,7 +96,7 @@ export const ticketForwardToTeamInputSchema = z.object({
 const conversationFingerprintSchema = z.string().max(20_000).nullable();
 export const ticketLiveRequestSchema = z.union([
   z.object({ ticket_id: uuidSchema, fingerprint: conversationFingerprintSchema }).strict(),
-  z.object({ order_id: uuidSchema, fingerprint: conversationFingerprintSchema }).strict(),
+  z.object({ order_id: uuidSchema, fingerprint: conversationFingerprintSchema, page: orderPageInputSchema.optional() }).strict(),
 ]);
 
 export const updateTicketStatusSchema = z.object({
@@ -186,7 +187,7 @@ export type TicketDetailMessage = {
   unsent_at?: string | null;
   can_unsend?: boolean;
   attachments: Array<Pick<TicketAttachmentRow, "id" | "original_name" | "mime_type" | "size_bytes" | "scan_status" | "created_at">>;
-  /** Client-only optimistic-send bookkeeping; never present on rows from the server. */
+  /** Optimistic identity; bounded Order reads return it only for the viewer's own sends. */
   requestId?: string | null;
   pending?: boolean;
   failed?: boolean;

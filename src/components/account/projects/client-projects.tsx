@@ -3,6 +3,7 @@ import Link from "next/link";
 import { projectAttention } from "../../../domain/client-portal/attention";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
 import type { TicketDetail } from "../../../domain/tickets/schema";
+import type { OrderPageInfo } from "../../../domain/orders/conversation-page";
 import { ProjectConversation } from "../../tickets/project-conversation";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
@@ -17,7 +18,7 @@ export function ClientProjectDetail({
   startControl,
 }: {
   project: ClientProjectView;
-  conversation: TicketDetail | null;
+  conversation: (TicketDetail & {page?:OrderPageInfo}) | null;
   /** The signed-in client's profile id, so message ownership comes from the
    *  authenticated user rather than from the client role. */
   viewerId: string;
@@ -119,6 +120,7 @@ export function ClientProjectDetail({
           orderId={project.id}
           heading={project.reference}
           messages={conversation?.messages ?? []}
+          initialPage={conversation?.page}
           viewerProfileId={viewerId}
           repliesDisabled={repliesDisabled}
         />

@@ -4732,3 +4732,80 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 .callHistoryEntry>div{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
 .callHistoryEntry strong{font-weight:600;color:var(--wf-navy)}
 .callHistoryEntry time{font-size:11px}
+
+/* Explicit Order/Project variant: Tickets, Inbox and Team keep their own layouts. */
+.orderPagedSurface {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  max-height: calc(var(--order-viewport-height, 100dvh) - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 0;
+  min-width: 0;
+}
+.orderPagedSurface > .boundedTranscript {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+.boundedTranscript > header { flex: 0 0 auto; flex-wrap: wrap; }
+.boundedTranscript > header > div { min-width: 0; }
+.boundedTranscript h2 { overflow-wrap: anywhere; }
+.transcriptScroll {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: #8991b5 #f4f6fa;
+  scrollbar-width: thin;
+}
+.transcriptScroll:focus-visible { outline: 2px solid var(--wf-navy); outline-offset: -3px; }
+.transcriptScroll .thread { min-width: 0; }
+.transcriptScroll :is(.messageContent,.messageStack,.messageBubble,.messageBody) { min-width: 0; overflow-wrap: anywhere; }
+.transcriptScroll .attachmentImage { width: min(320px,100%); height: 200px; object-fit: contain; background: #f4f6fa; }
+.transcriptScroll .messageReplyThumbnail { aspect-ratio: 1; object-fit: contain; }
+.messageHistoryBar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--wf-border);
+  color: var(--wf-text-muted);
+  font-size: 12px;
+}
+.messageHistoryBar p { flex-basis: 100%; margin: 0; }
+.messageHistoryBar button,.jumpLatest button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--wf-navy);
+  font: inherit;
+  cursor: pointer;
+}
+.messageHistoryBar button:hover:not(:disabled),.jumpLatest button:hover:not(:disabled) { background: #edf0f7; }
+.messageHistoryBar button:focus-visible,.jumpLatest button:focus-visible { outline: 2px solid #9c7418; outline-offset: 1px; }
+.messageHistoryBar button:disabled,.jumpLatest button:disabled { opacity: .6; cursor: wait; }
+.messageHistoryBar svg,.jumpLatest svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.jumpLatest { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: center; background: #fffaf0; font-size: 12px; }
+.orderPagedSurface > .composer { flex: 0 0 auto; min-width: 0; padding-bottom: max(12px,env(safe-area-inset-bottom)); }
+.orderPagedSurface .composer .ticketRichComposer { min-height: 64px; max-height: min(140px,20dvh); overflow-y: auto; }
+@media (max-height: 480px) {
+  .orderPagedSurface > .composer { padding-top: 4px; padding-bottom: 4px; }
+  .orderPagedSurface .composer .ticketRichComposer { min-height: 40px; max-height: 56px; }
+  .boundedTranscript > header { padding-top: 6px; padding-bottom: 6px; }
+  .messageHistoryBar { padding-top: 0; padding-bottom: 0; }
+}

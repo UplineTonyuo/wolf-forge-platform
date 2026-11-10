@@ -5658,6 +5658,14 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: Json
       }
+      app_get_order_conversation_page: {
+        Args: { p_order_id: string; p_direction?: string; p_cursor?: string | null; p_retained_ids?: string[]; p_fingerprint?: string | null; p_request_ids?: string[] }
+        Returns: Json
+      }
+      app_get_order_conversation_notes: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       app_get_profile_effective_permissions: {
         Args: { p_profile_id?: string }
         Returns: {

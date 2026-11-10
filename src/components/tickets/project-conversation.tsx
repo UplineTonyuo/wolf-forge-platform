@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toggleClientOrderMessageReactionAction } from "../../app/actions/tickets";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
-import { TicketConversation } from "./ticket-conversation";
-import { useTicketConversationMessages } from "./use-ticket-conversation-messages";
+import { OrderConversationPanel } from "./order-conversation-panel";
+import { useOrderConversationMessages } from "./use-order-conversation-messages";
+import type { OrderPageInfo } from "../../domain/orders/conversation-page";
 import { useClientConversationPresence } from "./use-client-conversation-presence";
 import type { OrderReplyTarget } from "./order-message-actions";
 import { OrderCallControls } from "./ticket-call-controls";
@@ -18,22 +19,25 @@ import { useTicketCallHistory } from "./use-ticket-call-history";
  * signed-in profile id rather than from the client role, so the two POVs of
  * one Project run the same perspective rule and reverse cleanly.
  */
-export function ProjectConversation({
+function ProjectConversationBody({
   orderId,
   heading,
   messages,
   viewerProfileId,
   repliesDisabled,
+  initialPage,
 }: {
   orderId: string;
   heading: string;
   messages: TicketDetailMessage[];
   viewerProfileId: string;
   repliesDisabled: boolean;
+  initialPage?: OrderPageInfo;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
-  const history = useTicketCallHistory(orderId, true);
-  const optimistic = useTicketConversationMessages({ projectId: orderId, serverMessages: messages, mode: "client", viewerProfileId });
+  const optimistic = useOrderConversationMessages({orderId,serverMessages:messages,initialPage,mode:"client",viewerProfileId});
+  const history = useTicketCallHistory(orderId,true,{entries:optimistic.calls,onPage:optimistic.addCalls,onClear:optimistic.clearCalls,resetKey:optimistic.latestRevision});
+  useEffect(()=>{if(optimistic.unavailable)queueMicrotask(()=>setReplyTo(null))},[optimistic.unavailable]);
   useClientConversationPresence("project", orderId, !optimistic.unavailable);
 
   const toggleReaction = async (messageId: string, reactionCode: string) => {
@@ -45,30 +49,24 @@ export function ProjectConversation({
   if (optimistic.unavailable) return <p role="alert">This conversation is unavailable.</p>;
 
   return (
-    <>
-      <TicketConversation
-        orderChat
-        clientView
-        callControls={<OrderCallControls orderId={orderId} disabled={repliesDisabled} />}
-        callHistory={history.entries}
-        historyControls={history.error ? <p role="status">{history.error} {history.retryable ? <button type="button" disabled={history.busy} onClick={() => void history.load()}>Retry call history</button> : null}</p> : history.more ? <button type="button" disabled={history.busy} onClick={() => void history.load(true)}>Earlier calls</button> : null}
-        viewerProfileId={viewerProfileId}
-        messages={optimistic.messages}
-        heading={heading}
-        onReply={repliesDisabled ? undefined : setReplyTo}
-        canReact
-        onToggleReaction={toggleReaction}
-        onRetryMessage={(message) => void optimistic.retry(message.requestId ?? "")}
-      />
+    <OrderConversationPanel conversation={optimistic} renderer={{clientView:true,viewerProfileId,heading,
+      callControls:<OrderCallControls orderId={orderId} disabled={repliesDisabled}/>,
+      historyControls:history.error?<p role="status">{history.error} {history.retryable?<button type="button" disabled={history.busy} onClick={()=>void history.load()}>Retry call history</button>:null}</p>:history.more||optimistic.hasEvictedEarlierCalls?<button type="button" disabled={history.busy} onClick={()=>void history.load(true)}>Earlier calls</button>:null,
+      onReply:repliesDisabled?undefined:setReplyTo,canReact:true,onToggleReaction:toggleReaction,onRetryMessage:message=>void optimistic.retry(message.requestId??"")}}>
       <TicketComposer
         target={{ kind: "order", orderId }}
         mode="client"
         disabled={repliesDisabled}
+        attached
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         optimistic={{ onSend: optimistic.addOptimistic, onSettled: optimistic.settle }}
         confirmedRequestIds={messages.filter((message) => message.requestId).map((message) => message.requestId!)}
       />
-    </>
+    </OrderConversationPanel>
   );
+}
+
+export function ProjectConversation(props:Parameters<typeof ProjectConversationBody>[0]) {
+  return <ProjectConversationBody key={`${props.orderId}:${props.viewerProfileId}:${props.initialPage?.source??""}`} {...props}/>;
 }

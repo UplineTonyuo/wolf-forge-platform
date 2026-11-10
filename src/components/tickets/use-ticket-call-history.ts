@@ -3,23 +3,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { callHistoryEntry, type CallHistoryEntry } from "../../domain/tickets/calls";
 import { useInboxCalls } from "../calls/call-provider";
+import { compareConversationTime } from "../../domain/orders/conversation-page";
 
-export function useTicketCallHistory(ticketId: string, order = false) {
+type ControlledHistory = { entries: CallHistoryEntry[]; onPage: (page: CallHistoryEntry[], older: boolean) => void; onClear: () => void; resetKey?: number };
+export function useTicketCallHistory(ticketId: string, order = false, controlled?: ControlledHistory) {
   const controller = useInboxCalls();
+  const resetKey=controlled?.resetKey??0;
   const [state, setState] = useState<{ ticketId: string; entries: CallHistoryEntry[]; more: boolean; error: string; busy: boolean }>({ ticketId, entries: [], more: false, error: "", busy: false });
   const generation = useRef(0), inFlight = useRef(false), pending = useRef(false);
   const cursor = useRef<CallHistoryEntry | null>(null);
   const [retryable, setRetryable] = useState(true);
   const run = useRef<() => Promise<void>>(async () => {});
+  const controlledRef = useRef(controlled);
+  useEffect(()=>{controlledRef.current=controlled},[controlled]);
   const active = state.ticketId === ticketId;
-  const entries = active ? state.entries : [];
+  const entries = active ? controlled?.entries ?? state.entries : [];
   const load = useCallback(async (older = false) => {
     if (inFlight.current) { if (!older) pending.current = true; return; }
     inFlight.current = true;
     const current = generation.current;
     setState(previous => ({ ...(previous.ticketId === ticketId ? previous : { ticketId, entries: [], more: false, error: "" }), busy: true }));
     try {
-      const before = older ? cursor.current : null;
+      const retained=controlledRef.current?.entries;
+      const oldest=retained?.reduce<CallHistoryEntry|null>((previous,entry)=>!previous||compareConversationTime(entry.requestedAt,previous.requestedAt)<0||entry.requestedAt===previous.requestedAt&&entry.id<previous.id?entry:previous,null);
+      const before = older ? oldest ?? cursor.current : null;
       const query = new URLSearchParams({ action: "history", ...(order ? { order_id: ticketId } : { ticket_id: ticketId }), ...(before ? { before: before.requestedAt, before_id: before.id } : {}) });
       const response = await fetch(`/api/ticket-calls?${query}`, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(12000) });
       if (current !== generation.current) return;
@@ -29,6 +36,7 @@ export function useTicketCallHistory(ticketId: string, order = false) {
         const support = failure?.code === "SUPPORT_MODE";
         setRetryable(!support);
         cursor.current = null;
+        controlledRef.current?.onClear();
         setState({ ticketId, entries: [], more: false, busy: false, error: support ? "Calls and call history are disabled in client-support sessions. Use your own signed-in account for calling." : response.status === 401 ? "Your session expired. Sign in again to view call history." : "Call history is unavailable." }); return;
       }
       const result = await response.json();
@@ -36,7 +44,8 @@ export function useTicketCallHistory(ticketId: string, order = false) {
       const page = z.array(callHistoryEntry).max(50).parse(result.data);
       if (current !== generation.current) return;
       if (older || !cursor.current) cursor.current = page.at(-1) ?? null;
-      setState(previous => ({ ticketId, entries: [...new Map([...(previous.ticketId === ticketId ? previous.entries : []), ...page].map(call => [call.id, call])).values()], more: older ? page.length === 50 : page.length === 50 || (previous.ticketId === ticketId && previous.more), busy: false, error: "" }));
+      controlledRef.current?.onPage(page,older);
+      setState(previous => ({ ticketId, entries: controlledRef.current ? [] : [...new Map([...(previous.ticketId === ticketId ? previous.entries : []), ...page].map(call => [call.id, call])).values()], more: older ? page.length === 50 : page.length === 50 || (previous.ticketId === ticketId && previous.more), busy: false, error: "" }));
     } catch (error) {
       if (current === generation.current) setState(previous => ({ ...previous, busy: false, error: error instanceof Error && error.message === "RATE_LIMITED" ? "Call history request limit reached. Wait a moment, then try again." : "Call history could not be loaded. Try again." }));
     } finally {
@@ -61,6 +70,6 @@ export function useTicketCallHistory(ticketId: string, order = false) {
     const wake = () => { void load(); };
     window.addEventListener("wolf-forge-call-history", wake);
     return () => { generation.current = current + 1; unsubscribe?.(); window.removeEventListener("wolf-forge-call-history", wake); };
-  }, [controller, load, ticketId, order]);
+  }, [controller, load, ticketId, order, resetKey]);
   return { entries, more: active && state.more, busy: active && state.busy, error: active ? state.error : "", retryable, load };
 }

@@ -19,12 +19,13 @@ type TicketLiveSyncOptions = ConversationLiveTarget & {
   active: boolean;
   /** The fingerprint the client already holds, so unchanged ticks return no payload. */
   getFingerprint: () => string;
+  getPageRequest?: () => Record<string, unknown>;
   /**
    * Adopt an authoritative transcript. Return true only when it actually
    * changed what is on screen — that return value is what promotes the
    * scheduler back to FAST.
    */
-  onMessages: (messages: unknown[], fingerprint: string) => boolean;
+  onMessages: (messages: unknown[], fingerprint: string, data?: Record<string, unknown>) => boolean;
   onUnavailable?: () => void;
 };
 
@@ -65,6 +66,7 @@ export function useTicketLiveSync({
   projectId,
   active,
   getFingerprint,
+  getPageRequest,
   onMessages,
   onUnavailable,
 }: TicketLiveSyncOptions) {
@@ -72,11 +74,13 @@ export function useTicketLiveSync({
   const fingerprintRef = useRef(getFingerprint);
   const onMessagesRef = useRef(onMessages);
   const onUnavailableRef = useRef(onUnavailable);
+  const pageRequestRef = useRef(getPageRequest);
   useEffect(() => {
     fingerprintRef.current = getFingerprint;
     onMessagesRef.current = onMessages;
     onUnavailableRef.current = onUnavailable;
-  }, [getFingerprint, onMessages, onUnavailable]);
+    pageRequestRef.current = getPageRequest;
+  }, [getFingerprint, getPageRequest, onMessages, onUnavailable]);
 
   /*
    * Mutable scheduler state, never React state: it changes on every tick and
@@ -148,6 +152,7 @@ export function useTicketLiveSync({
           body: JSON.stringify({
             ...(projectId ? { order_id: projectId } : { ticket_id: conversationId }),
             fingerprint: fingerprintRef.current(),
+            ...(pageRequestRef.current?.() ?? {}),
           }),
         });
 
@@ -155,7 +160,7 @@ export function useTicketLiveSync({
           | {
               ok?: boolean;
               code?: string;
-              data?: { ticketId?: string; orderId?: string; fingerprint?: string; changed?: boolean; messages?: unknown[] | null };
+              data?: { ticketId?: string; orderId?: string; fingerprint?: string; changed?: boolean; messages?: unknown[] | null; [key: string]: unknown };
             }
           | null;
 
@@ -183,7 +188,7 @@ export function useTicketLiveSync({
             Array.isArray(data.messages) &&
             typeof data.fingerprint === "string"
           ) {
-            changed = onMessagesRef.current(data.messages, data.fingerprint);
+            changed = onMessagesRef.current(data.messages, data.fingerprint, data);
           }
         } else {
           scheduleState.current.failures += 1;

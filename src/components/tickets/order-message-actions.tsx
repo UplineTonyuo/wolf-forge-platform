@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   forwardTicketMessageToTeamAction,
@@ -67,6 +67,7 @@ export function OrderMessageActions({
   onReply,
   canReact,
   onToggleReaction = defaultToggleReaction,
+  portalMenu = false,
 }: {
   message: OrderReplyTarget;
   sourceLabel: string;
@@ -74,6 +75,7 @@ export function OrderMessageActions({
   destinations: TeamConversationView[];
   onReply?: (message: OrderReplyTarget) => void;
   canReact: boolean;
+  portalMenu?: boolean;
   /**
    * Staff and client reach the same RPC through different authorized server
    * actions, so the acting context is injected rather than assumed. The
@@ -163,19 +165,28 @@ export function OrderMessageActions({
         : window.innerHeight;
       const needed = menu.getBoundingClientRect().height + 16;
       menu.dataset.placement = limit - rect.bottom < needed ? "above" : "below";
+      if (portalMenu) {
+        const size=menu.getBoundingClientRect();
+        menu.style.position="fixed";menu.style.right="auto";menu.style.bottom="auto";
+        menu.style.left=`${Math.max(8,Math.min(rect.right-size.width,window.innerWidth-size.width-8))}px`;
+        menu.style.top=`${Math.max(8,Math.min(rect.bottom+8,window.innerHeight-size.height-8))}px`;
+        if(rect.bottom+size.height+16>window.innerHeight)menu.style.top=`${Math.max(8,rect.top-size.height-8)}px`;
+      }
     }
     place();
     window.addEventListener("resize", place);
+    if(portalMenu)window.addEventListener("scroll",place,true);
 
     function dismiss(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) closeMenu();
+      if (!rootRef.current?.contains(event.target as Node)&&!menuRef.current?.contains(event.target as Node)) closeMenu();
     }
     document.addEventListener("click", dismiss);
     return () => {
       document.removeEventListener("click", dismiss);
       window.removeEventListener("resize", place);
+      window.removeEventListener("scroll",place,true);
     };
-  }, [closeMenu, menuRendered, reactionPicker]);
+  }, [closeMenu, menuRendered, reactionPicker, portalMenu]);
 
   useEffect(() => {
     if (!forwardOpen) return;
@@ -285,6 +296,7 @@ export function OrderMessageActions({
     destinations.length > 0 ? "forward" : null,
     "copy",
   ].filter(Boolean);
+  const renderMenu=(menu:ReactNode)=>portalMenu?createPortal(menu,document.body):menu;
 
   return (
     <>
@@ -293,7 +305,7 @@ export function OrderMessageActions({
         className={styles.orderMessageActions}
         data-open={menuRendered || undefined}
         onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) hideMenu();
+          if (!event.currentTarget.contains(event.relatedTarget)&&!menuRef.current?.contains(event.relatedTarget)) hideMenu();
         }}
         onKeyDown={(event) => {
           if (event.key === "Escape" && menuRendered) {
@@ -308,7 +320,7 @@ export function OrderMessageActions({
             return;
           }
           const items = Array.from(
-            rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"], [role="menuitemcheckbox"]') ?? [],
+            menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"], [role="menuitemcheckbox"]') ?? [],
           );
           if (!items.length) return;
           const current = items.indexOf(document.activeElement as HTMLButtonElement);
@@ -342,7 +354,7 @@ export function OrderMessageActions({
           <MoreHorizontal aria-hidden="true" />
         </button>
 
-        {menuRendered ? (
+        {menuRendered ? renderMenu(
           <div
             ref={menuRef}
             id={menuId}

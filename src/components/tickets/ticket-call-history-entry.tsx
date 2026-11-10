@@ -14,7 +14,7 @@ function outcome(call: CallHistoryEntry) {
 }
 export function TicketCallHistoryEntry({ call, timeZone }: { call: CallHistoryEntry; timeZone: string | undefined }) {
   const Icon = call.outcome === "missed" ? PhoneMissed : call.mode === "video" ? Video : Phone;
-  return <li className={styles.callHistoryEntry} data-call-id={call.id}>
+  return <li className={styles.callHistoryEntry} data-call-id={call.id} data-timeline-id={call.id}>
     <Icon aria-hidden="true" />
     <div><strong>{outcome(call)} {call.mode === "audio" ? "voice" : "video"} call</strong>
       <span>{call.caller.name} → {call.callee?.name ?? "No recipient"}</span>

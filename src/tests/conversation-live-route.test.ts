@@ -10,6 +10,7 @@ vi.mock("../lib/supabase/identity-failure-response", () => ({
 const { POST } = await import("../app/api/ticket-live/route");
 const ID = "10000000-0000-4000-8000-000000000001";
 const messages = [{ id: "message-1", body: "Synthetic Studio message", attachments: [], reactions: [] }];
+const page={before:null,after:null,hasOlder:false,hasNewer:false,source:`project:${ID}`};
 
 function request(body: unknown, origin = "http://localhost:3046") {
   return new Request("http://localhost:3046/api/ticket-live", {
@@ -20,9 +21,9 @@ function request(body: unknown, origin = "http://localhost:3046") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.getContext.mockResolvedValue({ tickets: { get: mocks.getTicket, getForOrder: mocks.getProject } });
+  mocks.getContext.mockResolvedValue({ tickets: { get: mocks.getTicket, getOrderPage: mocks.getProject } });
   mocks.getTicket.mockResolvedValue({ messages });
-  mocks.getProject.mockResolvedValue({ messages });
+  mocks.getProject.mockImplementation(async (_id,input)=>({messages,updates:[],page,confirmedRequestIds:[],fingerprint:ticketConversationFingerprint(messages),changed:input.fingerprint!==ticketConversationFingerprint(messages)}));
 });
 
 describe("shared conversation live route", () => {
@@ -41,8 +42,9 @@ describe("shared conversation live route", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, data: {
       orderId: ID, fingerprint: ticketConversationFingerprint(messages), changed: true, messages,
+      updates:[],page,confirmedRequestIds:[],
     } });
-    expect(mocks.getProject).toHaveBeenCalledWith(ID);
+    expect(mocks.getProject).toHaveBeenCalledWith(ID,{direction:"refresh",cursor:null,retainedIds:[],requestIds:[],fingerprint:null});
     expect(mocks.getTicket).not.toHaveBeenCalled();
   });
 

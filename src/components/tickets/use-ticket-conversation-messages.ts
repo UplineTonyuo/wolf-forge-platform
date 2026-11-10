@@ -7,6 +7,7 @@ import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { useOptimisticTicketMessages } from "./use-optimistic-ticket-messages";
 import { useTicketLiveSync, type ConversationLiveTarget } from "./use-ticket-live-sync";
 import { notifyTicketAccessUnavailable } from "./ticket-access-boundary";
+export { useOrderConversationMessages } from "./use-order-conversation-messages";
 
 /**
  * The one place a Ticket conversation's transcript is assembled, shared by the
