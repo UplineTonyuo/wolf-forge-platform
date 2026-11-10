@@ -51,7 +51,7 @@ select is(current_setting('test.page')::jsonb->'messages'->0->>'body','Receipt 9
 select is(current_setting('test.page')::jsonb->'messages'->9->>'body','Receipt 1003','newest at end');
 select is((current_setting('test.page')::jsonb->'page'->>'hasOlder')::boolean,true,'older sentinel');
 select is((current_setting('test.page')::jsonb->'page'->>'hasNewer')::boolean,false,'latest exhausted');
-select like((current_setting('test.page')::jsonb->'page'->>'before')::jsonb->>'at','%.123456%','microsecond boundary retained');
+select alike((current_setting('test.page')::jsonb->'page'->>'before')::jsonb->>'at','%.123456%','microsecond boundary retained');
 select set_config('test.older',public.app_get_order_conversation_page('ea200000-0000-4000-8000-000000000001','before',current_setting('test.page')::jsonb->'page'->>'before')::text,true);
 select is(current_setting('test.older')::jsonb->'messages'->9->>'body','Receipt 993','same timestamp UUID boundary has no repeat or gap');
 select is(jsonb_array_length(current_setting('test.older')::jsonb->'messages'),10,'older batch ten');
@@ -72,6 +72,10 @@ select set_config('test.refresh',public.app_get_order_conversation_page('ea20000
 select is(jsonb_array_length(current_setting('test.refresh')::jsonb->'updates'),1,'refreshes older retained rows independently of new arrivals');
 select is(public.app_get_order_conversation_page('ea200000-0000-4000-8000-000000000001','refresh',null,array['ea300000-0000-4000-8000-000000000001'::uuid],current_setting('test.refresh')::jsonb->>'fingerprint')->'updates','null'::jsonb,'unchanged refresh omits row payload');
 reset role;
+update public.profiles set role_id=(select id from public.roles where name='admin') where id='ea000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select lives_ok($$select public.app_get_order_conversation_page('ea200000-0000-4000-8000-000000000001')$$,'non-Owner staff can read before explicit denial');
+reset role;
 insert into public.profile_permission_overrides(profile_id,permission_key,allowed) values
  ('ea000000-0000-4000-8000-000000000001','tickets.view',false);
 set local role authenticated;
@@ -79,6 +83,7 @@ set local "request.jwt.claim.sub"='ea000000-0000-4000-8000-000000000001';
 select throws_ok($$select public.app_get_order_conversation_page('ea200000-0000-4000-8000-000000000001')$$,'42501',null,'current explicit permission denial blocks subsequent page reads');
 reset role;
 delete from public.profile_permission_overrides where profile_id='ea000000-0000-4000-8000-000000000001' and permission_key='tickets.view';
+update public.profiles set role_id=(select id from public.roles where name='owner') where id='ea000000-0000-4000-8000-000000000001';
 insert into public.project_messages(id,order_id,author_profile_id,author_type,request_id,body,created_at) values
  ('ea300000-0000-4000-8000-000000000000','ea200000-0000-4000-8000-000000000001','ea000000-0000-4000-8000-000000000002','client','ea500000-0000-4000-8000-000000000001','Accepted older send','2026-11-09 00:00:00.123456+00');
 set local role authenticated;

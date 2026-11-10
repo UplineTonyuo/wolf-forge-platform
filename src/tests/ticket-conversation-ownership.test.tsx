@@ -18,6 +18,7 @@ vi.mock("../app/actions/tickets", () => ({
 }));
 
 const { TicketConversation } = await import("../components/tickets/ticket-conversation");
+const { OrderMessageActions } = await import("../components/tickets/order-message-actions");
 const { teamPickerReactionCodes } = await import("../domain/team/schema");
 
 import type { TicketDetailMessage } from "../domain/tickets/schema";
@@ -365,6 +366,27 @@ describe("Ticket conversation reply", () => {
 });
 
 describe("Ticket conversation reactions", () => {
+  it("keeps the portaled picker open when React replaces the clicked menu item", () => {
+    render(<OrderMessageActions
+      portalMenu
+      message={{ messageId: staffMessage.id, ticketId: staffMessage.ticket_id, authorName: "Staff", body: "Message", replyPreview: "Message" }}
+      sourceLabel="Project" reactions={[]} destinations={[]} canReact onReply={vi.fn()}
+      onToggleReaction={vi.fn(async () => ({ ok: true as const }))}
+    />);
+    fireEvent.click(screen.getByRole("button", { name: "Message actions" }));
+    const clickedItem = screen.getByRole("menuitem", { name: "React" });
+    const menu = screen.getByRole("menu", { name: "Message actions" });
+    fireEvent.click(clickedItem);
+    expect(clickedItem.isConnected).toBe(false);
+    // Real browser clicks finish bubbling after React replaces the target.
+    const bubblingClick = new MouseEvent("click", { bubbles: true });
+    Object.defineProperty(bubblingClick, "target", { value: clickedItem });
+    Object.defineProperty(bubblingClick, "composedPath", { value: () => [clickedItem, menu, document.body, document] });
+    fireEvent(document, bubblingClick);
+    expect(screen.getByRole("menu", { name: "Reactions" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Like" })).toBeInTheDocument();
+  });
+
   const reacted = message({
     id: "70000000-0000-4000-8000-0000000000e1",
     author_profile_id: CLIENT_PROFILE,

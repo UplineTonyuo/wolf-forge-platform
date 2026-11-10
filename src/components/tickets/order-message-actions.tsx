@@ -178,7 +178,7 @@ export function OrderMessageActions({
     if(portalMenu)window.addEventListener("scroll",place,true);
 
     function dismiss(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)&&!menuRef.current?.contains(event.target as Node)) closeMenu();
+      if (!event.composedPath().some(node => node === rootRef.current || node === menuRef.current)) closeMenu();
     }
     document.addEventListener("click", dismiss);
     return () => {
