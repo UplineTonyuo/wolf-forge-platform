@@ -20,7 +20,7 @@ export default async function ProjectsPage() {
     const [projects, people, services, serviceFolders, clients] = await Promise.all([
       context.services.orders.listProjects(),
       context.services.catalog.listAssignees(),
-      context.services.catalog.listActive(),
+      context.services.catalog.listActiveOptions(),
       context.services.catalog.listFolders(),
       context.services.companies.listActive(),
     ]);
