@@ -77,6 +77,8 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
     const page = await success(api.rpc("app_get_order_conversation_page", { p_order_id: order }), "Unlocked paged conversation");
     need(page.messages.some(message => message.body === "Staff can work before intake") && page.messages.length <= 10, "Unlocked page lost bounded history");
   }
+  await success(client.api.rpc("app_get_ticket_attachment_download", { p_attachment_id: attachment }), "Attachment metadata resumes after final submission");
+  await success(client.api.rpc("app_prepare_ticket_attachment", { p_order_id: order, p_request_id: randomUUID() }), "Attachment preparation resumes after final submission");
   await success(client.api.rpc("app_order_call_history", { p_order_id: order }), "Call history resumes after final submission");
   await success(client.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: randomUUID(), p_body: "Unlocked client send" }), "Unlocked write");
   // The pre-rollout order has required intake but no frozen start row.
@@ -91,13 +93,12 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   const linkedMessage = await sql("select id from public.ticket_messages where ticket_id=:'ticket'::uuid and request_id=:'request'::uuid;", { ticket, request: linkedRequest });
   await denied(client.api.rpc("app_get_ticket_detail_with_avatars", { p_ticket_id: ticket }), "Locked linked Ticket reader");
   await denied(client.api.rpc("app_reply_to_ticket", { p_ticket_id: ticket, p_request_id: randomUUID(), p_body: "Blocked linked send" }), "Locked linked Ticket write");
-  const rows = await success(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Linked Ticket RLS");
-  need(rows.length === 0, "Locked linked Ticket rows disclosed");
+  await denied(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Existing raw Ticket message ACL stays closed");
   await submit(requirements[0], emptyOrder);
   need(await eligible(client.api, emptyOrder) === true, "Legacy final submission did not unlock chat");
-  await success(client.api.rpc("app_get_order_conversation_page", { p_order_id: emptyOrder }), "Unlocked linked Ticket page");
-  const visibleRows = await success(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Unlocked linked Ticket RLS");
-  need(visibleRows.some(row => row.id === linkedMessage), "Submitted intake did not reveal the formerly protected linked message");
+  const linkedPage = await success(client.api.rpc("app_get_order_conversation_page", { p_order_id: emptyOrder }), "Unlocked linked Ticket page");
+  need(linkedPage.messages.some(row => row.id === linkedMessage), "Submitted intake did not reveal the formerly protected linked message");
+  await denied(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Unlock does not broaden the raw Ticket message ACL");
   need(await sql("select not exists(select 1 from private.client_order_starts where order_id=:'order'::uuid);", { order: emptyOrder }) === "t", "Legacy acceptance backfilled a gate");
-  console.log("PASS real Auth client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachment metadata/presence, partial/final/legacy completion and linked Ticket RLS (disposable CI only)");
+  console.log("PASS real Auth client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachment metadata/presence, partial/final/legacy completion and linked Ticket authority/ACLs (disposable CI only)");
 }
