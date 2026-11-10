@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 // Called only after check-client-support-rest's disposable-runner and real Auth guards.
-export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibling, other, supportApi, need, success, denied }) {
+export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibling, other, supportApi, need, success, denied, waitFor }) {
   const service = randomUUID(), emptyOrder = randomUUID(), attachment = randomUUID();
   await sql(`insert into public.services(id,tenant_id,name,price,currency,is_active,is_public,recurring)
     values(:'service'::uuid,:'tenant'::uuid,'Synthetic chat gate',10,'USD',true,true,false);
@@ -13,8 +13,7 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   need(await eligible(client.api, emptyOrder) === true, "No-form order must remain available");
   await success(client.api.rpc("app_get_order_conversation_page", { p_order_id: emptyOrder }), "No-form conversation");
 
-  const requirements = [];
-  for (let n = 0; n < 2; n++) {
+  const createRequirement = async (n) => {
     const field = randomUUID();
     const form = await success(owner.api.rpc("app_create_form", { p_request_id: randomUUID(), p_payload: {
       form_type: "intake", canonical_key: `chat-gate-${randomUUID()}`, definition: {
@@ -24,8 +23,9 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
       },
     } }), "Chat-gate intake creation");
     await success(owner.api.rpc("app_publish_form", { p_request_id: randomUUID(), p_form_id: form.id }), "Chat-gate publication");
-    requirements.push({ form: form.id, field });
-  }
+    return { form: form.id, field };
+  };
+  const requirements = [await createRequirement(0), await createRequirement(1)];
   await sql("insert into private.client_order_start_rollout(tenant_id,service_id,enabled) values(:'tenant'::uuid,:'service'::uuid,true);", { tenant, service });
   const purchased = await success(client.api.rpc("app_purchase_service_with_balance", { p_request_id: randomUUID(), p_service_id: service }), "Synthetic gated purchase");
   const order = purchased[0]?.order_id;
@@ -60,7 +60,7 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   need(await eligible(client.api, order) === false, "Start click opened chat");
   const assignments = await success(client.api.rpc("app_list_assigned_forms"), "Required intake navigation");
   const submit = async (requirement, targetOrder = order) => {
-    const rows = targetOrder === order ? assignments : await success(client.api.rpc("app_list_assigned_forms"), "Legacy intake navigation");
+    const rows = await success(client.api.rpc("app_list_assigned_forms"), "Current required intake navigation");
     const assignment = rows.find(row => row.order_id === targetOrder && row.form_id === requirement.form);
     need(assignment, "Required assignment missing from existing workflow");
     const result = await success(client.api.rpc("app_submit_form", { p_request_id: randomUUID(), p_form_version_id: assignment.form_version_id,
@@ -81,6 +81,23 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   await success(client.api.rpc("app_prepare_ticket_attachment", { p_order_id: order, p_request_id: randomUUID() }), "Attachment preparation resumes after final submission");
   await success(client.api.rpc("app_order_call_history", { p_order_id: order }), "Call history resumes after final submission");
   await success(client.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: randomUUID(), p_body: "Unlocked client send" }), "Unlocked write");
+  const extra = await createRequirement(2), extraAssignment = randomUUID(), blockedRequest = randomUUID();
+  const lockName = `wf-chat-gate-${randomUUID()}`;
+  const blocker = sql(`set application_name=:'name'; begin;
+    select 1 from public.tenants where id=:'tenant'::uuid for update;
+    insert into public.form_assignments(id,form_id,form_version_id,company_id,client_profile_id,order_id,assigned_by_profile_id)
+    select :'assignment'::uuid,id,published_version_id,:'company'::uuid,:'client'::uuid,:'order'::uuid,:'owner'::uuid
+      from public.forms where id=:'form'::uuid;
+    select pg_sleep(6); commit;`,
+  { name: lockName, tenant, assignment: extraAssignment, company: client.company, client: client.id, order, owner: owner.id, form: extra.form }).then(() => true, () => false);
+  await waitFor(async () => await sql("select exists(select 1 from pg_stat_activity where application_name=:'name' and wait_event='PgSleep');", { name: lockName }) === "t", "Staff assignment holds the shared Tenant lock");
+  const waitingSend = client.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: blockedRequest, p_body: "Must not cross a newly committed requirement" }).then(result => result);
+  await waitFor(async () => await sql("select exists(select 1 from pg_stat_activity where wait_event_type='Lock' and query like '%app_send_order_message%');") === "t", "Real client send waits after its early eligibility check");
+  need(await blocker, "Synthetic assignment transaction failed");
+  await denied(waitingSend, "Post-lock write trigger rechecks newly required intake");
+  need(await sql("select not exists(select 1 from public.project_messages where order_id=:'order'::uuid and request_id=:'request'::uuid);", { order, request: blockedRequest }) === "t", "A stale admitted send persisted after the requirement committed");
+  await submit(extra);
+  need(await eligible(client.api, order) === true, "Later required submission did not restore chat");
   // The pre-rollout order has required intake but no frozen start row.
   await success(owner.api.rpc("app_assign_form", { p_request_id: randomUUID(), p_form_id: requirements[0].form, p_context: { order_id: emptyOrder, client_profile_id: client.id } }), "Legacy required assignment");
   need(await eligible(client.api, emptyOrder) === false, "Legacy intake failed open");
@@ -100,5 +117,5 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   need(linkedPage.messages.some(row => row.id === linkedMessage), "Submitted intake did not reveal the formerly protected linked message");
   await denied(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Unlock does not broaden the raw Ticket message ACL");
   need(await sql("select not exists(select 1 from private.client_order_starts where order_id=:'order'::uuid);", { order: emptyOrder }) === "t", "Legacy acceptance backfilled a gate");
-  console.log("PASS real Auth client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachment metadata/presence, partial/final/legacy completion and linked Ticket authority/ACLs (disposable CI only)");
+  console.log("PASS real Auth client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachment metadata/presence, partial/final/legacy completion, post-lock admission race and linked Ticket authority/ACLs (disposable CI only)");
 }

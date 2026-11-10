@@ -68,6 +68,14 @@ begin
     raise exception 'Complete required service forms before using chat' using errcode='42501';
   end if;
   return project;$patch$),
+    ('private.enforce_ticket_module_write()',
+      '  return new;',
+      $patch$  if target_order is not null
+    and exists(select 1 from private.current_ticket_actor() actor where actor.role_name='client')
+    and not private.order_conversation_forms_complete(target_order) then
+    raise exception 'Complete required service forms before using chat' using errcode='42501';
+  end if;
+  return new;$patch$),
     ('private.can_access_ticket(uuid)',
       '(actor.role_name = ''client'' and project.company_id = actor.company_id)',
       '(actor.role_name = ''client'' and project.company_id = actor.company_id and private.order_conversation_forms_complete(project.id))'),

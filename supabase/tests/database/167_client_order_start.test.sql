@@ -22,6 +22,9 @@ select set_config('request.jwt.claim.sub','b6270000-0000-4000-8000-00000000000'|
 select set_config('request.jwt.claims','',true);
 select set_config('request.headers','{"x-wf-tenant":"b6270000-0000-4000-8000-000000000010"}',true);$$;
 create function pg_temp.try(command text) returns text language plpgsql as $$begin execute command; return 'OK';exception when others then return sqlstate;end;$$;
+create function pg_temp.chat_write_probe(p_order uuid) returns void language sql security definer set search_path='' as $$
+insert into public.project_messages(order_id,author_profile_id,author_type,body)
+values(p_order,auth.uid(),'client','Synthetic post-lock write probe');$$;
 create temp table start_ids(label text primary key,id uuid not null);
 grant all on start_ids to authenticated;
 set local role authenticated;
@@ -53,6 +56,7 @@ select is(jsonb_array_length(public.app_get_my_order_start(id)->'forms'),2,'both
 select is((public.app_request_my_order_start(id)->>'started')::boolean,false,'request does not skip required intake') from start_ids where label='order';
 select is((select status from public.app_get_my_client_project(id)),'pending','order remains pending before form completion') from start_ids where label='order';
 select is(public.app_my_order_chat_available(id),false,'Start request without submissions keeps chat locked') from start_ids where label='order';
+select throws_ok(format('select pg_temp.chat_write_probe(%L)',id),'42501',null,'existing write trigger independently refuses unfinished intake after admission waits') from start_ids where label='order';
 select is((select unanswered from public.app_list_my_order_response_states(array[id])),null::boolean,'locked native conversation does not expose reply metadata') from start_ids where label='order';
 select throws_ok(format('select public.app_get_order_conversation_page(%L)',id),'42501',null,'paged reader blocks unfinished intake') from start_ids where label='order';
 select throws_ok(format('select public.app_get_order_conversation(%L)',id),'42501',null,'old full reader blocks unfinished intake') from start_ids where label='order';
@@ -80,6 +84,7 @@ select is((select status from public.app_get_my_client_project(id)),'working','c
 select is((public.app_request_my_order_start(id)->>'started')::boolean,true,'a duplicate start replays the confirmed state') from start_ids where label='order';
 select is(public.app_my_order_chat_available(id),true,'all frozen submitted requirements unlock chat after final submission') from start_ids where label='order';
 select lives_ok(format('select public.app_get_order_conversation_page(%L)',id),'final completion unlocks the existing paged reader') from start_ids where label='order';
+select lives_ok(format('select pg_temp.chat_write_probe(%L)',id),'existing write boundary accepts valid completed proof') from start_ids where label='order';
 reset role;
 -- A sibling company member reads completion proof without becoming the purchaser.
 insert into auth.users(id,aud,role,email) values('b6270000-0000-4000-8000-000000000004','authenticated','authenticated','order-start-sibling@example.invalid');
@@ -155,10 +160,8 @@ update public.form_assignments set status='archived',archived_at=clock_timestamp
 select is(private.order_conversation_forms_complete('b6270000-0000-4000-8000-000000000080'),false,'archived old requirement remains fail-closed despite a submitted replacement');
 update public.form_assignments set status='canceled',archived_at=null where id='b6270000-0000-4000-8000-000000000081';
 select is(private.order_conversation_forms_complete('b6270000-0000-4000-8000-000000000080'),true,'restored ordinary canceled replacement history preserves submitted completion');
-create temp table saved_chat_submission as select id,latest_submission_id from public.form_assignments where id=(select id from start_ids where label='assignment');
-update public.form_assignments set latest_submission_id=(select latest_submission_id from public.form_assignments where id=(select id from start_ids where label='second-assignment')) where id=(select id from start_ids where label='assignment');
-select is(private.order_conversation_forms_complete(id),false,'invalid submission linkage cannot open a started frozen order') from start_ids where label='order';
-update public.form_assignments a set latest_submission_id=s.latest_submission_id from saved_chat_submission s where a.id=s.id;
+select throws_ok($$update public.form_assignments set latest_submission_id=(select latest_submission_id from public.form_assignments where id=(select id from start_ids where label='second-assignment')) where id=(select id from start_ids where label='assignment')$$,
+  '23514',null,'existing receipt invariant rejects invalid submitted linkage rather than admitting chat');
 update public.form_assignments set status='archived',archived_at=clock_timestamp() where id=(select id from start_ids where label='assignment');
 select is(private.order_conversation_forms_complete(id),false,'archived frozen assignment cannot open a started order') from start_ids where label='order';
 select * from finish();

@@ -538,7 +538,7 @@ async function main() {
     and exists(select 1 from private.intake_drafts where assignment_id=:'assignment'::uuid and answers=:'values'::jsonb);`,
   { ...raceParams, credential: legacyReference.credential_id }) === "t", "Race probes changed the fixture assignment or consumed its reference");
   step = "required-form conversation gate with real authenticated sessions";
-  await checkOrderChatFormGate({ sql, tenant, owner, client, sibling, other, supportApi, need, success, denied });
+  await checkOrderChatFormGate({ sql, tenant, owner, client, sibling, other, supportApi, need, success, denied, waitFor });
   step = "explicit support exit";
   await success(owner.api.rpc("app_end_client_support", { p_support_id: started.id }), "Explicit support exit");
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");
