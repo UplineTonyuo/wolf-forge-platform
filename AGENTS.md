@@ -51,6 +51,9 @@ plus a `Raw/` safety-net folder) that live in the Wolf Forge Obsidian Second
 Brain, at the path `scripts/sync-ai-memory-to-obsidian.ps1` syncs to
 (`$env:WOLF_FORGE_OBSIDIAN_MEMORY_PATH`).
 
+The sibling Security folder is canonical and Memory Steward-owned:
+`$env:WOLF_FORGE_OBSIDIAN_VAULT_PATH\02 Projects\Wolf Forge Platform\Security`.
+
 A worktree MAY also keep a local `.ai-memory/` directory holding the same
 six files as a working copy for that checkout, synced to the vault via
 `npm run memory:sync`. Not every worktree has one — a fresh clone or a
@@ -95,27 +98,22 @@ search) rather than the whole file.
 
 The actual repository remains the ultimate source of truth. If memory conflicts
 with verified code or database architecture, inspect the implementation,
-correct the memory, and mention the correction.
+include the proposed correction in the PR's "Proposed memory entries" block
+for the Memory Steward, and mention the discrepancy.
 
 Do not reverse a settled decision recorded in Decisions unless the user
 explicitly requests that change.
 
 ## Before finishing meaningful implementation work
 
-Before the final response, update the shared memory (the memory root, as
-defined above).
-
-### Current State
-
-Update the memory root's `01 Current State.md` so it describes what is true
-NOW.
-
-Do not merely append history to Current State. Replace stale statements.
+Before the final response, each lane appends ONE Implementation Log entry
+(append-only) and includes a "Proposed memory entries" block in its PR
+description for the Memory Steward to apply.
 
 ### Implementation Log
 
-Append one concise entry to the memory root's `03 Implementation Log.md`
-containing:
+Append ONE concise entry to the memory root's `03 Implementation Log.md`
+without rewriting existing entries, containing:
 
 - timestamp
 - agent: Claude Code or Codex
@@ -128,21 +126,17 @@ containing:
 - unresolved verified issues
 - recommended next move when relevant
 
-### Decisions
+### Memory Steward
 
-Update the memory root's `02 Decisions.md` only when a genuine product,
-architecture, UX, authorization, naming, data-model, or workflow decision was
-made or reversed.
+Only the Memory Steward session (worktree `woad-memory-steward`, per D-319)
+writes `01 Current State.md`, `02 Decisions.md`, `04 Known Issues.md`,
+`05 Architecture Map.md`, and the canonical Security notes, including
+`15 Security Gaps & Future Hardening.md`, `16 Security Control Registry.md`,
+and `17 Security Change Log.md`.
 
-### Known Issues
-
-Update the memory root's `04 Known Issues.md` only for verified unresolved
-problems. Move resolved issues out of Open when they are actually fixed.
-
-### Architecture Map
-
-Update the memory root's `05 Architecture Map.md` when the verified
-architecture materially changes.
+Lanes propose entries without reserving IDs. The steward allocates IDs at
+write time and updates control status at merge and release:
+Planned → In PR #__ → Live (deployment ID).
 
 ## Memory quality rules
 
@@ -195,12 +189,17 @@ After finishing meaningful implementation, audit, debugging, or validation work:
 
 2. Save that exact final report to:
 
-   `C:\Users\User\Desktop\wolf-forge-agent-output.md`
+   `$HOME\Desktop\wolf-forge-agent-output-<branch-or-task>.md`
+
+   Replace `<branch-or-task>` with a unique filename-safe lane/task name
+   (replace branch `/` with `-`). Use one file per lane/task so parallel
+   lanes never overwrite each other.
 
 3. Copy the complete file contents to the Windows clipboard using PowerShell:
 
    ```
-   powershell.exe -NoProfile -Command "Get-Content -Raw -Encoding UTF8 'C:\Users\User\Desktop\wolf-forge-agent-output.md' | Set-Clipboard"
+   $path = "$HOME\Desktop\wolf-forge-agent-output-<branch-or-task>.md"
+   Get-Content -Raw -Encoding UTF8 -LiteralPath $path | Set-Clipboard
    ```
 
    `-Encoding UTF8` is required, not optional. Windows PowerShell 5.1 reads a
