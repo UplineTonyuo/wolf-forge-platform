@@ -15,25 +15,27 @@ import {
   reportingProfileSummary,
 } from "../../domain/reporting/service-profiles";
 import { SearchableSelect } from "../ui/searchable-select";
+import { reportCompletionMonthLabel, type ReportSetupScope } from "../../domain/reporting/order-completion";
 import styles from "./reporting.module.css";
 
 export type ReportClientOption = { id: string; name: string };
 
 function choiceKey(choice: ReportServiceChoice): string {
-  return `${choice.serviceId}:${choice.subscriptionId ?? "fallback"}`;
+  return `${choice.serviceId}:${choice.subscriptionId ?? "order"}`;
 }
 
 /** Client → actual subscribed Service → guided saved draft. */
-export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
+export function NewReportForm({ clients, prefill, initialChoices = [] }: { clients: ReportClientOption[]; prefill?: ReportSetupScope; initialChoices?: ReportServiceChoice[] }) {
   const push = useRouteTransitionPush();
   const fieldId = useId();
-  const [step, setStep] = useState<"client" | "service">("client");
+  const [step, setStep] = useState<"client" | "service">(prefill ? "service" : "client");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
-  const [companyId, setCompanyId] = useState("");
-  const [choices, setChoices] = useState<ReportServiceChoice[]>([]);
-  const [fallback, setFallback] = useState(false);
-  const [selectedChoiceKey, setSelectedChoiceKey] = useState("");
-  const [title, setTitle] = useState("");
+  const initialChoice = initialChoices.find((choice) => choice.serviceId === prefill?.serviceId);
+  const initialProfile = prefill ? reportingProfileForService(prefill.serviceId) : null;
+  const [companyId, setCompanyId] = useState(prefill?.companyId ?? "");
+  const [choices, setChoices] = useState<ReportServiceChoice[]>(initialChoices);
+  const [selectedChoiceKey, setSelectedChoiceKey] = useState(initialChoice ? choiceKey(initialChoice) : "");
+  const [title, setTitle] = useState(initialProfile && prefill ? `${reportCompletionMonthLabel(prefill.reportingPeriodMonth)} ${initialProfile.packageLabel} Report` : "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +59,6 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
     }
 
     setChoices(result.choices);
-    setFallback(result.fallback);
     setSelectedChoiceKey("");
     setTitle("");
     setDirection("forward");
@@ -67,7 +68,7 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
   function chooseService(choice: ReportServiceChoice) {
     setSelectedChoiceKey(choiceKey(choice));
     const profile = reportingProfileForService(choice.serviceId);
-    if (profile) setTitle(reportTitleSuggestion(profile));
+    if (profile) setTitle(prefill ? `${reportCompletionMonthLabel(prefill.reportingPeriodMonth)} ${profile.packageLabel} Report` : reportTitleSuggestion(profile));
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -82,6 +83,7 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
       serviceId: selectedChoice.serviceId,
       subscriptionId: selectedChoice.subscriptionId,
       title: title.trim(),
+      ...(prefill ? { reportingPeriodMonth: prefill.reportingPeriodMonth } : {}),
     });
 
     if (result.ok) {
@@ -112,7 +114,7 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
           <>
             <header className={styles.setupFocusHead}>
               <h2 id={`${fieldId}-client-heading`}>Choose the client</h2>
-              <p>The report and every subscription choice stay scoped to this company.</p>
+              <p>Choose a Service this client purchased or currently receives.</p>
             </header>
 
             <label className={styles.field}>
@@ -138,17 +140,16 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
           <>
             <header className={styles.setupFocusHead}>
               <h2 id={`${fieldId}-service-heading`}>Choose the Service</h2>
+              {prefill ? <strong>{reportCompletionMonthLabel(prefill.reportingPeriodMonth)}</strong> : null}
               <p>
-                {fallback
-                  ? "No supported subscription is attached, so choose a Reporting profile from the active catalogue."
-                  : `Showing supported subscriptions attached to ${selectedClient?.name ?? "this client"}.`}
+                {`Showing purchased and in-progress Reporting Services for ${selectedClient?.name ?? "this client"}.`}
               </p>
             </header>
 
             {choices.length === 0 ? (
               <div className={styles.setupEmpty}>
-                <strong>No supported Reporting Services are available.</strong>
-                <p>Check that the catalogue records are active, then try again.</p>
+                <strong>No purchased or in-progress Reporting Services.</strong>
+                <p>This client has no eligible subscription or order for a supported Reporting Service.</p>
               </div>
             ) : (
               <fieldset className={styles.serviceChoices} disabled={loading}>
@@ -168,7 +169,7 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
                         <small>
                           {choice.subscriptionId
                             ? `${choice.subscriptionStatus ?? "active"} subscription`
-                            : "Catalogue profile fallback · no subscription attached"}
+                            : "Purchased or in-progress order"}
                         </small>
                       </span>
                       {profile ? (
@@ -194,11 +195,6 @@ export function NewReportForm({ clients }: { clients: ReportClientOption[] }) {
               <em className={styles.fieldHint}>Suggested from this month and package; fully editable.</em>
             </label>
 
-            {fallback ? (
-              <p className={styles.fallbackNote}>
-                This creates a report for the selected catalogue Service only. It does not create or imply a client subscription.
-              </p>
-            ) : null}
           </>
         )}
       </section>

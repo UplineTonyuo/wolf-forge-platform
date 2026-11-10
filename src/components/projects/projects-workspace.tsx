@@ -42,6 +42,7 @@ import {
   type ProjectTab,
 } from "../../domain/orders/projections";
 import { orderStatuses } from "../../domain/orders/schema";
+import { OrderCompletionGate } from "./order-completion-gate";
 import type { ServiceFolderRow } from "../../lib/supabase/database-rows";
 import { ProjectsFilterSheet } from "./projects-filter-sheet";
 import { ProjectServiceFilterPicker } from "./project-service-filter-picker";
@@ -127,6 +128,7 @@ export function ProjectsWorkspace({
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogChoiceRef = useRef<HTMLSelectElement>(null);
   const dialogConfirmRef = useRef<HTMLButtonElement>(null);
+  const completionReturnFocusRef = useRef<HTMLElement | null>(null);
   const unknownResponseCount = rows.filter((row) => row.unanswered === null).length;
   const responseStatesAvailable = rows.length === 0 || unknownResponseCount < rows.length;
 
@@ -216,6 +218,7 @@ export function ProjectsWorkspace({
   useEffect(() => {
     function onBulkAction(event: Event) {
       const detail = (event as CustomEvent<ProjectBulkActionDetail>).detail;
+      completionReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
       if (!detail || selectedIds.length === 0) {
         return;
@@ -311,6 +314,7 @@ export function ProjectsWorkspace({
     const choice = dialogChoiceRef.current?.value ?? "";
 
     setBusy(true);
+    setResult(null);
     let outcome: ProjectBulkResult;
     try {
       if (dialog.kind === "status") {
@@ -371,6 +375,15 @@ export function ProjectsWorkspace({
         </button>
       </div> : null}
 
+      {result ? <OrderCompletionGate failures={result.failed} onDismiss={() => completionReturnFocusRef.current?.focus()} onCompleted={(id) => {
+        setResult((current) => current ? {
+          ...current,
+          failed: current.failed.filter((entry) => entry.id !== id),
+          succeeded: [...current.succeeded, { id, label: current.failed.find((entry) => entry.id === id)?.label ?? "Order" }],
+        } : null);
+        setSelected((current) => new Set([...current].filter((selectedId) => selectedId !== id)));
+        router.refresh();
+      }} /> : null}
       {result ? (
         <div className={styles.resultPanel} role="status" aria-live="polite">
           <div className={styles.resultHeading}>

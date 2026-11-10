@@ -9,6 +9,8 @@ import { orderStatuses, type OrderStatus } from "../../domain/orders/schema";
 import { AnimatedSelect } from "../ui/animated-select";
 import { AccountAvatar } from "../ui/account-avatar";
 import { ProjectDetailActions } from "./project-detail-actions";
+import { OrderCompletionGate } from "./order-completion-gate";
+import type { ProjectOutcome } from "../../domain/orders/bulk";
 import type { ProjectOption } from "./projects-workspace";
 import styles from "./project-detail.module.css";
 
@@ -38,6 +40,7 @@ export function OrderHeaderControls({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completionFailures, setCompletionFailures] = useState<ProjectOutcome[]>([]);
 
   function describeFailure(result: ProjectBulkResult) {
     return result.failed[0]?.error ?? "The request could not be completed.";
@@ -47,9 +50,11 @@ export function OrderHeaderControls({
     if (busy) return;
     setBusy(true);
     setError(null);
+    setCompletionFailures([]);
     try {
       const result = await changeProjectStatusAction(orderId, nextStatus);
       if (result.succeeded.length === 0) {
+        setCompletionFailures(result.failed);
         setError(describeFailure(result));
         return;
       }
@@ -151,6 +156,7 @@ export function OrderHeaderControls({
           {error}
         </p>
       ) : null}
+      {completionFailures.length > 0 ? <OrderCompletionGate failures={completionFailures} onCompleted={() => { setError(null); setCompletionFailures([]); router.refresh(); }} /> : null}
     </div>
   );
 }

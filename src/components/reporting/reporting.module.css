@@ -2387,3 +2387,14 @@
     transform: none;
   }
 }
+.completionRequirement {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.completionRequirement p { margin: 0; }
+.completionRequirement textarea { width: 100%; box-sizing: border-box; }
+.completionActions > a,
+.completionActions > button { min-height: 44px; }

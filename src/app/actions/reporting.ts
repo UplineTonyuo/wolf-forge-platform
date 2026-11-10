@@ -86,16 +86,14 @@ export type ReportServiceChoice = {
 };
 
 export type ReportServiceChoicesResult =
-  | { ok: true; choices: ReportServiceChoice[]; fallback: boolean }
+  | { ok: true; choices: ReportServiceChoice[] }
   | { ok: false; error: string };
 
 /**
  * Service choices for one requested company.
  *
- * The database re-authorizes Reporting and validates the company. If at least
- * one supported subscription exists, only real subscribed choices are shown.
- * Otherwise the active supported catalogue rows are returned with null
- * subscription ids: that is the documented fallback, not ownership.
+ * The database re-authorizes Reporting and returns only client-owned Services.
+ * A null subscription identifies an eligible order, never a catalogue fallback.
  */
 export async function listReportServiceChoicesAction(input: {
   companyId: string;
@@ -106,15 +104,9 @@ export async function listReportServiceChoicesAction(input: {
       input.companyId,
       supportedReportingServiceIds,
     );
-    const attached = options.filter((option) => option.subscription_id !== null);
-    const selected = attached.length > 0
-      ? attached
-      : options.filter((option) => option.subscription_id === null);
-
     return {
       ok: true,
-      fallback: attached.length === 0,
-      choices: selected.map((option) => ({
+      choices: options.map((option) => ({
         serviceId: option.service_id,
         serviceName: option.service_name,
         subscriptionId: option.subscription_id,
@@ -233,6 +225,7 @@ export async function createServiceReportDraftAction(input: {
   serviceId: string;
   subscriptionId: string | null;
   title: string;
+  reportingPeriodMonth?: string;
 }): Promise<ReportDraftResult> {
   try {
     const profile = reportingProfileForService(input.serviceId);
@@ -254,6 +247,7 @@ export async function createServiceReportDraftAction(input: {
         company_id: input.companyId,
         service_id: input.serviceId,
         subscription_id: input.subscriptionId,
+        reporting_period_month: input.reportingPeriodMonth,
         report_lane: profile.reportLane,
         package_label: profile.packageLabel,
         title: input.title,

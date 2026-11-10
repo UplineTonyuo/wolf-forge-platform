@@ -2,6 +2,7 @@
 import { composeProjectRows, type ProjectListRow, type ProjectRelationRow } from "../domain/orders/projections";
 import { changeOrderStatusSchema, createOrderSchema, updateOrderSchema } from "../domain/orders/schema";
 import { parseInput, uuidSchema } from "../domain/shared";
+import { reportCompletionScopeSchema } from "../domain/reporting/order-completion";
 import { OrderRepository, type ProjectLabelRow } from "../repositories/order-repository";
 import type { ListOrdersFilter } from "../repositories/types";
 import { requireVerifiedActor, type ServiceDependencies, type UserMutationActor } from "./mutation-context";
@@ -86,10 +87,21 @@ export class OrderService {
     );
   }
 
+  async setReportingMonth(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.setReportingMonth(parseInput(uuidSchema, id), parseInput(reportCompletionScopeSchema, input));
+  }
+
+  async completeForReportingMonth(id: unknown, input: unknown, actor: UserMutationActor) {
+    requireVerifiedActor(actor);
+    return this.dependencies.repository.completeForReportingMonth(parseInput(uuidSchema, id), parseInput(reportCompletionScopeSchema, input));
+  }
+
   async changeStatus(id: unknown, input: unknown, actor: UserMutationActor) {
     const orderId = parseInput(uuidSchema, id);
     const requested = parseInput(changeOrderStatusSchema, input);
     requireVerifiedActor(actor);
+    if (requested.reportException) return this.dependencies.repository.completeWithoutReport(orderId, requested.reportException);
     return this.dependencies.repository.changeStatus(orderId, requested.status);
   }
 
