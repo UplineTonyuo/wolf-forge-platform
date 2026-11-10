@@ -9,6 +9,7 @@ import type { ReportCompletionScope, ReportExceptionInput } from "../domain/repo
 import type { OrderRow } from "../lib/supabase/database-rows";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { ListOrdersFilter, UserMutationClient } from "./types";
+import type { OperationalAssigneeRow } from "./service-repository";
 
 /**
  * Client and Service use their real foreign keys. Assignees now belong through
@@ -33,7 +34,11 @@ const orderResponseStatesSchema = z.array(z.object({
 }));
 
 export class OrderRepository {
-  constructor(private readonly client: UserMutationClient) {}
+  constructor(
+    private readonly client: UserMutationClient,
+    private readonly loadOperationalAssignees: () => Promise<OperationalAssigneeRow[]> = async () =>
+      unwrapMany(await client.rpc("app_list_operational_assignees")),
+  ) {}
 
   async listClientResponseStates(orderIds: string[]): Promise<OrderResponseState[]> {
     if (orderIds.length === 0) return [];
@@ -67,7 +72,7 @@ export class OrderRepository {
    * Resolve assignee labels through the Tenant membership projection without
    * exposing the rest of a teammate's profile. One request covers every row.
    */
-  private async hydrateMissingAssignees(sourceRows: ProjectRelationRow[]): Promise<ProjectRelationRow[]> {
+  async hydrateMissingAssignees(sourceRows: ProjectRelationRow[]): Promise<ProjectRelationRow[]> {
     const rows = sourceRows.map((row) => ({ ...row, profiles: row.profiles ?? null }));
     const missingIds = new Set(
       rows
@@ -76,7 +81,7 @@ export class OrderRepository {
     );
     if (missingIds.size === 0) return rows;
 
-    const assignees = unwrapMany(await this.client.rpc("app_list_operational_assignees"));
+    const assignees = await this.loadOperationalAssignees();
     const namesById = new Map(
       assignees
         .filter((assignee) => missingIds.has(assignee.profile_id))
@@ -136,7 +141,7 @@ export class OrderRepository {
     return hydrated ?? row;
   }
 
-  async listWithRelations(filter: ListOrdersFilter = {}): Promise<ProjectRelationPage> {
+  async listRelationRows(filter: ListOrdersFilter = {}): Promise<ProjectRelationPage> {
     let query = this.client.from("orders").select(projectRelationSelect, { count: "exact" });
     if (filter.companyId) query = query.eq("company_id", filter.companyId);
     if (filter.serviceId) query = query.eq("service_id", filter.serviceId);
@@ -147,9 +152,14 @@ export class OrderRepository {
     const result = await query.order("created_at", { ascending: false }).limit(projectListRowLimit);
     const rows = unwrapMany(result) as unknown as ProjectRelationRow[];
     return {
-      rows: await this.hydrateMissingAssignees(rows),
+      rows,
       totalCount: result.count,
     };
+  }
+
+  async listWithRelations(filter: ListOrdersFilter = {}): Promise<ProjectRelationPage> {
+    const page = await this.listRelationRows(filter);
+    return { ...page, rows: await this.hydrateMissingAssignees(page.rows) };
   }
 
   /**

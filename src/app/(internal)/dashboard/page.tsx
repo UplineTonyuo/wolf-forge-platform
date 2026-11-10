@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { DashboardReportingControl } from "../../../components/dashboard/dashboard-reporting-control";
 import { SalesTrendChart } from "../../../components/dashboard/sales-trend-chart";
+import chartStyles from "../../../components/dashboard/sales-trend-chart.module.css";
 import { TopServicesPanel } from "../../../components/dashboard/top-services-panel";
 import { assignServiceIconsById } from "../../../components/services/service-icons";
 import { DataError } from "../../../components/ui/list-states";
@@ -115,9 +116,27 @@ function MetricCard({
 
 type DashboardServices = Awaited<ReturnType<typeof getInternalContext>>["services"];
 
+async function SalesTrendSection({ dashboard, timeZone, chartKey, ...chart }: {
+  dashboard: DashboardServices["dashboard"];
+  timeZone: string;
+  chartKey: string;
+} & Required<Parameters<typeof SalesTrendChart>[0]>) {
+  let historyStart: string | null;
+  try {
+    historyStart = await dashboard.getHistoryStart(chart.currency);
+  } catch (error) {
+    return <DataError message={toClientSafeError(error).message} />;
+  }
+
+  return <SalesTrendChart key={chartKey} {...chart} window={{
+    ...chart.window,
+    earliest: historyStart ? toBusinessDateKey(new Date(historyStart), timeZone) : null,
+  }} />;
+}
+
 async function TopServicesSection({ topServicesRequest, catalogRequest, timeZone: tz, initialPeriod }: {
   topServicesRequest: Promise<(Awaited<ReturnType<DashboardServices["dashboard"]["getTopServices"]>> | null)[]>;
-  catalogRequest: ReturnType<DashboardServices["catalog"]["listCatalog"]>;
+  catalogRequest: ReturnType<DashboardServices["catalog"]["listCatalogOptions"]>;
   timeZone: string;
   initialPeriod: "week" | "month" | "year";
 }) {
@@ -194,10 +213,9 @@ export default async function DashboardPage({
     context.services.dashboard.getTopServices({ preset: "custom_range", ...yearToDateRange(businessToday) }).catch(() => null),
   ]);
   const catalogRequest = context.user.modules.services
-    ? context.services.catalog.listCatalog().catch(() => []) : Promise.resolve([]);
+    ? context.services.catalog.listCatalogOptions().catch(() => []) : Promise.resolve([]);
 
   let overview;
-  let historyStart: string | null;
 
   try {
     overview = await context.services.dashboard.getOverview({
@@ -206,7 +224,6 @@ export default async function DashboardPage({
       from: params.from,
       to: params.to,
     });
-    historyStart = await context.services.dashboard.getHistoryStart(overview.revenue.headline_currency);
   } catch (error) {
     return (
       <main className={styles.page}>
@@ -379,15 +396,30 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        <SalesTrendChart key={`${overview.range.start}:${overview.range.end}`} currency={revenue.headline_currency}
-          window={{ from: toBusinessDateKey(new Date(overview.range.start), tz), to: toBusinessDateKey(new Date(lastDayInRange), tz), today: businessToday,
-            earliest: historyStart ? toBusinessDateKey(new Date(historyStart), tz) : null }}
-          points={trendPoints.map((point) => ({
-          value: point.net_cents,
-          label: bucketLabel(point.bucket_start),
-          axisLabel: overview.range.bucket === "hour" ? formatBusinessHour(point.bucket_start, tz) : shortDate.format(new Date(point.bucket_start)),
-          money: formatCurrencyCents(point.net_cents, revenue.headline_currency),
-        }))} />
+        <Suspense fallback={<div role="status" aria-busy="true" aria-label="Loading sales trend">
+          <div className={chartStyles.figure}>
+            <div className={chartStyles.history}>
+              <span>Loading revenue history...</span>
+              <div aria-hidden="true">{[0, 1].map((item) => <span key={item} className="internal-page-skeleton-bar" style={{ width: 44, height: 44 }} />)}</div>
+              <span className={chartStyles.historyStatus} aria-hidden="true" />
+            </div>
+            <div className={chartStyles.chart} aria-hidden="true">
+              <span className="internal-page-skeleton-bar" style={{ gridColumn: 2, gridRow: 1, height: "100%" }} />
+            </div>
+            <div className={chartStyles.data} aria-hidden="true"><div style={{ minHeight: 44 }} /></div>
+          </div>
+        </div>}>
+          <SalesTrendSection key={`${overview.range.start}:${overview.range.end}`}
+            chartKey={`${overview.range.start}:${overview.range.end}`} dashboard={context.services.dashboard} timeZone={tz}
+            currency={revenue.headline_currency}
+            window={{ from: toBusinessDateKey(new Date(overview.range.start), tz), to: toBusinessDateKey(new Date(lastDayInRange), tz), today: businessToday, earliest: null }}
+            points={trendPoints.map((point) => ({
+              value: point.net_cents,
+              label: bucketLabel(point.bucket_start),
+              axisLabel: overview.range.bucket === "hour" ? formatBusinessHour(point.bucket_start, tz) : shortDate.format(new Date(point.bucket_start)),
+              money: formatCurrencyCents(point.net_cents, revenue.headline_currency),
+            }))} />
+        </Suspense>
       </section>
 
       <section className={styles.insightGrid}>

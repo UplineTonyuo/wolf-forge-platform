@@ -27,10 +27,75 @@ const overview = {
   active_subscriptions: { billable: 2, by_status: [] }, sales_trend: [],
 };
 
+function chartBoundary(page: ReactNode) {
+  return find(page, (element) => element.type === Suspense &&
+    (element.props as { fallback?: ReactElement<{ "aria-label"?: string }> }).fallback?.props["aria-label"] === "Loading sales trend")!;
+}
+
+async function resolveChild(boundary: ReactElement<{ children?: ReactNode }>) {
+  const child = Children.only(boundary.props.children) as ReactElement<Record<string, unknown>>;
+  return (child.type as (props: typeof child.props) => Promise<ReactElement>)(child.props);
+}
+
+it("returns overview cards before history and preserves the exact currency and earliest date after streaming", async () => {
+  let finish!: (value: string) => void;
+  mocks.history.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  let ready = false;
+  const pending = DashboardPage({ searchParams: Promise.resolve({}) }).then((page) => { ready = true; return page; });
+  let chart: Promise<ReactElement> | undefined;
+  try {
+    await setImmediate();
+    expect(ready).toBe(true);
+    const page = await pending;
+    expect(find(page, (element) => element.props["aria-label" as keyof typeof element.props] === "Executive metrics")).toBeTruthy();
+    const boundary = chartBoundary(page);
+    expect(boundary).toBeTruthy();
+    chart = resolveChild(boundary);
+    await setImmediate();
+    expect(mocks.history).toHaveBeenCalledExactlyOnceWith("GBP");
+    finish("2026-01-01T20:00:00Z");
+    const resolved = await chart;
+    const props = resolved.props as { currency: string; window: { earliest: string; from: string; to: string }; points: unknown[] };
+    expect(props.currency).toBe("GBP");
+    expect(props.window.earliest).toBe("2026-01-02");
+    expect(props.window.from).toBe("2026-11-01");
+    expect(props.window.to).toBe("2026-11-06");
+    expect(props.points.length).toBeGreaterThan(0);
+    expect(resolved.key).toBe(`${range.start}:${range.end}`);
+  } finally {
+    finish("2026-01-01T20:00:00Z");
+    await pending;
+    await chart;
+  }
+});
+
+it("keeps an empty history bound null and exposes a labeled busy chart fallback", async () => {
+  const page = await DashboardPage({ searchParams: Promise.resolve({}) });
+  const boundary = chartBoundary(page);
+  const fallback = (boundary.props as { fallback: ReactElement }).fallback;
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  expect(renderToStaticMarkup(fallback)).toContain('role="status" aria-busy="true"');
+  const chart = await resolveChild(boundary);
+  expect((chart.props as { window: { earliest: string | null } }).window.earliest).toBeNull();
+});
+
+it("contains failed history in the chart panel while retaining overview cards", async () => {
+  mocks.history.mockRejectedValue(new Error("Synthetic private history detail"));
+  const page = await DashboardPage({ searchParams: Promise.resolve({}) });
+  const boundary = chartBoundary(page);
+  expect(boundary).toBeTruthy();
+  expect(find(page, (element) => element.props["aria-label" as keyof typeof element.props] === "Executive metrics")).toBeTruthy();
+  const error = await resolveChild(boundary);
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const html = renderToStaticMarkup(error);
+  expect(html).toContain("role=\"alert\"");
+  expect(html).not.toContain("Synthetic private history detail");
+});
+
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.context.mockResolvedValue({ user: { greetingName: "Synthetic", modules: { services: true, subscriptions: true } }, services: {
-    dashboard: { getOverview: mocks.overview, getHistoryStart: mocks.history, getTopServices: mocks.top }, catalog: { listCatalog: mocks.catalog },
+    dashboard: { getOverview: mocks.overview, getHistoryStart: mocks.history, getTopServices: mocks.top }, catalog: { listCatalogOptions: mocks.catalog },
   } });
   mocks.overview.mockResolvedValue(overview);
   mocks.history.mockResolvedValue(null);
@@ -49,7 +114,7 @@ it.each(["ranking", "catalog"])("returns ready Dashboard content while %s remain
     await setImmediate();
     expect(mocks.top).toHaveBeenCalledTimes(3);
     expect(mocks.catalog).toHaveBeenCalledTimes(1);
-    expect(mocks.history).toHaveBeenCalledExactlyOnceWith("GBP");
+    expect(mocks.history).not.toHaveBeenCalled();
     expect(ready).toBe(true);
     const page = await pending;
     expect(find(page, (element) => element.type === "section" && element.props["aria-label" as keyof typeof element.props] === "Executive metrics")).toBeTruthy();
@@ -89,7 +154,8 @@ it("keeps all three periods, individual ranking errors and catalog fallback afte
     .mockResolvedValueOnce({ range, services: [{ service_id: "service-a", name: "Synthetic monthly service", paid_orders: 3 }] });
   mocks.catalog.mockRejectedValue(new Error("Synthetic catalog failure"));
   const page = await DashboardPage({ searchParams: Promise.resolve({ servicesPeriod: "year" }) });
-  const boundary = find(page, (element) => element.type === Suspense)!;
+  const boundary = find(page, (element) => element.type === Suspense &&
+    (element.props as { fallback?: ReactElement<{ "aria-label"?: string }> }).fallback?.props["aria-label"] !== "Loading sales trend")!;
   const section = Children.only(boundary.props.children) as ReactElement<Record<string, unknown>>;
   const panel = await (section.type as (props: typeof section.props) => Promise<ReactElement<{ initialPeriod: string; periods: Record<"week" | "month" | "year", { content: ReactNode }> }>>)(section.props);
   expect(panel.props.initialPeriod).toBe("year");
