@@ -29,6 +29,14 @@ export class CatalogService {
     return this.dependencies.repository.listCatalog();
   }
 
+  listActiveOptions() {
+    return this.dependencies.repository.listActiveOptions();
+  }
+
+  listCatalogOptions() {
+    return this.dependencies.repository.listCatalogOptions();
+  }
+
   listFolders() {
     return this.dependencies.repository.listFolders();
   }

@@ -44,15 +44,16 @@ export class OrderService {
    * One order query plus bounded task and public-response metadata batches.
    */
   async listProjects(filter?: ListOrdersFilter): Promise<ProjectListResult> {
-    const page = await this.dependencies.repository.listWithRelations(filter);
+    const page = await this.dependencies.repository.listRelationRows(filter);
     const ids = page.rows.map((row) => row.id);
-    const [taskFacts, responseStates] = await Promise.all([
+    const [rows, taskFacts, responseStates] = await Promise.all([
+      this.dependencies.repository.hydrateMissingAssignees(page.rows),
       this.dependencies.repository.listTaskFacts(ids),
       this.dependencies.repository.listResponseStates(ids).catch(() => []),
     ]);
 
     return {
-      rows: composeProjectRows(page.rows, taskFacts, new Date(), responseStates),
+      rows: composeProjectRows(rows, taskFacts, new Date(), responseStates),
       complete: page.totalCount === null || page.totalCount <= page.rows.length,
       totalCount: page.totalCount,
     };

@@ -39,7 +39,8 @@ describe("Orders response-state batch", () => {
   });
   it("loads metadata in one batch and preserves inaccessible or absent results as unknown", async () => {
     const repository = {
-      listWithRelations: vi.fn().mockResolvedValue({ rows: [source(), source(other)], totalCount: 2 }),
+      hydrateMissingAssignees: async (rows: ProjectRelationRow[]) => rows,
+      listRelationRows: vi.fn().mockResolvedValue({ rows: [source(), source(other)], totalCount: 2 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
       listResponseStates: vi.fn().mockResolvedValue([{ order_id: id, unanswered: true }]),
     };
@@ -49,7 +50,8 @@ describe("Orders response-state batch", () => {
   });
   it("keeps authorized order rows visible if metadata is denied or the migration is absent", async () => {
     const repository = {
-      listWithRelations: vi.fn().mockResolvedValue({ rows: [source()], totalCount: 1 }),
+      hydrateMissingAssignees: async (rows: ProjectRelationRow[]) => rows,
+      listRelationRows: vi.fn().mockResolvedValue({ rows: [source()], totalCount: 1 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
       listResponseStates: vi.fn().mockRejectedValue(new Error("unavailable")),
     };

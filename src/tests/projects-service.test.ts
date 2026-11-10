@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ProjectRelationRow } from "../domain/orders/projections";
 import { createUserSupabaseClient, verifyActor } from "../lib/supabase/user-client";
 import { OrderService } from "../services/order-service";
+import { OrderRepository } from "../repositories/order-repository";
+import { setImmediate } from "node:timers/promises";
 
 const actorId = "20000000-0000-4000-8000-000000000001";
 const orderId = "10000000-0000-4000-8000-000000000001";
@@ -46,9 +48,47 @@ function relationRow(id: string, overrides: Partial<ProjectRelationRow> = {}): P
 }
 
 describe("OrderService project read model", () => {
+  it.each(["hydrateMissingAssignees", "listTaskFacts"] as const)("propagates %s failure without presenting partial project data", async (method) => {
+    const failure = new Error("Synthetic required read failure");
+    const repository = {
+      listRelationRows: async () => ({ rows: [relationRow(orderId)], totalCount: 1 }),
+      hydrateMissingAssignees: vi.fn().mockResolvedValue([relationRow(orderId)]),
+      listTaskFacts: vi.fn().mockResolvedValue([]),
+      listResponseStates: vi.fn().mockResolvedValue([]),
+    };
+    repository[method].mockRejectedValue(failure);
+    await expect(new OrderService({ repository: repository as never }).listProjects()).rejects.toBe(failure);
+  });
+  it("starts bounded task and reply reads after IDs exist while assignee hydration is pending", async () => {
+    let finishOrders!: (value: unknown) => void;
+    let finishAssignees!: (value: unknown) => void;
+    const rawOrders = new Promise((resolve) => { finishOrders = resolve; });
+    const assignees = new Promise((resolve) => { finishAssignees = resolve; });
+    const query = { select: vi.fn().mockReturnThis(), is: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn().mockReturnValue(rawOrders) };
+    const taskIds: string[][] = [];
+    const rpc = vi.fn((name: string) => name === "app_list_operational_assignees" ? assignees : Promise.resolve({ data: [], error: null }));
+    const from = (table: string) => table === "orders" ? query : {
+      select: () => ({ in: (_column: string, ids: string[]) => { taskIds.push(ids); return { is: async () => ({ data: [], error: null }) }; } }),
+    };
+    const service = new OrderService({ repository: new OrderRepository({ from, rpc } as never) });
+    const pending = service.listProjects();
+    try {
+      await setImmediate();
+      expect(taskIds).toEqual([]);
+      expect(rpc).not.toHaveBeenCalled();
+      finishOrders({ data: [relationRow(orderId, { assigned_to_profile_id: actorId })], count: 1, error: null });
+      await setImmediate();
+      expect(taskIds).toEqual([[orderId]]);
+      expect(rpc).toHaveBeenCalledWith("app_list_order_response_states", { p_order_ids: [orderId] });
+    } finally {
+      finishAssignees({ data: [], error: null });
+      await pending;
+    }
+  });
   it("resolves orders, tasks and reply metadata in bounded batches, never one per row", async () => {
     const repository = {
-      listWithRelations: vi.fn().mockResolvedValue({
+      hydrateMissingAssignees: async (rows: ProjectRelationRow[]) => rows,
+      listRelationRows: vi.fn().mockResolvedValue({
         rows: [relationRow(orderId), relationRow("10000000-0000-4000-8000-000000000002")],
         totalCount: 2,
       }),
@@ -61,7 +101,7 @@ describe("OrderService project read model", () => {
     const service = new OrderService({ repository: repository as never });
     const result = await service.listProjects();
 
-    expect(repository.listWithRelations).toHaveBeenCalledTimes(1);
+    expect(repository.listRelationRows).toHaveBeenCalledTimes(1);
     expect(repository.listTaskFacts).toHaveBeenCalledTimes(1);
     expect(repository.listTaskFacts).toHaveBeenCalledWith([
       orderId,
@@ -75,7 +115,8 @@ describe("OrderService project read model", () => {
 
   it("passes client, service, assignee and status filters through to the repository", async () => {
     const repository = {
-      listWithRelations: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
+      hydrateMissingAssignees: async (rows: ProjectRelationRow[]) => rows,
+      listRelationRows: vi.fn().mockResolvedValue({ rows: [], totalCount: 0 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
       listResponseStates: vi.fn().mockResolvedValue([]),
     };
@@ -88,7 +129,7 @@ describe("OrderService project read model", () => {
       status: "working",
     });
 
-    expect(repository.listWithRelations).toHaveBeenCalledWith({
+    expect(repository.listRelationRows).toHaveBeenCalledWith({
       companyId,
       serviceId,
       assignedToProfileId: actorId,
@@ -99,7 +140,8 @@ describe("OrderService project read model", () => {
 
   it("reports an incomplete dataset instead of presenting partial totals as complete", async () => {
     const repository = {
-      listWithRelations: vi.fn().mockResolvedValue({ rows: [relationRow(orderId)], totalCount: 9000 }),
+      hydrateMissingAssignees: async (rows: ProjectRelationRow[]) => rows,
+      listRelationRows: vi.fn().mockResolvedValue({ rows: [relationRow(orderId)], totalCount: 9000 }),
       listTaskFacts: vi.fn().mockResolvedValue([]),
       listResponseStates: vi.fn().mockResolvedValue([]),
     };

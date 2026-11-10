@@ -541,13 +541,15 @@ export const getInternalContext = cache(async () => {
     redirect("/login?reason=staff-only");
   }
 
+  const catalogRepository = new ServiceRepository(client);
+
   return {
     actor,
     client,
     user,
     services: {
       activity: new ActivityService(new ActivityRepository(client)),
-      catalog: new CatalogService({ repository: new ServiceRepository(client) }),
+      catalog: new CatalogService({ repository: catalogRepository }),
       companies: new CompanyService({ repository: new CompanyRepository(client) }),
       organizations: new OrganizationService({ repository: new OrganizationRepository(client) }),
       dashboard: new DashboardService({ repository: new DashboardRepository(client) }),
@@ -573,7 +575,7 @@ export const getInternalContext = cache(async () => {
       projectConversation: new ProjectConversationService({
         repository: new ProjectConversationRepository(client),
       }),
-      orders: new OrderService({ repository: new OrderRepository(client) }),
+      orders: new OrderService({ repository: new OrderRepository(client, () => catalogRepository.listOperationalAssignees()) }),
       tasks: new TaskService({ repository: new TaskRepository(client) }),
       permissions: new PermissionService({ repository: new PermissionRepository(client) }),
       // Platform Admin-only White Label drafts (WL-2.33); every RPC re-checks the entitlement.

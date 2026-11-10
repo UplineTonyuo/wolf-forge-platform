@@ -6,6 +6,7 @@ import type {
   UpdateServiceInput,
 } from "../domain/services/schema";
 import type { ServiceFolderRow, ServiceRow } from "../lib/supabase/database-rows";
+import type { Database } from "../lib/supabase/database.types";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import { unwrapMany, unwrapOne } from "../lib/supabase/repository-helpers";
 import type { UserMutationClient } from "./types";
@@ -16,7 +17,12 @@ export type ServiceAssigneeOption = {
   avatarUrl?: string | null;
 };
 
+export type ServiceOptionRow = Pick<ServiceRow, "id" | "name" | "folder_id">;
+export type OperationalAssigneeRow = Database["public"]["Functions"]["app_list_operational_assignees"]["Returns"][number];
+
 export class ServiceRepository {
+  private operationalAssigneesRequest?: Promise<OperationalAssigneeRow[]>;
+
   constructor(private readonly client: UserMutationClient) {}
 
   async create(input: CreateServiceInput): Promise<ServiceRow> {
@@ -66,6 +72,20 @@ export class ServiceRepository {
         .is("archived_at", null)
         .order("sort_order")
         .order("name"),
+    );
+  }
+
+  async listActiveOptions(): Promise<ServiceOptionRow[]> {
+    return unwrapMany(
+      await this.client.from("services").select("id, name, folder_id")
+        .eq("is_active", true).is("archived_at", null).order("name"),
+    );
+  }
+
+  async listCatalogOptions(): Promise<ServiceOptionRow[]> {
+    return unwrapMany(
+      await this.client.from("services").select("id, name, folder_id")
+        .is("archived_at", null).order("sort_order").order("name"),
     );
   }
 
@@ -177,8 +197,15 @@ export class ServiceRepository {
     );
   }
 
+  listOperationalAssignees(): Promise<OperationalAssigneeRow[]> {
+    // This repository belongs to one verified request context, never a global cache.
+    return this.operationalAssigneesRequest ??= Promise.resolve(
+      this.client.rpc("app_list_operational_assignees"),
+    ).then(unwrapMany);
+  }
+
   async listAssignees(): Promise<ServiceAssigneeOption[]> {
-    return unwrapMany(await this.client.rpc("app_list_operational_assignees"))
+    return (await this.listOperationalAssignees())
       .map((profile) => ({
         id: profile.profile_id,
         displayName: profile.display_name ?? "Unnamed teammate",
