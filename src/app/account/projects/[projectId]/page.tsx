@@ -31,10 +31,13 @@ export default async function ClientProjectDetailPage({
 
   try {
     await services.permissions.requireModuleAccess("portal_projects");
-    [project, startState] = await Promise.all([
+    const [loadedProject, start] = await Promise.all([
       services.projects.getClientProject(projectId),
-      services.projects.getClientStartState(projectId).catch(() => { startError = true; return null; }),
+      services.projects.getClientStartState(projectId).then(state => ({ state, error: false })).catch(() => ({ state: null, error: true })),
     ]);
+    project = loadedProject;
+    startState = start.state;
+    startError = start.error;
   } catch (error) {
     const safe = toClientSafeError(error);
     if (safe.code === "PERMISSION_DENIED") denied = true;
