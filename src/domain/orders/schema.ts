@@ -1,5 +1,6 @@
 ﻿import { z } from "zod";
 import type { OrderRow } from "../../lib/supabase/database-rows";
+import { reportExceptionSchema } from "../reporting/order-completion";
 import {
   nonBlankTextSchema,
   nullableNonBlankTextSchema,
@@ -49,7 +50,8 @@ export const updateOrderSchema = z
 
 export const changeOrderStatusSchema = z.object({
   status: orderStatusSchema,
-});
+  reportException: reportExceptionSchema.optional(),
+}).refine((value) => !value.reportException || value.status === "complete", "An exception only applies to completion.");
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;

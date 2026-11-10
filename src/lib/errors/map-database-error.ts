@@ -3,11 +3,13 @@
   ConflictError,
   DatabaseError,
   NotFoundError,
+  OrderReportRequiredError,
   PermissionDeniedError,
   RateLimitedError,
   SlowModeActiveError,
   ValidationError,
 } from "./application-error";
+import { orderReportRequirementSchema } from "../../domain/reporting/order-completion";
 
 export interface DatabaseErrorLike {
   code?: string;
@@ -27,6 +29,14 @@ export function mapDatabaseError(error: unknown, resource = "Record"): Applicati
     return new ApplicationError("PERMISSION_DENIED", "Keep the existing Coupon discount, quantity, amount and currency unchanged while Coupons are unavailable.", { cause: error });
   }
   switch (databaseError?.code) {
+    case "WF431": {
+      try {
+        const scope = orderReportRequirementSchema.parse(JSON.parse(databaseError.details ?? ""));
+        return new OrderReportRequiredError(scope, error);
+      } catch {
+        return new DatabaseError(error);
+      }
+    }
     case "PGRST116":
     case "02000":
     case "P0002":

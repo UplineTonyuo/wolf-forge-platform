@@ -1866,6 +1866,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          reporting_period_month: string | null
           archived_at: string | null
           assigned_to_profile_id: string | null
           company_id: string
@@ -1883,6 +1884,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          reporting_period_month?: string | null
           archived_at?: string | null
           assigned_to_profile_id?: string | null
           company_id: string
@@ -1900,6 +1902,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          reporting_period_month?: string | null
           archived_at?: string | null
           assigned_to_profile_id?: string | null
           company_id?: string
@@ -4844,6 +4847,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      app_complete_order_without_report: {
+        Args: { p_order_id: string; p_service_id: string; p_reporting_period_month: string; p_reason: string }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      app_set_order_reporting_month: {
+        Args: { p_order_id: string; p_service_id: string; p_reporting_period_month: string }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      app_complete_order_for_reporting_month: {
+        Args: { p_order_id: string; p_service_id: string; p_reporting_period_month: string }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
       }
       app_change_order_status: {
         Args: { p_order_id: string; p_status: string }

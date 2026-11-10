@@ -21,7 +21,7 @@ async function verifiedActor() {
 }
 
 function order(status: OrderRow["status"], completion: string | null): OrderRow {
-  return { id: entityId, order_number: 42, company_id: actorId, service_id: actorId, assigned_to_profile_id: null, title: "Test", status, priority: "normal", due_at: null, started_at: null, completed_at: completion, notes: null, created_at: completedAt, updated_at: completedAt, archived_at: null };
+  return { id: entityId, order_number: 42, company_id: actorId, service_id: actorId, reporting_period_month: null, assigned_to_profile_id: null, title: "Test", status, priority: "normal", due_at: null, started_at: null, completed_at: completion, notes: null, created_at: completedAt, updated_at: completedAt, archived_at: null };
 }
 
 function task(status: OrderTaskRow["status"], completion: string | null): OrderTaskRow {
@@ -99,6 +99,23 @@ describe("atomic service orchestration", () => {
 
     expect(repository.changeStatus).toHaveBeenCalledOnce();
     expect(repository.changeStatus).toHaveBeenCalledWith(entityId, "complete");
+  });
+
+  it("keeps month selection and exact-scoped completion behind a verified actor", async () => {
+    const actor = await verifiedActor();
+    const repository = { setReportingMonth: vi.fn(), completeForReportingMonth: vi.fn() };
+    const service = new OrderService({ repository: repository as never });
+    const scope = { serviceId: actorId, reportingPeriodMonth: "2026-11-01" };
+    await service.setReportingMonth(entityId, scope, actor);
+    await service.completeForReportingMonth(entityId, scope, actor);
+    expect(repository.setReportingMonth).toHaveBeenCalledWith(entityId, scope);
+    expect(repository.completeForReportingMonth).toHaveBeenCalledWith(entityId, scope);
+    repository.setReportingMonth.mockClear();
+    repository.completeForReportingMonth.mockClear();
+    await expect(service.setReportingMonth(entityId, scope, { id: actorId } as never)).rejects.toThrow();
+    await expect(service.completeForReportingMonth(entityId, scope, { id: actorId } as never)).rejects.toThrow();
+    expect(repository.setReportingMonth).not.toHaveBeenCalled();
+    expect(repository.completeForReportingMonth).not.toHaveBeenCalled();
   });
 
   it("delegates task reopening to one transactional repository operation", async () => {

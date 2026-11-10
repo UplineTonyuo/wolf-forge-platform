@@ -31,6 +31,7 @@ const now = new Date("2026-08-13T12:00:00.000Z");
 
 function relationRow(overrides: Partial<ProjectRelationRow> & { id: string }): ProjectRelationRow {
   const base: OrderRow = {
+    reporting_period_month: null,
     id: overrides.id,
     order_number: 1,
     company_id: "c0000000-0000-4000-8000-000000000001",
