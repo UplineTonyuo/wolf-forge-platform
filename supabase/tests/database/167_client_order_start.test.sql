@@ -52,23 +52,50 @@ select is((select order_id from public.app_list_assigned_forms() where assignmen
 select is(jsonb_array_length(public.app_get_my_order_start(id)->'forms'),2,'both frozen required forms are returned before Start order') from start_ids where label='order';
 select is((public.app_request_my_order_start(id)->>'started')::boolean,false,'request does not skip required intake') from start_ids where label='order';
 select is((select status from public.app_get_my_client_project(id)),'pending','order remains pending before form completion') from start_ids where label='order';
+select is(public.app_my_order_chat_available(id),false,'Start request without submissions keeps chat locked') from start_ids where label='order';
+select is((select unanswered from public.app_list_my_order_response_states(array[id])),null::boolean,'locked native conversation does not expose reply metadata') from start_ids where label='order';
+select throws_ok(format('select public.app_get_order_conversation_page(%L)',id),'42501',null,'paged reader blocks unfinished intake') from start_ids where label='order';
+select throws_ok(format('select public.app_get_order_conversation(%L)',id),'42501',null,'old full reader blocks unfinished intake') from start_ids where label='order';
+select throws_ok(format('select public.app_get_project_conversation(%L)',id),'42501',null,'project full reader blocks unfinished intake') from start_ids where label='order';
+select throws_ok(format('select public.app_send_order_message(%L,gen_random_uuid(),%L)',id,'Blocked'),'42501',null,'direct send blocks unfinished intake') from start_ids where label='order';
+select throws_ok(format('select public.app_reply_to_order_message(%L,gen_random_uuid(),%L,gen_random_uuid())',id,'Blocked reply'),'42501',null,'direct quote/reply blocks before source lookup') from start_ids where label='order';
+select throws_ok(format('select public.app_toggle_order_message_reaction(%L,gen_random_uuid(),%L)',id,'like'),'42501',null,'direct reaction blocks unfinished intake') from start_ids where label='order';
 select pg_temp.act(3);
 select ok(public.app_get_my_order_start(id) is null,'other client cannot read order start') from start_ids where label='order';
 select is(pg_temp.try(format('select public.app_request_my_order_start(%L)',id)),'42501','other client cannot start the order') from start_ids where label='order';
 select pg_temp.act(1);
+select lives_ok(format('select public.app_get_order_conversation_page(%L)',id),'actual staff retain conversation access while forms are unfinished') from start_ids where label='order';
 select public.app_publish_form(gen_random_uuid(),id) from start_ids where label='form';
 select pg_temp.act(2);
 select ok(public.app_my_intake_version_available(a.id,(public.app_get_assigned_form_schema(a.id)->'schema'->>'form_version_id')::uuid),'frozen intake remains available after republication') from start_ids a where label='assignment';
 select public.app_submit_form(gen_random_uuid(),(public.app_get_assigned_form_schema(a.id)->'schema'->>'form_version_id')::uuid,
   jsonb_build_object('assignment_id',a.id),jsonb_build_array(jsonb_build_object('field_key','b6270000-0000-4000-8000-000000000050','value','Synthetic Business')),'[]') from start_ids a where label='assignment';
 select is((public.app_reconcile_my_order_start(id)->>'started')::boolean,false,'one completed form cannot skip the second required form') from start_ids where label='assignment';
+select is(public.app_my_order_chat_available(id),false,'one of two required submissions cannot open chat') from start_ids where label='order';
 select is((select status from public.app_get_my_client_project(id)),'pending','persisted order is still pending with one incomplete requirement') from start_ids where label='order';
 select public.app_submit_form(gen_random_uuid(),(public.app_get_assigned_form_schema(a.id)->'schema'->>'form_version_id')::uuid,
   jsonb_build_object('assignment_id',a.id),jsonb_build_array(jsonb_build_object('field_key','b6270000-0000-4000-8000-000000000051','value','Second Synthetic Business')),'[]') from start_ids a where label='second-assignment';
 select is((public.app_reconcile_my_order_start(id)->>'started')::boolean,true,'required form completion starts the requested order') from start_ids where label='assignment';
 select is((select status from public.app_get_my_client_project(id)),'working','canonical order is in progress') from start_ids where label='order';
 select is((public.app_request_my_order_start(id)->>'started')::boolean,true,'a duplicate start replays the confirmed state') from start_ids where label='order';
+select is(public.app_my_order_chat_available(id),true,'all frozen submitted requirements unlock chat after final submission') from start_ids where label='order';
+select lives_ok(format('select public.app_get_order_conversation_page(%L)',id),'final completion unlocks the existing paged reader') from start_ids where label='order';
 reset role;
+-- A sibling company member reads completion proof without becoming the purchaser.
+insert into auth.users(id,aud,role,email) values('b6270000-0000-4000-8000-000000000004','authenticated','authenticated','order-start-sibling@example.invalid');
+insert into public.tenant_memberships(tenant_id,profile_id,account_class,role_id,company_id)
+select 'b6270000-0000-4000-8000-000000000010','b6270000-0000-4000-8000-000000000004','client',id,'b6270000-0000-4000-8000-000000000020' from public.roles where name='client';
+set local role authenticated;
+select pg_temp.act(4);
+select is(public.app_my_order_chat_available(id),true,'company member is not restricted to purchaser-owned intake') from start_ids where label='order';
+select lives_ok(format('select public.app_get_order_conversation_page(%L)',id),'company member retains ordinary conversation entitlement') from start_ids where label='order';
+reset role;
+create temp table original_chat_gate as select * from private.client_order_starts where order_id=(select id from start_ids where label='order');
+update private.client_order_starts set assignment_ids=assignment_ids||gen_random_uuid() where order_id=(select id from start_ids where label='order');
+select is(private.order_conversation_forms_complete(id),false,'missing frozen assignment cannot disappear and open chat') from start_ids where label='order';
+update private.client_order_starts g set assignment_ids=s.assignment_ids,assignment_versions='{}'::jsonb from original_chat_gate s where g.order_id=s.order_id;
+select is(private.order_conversation_forms_complete(id),false,'mismatched frozen versions lock an already started order') from start_ids where label='order';
+update private.client_order_starts g set assignment_versions=s.assignment_versions from original_chat_gate s where g.order_id=s.order_id;
 select is((select count(*)::integer from public.activity_events where entity_id=(select id from start_ids where label='order') and action='order.status_changed' and metadata->>'client_requested'='true'),1,'only one client-start activity is recorded');
 select ok(not has_function_privilege('authenticated','private.try_requested_order_start(uuid)','EXECUTE'),'privileged start helper is not a client RPC');
 select ok(not has_table_privilege('authenticated','private.client_order_starts','UPDATE'),'client cannot edit request proof');
@@ -88,6 +115,51 @@ set local role authenticated;
 select pg_temp.act(2);
 insert into start_ids select 'no-intake-order',order_id from public.app_purchase_service_with_balance(gen_random_uuid(),'b6270000-0000-4000-8000-000000000031');
 select ok(public.app_get_my_order_start(id) is null,'service intentionally without intake remains ungated') from start_ids where label='no-intake-order';
+select is(public.app_my_order_chat_available(id),true,'no requirements preserves authorized client chat') from start_ids where label='no-intake-order';
 reset role;
+select ok(not has_function_privilege('authenticated','private.order_conversation_forms_complete(uuid)','execute'),'completion proof is private');
+select ok(not has_function_privilege('anon','public.app_my_order_chat_available(uuid)','execute'),'anonymous cannot read eligibility');
+select ok(not has_function_privilege('service_role','public.app_my_order_chat_available(uuid)','execute'),'no service-role eligibility shortcut');
+-- Historical assigned intake has no frozen gate and must still block linked Ticket paths.
+select set_config('request.jwt.claim.sub','',true);
+insert into public.orders(id,tenant_id,company_id,service_id,title) values
+('b6270000-0000-4000-8000-000000000080','b6270000-0000-4000-8000-000000000010','b6270000-0000-4000-8000-000000000020','b6270000-0000-4000-8000-000000000030','Legacy required intake');
+insert into public.form_assignments(id,form_id,form_version_id,company_id,client_profile_id,order_id,assigned_by_profile_id)
+select 'b6270000-0000-4000-8000-000000000081',a.form_id,f.published_version_id,a.company_id,null,'b6270000-0000-4000-8000-000000000080','b6270000-0000-4000-8000-000000000001'
+from public.form_assignments a join public.forms f on f.id=a.form_id where a.id=(select id from start_ids where label='assignment');
+set local role authenticated;
+select pg_temp.act(1);
+insert into start_ids select 'legacy-assignment',(public.app_assign_form(gen_random_uuid(),id,
+  '{"order_id":"b6270000-0000-4000-8000-000000000080","client_profile_id":"b6270000-0000-4000-8000-000000000002"}')).id from start_ids where label='form';
+reset role;
+select is((select status from public.form_assignments where id='b6270000-0000-4000-8000-000000000081'),'canceled','ordinary reassignment retains canceled legacy history');
+select set_config('request.jwt.claim.sub','',true);
+insert into public.tickets(id,tenant_id,order_id,company_id,client_profile_id,subject,created_by_profile_id) values
+('b6270000-0000-4000-8000-000000000082','b6270000-0000-4000-8000-000000000010','b6270000-0000-4000-8000-000000000080','b6270000-0000-4000-8000-000000000020','b6270000-0000-4000-8000-000000000002','Legacy chat','b6270000-0000-4000-8000-000000000001'),
+('b6270000-0000-4000-8000-000000000083','b6270000-0000-4000-8000-000000000010',null,'b6270000-0000-4000-8000-000000000020','b6270000-0000-4000-8000-000000000002','Standalone chat','b6270000-0000-4000-8000-000000000001');
+set local role authenticated;
+select pg_temp.act(2);
+select is(public.app_my_order_chat_available('b6270000-0000-4000-8000-000000000080'),false,'legacy required assignment blocks without a frozen gate');
+select is(private.can_access_ticket('b6270000-0000-4000-8000-000000000082'),false,'linked Ticket RLS visibility blocks required intake');
+select throws_ok($$select public.app_get_ticket_detail_with_avatars('b6270000-0000-4000-8000-000000000082')$$,'42501',null,'linked Ticket full reader blocks required intake');
+select throws_ok($$select public.app_reply_to_ticket(gen_random_uuid(),'b6270000-0000-4000-8000-000000000082','Blocked')$$,'42501',null,'linked Ticket direct reply blocks required intake');
+select lives_ok($$select public.app_get_ticket_detail_with_avatars('b6270000-0000-4000-8000-000000000083')$$,'standalone Ticket keeps existing behavior');
+select public.app_submit_form(gen_random_uuid(),(public.app_get_assigned_form_schema(id)->'schema'->>'form_version_id')::uuid,
+  jsonb_build_object('assignment_id',id),
+  '[{"field_key":"b6270000-0000-4000-8000-000000000050","value":"Legacy completion"}]','[]') from start_ids where label='legacy-assignment';
+select is(public.app_my_order_chat_available('b6270000-0000-4000-8000-000000000080'),true,'legacy submitted completion unlocks without gate creation or Start');
+select lives_ok($$select public.app_get_order_conversation_page('b6270000-0000-4000-8000-000000000080')$$,'legacy completion unlocks linked-ticket paging');
+reset role;
+select set_config('request.jwt.claim.sub','',true);
+update public.form_assignments set status='archived',archived_at=clock_timestamp() where id='b6270000-0000-4000-8000-000000000081';
+select is(private.order_conversation_forms_complete('b6270000-0000-4000-8000-000000000080'),false,'archived old requirement remains fail-closed despite a submitted replacement');
+update public.form_assignments set status='canceled',archived_at=null where id='b6270000-0000-4000-8000-000000000081';
+select is(private.order_conversation_forms_complete('b6270000-0000-4000-8000-000000000080'),true,'restored ordinary canceled replacement history preserves submitted completion');
+create temp table saved_chat_submission as select id,latest_submission_id from public.form_assignments where id=(select id from start_ids where label='assignment');
+update public.form_assignments set latest_submission_id=(select latest_submission_id from public.form_assignments where id=(select id from start_ids where label='second-assignment')) where id=(select id from start_ids where label='assignment');
+select is(private.order_conversation_forms_complete(id),false,'invalid submission linkage cannot open a started frozen order') from start_ids where label='order';
+update public.form_assignments a set latest_submission_id=s.latest_submission_id from saved_chat_submission s where a.id=s.id;
+update public.form_assignments set status='archived',archived_at=clock_timestamp() where id=(select id from start_ids where label='assignment');
+select is(private.order_conversation_forms_complete(id),false,'archived frozen assignment cannot open a started order') from start_ids where label='order';
 select * from finish();
 rollback;

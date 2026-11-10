@@ -57,6 +57,12 @@ export class OrderRepository {
     return clientOrderStartSchema.nullable().parse(result.data);
   }
 
+  async getClientChatEligibility(id: string): Promise<boolean> {
+    const result = await this.client.rpc("app_my_order_chat_available", { p_order_id: id });
+    if (result.error) throw mapDatabaseError(result.error, "Order conversation access");
+    return z.boolean().parse(result.data);
+  }
+
   async requestClientStart(id: string) {
     const result = await this.client.rpc("app_request_my_order_start", { p_order_id: id });
     if (result.error) throw mapDatabaseError(result.error, "Order start");

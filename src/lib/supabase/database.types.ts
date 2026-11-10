@@ -5392,6 +5392,7 @@ export type Database = {
       app_server_run_intake_job: { Args: { p_submission_id: string }; Returns: Json }
       app_server_intake_maintenance: { Args: never; Returns: Json }
         app_get_my_order_start: { Args: { p_order_id: string }; Returns: Json }
+        app_my_order_chat_available: { Args: { p_order_id: string }; Returns: boolean }
         app_request_my_order_start: { Args: { p_order_id: string }; Returns: Json }
         app_reconcile_my_order_start: { Args: { p_assignment_id: string }; Returns: Json }
         app_my_intake_version_available: { Args: { p_assignment_id: string; p_version_id: string }; Returns: boolean }

@@ -43,6 +43,7 @@ function ProjectConversationBody({
   const toggleReaction = async (messageId: string, reactionCode: string) => {
     const result = await toggleClientOrderMessageReactionAction(orderId, messageId, reactionCode);
     if (result.ok) optimistic.wake();
+    else if (result.code && ["PERMISSION_DENIED", "NOT_FOUND", "UNAUTHENTICATED"].includes(result.code)) optimistic.invalidate();
     return result;
   };
 

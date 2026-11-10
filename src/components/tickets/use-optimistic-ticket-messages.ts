@@ -29,7 +29,7 @@ type PendingEntry = TicketDetailMessage & { draft: OptimisticTicketDraft };
  */
 export function useOptimisticTicketMessages(
   serverMessages: TicketDetailMessage[],
-  options: { mode: "admin" | "client"; viewerProfileId?: string | null; confirmation?: "request-id"; onRetryAccepted?: () => void },
+  options: { mode: "admin" | "client"; viewerProfileId?: string | null; confirmation?: "request-id"; onRetryAccepted?: () => void; onUnavailable?: () => void },
 ) {
   const router = useRouter();
   const [pending, setPending] = useState<PendingEntry[]>([]);
@@ -117,6 +117,7 @@ export function useOptimisticTicketMessages(
       }, formData);
 
       if (!result.ok) {
+        if (result.code && ["PERMISSION_DENIED", "NOT_FOUND", "UNAUTHENTICATED"].includes(result.code)) options.onUnavailable?.();
         settle(requestId, false);
         return;
       }

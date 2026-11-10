@@ -117,7 +117,8 @@ export async function submitAssignedFormAction(input: SubmitFormInput, downloadR
     }
     revalidatePath("/account/onboarding");
     revalidatePath("/account/projects"); revalidatePath("/orders"); revalidatePath("/dashboard");
-    if (orderStart) revalidatePath(`/account/projects/${orderStart.id}`);
+    const projectId = submission.order_id ?? orderStart?.id;
+    if (projectId) revalidatePath(`/account/projects/${projectId}`);
     revalidatePath("/account");
     result = { id: submission.id, followUp, ...(orderStart ? { orderStart } : {}) };
     if (downloadReceipt === true && parsed.context.assignment_id) receiptPath = `/account/onboarding/${parsed.context.assignment_id}?submitted=${submission.id}`;

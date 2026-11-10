@@ -8,6 +8,7 @@ import { ProjectConversation } from "../../tickets/project-conversation";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
 import type { ReactNode } from "react";
+import styles from "./client-project-detail.module.css";
 
 export { ClientProjectsList } from "./client-projects-list";
 
@@ -16,6 +17,7 @@ export function ClientProjectDetail({
   conversation,
   viewerId,
   startControl,
+  chatAccess,
 }: {
   project: ClientProjectView;
   conversation: (TicketDetail & {page?:OrderPageInfo}) | null;
@@ -23,6 +25,7 @@ export function ClientProjectDetail({
    *  authenticated user rather than from the client role. */
   viewerId: string;
   startControl?: ReactNode;
+  chatAccess: "locked" | "unlocked" | "unavailable";
 }) {
   const attention = projectAttention(project.status);
   const conversationTicket = conversation?.ticket ?? null;
@@ -51,7 +54,7 @@ export function ClientProjectDetail({
         All orders
       </Link>
 
-      <header className="portal-page-head portal-page-head-actions">
+      <header className={`portal-page-head portal-page-head-actions ${styles.heading}`}>
         <div>
           <span className="portal-eyebrow">{project.reference}</span>
           <h1>{project.title}</h1>
@@ -59,8 +62,6 @@ export function ClientProjectDetail({
         </div>
         <AttentionPill tone={attention.tone} label={attention.label} />
       </header>
-
-      {startControl}
 
       {attention.tone === "waiting_on_you" ? (
         <div className="portal-callout" data-tone="waiting_on_you">
@@ -72,6 +73,23 @@ export function ClientProjectDetail({
         </div>
       ) : null}
 
+      <div className={styles.workspace}>
+      <section className={`portal-section ${styles.conversation}`} aria-labelledby="portal-project-conversation">
+        <h2 id="portal-project-conversation" className="sr-only">Conversation</h2>
+        {chatAccess === "unlocked" ? <ProjectConversation
+          orderId={project.id}
+          heading={project.reference}
+          messages={conversation?.messages ?? []}
+          initialPage={conversation?.page}
+          viewerProfileId={viewerId}
+          repliesDisabled={repliesDisabled}
+        /> : <p role="status">{chatAccess === "locked"
+          ? "Complete all required service forms to open this conversation. If a form is unavailable, contact the team."
+          : "Conversation access could not be confirmed. Reload to try again."}</p>}
+      </section>
+
+      <aside className={styles.sidebar} aria-label="Order information">
+      {startControl}
       <section className="portal-section" aria-labelledby="portal-project-progress">
         <header className="portal-section-head">
           <h2 id="portal-project-progress">Delivery progress</h2>
@@ -102,7 +120,7 @@ export function ClientProjectDetail({
         <header className="portal-section-head">
           <h2 id="portal-project-facts">Details</h2>
         </header>
-        <dl className="portal-fact-grid">
+        <dl className={`portal-fact-grid ${styles.facts}`}>
           {facts.map((fact) => (
             <div key={fact.label}>
               <dt>{fact.label}</dt>
@@ -111,20 +129,8 @@ export function ClientProjectDetail({
           ))}
         </dl>
       </section>
-
-      <section className="portal-section" aria-labelledby="portal-project-conversation">
-        <h2 id="portal-project-conversation" className="sr-only">
-          Conversation
-        </h2>
-        <ProjectConversation
-          orderId={project.id}
-          heading={project.reference}
-          messages={conversation?.messages ?? []}
-          initialPage={conversation?.page}
-          viewerProfileId={viewerId}
-          repliesDisabled={repliesDisabled}
-        />
-      </section>
+      </aside>
+      </div>
     </div>
   );
 }

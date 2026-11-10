@@ -31,10 +31,9 @@ export default async function ClientProjectDetailPage({
 
   try {
     await services.permissions.requireModuleAccess("portal_projects");
-    [project, conversation] = await Promise.all([
+    [project, startState] = await Promise.all([
       services.projects.getClientProject(projectId),
-      services.tickets.getOrderPage(projectId),
-      services.projects.getClientStartState(projectId).then((state) => { startState = state; }).catch(() => { startError = true; }),
+      services.projects.getClientStartState(projectId).catch(() => { startError = true; return null; }),
     ]);
   } catch (error) {
     const safe = toClientSafeError(error);
@@ -48,26 +47,38 @@ export default async function ClientProjectDetailPage({
   if (denied) redirect("/account");
   if (missing || !project) notFound();
 
-  // Older purchases may have assigned intake without a frozen start gate.
-  // Keep those real requests reachable without creating or backfilling a gate.
+  // Include legacy and later required forms without backfilling a start gate.
   let legacyIntake: Awaited<ReturnType<typeof readClientAssignments>> = null;
   let legacyIntakeError = false;
   let formsSignature: string | null = null;
-  if (!startError && !startState && user.modules.portal_forms === true) {
+  if (!startError && user.modules.portal_forms === true) {
     try {
       const visibility = await loadFormsVisibility("client");
       if (visibility.ok) {
         formsSignature = visibility.signature;
-        legacyIntake = (await readClientAssignments())?.filter((form) => form.order_id === projectId && form.form_type === "intake" && form.required && form.status === "assigned") ?? [];
+        const assignments = await readClientAssignments();
+        if (assignments === null) legacyIntakeError = true;
+        else legacyIntake = assignments.filter((form) => form.order_id === projectId && form.form_type === "intake" && form.required && form.status === "assigned"
+          && (startState?.started || !startState?.forms.some((frozen) => frozen.id === form.assignment_id)));
       } else { legacyIntakeError = true; }
     } catch { legacyIntakeError = true; }
   }
-  const legacyControl = legacyIntake?.length && formsSignature !== null ? <FormsVisibilityBoundary scope="client" signature={formsSignature}><section id="start-order" className="portal-section">
+  const legacyControl = legacyIntake?.length && formsSignature !== null ? <FormsVisibilityBoundary scope="client" signature={formsSignature}><section id="required-order-forms" className="portal-section">
     <h2>Complete your order information</h2>
     <p>Complete the required service forms for this order.</p>
     <ul>{legacyIntake.map((form) => <li key={form.assignment_id}>{form.work_enabled !== false ? <Link href={`/account/onboarding/${form.assignment_id}`}>Complete intake form: {form.order_title ?? form.title}</Link> : <span>Form collection is paused. Contact the team.</span>}</li>)}</ul>
   </section></FormsVisibilityBoundary> : legacyIntakeError ? <p role="alert">Required forms could not be loaded. Reload to try again.</p> : null;
 
+  let chatAccess: "locked" | "unlocked" | "unavailable" = "unavailable";
+  if (!startError && !legacyIntakeError) {
+    try {
+      const eligible = await services.projects.getClientChatEligibility(projectId);
+      chatAccess = eligible && !legacyIntake?.length ? "unlocked" : "locked";
+      if (chatAccess === "unlocked") conversation = await services.tickets.getOrderPage(projectId);
+    } catch { chatAccess = "unavailable"; conversation = null; }
+  }
+
   return <ClientProjectDetail project={project} conversation={conversation} viewerId={user.id}
-    startControl={startError ? <p role="alert">Order start status could not be loaded. Reload before starting this order.</p> : startState ? <ClientOrderStart initial={startState} /> : legacyControl} />;
+    chatAccess={chatAccess}
+    startControl={startError ? <p role="alert">Order start status could not be loaded. Reload before starting this order.</p> : <>{startState ? <ClientOrderStart initial={startState} /> : null}{legacyControl}</>} />;
 }
