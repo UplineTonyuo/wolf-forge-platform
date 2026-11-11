@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { projectAttention } from "../../../domain/client-portal/attention";
 import type { ClientProjectView } from "../../../domain/orders/client-projections";
@@ -32,6 +32,7 @@ export function ClientProjectDetail({
   const repliesDisabled = conversationTicket
     ? conversationTicket.status === "closed" || Boolean(conversationTicket.archived_at)
     : false;
+  const locked = chatAccess === "locked";
 
   /*
    * Only facts the read model actually carries. A field with no value is shown
@@ -47,6 +48,20 @@ export function ClientProjectDetail({
     { label: "Completed", value: project.completedLabel ?? "Not completed yet" },
   ];
 
+  const details = (<section className="portal-section" aria-labelledby="portal-project-facts">
+        <header className="portal-section-head">
+          <h2 id="portal-project-facts">Details</h2>
+        </header>
+        <dl className={`portal-fact-grid ${styles.facts}`}>
+          {facts.map((fact) => (
+            <div key={fact.label}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>);
+
   return (
     <div className="portal-page">
       <Link href="/account/projects" className="portal-back">
@@ -54,7 +69,7 @@ export function ClientProjectDetail({
         All orders
       </Link>
 
-      <header className={`portal-page-head portal-page-head-actions ${styles.heading}`}>
+      <header className={`portal-page-head portal-page-head-actions ${styles.heading} ${locked ? styles.lockedHeading : ""}`}>
         <div>
           <span className="portal-eyebrow">{project.reference}</span>
           <h1>{project.title}</h1>
@@ -73,7 +88,18 @@ export function ClientProjectDetail({
         </div>
       ) : null}
 
-      <div className={styles.workspace}>
+      <div className={`${styles.workspace} ${locked ? styles.lockedWorkspace : ""}`}>
+      {locked ? <div className={styles.requiredForms}>
+        {startControl}
+        <section className={styles.lockedNotice} aria-labelledby="portal-project-locked">
+          <LockKeyhole aria-hidden={true} />
+          <div>
+            <h2 id="portal-project-locked">Conversation opens after submission</h2>
+            <p role="status">Messages and attachments become available when all required service forms are complete.</p>
+          </div>
+        </section>
+        <p className={styles.formHelp}>If a required form is unavailable, contact the team.</p>
+      </div> :
       <section className={`portal-section ${styles.conversation}`} aria-labelledby="portal-project-conversation">
         <h2 id="portal-project-conversation" className="sr-only">Conversation</h2>
         {chatAccess === "unlocked" ? <ProjectConversation
@@ -83,14 +109,13 @@ export function ClientProjectDetail({
           initialPage={conversation?.page}
           viewerProfileId={viewerId}
           repliesDisabled={repliesDisabled}
-        /> : <p role="status">{chatAccess === "locked"
-          ? "Complete all required service forms to open this conversation. If a form is unavailable, contact the team."
-          : "Conversation access could not be confirmed. Reload to try again."}</p>}
-      </section>
+        /> : <p role="status">Conversation access could not be confirmed. Reload to try again.</p>}
+      </section>}
 
-      <aside className={styles.sidebar} aria-label="Order information">
-      {startControl}
-      <section className="portal-section" aria-labelledby="portal-project-progress">
+      <aside className={`${styles.sidebar} ${locked ? styles.lockedSidebar : ""}`} aria-label="Order information">
+      {!locked ? startControl : null}
+      {locked ? details : null}
+      <section className={`portal-section ${locked ? styles.lockedProgress : ""}`} aria-labelledby="portal-project-progress">
         <header className="portal-section-head">
           <h2 id="portal-project-progress">Delivery progress</h2>
         </header>
@@ -116,19 +141,7 @@ export function ClientProjectDetail({
         </div>
       </section>
 
-      <section className="portal-section" aria-labelledby="portal-project-facts">
-        <header className="portal-section-head">
-          <h2 id="portal-project-facts">Details</h2>
-        </header>
-        <dl className={`portal-fact-grid ${styles.facts}`}>
-          {facts.map((fact) => (
-            <div key={fact.label}>
-              <dt>{fact.label}</dt>
-              <dd>{fact.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      {!locked ? details : null}
       </aside>
       </div>
     </div>
