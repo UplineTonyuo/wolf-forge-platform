@@ -1,0 +1,18 @@
+.heading > div { flex: 1 1 260px; max-width: 100%; }
+.heading :is(h1, p) { overflow-wrap: anywhere; }
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+  align-items: start;
+  gap: 28px;
+  min-width: 0;
+}
+.conversation, .sidebar { min-width: 0; }
+.sidebar { display: grid; gap: 28px; }
+.facts { grid-template-columns: minmax(0, 1fr); }
+.facts dd { overflow-wrap: anywhere; }
+.conversation > p { margin: 0; line-height: 1.6; }
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

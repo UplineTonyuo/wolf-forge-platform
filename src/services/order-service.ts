@@ -26,6 +26,7 @@ export class OrderService {
   list(filter?: ListOrdersFilter) { return this.dependencies.repository.list(filter); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }
   getClientStartState(id: unknown) { return this.dependencies.repository.getClientStartState(parseInput(uuidSchema, id)); }
+  getClientChatEligibility(id: unknown) { return this.dependencies.repository.getClientChatEligibility(parseInput(uuidSchema, id)); }
   requestClientStart(id: unknown, actor: UserMutationActor) {
     requireVerifiedActor(actor);
     return this.dependencies.repository.requestClientStart(parseInput(uuidSchema, id));

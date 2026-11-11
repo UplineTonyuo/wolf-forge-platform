@@ -54,6 +54,7 @@ export function useOrderConversationMessages({orderId,serverMessages,initialPage
   },[orderId]);
   const deny=useCallback(()=>{
     direct.current?.abort();generation.current+=1;
+    busy.current=false;pendingLatest.current=false;
     clear.current();requestIds.current=[];
     commit(previous=>({...previous,messages:[],calls:[],oldestCall:null,unavailable:true,newCount:0,busy:false}));router.refresh();
   },[commit,router]);
@@ -133,11 +134,16 @@ export function useOrderConversationMessages({orderId,serverMessages,initialPage
   },[bound,commit,deny,key,orderId]);
   const jumpToLatest=useCallback(()=>load("latest"),[load]);
   useEffect(()=>{jumpRef.current=()=>{void jumpToLatest()}},[jumpToLatest]);
-  const optimistic=useOptimisticTicketMessages(state.key===key&&!state.unavailable?state.messages:[],{mode,viewerProfileId,confirmation:"request-id",onRetryAccepted:()=>jumpRef.current()});
+  const optimistic=useOptimisticTicketMessages(state.key===key&&!state.unavailable?state.messages:[],{mode,viewerProfileId,confirmation:"request-id",onRetryAccepted:()=>jumpRef.current(),onUnavailable:deny});
   useEffect(()=>{requestIds.current=optimistic.pendingRequestIds;confirm.current=optimistic.confirm;clear.current=optimistic.clear},[optimistic.pendingRequestIds,optimistic.confirm,optimistic.clear]);
-  const settle=(id:string,ok:boolean)=>{optimistic.settle(id,ok);if(ok){void jumpToLatest();wake()}};
+  const settle=(id:string,ok:boolean,code?:string)=>{
+    if(code&&["PERMISSION_DENIED","NOT_FOUND","UNAUTHENTICATED"].includes(code)){deny();return}
+    if(current.current.unavailable)return;
+    optimistic.settle(id,ok);if(ok){void jumpToLatest();wake()}
+  };
   const setViewport=useCallback((nearBottom:boolean,anchor:string|null)=>{reading.current={nearBottom,anchor};setAway(!nearBottom)},[]);
   const addCalls=useCallback((calls:CallHistoryEntry[],older:boolean)=>{
+    if(current.current.unavailable)return;
     commit(previous=>{
       const oldest=calls.reduce((oldest,call)=>!oldest||(compareConversationTime(call.requestedAt,oldest.at)||call.id.localeCompare(oldest.id))<0?{id:call.id,at:call.requestedAt}:oldest,previous.oldestCall);
       return {...bound(previous,previous.messages,[...new Map([...previous.calls,...calls].map(c=>[c.id,c])).values()],older?"before":"after",previous.page),oldestCall:oldest};
@@ -148,5 +154,5 @@ export function useOrderConversationMessages({orderId,serverMessages,initialPage
   return {...state,messages:active?optimistic.messages:[],calls:active?state.calls:[],unavailable:state.key===key&&state.unavailable,
     hasEvictedEarlierCalls:Boolean(state.oldestCall&&state.calls[0]&&(compareConversationTime(state.calls[0].requestedAt,state.oldestCall.at)||state.calls[0].id.localeCompare(state.oldestCall.id))>0),
     newCount:active?state.newCount:0,away,setViewport,loadOlder:()=>load("before"),loadNewer:()=>load("after"),jumpToLatest,
-    retryPage:()=>load(retryDirection.current),wake,addCalls,clearCalls,addOptimistic:optimistic.addOptimistic,retry:optimistic.retry,settle};
+    retryPage:()=>load(retryDirection.current),wake,addCalls,clearCalls,invalidate:deny,addOptimistic:optimistic.addOptimistic,retry:optimistic.retry,settle};
 }

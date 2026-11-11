@@ -16,10 +16,29 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
   useLayoutEffect(()=>{viewport.current=conversation.setViewport},[conversation.setViewport]);
   useLayoutEffect(()=>{
     const viewport=window.visualViewport;
-    const resize=()=>{host.current?.style.setProperty("--order-viewport-height",`${viewport?.height??window.innerHeight}px`)};
-    resize();viewport?.addEventListener("resize",resize);window.addEventListener("resize",resize);
-    return ()=>{viewport?.removeEventListener("resize",resize);window.removeEventListener("resize",resize)};
-  },[]);
+    const resize=()=>{
+      const element=host.current;if(!element)return;
+      const height=viewport?.height??window.innerHeight;
+      element.style.setProperty("--order-viewport-height",`${height}px`);
+      if(renderer.clientView){
+        const top=Math.max(0,element.getBoundingClientRect().top-(viewport?.offsetTop??0));
+        const available=height-24;
+        // A panel below the fold keeps a usable internal viewport until scrolled into view.
+        element.style.setProperty("--client-order-height",`${Math.max(Math.min(420,available),available-top)}px`);
+        element.dataset.compactViewport=String(height<=480);
+        if(element.contains(document.activeElement)&&element.getBoundingClientRect().bottom>(viewport?.offsetTop??0)+height){
+          element.scrollIntoView({block:"start"});
+        }
+      }
+    };
+    let frame=0;
+    const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(resize)};
+    const focusedScroll=()=>{if(host.current?.contains(document.activeElement))schedule()};
+    resize();viewport?.addEventListener("resize",schedule);viewport?.addEventListener("scroll",schedule);window.addEventListener("resize",schedule);
+    if(renderer.clientView){window.addEventListener("scroll",focusedScroll);host.current?.addEventListener("focusin",schedule)}
+    const element=host.current;
+    return ()=>{cancelAnimationFrame(frame);viewport?.removeEventListener("resize",schedule);viewport?.removeEventListener("scroll",schedule);window.removeEventListener("resize",schedule);window.removeEventListener("scroll",focusedScroll);element?.removeEventListener("focusin",schedule)};
+  },[renderer.clientView]);
   const capture=useCallback(()=>{
     const element=scroll.current;if(!element)return;
     // Follow only within 60 CSS pixels of the bottom, including keyboard scrolling.
@@ -48,7 +67,7 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
     const list=element.querySelector("ol");if(list)observer?.observe(list);
     return ()=>observer?.disconnect();
   },[conversation.messages,conversation.calls,conversation.latestRevision]);
-  return <div ref={host} className={`${styles.orderConversationSurface} ${styles.orderPagedSurface}`} data-order-conversation="paged">
+  return <div ref={host} className={`${styles.orderConversationSurface} ${styles.orderPagedSurface}${renderer.clientView?` ${styles.clientPagedSurface}`:""}`} data-order-conversation="paged">
     <TicketConversation {...renderer} orderChat messages={conversation.messages} callHistory={conversation.calls}
       transcript={{ref:scroll,onScroll:capture,controls:<div className={styles.messageHistoryBar}>
         {conversation.page.hasOlder?<button type="button" disabled={conversation.busy} onClick={()=>{capture();following.current=false;conversation.setViewport(false,anchor.current?.id??null);void conversation.loadOlder()}}><History aria-hidden="true"/>{conversation.busy?"Loading messages…":"Load 10 older messages"}</button>:<span>Beginning of conversation</span>}

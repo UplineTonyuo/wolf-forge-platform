@@ -4,6 +4,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
+import { checkOrderChatFormGate } from "./check-order-chat-form-gate.mjs";
 
 const tenant = "f0f0f0f0-0000-4000-8000-000000000001";
 const hook = "public.app_apply_client_support_context";
@@ -536,6 +537,8 @@ async function main() {
     and exists(select 1 from public.form_assignments where id=:'assignment'::uuid and status='assigned')
     and exists(select 1 from private.intake_drafts where assignment_id=:'assignment'::uuid and answers=:'values'::jsonb);`,
   { ...raceParams, credential: legacyReference.credential_id }) === "t", "Race probes changed the fixture assignment or consumed its reference");
+  step = "required-form conversation gate with real authenticated sessions";
+  await checkOrderChatFormGate({ sql, tenant, owner, client, sibling, other, supportApi, need, success, denied, waitFor });
   step = "explicit support exit";
   await success(owner.api.rpc("app_end_client_support", { p_support_id: started.id }), "Explicit support exit");
   const ended = await success(owner.api.rpc("app_get_own_client_support_state", { p_support_id: started.id }), "Exited support state");

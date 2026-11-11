@@ -36,6 +36,16 @@ beforeEach(()=>{
 });
 afterEach(()=>{cleanup();vi.unstubAllGlobals()});
 describe("Order page state",()=>{
+  it("clears loaded and pending messages on a typed send denial and ignores late call pages",async()=>{
+    const call={id:"late-call",requestedAt:"2026-11-10T00:00:00Z"} as CallHistoryEntry;
+    function Revocation(){const state=hooks.useOrderConversationMessages({orderId:order,serverMessages:initial,initialPage:page,mode:"client",viewerProfileId:"client"});return <><button onClick={()=>{state.addOptimistic({requestId:order,body:"Pending private draft",attachment:null,replyTo:null,target:{kind:"order",orderId:order}})}}>Draft send</button><button onClick={()=>state.settle(order,false,"PERMISSION_DENIED")}>Deny send</button><button onClick={()=>state.addCalls([call],true)}>Late history</button><span>{state.unavailable?"Access revoked":"Access current"}</span>{state.messages.map(m=><p key={m.id}>{m.body}</p>)}<span data-testid="retained-calls">{state.calls.length}</span></>}
+    render(<Revocation/>);await waitFor(()=>expect(mocks.fetch).toHaveBeenCalled());
+    fireEvent.click(screen.getByText("Draft send"));expect(screen.getByText("Pending private draft")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Deny send"));await screen.findByText("Access revoked");
+    expect(screen.queryByText("Pending private draft")).not.toBeInTheDocument();expect(screen.queryByText("Message 91")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("Late history"));expect(screen.getByTestId("retained-calls")).toHaveTextContent("0");
+    expect(mocks.refresh).toHaveBeenCalled();
+  });
   it("resets the evicted call interval on Jump to latest so intermediate calls can be reloaded",async()=>{
     const calls=Array.from({length:100},(_,i)=>({id:`call-${String(i+1).padStart(3,"0")}`,requestedAt:i<10?"2026-11-10T00:00:00.000000Z":`2026-11-10T00:00:01.${String(i).padStart(6,"0")}Z`})) as CallHistoryEntry[];
     // A reachable older window: 190 mixed entries have evicted newer calls C11..C100.

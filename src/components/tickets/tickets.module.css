@@ -4800,9 +4800,14 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 .messageHistoryBar button:focus-visible,.jumpLatest button:focus-visible { outline: 2px solid #9c7418; outline-offset: 1px; }
 .messageHistoryBar button:disabled,.jumpLatest button:disabled { opacity: .6; cursor: wait; }
 .messageHistoryBar svg,.jumpLatest svg { width: 16px; height: 16px; flex: 0 0 auto; }
-.jumpLatest { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: center; background: #fffaf0; font-size: 12px; }
+.jumpLatest { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: center; font-size: 12px; }
 .orderPagedSurface > .composer { flex: 0 0 auto; min-width: 0; padding-bottom: max(12px,env(safe-area-inset-bottom)); }
 .orderPagedSurface .composer .ticketRichComposer { min-height: 64px; max-height: min(140px,20dvh); overflow-y: auto; }
+.clientPagedSurface { height: var(--client-order-height, 600px); }
+.clientPagedSurface[data-compact-viewport="true"] > .composer { padding-top: 4px; padding-bottom: 4px; }
+.clientPagedSurface[data-compact-viewport="true"] .composer .ticketRichComposer { min-height: 40px; max-height: 56px; }
+.clientPagedSurface[data-compact-viewport="true"] .boundedTranscript > header { padding-top: 6px; padding-bottom: 6px; }
+.clientPagedSurface[data-compact-viewport="true"] .messageHistoryBar { padding-top: 0; padding-bottom: 0; }
 @media (max-height: 480px) {
   .orderPagedSurface > .composer { padding-top: 4px; padding-bottom: 4px; }
   .orderPagedSurface .composer .ticketRichComposer { min-height: 40px; max-height: 56px; }

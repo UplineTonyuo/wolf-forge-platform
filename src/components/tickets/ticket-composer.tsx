@@ -58,7 +58,7 @@ type TicketComposerOptimistic = {
     replyTo: OrderReplyTarget | null;
     target: TicketComposerActionInput["target"];
   }) => void;
-  onSettled: (requestId: string, ok: boolean) => void;
+  onSettled: (requestId: string, ok: boolean, code?: string) => void;
 };
 
 export function TicketComposer(props: Parameters<typeof TicketComposerBody>[0]) {
@@ -297,7 +297,7 @@ function TicketComposerBody({
           }, formData);
 
           if (!result.ok) {
-            if (optimistic) optimistic.onSettled(requestId, false);
+            if (optimistic) optimistic.onSettled(requestId, false, result.code);
             else setError(result.error);
 
             return;

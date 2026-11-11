@@ -128,6 +128,10 @@ jobs:
       - name: start isolated local Supabase database
         id: supabase
         run: npx supabase start --yes
+      - name: replay released chat baseline then apply the required-form guard
+        run: |
+          npx supabase db reset --local --version 20261110153809
+          npx supabase migration up --local
       # `test:db` is pinned to `supabase test db --local`; no linked project or
       # hosted connection string is available to this job.
       - name: full pgTAP and RLS suite

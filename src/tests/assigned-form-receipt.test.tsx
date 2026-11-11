@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AssignedFormPage from "../app/account/onboarding/[assignmentId]/page";
 import { submitAssignedFormAction } from "../app/actions/forms";
 import type { SubmitFormInput } from "../domain/forms/schema";
+import { revalidatePath } from "next/cache";
 
 const mocks = vi.hoisted(() => ({ history: vi.fn(), receipt: vi.fn(), work: vi.fn(), submit: vi.fn(), rpc: vi.fn(), detail: vi.fn(), redirect: vi.fn(), context: vi.fn() }));
 vi.mock("server-only", () => ({}));
@@ -30,6 +31,13 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the authenticated submission receipt", () => {
+  it("refreshes authoritative Project chat eligibility after a saved legacy intake without a start gate", async () => {
+    const order = "50000000-0000-4000-8000-000000000001";
+    mocks.submit.mockResolvedValue({ id: submission, order_id: order });
+    await submitAssignedFormAction(input);
+    expect(revalidatePath).toHaveBeenCalledWith(`/account/projects/${order}`);
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
   it.each([undefined, "foreign-submission", [submission]])("does not automatically download for an absent or unmatched query %j", async (submitted) => {
     render(await AssignedFormPage({ params: Promise.resolve({ assignmentId: assignment }), searchParams: Promise.resolve({ submitted }) }));
     expect(mocks.detail).toHaveBeenCalledWith(expect.objectContaining({ automaticPdf: false, canCorrect: false }));
