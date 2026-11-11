@@ -72,6 +72,9 @@ begin
       '  return new;',
       $patch$  if target_order is not null
     and exists(select 1 from private.current_ticket_actor() actor where actor.role_name='client')
+    -- Purchase receipts are trusted inserts even inside the buyer's session.
+    and not (tg_op='INSERT' and tg_table_name in ('ticket_messages','project_messages')
+      and to_jsonb(new)->>'author_type'='system' and to_jsonb(new)->>'author_profile_id' is null)
     and not private.order_conversation_forms_complete(target_order) then
     raise exception 'Complete required service forms before using chat' using errcode='42501';
   end if;

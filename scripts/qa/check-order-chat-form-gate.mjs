@@ -30,6 +30,7 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   const purchased = await success(client.api.rpc("app_purchase_service_with_balance", { p_request_id: randomUUID(), p_service_id: service }), "Synthetic gated purchase");
   const order = purchased[0]?.order_id;
   need(typeof order === "string", "Purchase order missing");
+  need(await sql("select count(*)=1 from public.project_messages where order_id=:'order'::uuid and author_type='system' and author_profile_id is null;", { order }) === "t", "Gated purchase must persist its trusted system receipt");
   const staffRequest = randomUUID();
   await success(owner.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: staffRequest, p_body: "Staff can work before intake" }), "Staff access before intake");
   const source = await sql("select id from public.project_messages where order_id=:'order'::uuid and request_id=:'request'::uuid;", { order, request: staffRequest });
@@ -47,6 +48,8 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
     await denied(api.rpc("app_reply_to_order_message", { p_order_id: order, p_request_id: randomUUID(), p_body: "Blocked quote", p_reply_to_message_id: source }), "Locked reply");
     await denied(api.rpc("app_toggle_order_message_reaction", { p_order_id: order, p_message_id: source, p_reaction_code: "like" }), "Locked reaction");
     await denied(api.rpc("app_prepare_ticket_attachment", { p_order_id: order, p_request_id: randomUUID() }), "Locked attachment preparation");
+    await denied(api.rpc("app_send_ticket_message_with_attachment", { p_order_id: order, p_request_id: randomUUID(), p_body: "Blocked attachment",
+      p_original_name: "Synthetic.txt", p_mime_type: "application/pdf", p_size_bytes: 4, p_checksum_sha256: "a".repeat(64) }), "Locked attachment send");
     await denied(api.rpc("app_get_ticket_attachment_download", { p_attachment_id: attachment }), "Locked attachment metadata");
     await denied(api.rpc("app_set_client_conversation_presence", { p_conversation_type: "project", p_conversation_id: order, p_active: true }), "Locked presence");
   };
@@ -81,6 +84,40 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   await success(client.api.rpc("app_prepare_ticket_attachment", { p_order_id: order, p_request_id: randomUUID() }), "Attachment preparation resumes after final submission");
   await success(client.api.rpc("app_order_call_history", { p_order_id: order }), "Call history resumes after final submission");
   await success(client.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: randomUUID(), p_body: "Unlocked client send" }), "Unlocked write");
+  // Body/payload input cannot choose authorship in any client-callable message writer.
+  const claimedSystem = JSON.stringify({ author_type: "system", author_profile_id: null });
+  const forgedTicket = await client.api.rpc("app_create_ticket", { p_request_id: randomUUID(), p_payload: {
+    subject: "Synthetic forged author", message: claimedSystem, author_type: "system", author_profile_id: null,
+  } });
+  need(forgedTicket.error?.code === "22023", "Ticket payload accepted caller-chosen authorship");
+  await denied(client.api.from("project_messages").insert({ order_id: order, author_type: "system", author_profile_id: null, body: claimedSystem }), "Raw Project system-message forgery");
+  const nativeRequests = [randomUUID(), randomUUID()];
+  await success(client.api.rpc("app_send_order_message", { p_order_id: order, p_request_id: nativeRequests[0], p_body: claimedSystem }), "Actor-owned native send");
+  await success(client.api.rpc("app_reply_to_order_message", { p_order_id: order, p_request_id: nativeRequests[1], p_body: claimedSystem, p_reply_to_message_id: source }), "Actor-owned native reply");
+  const ticketRequests = [randomUUID(), randomUUID(), randomUUID()];
+  const ownTicket = await success(client.api.rpc("app_create_ticket", { p_request_id: ticketRequests[0], p_payload: {
+    subject: "Synthetic actor-owned Ticket", message: claimedSystem,
+  } }), "Actor-owned Ticket creation");
+  need(typeof ownTicket.id === "string", "Actor-owned Ticket missing");
+  const firstTicketMessage = await sql("select id from public.ticket_messages where ticket_id=:'ticket'::uuid and request_id=:'request'::uuid;", { ticket: ownTicket.id, request: ticketRequests[0] });
+  await denied(client.api.from("ticket_messages").insert({ ticket_id: ownTicket.id, author_type: "system", author_profile_id: null, message_kind: "reply", visibility: "client", body: claimedSystem }), "Raw Ticket system-message forgery");
+  await success(client.api.rpc("app_reply_to_ticket", { p_ticket_id: ownTicket.id, p_request_id: ticketRequests[1], p_body: claimedSystem }), "Actor-owned Ticket reply");
+  await success(client.api.rpc("app_reply_to_ticket_message", { p_ticket_id: ownTicket.id, p_request_id: ticketRequests[2], p_body: claimedSystem, p_reply_to_message_id: firstTicketMessage }), "Actor-owned Ticket quoted reply");
+  const attachmentRequests = [randomUUID(), randomUUID()];
+  for (const [index, target] of [{ p_order_id: order }, { p_ticket_id: ownTicket.id }].entries()) {
+    const request = attachmentRequests[index];
+    const prepared = await success(client.api.rpc("app_prepare_ticket_attachment", { ...target, p_request_id: request }), "Actor-owned attachment preparation");
+    need(typeof prepared.storage_key === "string", "Synthetic attachment key missing");
+    await sql("insert into storage.objects(bucket_id,name) values('ticket-attachments',:'key');", { key: prepared.storage_key });
+    await success(client.api.rpc("app_send_ticket_message_with_attachment", { ...target, p_request_id: request, p_body: claimedSystem,
+      p_original_name: "Synthetic.pdf", p_mime_type: "application/pdf", p_size_bytes: 4, p_checksum_sha256: "a".repeat(64) }), "Actor-owned attachment send");
+  }
+  const authoredRequests = [...nativeRequests, ...ticketRequests, ...attachmentRequests];
+  need(await sql(`select count(*)=7 and bool_and(author_type='client' and author_profile_id=:'client'::uuid)
+    from (select author_type,author_profile_id,request_id from public.project_messages where order_id=:'order'::uuid
+      union all select author_type,author_profile_id,request_id from public.ticket_messages where ticket_id=:'ticket'::uuid) authored
+    where request_id in (select value::uuid from jsonb_array_elements_text(:'requests'::jsonb));`,
+  { order, ticket: ownTicket.id, client: client.id, requests: authoredRequests }) === "t", "A client-callable message writer accepted forged system authorship");
   const extra = await createRequirement(2), extraAssignment = randomUUID(), blockedRequest = randomUUID();
   const lockName = `wf-chat-gate-${randomUUID()}`;
   const blocker = sql(`set application_name=:'name'; begin;
@@ -117,5 +154,5 @@ export async function checkOrderChatFormGate({ sql, tenant, owner, client, sibli
   need(linkedPage.messages.some(row => row.id === linkedMessage), "Submitted intake did not reveal the formerly protected linked message");
   await denied(client.api.from("ticket_messages").select("id").eq("ticket_id", ticket), "Unlock does not broaden the raw Ticket message ACL");
   need(await sql("select not exists(select 1 from private.client_order_starts where order_id=:'order'::uuid);", { order: emptyOrder }) === "t", "Legacy acceptance backfilled a gate");
-  console.log("PASS real Auth client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachment metadata/presence, partial/final/legacy completion, post-lock admission race and linked Ticket authority/ACLs (disposable CI only)");
+  console.log("PASS real Auth gated purchase receipt, client/company-member/support chat gate, direct reads/writes/quotes/reactions/attachments/presence, caller-authorship forgery denial, partial/final/legacy completion, post-lock admission race and linked Ticket authority/ACLs (disposable CI only)");
 }

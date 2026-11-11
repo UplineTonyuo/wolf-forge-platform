@@ -42,6 +42,17 @@ select public.app_publish_form(gen_random_uuid(),id) from start_ids where label=
 select pg_temp.act(2);
 insert into start_ids select 'order',order_id from public.app_purchase_service_with_balance(gen_random_uuid(),'b6270000-0000-4000-8000-000000000030');
 reset role;
+select is((select count(*)::integer from public.project_messages
+  where order_id=(select id from start_ids where label='order') and author_type='system' and author_profile_id is null),
+  1,'purchase stores its system receipt even while required forms are incomplete');
+select is(private.order_conversation_forms_complete(id),false,'purchase receipt does not complete or bypass required intake') from start_ids where label='order';
+select throws_ok(format('update public.project_messages set body=body where order_id=%L and author_type=%L',id,'system'),
+  '55000',null,'system receipt UPDATE remains append-only despite the INSERT exception') from start_ids where label='order';
+select throws_ok(format('insert into public.project_messages(order_id,author_profile_id,author_type,body) values(%L,%L,%L,%L)',
+  id,'b6270000-0000-4000-8000-000000000002','system','Forged system author'),
+  '42501',null,'system INSERT with a non-null author is not exempt') from start_ids where label='order';
+select ok(not has_table_privilege('authenticated','public.project_messages','INSERT')
+  and not has_table_privilege('authenticated','public.ticket_messages','INSERT'),'client cannot use raw message INSERT to claim system authorship');
 insert into start_ids select 'assignment',a.id from public.form_assignments a
   where a.order_id=(select id from start_ids where label='order') and a.form_id=(select id from start_ids where label='form');
 select is((select count(*)::integer from start_ids where label='assignment'),1,'purchase creates exactly one assigned intake');
