@@ -10,5 +10,5 @@ import { sanitizeSpeedInsightsEvent } from "../../domain/observability/speed-ins
  * the browser.
  */
 export function SpeedInsights() {
-  return <VercelSpeedInsights beforeSend={sanitizeSpeedInsightsEvent} />;
+  return <VercelSpeedInsights sampleRate={0.1} beforeSend={sanitizeSpeedInsightsEvent} />;
 }
