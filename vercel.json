@@ -1,4 +1,5 @@
 {
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
   "git": {
     "deploymentEnabled": {
       "codex/woad-live-calls-20261026": false,
