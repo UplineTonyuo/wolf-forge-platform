@@ -69,6 +69,7 @@ export function PortalDialog({
   showClose = false,
   headerAction,
   layer,
+  fullWindow = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -84,6 +85,8 @@ export function PortalDialog({
   headerAction?: ReactNode;
   /** Calls must interrupt even a portaled Inbox drawer. */
   layer?: "call";
+  /** Opt-in full-window layout for calls; other dialogs retain their layout. */
+  fullWindow?: boolean;
 }) {
   const titleId = useId();
   const descriptionId = useId();
@@ -138,6 +141,29 @@ export function PortalDialog({
       returnFocusRef.current?.focus({ preventScroll: true });
     };
   }, [mounted, render, layer]);
+
+  useLayoutEffect(() => {
+    if (!open || layer !== "call" || !fullWindow) return;
+    const overlay = nativeCallRef.current;
+    if (!overlay) return;
+    const viewport = window.visualViewport;
+    const update = () => {
+      overlay.style.setProperty("--call-viewport-width", `${viewport?.width ?? window.innerWidth}px`);
+      overlay.style.setProperty("--call-viewport-height", `${viewport?.height ?? window.innerHeight}px`);
+      overlay.style.setProperty("--call-viewport-left", `${viewport?.offsetLeft ?? 0}px`);
+      overlay.style.setProperty("--call-viewport-top", `${viewport?.offsetTop ?? 0}px`);
+    };
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      for (const dimension of ["width", "height", "left", "top"]) overlay.style.removeProperty(`--call-viewport-${dimension}`);
+    };
+  }, [open, layer, fullWindow]);
 
   useEffect(() => {
     if (!exiting) return;
@@ -246,6 +272,7 @@ export function PortalDialog({
     <Overlay
       ref={(node: HTMLDivElement | HTMLDialogElement | null) => { nativeCallRef.current = node?.tagName === "DIALOG" ? node as HTMLDialogElement : null; }}
       className="portal-overlay" data-phase={phase} data-size={size} data-layer={layer}
+      data-full-window={layer === "call" && fullWindow || undefined}
       aria-modal={layer === "call" ? true : undefined}
       aria-labelledby={layer === "call" ? titleId : undefined}
       aria-describedby={layer === "call" && description ? descriptionId : undefined}

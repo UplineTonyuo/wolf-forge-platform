@@ -3,6 +3,18 @@
 @media(prefers-reduced-motion:reduce){.controls button,.minimize{transition:none}}
 .devices [role="listbox"]{top:auto;bottom:calc(100% + 6px);max-height:180px;overflow-y:auto;transform-origin:bottom left}
 .screen .note{color:#d0d7ed}
+.screen[data-fullscreen]{display:flex;flex:1;flex-direction:column;min-height:0;border-radius:0;padding:0 max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.screen[data-fullscreen] .status{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.screen[data-fullscreen] .stage{flex:1;min-height:0;aspect-ratio:auto;margin-top:8px;border:0;border-radius:0}
+.screen[data-fullscreen] .person{padding:8px;gap:8px}
+.screen[data-fullscreen] .portrait{width:clamp(44px,16dvh,100px);height:clamp(44px,16dvh,100px);font-size:24px}
+.screen[data-fullscreen] .preview{width:clamp(64px,18vw,132px);max-height:40%;right:8px;bottom:8px}
+.screen[data-fullscreen] .controls{flex:0 0 auto;flex-wrap:nowrap;padding:12px 0 0;gap:8px}
+.screen[data-fullscreen] .controls button{flex:0 1 auto;min-width:44px;padding:10px 12px}
+.screen[data-fullscreen] .notice{flex:0 0 auto;margin-top:8px}
+.screen[data-fullscreen] .notice button{min-width:44px;border:1px solid #ffffff36;border-radius:8px;padding:8px 12px;background:#1b2755;color:#fff}
+.screen[data-fullscreen] .notice button:focus-visible{outline:3px solid #edc96b;outline-offset:3px}
+.screen[data-fullscreen] .error,.screen[data-fullscreen]>.note{flex:0 0 auto;margin:8px 0 0;padding:8px;font-size:12px}
 .level{position:absolute;bottom:16px;left:calc(50% - 50px);width:100px;height:4px;border-radius:2px;background:#ffffff26;overflow:hidden}.level>span{display:block;height:100%;background:#e4bd50;transform-origin:left}
 .controlsBar{margin:0;flex-wrap:nowrap;flex-shrink:0}
 .controlsBar>button{width:44px;height:44px;min-width:44px;padding:0;justify-content:center;cursor:pointer}

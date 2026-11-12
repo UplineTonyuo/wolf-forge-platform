@@ -2,7 +2,6 @@
 import "@testing-library/jest-dom/vitest";
 import { act,cleanup,fireEvent,render,screen,waitFor } from "@testing-library/react";
 import { afterEach,expect,it,vi } from "vitest";
-vi.mock("../components/account/ui/portal-dialog",()=>({PortalDialog:({children,open,title}:{children:React.ReactNode;open:boolean;title:string})=>open?<div role="dialog" aria-label={title}>{children}</div>:null}));
 import { CallScreen } from "../components/calls/call-screen";
 import { placeCallWindow } from "../components/calls/floating-call-window";
 import { emptyMedia } from "../components/calls/call-media";
@@ -12,7 +11,7 @@ const id="71000000-0000-4000-8000-000000000001",other="71000000-0000-4000-8000-0
 const call={id,ticketId:id,callerId:other,calleeId:id,mode:"audio",state:"ringing",expiresAt:"2026-11-03T12:15:00Z"} as CallState["call"];
 const state={call,peer:{name:"Synthetic client",avatarUrl:null},busy:false,error:"",minimized:false,canJoin:false,joinAttempt:0};
 const command=vi.fn();const controller={profileId:id,command,close:vi.fn(),minimize:vi.fn(),end:vi.fn(),allowJoin:vi.fn()} as unknown as CallController;
-afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.clearAllMocks();});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.clearAllMocks();Reflect.deleteProperty(document.documentElement,"requestFullscreen");Reflect.deleteProperty(HTMLElement.prototype,"requestFullscreen");Reflect.deleteProperty(document,"exitFullscreen");Reflect.deleteProperty(document,"fullscreenElement");});
 it("offers answer and decline with camera-free voice presentation",()=>{render(<CallScreen state={state} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);
  expect(screen.getByText("Voice only · Camera stays off")).toBeInTheDocument();fireEvent.click(screen.getByRole("button",{name:"Answer"}));expect(command).toHaveBeenCalledWith("accept");expect(screen.queryByRole("button",{name:"Turn camera on"})).not.toBeInTheDocument();
 });
@@ -54,6 +53,96 @@ const activeVideo={...state,call:{...call!,mode:"video" as const,state:"active" 
 function showVideo(overrides:Partial<Parameters<typeof CallScreen>[0]>={}){
  return render(<CallScreen state={activeVideo} controller={controller} media={{mic:vi.fn()} as unknown as CallMedia} mediaState={{...emptyMedia,state:"connected",micOn:true}} now={0} {...overrides}/>);
 }
+const normalVideo={...activeVideo,minimized:false,canJoin:true};
+function showNormalVideo(overrides:Partial<Parameters<typeof CallScreen>[0]>={}){
+ return showVideo({state:normalVideo,mediaState:{...emptyMedia,state:"connected",peerPresent:true,micOn:true},...overrides});
+}
+it("offers Full screen and Minimize in the normal video call header",()=>{
+ showNormalVideo();const dialog=screen.getByRole("dialog");
+ expect(dialog).toContainElement(screen.getByRole("button",{name:"Full screen"}));
+ expect(dialog).toContainElement(screen.getByRole("button",{name:"Minimize call"}));
+});
+it.each(["audio","incoming","ended"])("does not offer Full screen for an %s call",kind=>{
+ showNormalVideo({state:{...normalVideo,call:{...normalVideo.call,mode:kind==="audio"?"audio":"video",state:kind==="incoming"?"ringing":kind==="ended"?"ended":"active"}}});
+ expect(screen.queryByRole("button",{name:"Full screen"})).not.toBeInTheDocument();
+});
+it("fills the window with exactly one size action and only mute, camera and end in the bottom controls",()=>{
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ expect(screen.getByRole("dialog")).toHaveAttribute("data-full-window","true");
+ expect(screen.getAllByRole("button",{name:/^(Full screen|Exit full screen|Minimize call)$/})).toHaveLength(1);
+ expect(screen.getByRole("button",{name:"Exit full screen"})).toBeInTheDocument();
+ expect(screen.queryByRole("button",{name:"Minimize call"})).not.toBeInTheDocument();
+ const controls=screen.getByRole("group",{name:"Call controls"});
+ expect(Array.from(controls.querySelectorAll("button")).map(node=>node.getAttribute("aria-label")||node.textContent)).toEqual(["Mute microphone","Turn camera on","End call"]);
+ expect(screen.queryByText("Device settings")).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:"Exit full screen"}));
+ expect(screen.getByRole("dialog")).not.toHaveAttribute("data-full-window");
+ expect(screen.getByRole("button",{name:"Full screen"})).toHaveFocus();
+ expect(screen.getByRole("button",{name:"Minimize call"})).toBeInTheDocument();
+});
+it("uses the first Escape to exit full screen and the next Escape for the existing close action",()=>{
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ fireEvent.keyDown(document.activeElement!,{key:"Escape"});
+ expect(screen.getByRole("button",{name:"Full screen"})).toHaveFocus();expect(controller.close).not.toHaveBeenCalled();
+ fireEvent.keyDown(document.activeElement!,{key:"Escape"});expect(controller.close).toHaveBeenCalledOnce();
+});
+it("keeps keyboard focus inside the fullscreen call",()=>{
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ const exit=screen.getByRole("button",{name:"Exit full screen"}),end=screen.getByRole("button",{name:"End call"});
+ end.focus();fireEvent.keyDown(end,{key:"Tab"});expect(exit).toHaveFocus();
+ fireEvent.keyDown(exit,{key:"Tab",shiftKey:true});expect(end).toHaveFocus();
+});
+it("says Camera is off when connected without remote video",()=>{
+ showNormalVideo();expect(screen.getByText("Camera is off")).toBeInTheDocument();expect(screen.queryByText("Camera will appear when connected")).not.toBeInTheDocument();
+});
+it("keeps the connecting camera message while connecting",()=>{
+ showNormalVideo({mediaState:{...emptyMedia,state:"connecting"}});expect(screen.getByText("Camera will appear when connected")).toBeInTheDocument();
+});
+it.each(["idle","reconnecting","error"] as const)("does not promise a connecting camera while media is %s",mediaStatus=>{
+ showNormalVideo({mediaState:{...emptyMedia,state:mediaStatus}});expect(screen.queryByText("Camera will appear when connected")).not.toBeInTheDocument();
+});
+it("keeps the full-window fallback when the browser fullscreen request is rejected",async()=>{
+ Object.defineProperty(HTMLElement.prototype,"requestFullscreen",{configurable:true,value:vi.fn().mockRejectedValue(new Error("Unsupported"))});
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ await act(async()=>{await Promise.resolve();});expect(screen.getByRole("dialog")).toHaveAttribute("data-full-window","true");
+});
+it("promotes the existing call panel above the native dialog layer for browser fullscreen",()=>{
+ const requestNative=vi.fn().mockResolvedValue(undefined);
+ Object.defineProperty(HTMLElement.prototype,"requestFullscreen",{configurable:true,value:requestNative});
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ expect(requestNative.mock.contexts[0]).toBe(screen.getByRole("button",{name:"Exit full screen"}).closest(".portal-overlay-panel"));
+});
+it("exits the UI when the browser leaves fullscreen using its own controls",async()=>{
+ let nativeElement:Element|null=null;
+ Object.defineProperty(document,"fullscreenElement",{configurable:true,get:()=>nativeElement});
+ Object.defineProperty(HTMLElement.prototype,"requestFullscreen",{configurable:true,value:async()=>{nativeElement=document.querySelector(".portal-overlay-panel");document.dispatchEvent(new Event("fullscreenchange"));}});
+ showNormalVideo();await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Full screen"}));});
+ expect(screen.getByRole("dialog")).toHaveAttribute("data-full-window","true");
+ act(()=>{nativeElement=null;document.dispatchEvent(new Event("fullscreenchange"));});
+ expect(screen.getByRole("button",{name:"Full screen"})).toHaveFocus();expect(controller.close).not.toHaveBeenCalled();
+});
+it("cancels a late browser fullscreen result after the user has already exited",async()=>{
+ let nativeElement:Element|null=null;let finish!:()=>void;
+ Object.defineProperty(document,"fullscreenElement",{configurable:true,get:()=>nativeElement});
+ Object.defineProperty(HTMLElement.prototype,"requestFullscreen",{configurable:true,value:()=>{const element=document.querySelector(".portal-overlay-panel");return new Promise<void>(resolve=>{finish=()=>{nativeElement=element;resolve();};});}});
+ Object.defineProperty(document,"exitFullscreen",{configurable:true,value:async()=>{nativeElement=null;document.dispatchEvent(new Event("fullscreenchange"));}});
+ showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));fireEvent.click(screen.getByRole("button",{name:"Exit full screen"}));
+ await act(async()=>{finish();await Promise.resolve();});expect(nativeElement).toBeNull();expect(screen.getByRole("button",{name:"Full screen"})).toBeInTheDocument();
+});
+it("returns to normal view after the floating window expands",()=>{
+ const view=showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ view.rerender(<CallScreen state={activeVideo} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Reopen call with Synthetic client"}));
+ view.rerender(<CallScreen state={normalVideo} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={0}/>);
+ expect(screen.getByRole("button",{name:"Full screen"})).toBeInTheDocument();expect(screen.queryByRole("button",{name:"Exit full screen"})).not.toBeInTheDocument();
+});
+it("tracks the visual viewport while full screen",()=>{
+ const viewport=Object.assign(new EventTarget(),{width:320,height:360,offsetLeft:8,offsetTop:20});
+ vi.stubGlobal("visualViewport",viewport);showNormalVideo();fireEvent.click(screen.getByRole("button",{name:"Full screen"}));
+ const dialog=screen.getByRole("dialog");expect(dialog.style.getPropertyValue("--call-viewport-height")).toBe("360px");expect(dialog.style.getPropertyValue("--call-viewport-left")).toBe("8px");
+ act(()=>{viewport.height=280;viewport.dispatchEvent(new Event("resize"));});expect(dialog.style.getPropertyValue("--call-viewport-height")).toBe("280px");
+ fireEvent.click(screen.getByRole("button",{name:"Exit full screen"}));expect(dialog.style.getPropertyValue("--call-viewport-height")).toBe("");
+});
 it("shows the remote video and three call controls while a video call is minimized",()=>{
  const track={kind:"video"} as MediaStreamTrack;
  const stream={getTracks:()=>[track]};
