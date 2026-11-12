@@ -23,3 +23,28 @@
 .recipient>span:last-child{min-width:0;display:grid;gap:4px;overflow-wrap:anywhere}
 .recipient strong{font-size:14px}.recipient small{color:#d0d7ed;font-size:12px}
 .notice>p{flex-basis:100%;margin:0;line-height:1.5}
+
+.floating{position:fixed;right:12px;bottom:12px;left:auto;top:auto;width:min(272px,calc(100vw - 24px));max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);z-index:var(--portal-layer-header-panel,60);background:#060e43;color:#fff;border-radius:12px;box-shadow:0 10px 36px #07103f33;display:flex;flex-direction:column}
+.floating[style]{right:auto;bottom:auto}
+.floating[data-dragging]{transition:none}
+.floatingMove{display:flex;align-items:center;gap:8px;min-height:44px;width:100%;padding:8px 12px;border:0;border-radius:12px 12px 0 0;background:transparent;color:inherit;cursor:grab;touch-action:none;user-select:none;text-align:left;font-size:12px}
+.floatingMove>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.floatingMove strong{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.floatingMove svg{width:16px;height:16px;flex-shrink:0;color:#d0d7ed}
+.floating[data-dragging] .floatingMove{cursor:grabbing}
+.floatingStage{position:relative;display:grid;place-items:center;aspect-ratio:16/9;width:100%;min-height:48px;flex:1 1 auto;border:0;padding:8px;background:#091345;cursor:pointer;color:inherit;overflow:hidden}
+.floatingStage .portrait{width:72px;height:72px;font-size:24px;flex-shrink:0}
+.floatingControls{flex:0 0 auto;gap:12px;padding:8px 12px}
+.floatingControls button{width:44px;height:44px;min-width:44px;padding:8px;flex:0 0 44px;transition:background var(--wf-motion-fast,140ms) var(--wf-ease)}
+.floatingControls button:hover:not(:disabled){transform:none}
+.floatingMove:hover,.floatingStage:hover{background:#1b2755}
+.floatingMove:focus-visible,.floatingStage:focus-visible{outline:3px solid #edc96b;outline-offset:-3px}
+@media(prefers-reduced-motion:reduce){.floating,.floatingControls button{transition:none}}
+
+.floating[data-unplaceable]{visibility:hidden;pointer-events:none}
+.floating[data-compact]{display:grid;grid-template-columns:44px minmax(0,1fr) 132px;grid-template-rows:minmax(44px,1fr)}
+.floating[data-compact] .floatingStage{grid-column:1;grid-row:1;aspect-ratio:auto;min-height:44px;padding:0;border-radius:12px 0 0 12px}
+.floating[data-compact] .floatingStage .portrait{width:40px;height:40px;font-size:14px}
+.floating[data-compact] .floatingMove{grid-column:2;grid-row:1;display:grid;gap:0;padding:4px;font-size:11px;border-radius:0}
+.floating[data-compact] .floatingMove svg{display:none}
+.floating[data-compact] .floatingControls{grid-column:3;grid-row:1;gap:0;padding:0;align-items:center}
