@@ -13672,6 +13672,34 @@ td {
   max-height: min(760px, calc(100dvh - 32px));
 }
 
+html:has(.portal-overlay[data-layer="call"][data-full-window]) { scrollbar-gutter: auto; }
+.portal-overlay[data-layer="call"][data-full-window] {
+  inset: auto;
+  left: var(--call-viewport-left, 0px);
+  top: var(--call-viewport-top, 0px);
+  width: var(--call-viewport-width, 100vw);
+  height: var(--call-viewport-height, 100dvh);
+  padding: 0;
+  background: #060e43;
+}
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-panel {
+  width: 100%; height: 100%; max-width: none; max-height: none;
+  min-height: 0; border: 0; border-radius: 0; box-shadow: none;
+  background: #060e43; color: #fff; animation: none;
+}
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-head {
+  flex: 0 0 auto; align-items: flex-start; gap: 12px;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+  border: 0;
+}
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-head > div:first-child { min-width: 0; }
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-head h2 { color: inherit; font-size: 18px; overflow-wrap: anywhere; }
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-head-actions { flex-shrink: 0; }
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-head-actions button { background: #1b2755; border-color: #ffffff36; color: #fff; }
+.portal-overlay[data-layer="call"][data-full-window] .portal-overlay-body {
+  display: flex; flex: 1; min-height: 0; padding: 0;
+}
+
 .portal-overlay[data-phase="open"] .portal-overlay-panel {
   animation: portal-panel-in var(--portal-pop-in) var(--portal-pop-ease) both;
 }
