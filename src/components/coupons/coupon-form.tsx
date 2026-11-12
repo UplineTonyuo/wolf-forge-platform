@@ -207,7 +207,7 @@ export function CouponForm({
         </div>
       </section>
 
-      <div className={styles.formActions}><Link className="button-secondary" href="/coupons">Cancel</Link><SubmitButton mode={mode} /></div>
+      <div data-call-avoid className={styles.formActions}><Link className="button-secondary" href="/coupons">Cancel</Link><SubmitButton mode={mode} /></div>
     </form>
   );
 }

@@ -147,7 +147,7 @@ it("ignores a closed mobile backdrop when keeping the composer clear",()=>{
   const top=this.id==="composer"?600:0,width=this.getAttribute("role")==="region"?272:390,height=this.getAttribute("role")==="region"?257:this.id==="composer"?188:844;
   return {left:0,top,width,height,right:width,bottom:top+height,x:0,y:top,toJSON(){}};
  });
- render(<><div aria-hidden="true" style={{position:"fixed",inset:0,opacity:0,pointerEvents:"none"}}/><form id="composer" data-target-kind="ticket"/></>);
+ render(<><div data-call-avoid aria-hidden="true" style={{position:"fixed",inset:0,opacity:0,pointerEvents:"none"}}/><form id="composer" data-target-kind="ticket"/></>);
  showVideo();expect(screen.getByRole("region",{name:"Floating video call"}).style.top).toBe("331px");
 });
 it("observes composer resizing even when the page shell stays the same size",()=>{
@@ -161,4 +161,40 @@ it("compacts the video instead of covering the composer when the visual viewport
  expect(placeCallWindow("bottom-right",272,257,{left:0,top:0,right:390,bottom:400},[
   {left:0,top:0,right:390,bottom:64},{left:0,top:250,right:390,bottom:400}
  ])).toEqual({x:106,y:76,height:162});
+});
+
+function obstacleCollectionFixture(){
+ const frames:FrameRequestCallback[]=[];
+ vi.stubGlobal("requestAnimationFrame",(callback:FrameRequestCallback)=>{frames.push(callback);return frames.length;});
+ vi.stubGlobal("cancelAnimationFrame",vi.fn());
+ const observed:Element[]=[];
+ vi.stubGlobal("ResizeObserver",class{observe(element:Element){observed.push(element);}disconnect(){}});
+ render(<div><form data-target-kind="ticket"><div contentEditable suppressContentEditableWarning aria-label="Draft">Initial draft</div></form><div data-testid="page-controls"/></div>);
+ const editor=screen.getByLabelText("Draft"),page=screen.getByTestId("page-controls");
+ const collect=vi.spyOn(document.body,"querySelectorAll");
+ showVideo();
+ const flush=async(change:()=>void)=>{await act(async()=>{change();await Promise.resolve();for(const callback of frames.splice(0))callback(0);});};
+ const queries=()=>collect.mock.calls.map(([selector])=>selector).filter(selector=>selector==="*"||selector.includes('form[data-target-kind]'));
+ return {queries,flush,observed,editor,page};
+}
+it("does not recollect obstacles for composer text or attribute edits",async()=>{
+ const {queries,flush,editor}=obstacleCollectionFixture();const initial=queries().length;
+ await flush(()=>{editor.firstChild!.textContent="Continuing the existing draft";editor.setAttribute("data-typing","true");editor.style.minHeight="80px";});
+ expect(queries()).toHaveLength(initial);
+ await flush(()=>{editor.textContent="A replacement text node";});
+ expect(queries()).toHaveLength(initial);
+});
+it("recollects for added or removed controls and viewport resize using explicit selectors",async()=>{
+ const {queries,flush,observed,page}=obstacleCollectionFixture();const initial=queries().length;
+ expect(queries().every(selector=>!selector.includes("*"))).toBe(true);
+ const bar=document.createElement("footer");bar.setAttribute("data-call-avoid","");
+ await flush(()=>{page.append(bar);});expect(queries()).toHaveLength(initial+1);expect(observed).toContain(bar);
+ await flush(()=>{bar.remove();});expect(queries()).toHaveLength(initial+2);
+ await flush(()=>{window.dispatchEvent(new Event("resize"));});expect(queries()).toHaveLength(initial+3);
+});
+it("reuses collected obstacles when the user changes corners",async()=>{
+ const {queries,flush}=obstacleCollectionFixture();const initial=queries().length;
+ await flush(()=>{fireEvent.keyDown(screen.getByRole("button",{name:/Move call window/}),{key:"ArrowLeft"});});
+ expect(queries()).toHaveLength(initial);
+ expect(screen.getByRole("region",{name:"Floating video call"})).toHaveAttribute("data-corner","bottom-left");
 });

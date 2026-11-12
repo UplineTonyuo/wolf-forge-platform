@@ -11,6 +11,7 @@
   "authenticated": false,
   "errors": [],
   "reducedMotion": "0s",
+  "typingObstacleCollections": 0,
   "shortViewport": {
     "frame": {
       "x": 106,

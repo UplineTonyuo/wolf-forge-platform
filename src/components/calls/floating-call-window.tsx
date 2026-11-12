@@ -9,6 +9,11 @@ type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 type Point = { x: number; y: number };
 type Bounds = { left: number; top: number; right: number; bottom: number };
 const gap = 12;
+const obstacleSelector = [
+ 'form[data-target-kind]', '[data-call-avoid]', 'nav[aria-label="Mobile bottom navigation"]',
+ '.app-sidebar', '.portal-sidebar', '.workspace-command-bar', '.portal-command-bar',
+ '.portal-command-trailing', '.page-actions', 'aside[aria-label="Order details"]', `.${styles.audioPrompt}`,
+].join(",");
 
 // Candidate edges keep the window near its corner without covering working controls.
 export function placeCallWindow(corner: Corner, width: number, height: number, viewport: Bounds, obstacles: Bounds[], preferred?: Point): (Point & { height: number }) | null {
@@ -42,16 +47,17 @@ function viewportBounds(): Bounds {
 }
 
 function workingControls(node: HTMLElement): HTMLElement[] {
- return Array.from(document.body.querySelectorAll<HTMLElement>("*")).filter(element => {
-  if (node.contains(element) || element.contains(node) || element.closest('[role="dialog"], dialog, .portal-overlay, [aria-hidden="true"], [hidden], [inert]')) return false;
+ return Array.from(document.body.querySelectorAll<HTMLElement>(obstacleSelector))
+  .filter(element => !node.contains(element) && !element.contains(node));
+}
+function controlBounds(elements: HTMLElement[]): Bounds[] {
+ return elements.filter(element => {
+  if (element.closest('[role="dialog"], dialog, .portal-overlay, [aria-hidden="true"], [hidden], [inert]')) return false;
   const style = getComputedStyle(element);
   if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0" || style.pointerEvents === "none") return false;
   if (element.checkVisibility && !element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
-  return element.matches('form[data-target-kind]') || style.position === "fixed" || style.position === "sticky";
- });
-}
-function controlBounds(elements: HTMLElement[]): Bounds[] {
- return elements.map(element => element.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight);
+  return element.matches('form[data-target-kind], [data-call-avoid]') || style.position === "fixed" || style.position === "sticky";
+ }).map(element => element.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight);
 }
 
 export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, onEnd, onExpand, children }: {
@@ -59,6 +65,7 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
  onMute: () => void; onEnd: () => void; onExpand: () => void; children: ReactNode;
 }) {
  const [corner, setCorner] = useState<Corner>("bottom-right");
+ const cornerRef = useRef<Corner>("bottom-right");
  const [point, setPoint] = useState<(Point & { height: number }) | null>(null);
  const [unplaceable, setUnplaceable] = useState(false);
  const controls = useRef<HTMLElement[]>([]);
@@ -86,7 +93,7 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
    node.style.maxWidth = Math.max(44, view.right - view.left - gap * 2) + "px";
    const width = node.getBoundingClientRect().width;
    const naturalHeight = 44 + width * 9 / 16 + 60;
-   const next = placeCallWindow(corner, width, naturalHeight, view, controlBounds(controls.current));
+   const next = placeCallWindow(cornerRef.current, width, naturalHeight, view, controlBounds(controls.current));
    setUnplaceable(!next);
    setPoint(previous => previous?.x === next?.x && previous?.y === next?.y && previous?.height === next?.height ? previous : next);
   };
@@ -95,8 +102,10 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
   const viewportResize = () => { drag.current = null;setDragging(false);refresh(); };
   settle.current = measure;
   measure();
-  const observer = new MutationObserver(records => { if (records.some(record => !node.contains(record.target))) refresh(); });
-  observer.observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "hidden", "aria-hidden"] });
+  const observer = new MutationObserver(records => {
+   if (records.some(record => !node.contains(record.target) && [...record.addedNodes, ...record.removedNodes].some(changed => changed.nodeType === Node.ELEMENT_NODE))) refresh();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener("resize", viewportResize);window.addEventListener("scroll", schedule, true);
   window.visualViewport?.addEventListener("resize", viewportResize);window.visualViewport?.addEventListener("scroll", schedule);
   return () => {
@@ -104,7 +113,9 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
    window.removeEventListener("resize", viewportResize);window.removeEventListener("scroll", schedule, true);
    window.visualViewport?.removeEventListener("resize", viewportResize);window.visualViewport?.removeEventListener("scroll", schedule);
   };
- }, [visible, corner]);
+ }, [visible]);
+
+ useLayoutEffect(() => { cornerRef.current = corner;settle.current(); }, [corner]);
 
  if (!visible || typeof document === "undefined") return null;
  const finish = (event: PointerEvent<HTMLButtonElement>, cancelled = false) => {
