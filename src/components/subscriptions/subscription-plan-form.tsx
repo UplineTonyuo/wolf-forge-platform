@@ -119,7 +119,7 @@ export function SubscriptionPlanForm({
         </div>
       </section>
 
-      <footer className={styles.formFooter}><Link className="button-secondary" href={subscriptionId ? `/subscriptions/${subscriptionId}` : "/subscriptions"}>Cancel</Link><SubmitButton mode={mode} /></footer>
+      <footer data-call-avoid className={styles.formFooter}><Link className="button-secondary" href={subscriptionId ? `/subscriptions/${subscriptionId}` : "/subscriptions"}>Cancel</Link><SubmitButton mode={mode} /></footer>
     </form>
   );
 }

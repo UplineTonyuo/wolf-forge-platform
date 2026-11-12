@@ -1,0 +1,75 @@
+{
+  "adaptedFrom": "video-call-preview-20261103",
+  "actualComponents": [
+    "CallScreen",
+    "VideoTrack",
+    "Portrait",
+    "TicketConversation",
+    "TicketComposer"
+  ],
+  "syntheticMedia": true,
+  "authenticated": false,
+  "errors": [],
+  "reducedMotion": "0s",
+  "typingObstacleCollections": 0,
+  "shortViewport": {
+    "frame": {
+      "x": 106,
+      "y": 76,
+      "width": 272,
+      "height": 61.234375
+    },
+    "composer": {
+      "x": 13,
+      "y": 149.234375,
+      "width": 349,
+      "height": 189.5
+    }
+  },
+  "interactions": [
+    "keyboard corner movement",
+    "page-content navigation retention",
+    "mute/unmute",
+    "expand/full call/minimize",
+    "avatar fallback",
+    "reduced motion",
+    "short viewport",
+    "mouse drag",
+    "simulated touch drag",
+    "composer text growth",
+    "end call"
+  ],
+  "placements": [
+    {"width":320,"corner":"bottom-right","frame":{"x":36,"y":326.5,"width":272,"height":257},"composer":{"x":13,"y":595.5,"width":279,"height":219.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":320,"corner":"bottom-left","frame":{"x":12,"y":326.5,"width":272,"height":257},"composer":{"x":13,"y":595.5,"width":279,"height":219.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":320,"corner":"top-left","frame":{"x":12,"y":76,"width":272,"height":257},"composer":{"x":13,"y":595.5,"width":279,"height":219.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":320,"corner":"top-right","frame":{"x":36,"y":76,"width":272,"height":257},"composer":{"x":13,"y":595.5,"width":279,"height":219.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":360,"corner":"bottom-right","frame":{"x":76,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":319,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":360,"corner":"bottom-left","frame":{"x":12,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":319,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":360,"corner":"top-left","frame":{"x":12,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":319,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":360,"corner":"top-right","frame":{"x":76,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":319,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"bottom-right","frame":{"x":106,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"bottom-left","frame":{"x":12,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"top-left","frame":{"x":12,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"top-right","frame":{"x":106,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":430,"corner":"bottom-right","frame":{"x":146,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":389,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":430,"corner":"bottom-left","frame":{"x":12,"y":356.5,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":389,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":430,"corner":"top-left","frame":{"x":12,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":389,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":430,"corner":"top-right","frame":{"x":146,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":389,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":768,"corner":"bottom-right","frame":{"x":484,"y":400.5,"width":272,"height":257},"composer":{"x":245,"y":669.5,"width":483,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":768,"corner":"bottom-left","frame":{"x":232,"y":400.5,"width":272,"height":257},"composer":{"x":245,"y":669.5,"width":483,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":768,"corner":"top-left","frame":{"x":232,"y":76,"width":272,"height":257},"composer":{"x":245,"y":669.5,"width":483,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":768,"corner":"top-right","frame":{"x":484,"y":76,"width":272,"height":257},"composer":{"x":245,"y":669.5,"width":483,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1280,"corner":"bottom-right","frame":{"x":996,"y":414,"width":272,"height":257},"composer":{"x":245,"y":683,"width":995,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1280,"corner":"bottom-left","frame":{"x":232,"y":414,"width":272,"height":257},"composer":{"x":245,"y":683,"width":995,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1280,"corner":"top-left","frame":{"x":232,"y":76,"width":272,"height":257},"composer":{"x":245,"y":683,"width":995,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1280,"corner":"top-right","frame":{"x":996,"y":76,"width":272,"height":257},"composer":{"x":245,"y":683,"width":995,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1440,"corner":"bottom-right","frame":{"x":1156,"y":414,"width":272,"height":257},"composer":{"x":245,"y":683,"width":1155,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1440,"corner":"bottom-left","frame":{"x":232,"y":414,"width":272,"height":257},"composer":{"x":245,"y":683,"width":1155,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1440,"corner":"top-left","frame":{"x":232,"y":76,"width":272,"height":257},"composer":{"x":245,"y":683,"width":1155,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":1440,"corner":"top-right","frame":{"x":1156,"y":76,"width":272,"height":257},"composer":{"x":245,"y":683,"width":1155,"height":176},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"mouse-drag","frame":{"x":12,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"touch-drag","frame":{"x":106,"y":76,"width":272,"height":257},"composer":{"x":13,"y":625.5,"width":349,"height":189.5},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44},
+    {"width":390,"corner":"composer-growth","frame":{"x":106,"y":76,"width":272,"height":257},"composer":{"x":13,"y":551.5625,"width":349,"height":263.4375},"overflow":false,"overlap":false,"visible":true,"video":true,"minControlWidth":44,"minControlHeight":44}
+  ]
+}

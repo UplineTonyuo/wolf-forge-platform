@@ -99,7 +99,7 @@ export function StoreServiceDetail({
           </p>
         )}
 
-        <aside className={styles.aside}>
+        <aside data-call-avoid className={styles.aside}>
           <div className={styles.priceCard}>
             <span className={styles.price}>
               {amount}

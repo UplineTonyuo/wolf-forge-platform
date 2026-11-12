@@ -37,5 +37,6 @@ it('shows one server-based elapsed clock after two hours, without a time-left co
 });
 it('keeps the elapsed clock when minimized and shows no extra countdown',()=>{
  render(<CallScreen state={{...state,minimized:true}} controller={controller} media={{} as CallMedia} mediaState={emptyMedia} now={Date.parse('2026-11-06T14:00:00Z')}/>);
- expect(screen.getByRole('button',{name:/Synthetic peer/})).toHaveTextContent('120:00');
+ expect(screen.getByRole('region',{name:'Floating video call'})).toHaveTextContent('120:00');
+ expect(screen.queryByText(/left$/)).not.toBeInTheDocument();
 });

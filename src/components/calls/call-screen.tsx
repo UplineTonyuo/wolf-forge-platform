@@ -7,6 +7,7 @@ import { AccountAvatar } from "../ui/account-avatar";
 import type { CallController,CallState } from "./call-controller";
 import type { CallMedia,MediaState } from "./call-media";
 import styles from "./calls.module.css";
+import { FloatingCallWindow } from "./floating-call-window";
 
 export function VideoTrack({track,local=false}:{track:MediaStreamTrack|null;local?:boolean}){
  const ref=useRef<HTMLVideoElement>(null);
@@ -33,7 +34,10 @@ export function CallScreen({state,controller,media,mediaState,now,playBlocked=fa
  const elapsedClock=elapsed===null?null:`${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,"0")}`;
  const deviceMenu=async()=>{try{setDevices(await navigator.mediaDevices.enumerateDevices());}catch{controller.error("Device list unavailable. Check your browser permissions.");}};
  return <>
-  {state.minimized&&!ended&&!incoming?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{manual?elapsedClock??"Connecting…":clock}</strong></button>:null}
+  {call.mode==="video"&&!ended&&!incoming?<FloatingCallWindow key={call.id} visible={state.minimized} name={name} clock={manual?elapsedClock??"Connecting…":clock} micOn={mediaState.micOn} busy={state.busy} onMute={()=>{void media.mic();}} onEnd={()=>{void controller.end();}} onExpand={()=>controller.minimize(false)}>
+   {mediaState.remoteVideo?<VideoTrack track={mediaState.remoteVideo}/>:<Portrait name={name} url={state.peer?.avatarUrl}/>}
+  </FloatingCallWindow>:null}
+  {call.mode==="audio"&&state.minimized&&!ended&&!incoming?<button type="button" className={styles.strip} onClick={()=>controller.minimize(false)}><Phone aria-hidden="true"/><span>{name} · {status}</span><strong>{manual?elapsedClock??"Connecting…":clock}</strong></button>:null}
   <PortalDialog open={incoming||!state.minimized} onClose={incoming?()=>{void controller.command("decline");}:controller.close} title={call.mode==="audio"?"Voice call":"Video call"} description={incoming?"Incoming call · Escape to decline":"Wolf Forge · Private conversation"} size={incoming?"default":"wide"} layer="call" closeOnBackdrop={false} showClose={ended}
    headerAction={!ended&&!incoming?<button type="button" className={styles.minimize} aria-label="Minimize call" onClick={()=>controller.minimize()}><Minimize2 aria-hidden="true"/></button>:undefined}>
    <div className={styles.screen} data-incoming={incoming||undefined}>

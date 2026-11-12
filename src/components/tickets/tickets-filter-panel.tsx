@@ -131,7 +131,7 @@ export function TicketsFilterPanel({
         onInboxChange={onInboxChange}
       />
 
-      <div className={styles.filterPanelFooter}>
+      <div data-call-avoid className={styles.filterPanelFooter}>
         <button type="button" className={styles.filterClearButton} onClick={onClear}>
           Clear filters
         </button>
