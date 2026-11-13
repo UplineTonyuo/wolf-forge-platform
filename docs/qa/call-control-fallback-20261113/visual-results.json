@@ -1,0 +1,4390 @@
+{
+  "adaptedFrom": "video-call-preview-20261103",
+  "actualComponents": [
+    "CallScreen",
+    "VideoTrack",
+    "Portrait",
+    "TicketConversation",
+    "TicketComposer"
+  ],
+  "syntheticMedia": true,
+  "authenticated": false,
+  "errors": [],
+  "checks": [
+    {
+      "width": 320,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 36,
+        "y": 326.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 595.5,
+        "width": 279,
+        "height": 219.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 326.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 595.5,
+        "width": 279,
+        "height": 219.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 595.5,
+        "width": 279,
+        "height": 219.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "top-right",
+      "frame": {
+        "x": 36,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 595.5,
+        "width": 279,
+        "height": 219.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 76,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 319,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 319,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 319,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "top-right",
+      "frame": {
+        "x": 76,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 319,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 106,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "top-right",
+      "frame": {
+        "x": 106,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 146,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 389,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 356.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 389,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 389,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "top-right",
+      "frame": {
+        "x": 146,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 389,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 484,
+        "y": 400.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 669.5,
+        "width": 483,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 400.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 669.5,
+        "width": 483,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 669.5,
+        "width": 483,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "top-right",
+      "frame": {
+        "x": 484,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 669.5,
+        "width": 483,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 996,
+        "y": 414,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 995,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 414,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 995,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 995,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "top-right",
+      "frame": {
+        "x": 996,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 995,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "bottom-right",
+      "frame": {
+        "x": 1156,
+        "y": 414,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 1155,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 414,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 1155,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 1155,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "top-right",
+      "frame": {
+        "x": 1156,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 245,
+        "y": 683,
+        "width": 1155,
+        "height": 176
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "mouse-drag",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Unmute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "touch-drag",
+      "frame": {
+        "x": 106,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 625.5,
+        "width": 349,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Unmute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "composer-growth",
+      "frame": {
+        "x": 106,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 13,
+        "y": 551.5625,
+        "width": 349,
+        "height": 263.4375
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Unmute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 36,
+        "y": 382.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.5,
+          "width": 281,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 382.5,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.5,
+          "width": 281,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.5,
+          "width": 281,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 36,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.5,
+          "width": 281,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 76,
+        "y": 382.234375,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 321,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 382.234375,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 321,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 321,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 76,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 321,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 106,
+        "y": 382.234375,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 351,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 382.234375,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 351,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 351,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 106,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 651.234375,
+          "width": 351,
+          "height": 164.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 146,
+        "y": 432,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 701,
+          "width": 391,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 432,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 701,
+          "width": 391,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 701,
+          "width": 391,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 146,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 701,
+          "width": 391,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 484,
+        "y": 475.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 744.953125,
+          "width": 485,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 475.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 744.953125,
+          "width": 485,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 744.953125,
+          "width": 485,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 484,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 744.953125,
+          "width": 485,
+          "height": 115
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 996,
+        "y": 524.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 524.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 996,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "builder-bottom-right",
+      "frame": {
+        "x": 1156,
+        "y": 524.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "builder-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 524.953125,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "builder-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "builder-top-right",
+      "frame": {
+        "x": 1156,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 793.953125,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 36,
+        "y": 390.25,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 281,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 390.25,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 281,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 281,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 36,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 281,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 76,
+        "y": 390.25,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 321,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 390.25,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 321,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 321,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 360,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 76,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 659.25,
+          "width": 321,
+          "height": 156.75
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 106,
+        "y": 438.671875,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.671875,
+          "width": 351,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 438.671875,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.671875,
+          "width": 351,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.671875,
+          "width": 351,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 106,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.671875,
+          "width": 351,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 146,
+        "y": 438.75,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.75,
+          "width": 391,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 12,
+        "y": 438.75,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.75,
+          "width": 391,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 12,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.75,
+          "width": 391,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 146,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 12,
+          "y": 707.75,
+          "width": 391,
+          "height": 108.25
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 484,
+        "y": 505.671875,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 774.671875,
+          "width": 485,
+          "height": 85
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 505.671875,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 774.671875,
+          "width": 485,
+          "height": 85
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 774.671875,
+          "width": 485,
+          "height": 85
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 768,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 484,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 774.671875,
+          "width": 485,
+          "height": 85
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 996,
+        "y": 507.890625,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 507.890625,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 996,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 997,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "wizard-bottom-right",
+      "frame": {
+        "x": 1156,
+        "y": 507.890625,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "wizard-bottom-left",
+      "frame": {
+        "x": 232,
+        "y": 507.890625,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "wizard-top-left",
+      "frame": {
+        "x": 232,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "corner": "wizard-top-right",
+      "frame": {
+        "x": 1156,
+        "y": 76,
+        "width": 272,
+        "height": 257
+      },
+      "composer": null,
+      "reportBars": [
+        {
+          "x": 244,
+          "y": 776.890625,
+          "width": 1157,
+          "height": 65.5
+        }
+      ],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Mute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "corner": "reminimized-after-fallback",
+      "frame": {
+        "x": 106,
+        "y": 559,
+        "width": 272,
+        "height": 257
+      },
+      "composer": {
+        "x": 1,
+        "y": 65,
+        "width": 373,
+        "height": 189.5
+      },
+      "reportBars": [],
+      "overflow": false,
+      "overlap": false,
+      "visible": true,
+      "video": true,
+      "controls": [
+        {
+          "name": "Move call window. Tap for next corner or use arrow keys",
+          "width": 272,
+          "height": 44
+        },
+        {
+          "name": "View full video call with Synthetic client",
+          "width": 272,
+          "height": 153
+        },
+        {
+          "name": "Unmute microphone",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "End call",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "name": "Reopen call with Synthetic client",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    }
+  ],
+  "reducedMotion": "0s",
+  "shortViewport": {
+    "frame": {
+      "x": 106,
+      "y": 76,
+      "width": 272,
+      "height": 61.234375
+    },
+    "composer": {
+      "x": 13,
+      "y": 149.234375,
+      "width": 349,
+      "height": 189.5
+    }
+  },
+  "typingObstacleCollections": 0,
+  "exhaustedViewport": {
+    "width": 390,
+    "height": 240,
+    "restoredDialog": true,
+    "muteWorks": true,
+    "endKeyboardReachable": true,
+    "endInViewport": true
+  },
+  "interactions": [
+    "actual report builder/wizard sticky bars",
+    "exhausted viewport restores full call",
+    "keyboard corner movement",
+    "page-content navigation retention",
+    "mute/unmute",
+    "expand/full call/minimize",
+    "avatar fallback",
+    "reduced motion",
+    "short viewport",
+    "mouse drag",
+    "simulated touch drag",
+    "composer text growth",
+    "end call"
+  ]
+}
