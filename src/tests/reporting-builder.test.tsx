@@ -40,6 +40,7 @@ import {
   type ReportDraftSectionInput,
 } from "../domain/reporting/schema";
 import { navigationCategories } from "../components/shell/nav-registry";
+import { FloatingCallWindow } from "../components/calls/floating-call-window";
 
 /**
  * The internal Reporting builder.
@@ -185,7 +186,7 @@ const { ReportPreview } = await import("../components/reporting/report-preview")
 const { ReportWizard } = await import("../components/reporting/report-wizard");
 const { NewReportForm } = await import("../components/reporting/new-report-form");
 
-afterEach(cleanup);
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 
 beforeEach(() => {
   saveReportDraftAction.mockClear().mockResolvedValue({ ok: true });
@@ -2078,4 +2079,22 @@ describe("save + send completion flow", () => {
     expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send to client" })).toBeInTheDocument();
   });
+});
+
+describe("reporting actions during a minimized call",()=>{
+ it.each(["builder","wizard"] as const)("keeps the floating call clear of the %s sticky actions",mode=>{
+  vi.stubGlobal("innerWidth",390);vi.stubGlobal("innerHeight",844);
+  render(mode==="builder"?<ReportBuilder document={documentFixture()} canSend/>:<ReportWizard document={wizardDocument()} canSend/>);
+  const save=screen.getByRole("button",{name:"Save draft"});const bar=mode==="builder"?save.parentElement!:save.closest("footer")!;
+  const box=(left:number,top:number,width:number,height:number)=>({left,top,width,height,right:left+width,bottom:top+height,x:left,y:top,toJSON(){}});
+  vi.spyOn(HTMLElement.prototype,"getBoundingClientRect").mockImplementation(function(this:HTMLElement){
+   if(this===bar)return box(0,700,390,100);
+   if(this.getAttribute("role")==="region")return box(Number.parseFloat(this.style.left)||0,Number.parseFloat(this.style.top)||0,272,257);
+   return box(0,0,0,0);
+  });
+  render(<FloatingCallWindow visible name="Synthetic client" clock="3:00" micOn busy={false} onMute={vi.fn()} onEnd={vi.fn()} onExpand={vi.fn()}><span>Participant preview</span></FloatingCallWindow>);
+  const frame=screen.getByRole("region",{name:"Floating video call"});
+  expect(Number.parseFloat(frame.style.top)+257).toBeLessThanOrEqual(688);
+  expect(save).toBeVisible();expect(save).toBeEnabled();
+ });
 });

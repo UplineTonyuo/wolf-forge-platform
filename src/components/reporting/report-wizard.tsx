@@ -455,7 +455,7 @@ export function ReportWizard({
         </p>
       ) : null}
 
-      <footer className={styles.wizardActions}>
+      <footer data-call-avoid className={styles.wizardActions}>
         <div>
           {previous ? (
             <button

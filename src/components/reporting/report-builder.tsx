@@ -541,7 +541,7 @@ export function ReportBuilder({
         </p>
       ) : null}
 
-      <div className={styles.actions}>
+      <div data-call-avoid className={styles.actions}>
         <span
           className={styles.actionsState}
           role="status"
