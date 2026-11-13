@@ -53,7 +53,6 @@
 .floatingMove:focus-visible,.floatingStage:focus-visible{outline:3px solid #edc96b;outline-offset:-3px}
 @media(prefers-reduced-motion:reduce){.floating,.floatingControls button{transition:none}}
 
-.floating[data-unplaceable]{visibility:hidden;pointer-events:none}
 .floating[data-compact]{display:grid;grid-template-columns:44px minmax(0,1fr) 132px;grid-template-rows:minmax(44px,1fr)}
 .floating[data-compact] .floatingStage{grid-column:1;grid-row:1;aspect-ratio:auto;min-height:44px;padding:0;border-radius:12px 0 0 12px}
 .floating[data-compact] .floatingStage .portrait{width:40px;height:40px;font-size:14px}

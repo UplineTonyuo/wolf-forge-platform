@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
-import { act,cleanup,fireEvent,render,screen,waitFor } from "@testing-library/react";
+import { act,cleanup,fireEvent,render,screen,waitFor,within } from "@testing-library/react";
 import { afterEach,expect,it,vi } from "vitest";
+import { useState } from "react";
 import { CallScreen } from "../components/calls/call-screen";
-import { placeCallWindow } from "../components/calls/floating-call-window";
+import { FloatingCallWindow,placeCallWindow } from "../components/calls/floating-call-window";
 import { emptyMedia } from "../components/calls/call-media";
 import type { CallController,CallState } from "../components/calls/call-controller";
 import type { CallMedia } from "../components/calls/call-media";
@@ -286,4 +287,42 @@ it("reuses collected obstacles when the user changes corners",async()=>{
  await flush(()=>{fireEvent.keyDown(screen.getByRole("button",{name:/Move call window/}),{key:"ArrowLeft"});});
  expect(queries()).toHaveLength(initial);
  expect(screen.getByRole("region",{name:"Floating video call"})).toHaveAttribute("data-corner","bottom-left");
+});
+
+it("restores accessible full-call controls when the floating viewport is exhausted",async()=>{
+ vi.stubGlobal("innerWidth",390);vi.stubGlobal("innerHeight",844);
+ const box=(left:number,top:number,width:number,height:number)=>({left,top,width,height,right:left+width,bottom:top+height,x:left,y:top,toJSON(){}});
+ vi.spyOn(HTMLElement.prototype,"getBoundingClientRect").mockImplementation(function(this:HTMLElement){
+  if(this.id==="protected-header")return box(0,0,390,64);
+  if(this.id==="growing-composer")return box(0,window.innerHeight===300?88:650,390,window.innerHeight===300?212:194);
+  if(this.getAttribute("role")==="region")return box(Number.parseFloat(this.style.left)||0,Number.parseFloat(this.style.top)||0,272,257);
+  return box(0,0,0,0);
+ });
+ const mic=vi.fn(),end=vi.fn(),restore=vi.fn();let minimize:(value?:boolean)=>void=()=>{};
+ function ActiveCall(){
+  const [snapshot,setSnapshot]=useState<CallState>({...activeVideo,canJoin:true});
+  minimize=(value=true)=>{restore(value);setSnapshot(current=>({...current,minimized:value}));};
+  return <><header id="protected-header" data-call-avoid/><form id="growing-composer" data-target-kind="ticket"/>
+   <CallScreen state={snapshot} controller={{...controller,minimize,end} as unknown as CallController} media={{mic} as unknown as CallMedia} mediaState={{...emptyMedia,state:"connected",micOn:true}} now={0}/></>;
+ }
+ render(<ActiveCall/>);
+ fireEvent.keyDown(screen.getByRole("button",{name:/Move call window/}),{key:"ArrowLeft"});
+ await act(async()=>{window.innerHeight=300;window.dispatchEvent(new Event("resize"));await new Promise(resolve=>setTimeout(resolve,40));});
+ const dialog=await screen.findByRole("dialog",{name:"Video call"});
+ expect(restore).toHaveBeenCalledExactlyOnceWith(false);
+ const mute=within(dialog).getByRole("button",{name:"Mute microphone"});const hangup=within(dialog).getByRole("button",{name:"End call"});
+ mute.focus();expect(mute).toHaveFocus();fireEvent.click(mute);expect(mic).toHaveBeenCalledOnce();
+ hangup.focus();expect(hangup).toHaveFocus();fireEvent.click(hangup);expect(end).toHaveBeenCalledOnce();
+ await act(async()=>{window.innerHeight=844;window.dispatchEvent(new Event("resize"));minimize(true);await new Promise(resolve=>setTimeout(resolve,200));});
+ expect(screen.getByRole("region",{name:"Floating video call"})).toHaveAttribute("data-corner","bottom-left");
+});
+
+it("requests the no-space fallback once per minimized opening",()=>{
+ vi.spyOn(HTMLElement.prototype,"getBoundingClientRect").mockImplementation(function(this:HTMLElement){
+  const width=this.id==="occupied-controls"?window.innerWidth:272,height=this.id==="occupied-controls"?window.innerHeight:257;
+  return {left:0,top:0,width,height,right:width,bottom:height,x:0,y:0,toJSON(){}};
+ });
+ const expand=vi.fn();
+ render(<><div id="occupied-controls" data-call-avoid/><FloatingCallWindow visible name="Synthetic client" clock="3:00" micOn busy={false} onMute={vi.fn()} onEnd={vi.fn()} onExpand={expand}><span>Participant preview</span></FloatingCallWindow></>);
+ expect(expand).toHaveBeenCalledOnce();
 });

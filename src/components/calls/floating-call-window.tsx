@@ -67,21 +67,24 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
  const [corner, setCorner] = useState<Corner>("bottom-right");
  const cornerRef = useRef<Corner>("bottom-right");
  const [point, setPoint] = useState<(Point & { height: number }) | null>(null);
- const [unplaceable, setUnplaceable] = useState(false);
  const controls = useRef<HTMLElement[]>([]);
  const suppressClick = useRef(false);
  const [dragging, setDragging] = useState(false);
  const frame = useRef<HTMLDivElement>(null);
  const drag = useRef<{ id: number; x: number; y: number; start: Point; moved: boolean } | null>(null);
  const settle = useRef(() => {});
+ const expand = useRef(onExpand);
+
+ useLayoutEffect(() => { expand.current = onExpand; }, [onExpand]);
 
  useLayoutEffect(() => {
   const node = frame.current;
   if (!visible || !node) return;
-  let scheduled = 0, refreshControls = true;
+  let scheduled = 0, refreshControls = true, restored = false;
   const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => schedule());
   const measure = () => {
    scheduled = 0;
+   if (restored) return;
    if (refreshControls) {
     refreshControls = false;controls.current = workingControls(node);
     resize?.disconnect();resize?.observe(document.body);resize?.observe(node);
@@ -94,7 +97,7 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
    const width = node.getBoundingClientRect().width;
    const naturalHeight = 44 + width * 9 / 16 + 60;
    const next = placeCallWindow(cornerRef.current, width, naturalHeight, view, controlBounds(controls.current));
-   setUnplaceable(!next);
+   if (!next) { restored = true;expand.current();return; }
    setPoint(previous => previous?.x === next?.x && previous?.y === next?.y && previous?.height === next?.height ? previous : next);
   };
   const schedule = () => { if (!scheduled) scheduled = requestAnimationFrame(measure); };
@@ -109,7 +112,7 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
   window.addEventListener("resize", viewportResize);window.addEventListener("scroll", schedule, true);
   window.visualViewport?.addEventListener("resize", viewportResize);window.visualViewport?.addEventListener("scroll", schedule);
   return () => {
-   observer.disconnect();resize?.disconnect();cancelAnimationFrame(scheduled);drag.current = null;
+   observer.disconnect();resize?.disconnect();cancelAnimationFrame(scheduled);drag.current = null;settle.current = () => {};
    window.removeEventListener("resize", viewportResize);window.removeEventListener("scroll", schedule, true);
    window.visualViewport?.removeEventListener("resize", viewportResize);window.visualViewport?.removeEventListener("scroll", schedule);
   };
@@ -130,7 +133,7 @@ export function FloatingCallWindow({ visible, name, clock, micOn, busy, onMute, 
   settle.current();
  };
  const style = point ? { left: point.x, top: point.y, height: point.height } : undefined;
- return createPortal(<div ref={frame} role="region" aria-label="Floating video call" className={styles.floating} data-corner={corner} data-compact={point && point.height < 152 || undefined} data-unplaceable={unplaceable || undefined} data-dragging={dragging || undefined} style={style as CSSProperties}>
+ return createPortal(<div ref={frame} role="region" aria-label="Floating video call" className={styles.floating} data-corner={corner} data-compact={point && point.height < 152 || undefined} data-dragging={dragging || undefined} style={style as CSSProperties}>
   <button type="button" className={styles.floatingMove} aria-label="Move call window. Tap for next corner or use arrow keys" title="Drag or tap to move" onClick={() => {
    if (suppressClick.current) { suppressClick.current = false;return; }
    const corners: Corner[] = ["bottom-right", "bottom-left", "top-left", "top-right"];
