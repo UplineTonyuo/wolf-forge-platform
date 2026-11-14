@@ -8,9 +8,9 @@ import { createUserSupabaseClient, verifyActor, type VerifiedActor } from "../li
 import { TeamVoiceService } from "../services/team-voice-service";
 
 const m = vi.hoisted(() => ({
-  limit: vi.fn(), rpc: vi.fn(), store: vi.fn(), download: vi.fn(), attachment: vi.fn(), probe: vi.fn(), actor: null as unknown,
+  limit: vi.fn(), byteLimit: vi.fn(), rpc: vi.fn(), store: vi.fn(), download: vi.fn(), attachment: vi.fn(), probe: vi.fn(), actor: null as unknown,
 }));
-vi.mock("../lib/security/server-cost-limit", () => ({ enforceServerCostLimit: m.limit }));
+vi.mock("../lib/security/server-cost-limit", () => ({ enforceServerCostLimit: m.limit, enforcePrivateDownloadByteBudget: m.byteLimit, PRIVATE_DOWNLOAD_BUDGET_WINDOW_SECONDS: 86400 }));
 vi.mock("../lib/supabase/next-server", () => ({
   getClientContext: async () => ({ actor: m.actor, client: { rpc: m.rpc } }),
   getSelfServiceContext: async () => ({ actor: m.actor, client: { rpc: m.rpc } }),
@@ -33,15 +33,17 @@ const fileId = "20000000-0000-4000-8000-000000000001";
 const assignmentId = "30000000-0000-4000-8000-000000000001";
 const fieldKey = "40000000-0000-4000-8000-000000000001";
 const conversationId = "50000000-0000-4000-8000-000000000001";
-const fileInfo = { id: fileId, name: "synthetic.pdf", mime: "application/pdf", size: 12, path: "tenant/assignment/file" };
+const tenantId = "60000000-0000-4000-8000-000000000001";
+const fileInfo = { id: fileId, tenant_id: tenantId, name: "synthetic.pdf", mime: "application/pdf", size: 12, path: "tenant/assignment/file" };
 
 beforeEach(async () => {
   vi.clearAllMocks();
   m.limit.mockReset().mockResolvedValue(undefined);
+  m.byteLimit.mockReset().mockResolvedValue(undefined);
   m.rpc.mockReset().mockResolvedValue({ data: fileInfo.path, error: null });
   m.store.mockResolvedValue(false);
   m.download.mockResolvedValue(new Blob(["%PDF-1.7\nQA"], { type: "application/pdf" }));
-  m.attachment.mockReset().mockResolvedValue({ storage_object_key: fileInfo.path, mime_type: fileInfo.mime, original_name: fileInfo.name });
+  m.attachment.mockReset().mockResolvedValue({ storage_object_key: fileInfo.path, mime_type: fileInfo.mime, original_name: fileInfo.name, size_bytes: fileInfo.size, tenant_id: tenantId });
   m.probe.mockResolvedValue({ durationMs: 1000, sizeBytes: 12, mimeType: "audio/webm" });
   const client = createUserSupabaseClient({ SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_PUBLISHABLE_KEY: "synthetic" }, "synthetic-token");
   vi.spyOn(client.auth, "getClaims").mockResolvedValue({ data: { claims: { sub: actorId } }, error: null } as never);
@@ -89,6 +91,9 @@ describe("private intake download spend boundary", () => {
     expect(m.limit).toHaveBeenCalledWith({ actorId, action: "intake.file_download" });
     expect(m.rpc.mock.invocationCallOrder[0]).toBeLessThan(m.limit.mock.invocationCallOrder[0]!);
     expect(m.limit.mock.invocationCallOrder[0]).toBeLessThan(m.download.mock.invocationCallOrder[0]!);
+    expect(m.byteLimit).toHaveBeenCalledWith({ actorId, tenantId, sizeBytes: fileInfo.size });
+    expect(m.limit.mock.invocationCallOrder[0]).toBeLessThan(m.byteLimit.mock.invocationCallOrder[0]!);
+    expect(m.byteLimit.mock.invocationCallOrder[0]).toBeLessThan(m.download.mock.invocationCallOrder[0]!);
     expect(m.download).toHaveBeenCalledWith(fileInfo.path);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("location")).toBeNull();
@@ -99,6 +104,7 @@ describe("private intake download spend boundary", () => {
     const response = await request();
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
+    expect(m.byteLimit).not.toHaveBeenCalled();
     expect(m.download).not.toHaveBeenCalled();
   });
 
@@ -109,6 +115,7 @@ describe("private intake download spend boundary", () => {
     m.limit.mockClear(); m.rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
     expect((await request()).status).toBe(403);
     expect(m.limit).not.toHaveBeenCalled();
+    expect(m.byteLimit).not.toHaveBeenCalled();
   });
 });
 
@@ -120,6 +127,9 @@ describe("ticket and Project attachment download spend boundary", () => {
     expect(m.limit).toHaveBeenCalledWith({ actorId, action: "ticket.file_download" });
     expect(m.attachment.mock.invocationCallOrder[0]).toBeLessThan(m.limit.mock.invocationCallOrder[0]!);
     expect(m.limit.mock.invocationCallOrder[0]).toBeLessThan(m.download.mock.invocationCallOrder[0]!);
+    expect(m.byteLimit).toHaveBeenCalledWith({ actorId, tenantId, sizeBytes: fileInfo.size });
+    expect(m.limit.mock.invocationCallOrder[0]).toBeLessThan(m.byteLimit.mock.invocationCallOrder[0]!);
+    expect(m.byteLimit.mock.invocationCallOrder[0]).toBeLessThan(m.download.mock.invocationCallOrder[0]!);
     expect(response.headers.get("content-disposition")).toContain("inline;");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("location")).toBeNull();
@@ -129,6 +139,7 @@ describe("ticket and Project attachment download spend boundary", () => {
     const response = await request();
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("60");
+    expect(m.byteLimit).not.toHaveBeenCalled();
     expect(m.download).not.toHaveBeenCalled();
   });
   it("does not read bytes on limiter outage or a denied attachment", async () => {
@@ -138,6 +149,7 @@ describe("ticket and Project attachment download spend boundary", () => {
     m.limit.mockClear(); m.attachment.mockRejectedValue(new PermissionDeniedError());
     expect((await request()).status).toBe(403);
     expect(m.limit).not.toHaveBeenCalled();
+    expect(m.byteLimit).not.toHaveBeenCalled();
   });
 });
 
@@ -151,6 +163,69 @@ function voiceFixture() {
   const storage = { inspectObject: vi.fn().mockResolvedValue({ bytes: new Uint8Array(12), size: 12, contentType: "audio/webm" }) };
   return { team, storage, service: new TeamVoiceService(team as never, storage as never) };
 }
+
+describe.each(["intake", "ticket"] as const)("%s download daily byte budget", (kind) => {
+  const request = () => kind === "intake"
+    ? downloadIntakeFile(new Request("http://localhost/api/intake-files/" + fileId), { params: Promise.resolve({ fileId }) })
+    : downloadTicketFile(new Request("http://localhost/api/ticket-attachments/" + fileId), { params: Promise.resolve({ attachmentId: fileId }) });
+
+  beforeEach(() => m.rpc.mockResolvedValue({ data: fileInfo, error: null }));
+
+  it("returns 429/no-store and a daily retry hint without fetching Storage bytes", async () => {
+    m.byteLimit.mockRejectedValue(new RateLimitedError());
+    const response = await request();
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("86400");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("location")).toBeNull();
+    expect(await response.text()).toBe(new RateLimitedError().message);
+    expect(m.byteLimit).toHaveBeenCalledExactlyOnceWith({ actorId, tenantId, sizeBytes: fileInfo.size });
+    expect(m.download).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when byte accounting is unavailable", async () => {
+    m.byteLimit.mockRejectedValue(new DatabaseError());
+    const response = await request();
+    expect(response.ok).toBe(false);
+    expect(response.headers.get("retry-after")).toBeNull();
+    expect(m.download).not.toHaveBeenCalled();
+  });
+
+  it("authorizes before any byte accounting, even when the byte budget would refuse", async () => {
+    m.byteLimit.mockRejectedValue(new RateLimitedError());
+    if (kind === "intake") m.rpc.mockResolvedValue({ data: null, error: { code: "42501" } });
+    else m.attachment.mockRejectedValue(new PermissionDeniedError());
+    expect((await request()).status).toBe(403);
+    expect(m.limit).not.toHaveBeenCalled();
+    expect(m.byteLimit).not.toHaveBeenCalled();
+    expect(m.download).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])("refuses missing or invalid metadata size %s before accounting", async (size) => {
+    m.rpc.mockResolvedValue({ data: { ...fileInfo, size }, error: null });
+    m.attachment.mockResolvedValue({ storage_object_key: fileInfo.path, size_bytes: size, tenant_id: tenantId });
+    expect((await request()).ok).toBe(false);
+    expect(m.byteLimit).not.toHaveBeenCalled();
+    expect(m.download).not.toHaveBeenCalled();
+  });
+
+  it("requires an authoritative metadata Tenant before accounting", async () => {
+    m.rpc.mockResolvedValue({ data: { ...fileInfo, tenant_id: undefined }, error: null });
+    m.attachment.mockResolvedValue({ storage_object_key: fileInfo.path, size_bytes: fileInfo.size });
+    expect((await request()).ok).toBe(false);
+    expect(m.byteLimit).not.toHaveBeenCalled();
+    expect(m.download).not.toHaveBeenCalled();
+  });
+
+  it("charges authorized size again on retry after Storage failure", async () => {
+    m.download.mockRejectedValueOnce(new DatabaseError());
+    expect((await request()).ok).toBe(false);
+    expect((await request()).status).toBe(200);
+    expect(m.byteLimit).toHaveBeenCalledTimes(2);
+    expect(m.byteLimit).toHaveBeenNthCalledWith(1, { actorId, tenantId, sizeBytes: fileInfo.size });
+    expect(m.byteLimit).toHaveBeenNthCalledWith(2, { actorId, tenantId, sizeBytes: fileInfo.size });
+  });
+});
 
 describe("voice finalization replay spend boundary", () => {
   it("counts each replay before bytes/probe and retains canonical database finalization", async () => {

@@ -19,7 +19,11 @@ import { NotFoundError, PermissionDeniedError, ValidationError } from "../lib/er
 const attachmentDownloadMock = vi.fn();
 const storageDownloadMock = vi.fn();
 
-vi.mock("../lib/security/server-cost-limit", () => ({ enforceServerCostLimit: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("../lib/security/server-cost-limit", () => ({
+  enforceServerCostLimit: vi.fn().mockResolvedValue(undefined),
+  enforcePrivateDownloadByteBudget: vi.fn().mockResolvedValue(undefined),
+  PRIVATE_DOWNLOAD_BUDGET_WINDOW_SECONDS: 86400,
+}));
 
 vi.mock("../lib/supabase/next-server", () => ({
   getSelfServiceContext: vi.fn(async () => ({ actor: { profileId: "actor-1" }, client: {} })),
@@ -70,6 +74,8 @@ describe("GET /api/ticket-attachments/[attachmentId] — secure delivery", () =>
       storage_object_key: "actor-1/att-1",
       mime_type: "image/png",
       original_name: "screenshot.png",
+      size_bytes: 4,
+      tenant_id: "60000000-0000-4000-8000-000000000001",
     });
     storageDownloadMock.mockResolvedValue(new Blob([new Uint8Array([1, 2, 3, 4])], { type: "image/png" }));
 
@@ -100,6 +106,8 @@ describe("GET /api/ticket-attachments/[attachmentId] — secure delivery", () =>
       storage_object_key: "actor-1/att-2",
       mime_type: "application/pdf",
       original_name: "invoice.pdf",
+      size_bytes: 1,
+      tenant_id: "60000000-0000-4000-8000-000000000001",
     });
     storageDownloadMock.mockResolvedValue(new Blob([new Uint8Array([9])], { type: "application/pdf" }));
 
