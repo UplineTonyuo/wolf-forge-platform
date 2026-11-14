@@ -14,7 +14,7 @@ import type {
   IntakeSecretCaptureInput,
 } from "../domain/forms/schema";
 import { intakeSecretFieldsSchema, intakeSecretListSchema, intakeSecretReferenceSchema } from "../domain/forms/schema";
-import { ValidationError } from "../lib/errors/application-error";
+import { NotFoundError, ValidationError } from "../lib/errors/application-error";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { Database, Json } from "../lib/supabase/database.types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -322,11 +322,20 @@ export class FormRepository {
   }
 
   async getPublishedSchema(canonicalKey: string): Promise<FormPublishedSchema> {
+    const { getRequestPublicPublishedSchema } = await import("../app/f/public-schema");
+    try {
+      return await getRequestPublicPublishedSchema(canonicalKey);
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) throw error;
+    }
+    // Authenticated/assigned schemas retain their existing actor-scoped RPC.
     const result = await this.client.rpc("app_get_published_form_schema", {
       p_canonical_key: canonicalKey,
     });
     if (result.error) throw mapDatabaseError(result.error, "Published Form");
-    return result.data as unknown as FormPublishedSchema;
+    const schema = result.data as unknown as FormPublishedSchema;
+    if (schema?.visibility === "public") throw new NotFoundError("Published Form");
+    return schema;
   }
 
   async listAssignments(): Promise<FormAssignmentSummary[]> {
