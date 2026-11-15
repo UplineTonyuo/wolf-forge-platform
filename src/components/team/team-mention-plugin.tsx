@@ -6,19 +6,22 @@ import { $createLinkNode } from "@lexical/link";
 import { $createTextNode, $getNodeByKey, $getSelection, $isRangeSelection, $isTextNode,
   COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical";
 import type { TeamMemberView } from "../../domain/team/projections";
+import { UsersRound } from "lucide-react";
+import { TeamAvatar } from "./team-avatar";
 import styles from "./team-messages.module.css";
 
 type Match = { key: string; offset: number; length: number; query: string };
-type Choice = { id: string; name: string };
+type Choice = { id: string; name: string; avatarUrl: string | null; initials: string };
 
 export function TeamMentionPlugin({ members }: { members: TeamMemberView[] }) {
   const [editor] = useLexicalComposerContext();
   const [match, setMatch] = useState<Match | null>(null);
   const [selected, setSelected] = useState(0);
   const dismissed = useRef<string | null>(null);
+  const picker = useRef<HTMLDivElement>(null);
   const choices: Choice[] = useMemo(() => [
-    { id: "everyone", name: "everyone" },
-    ...members.map((member) => ({ id: member.profileId, name: member.name })),
+    { id: "everyone", name: "everyone", avatarUrl: null, initials: "" },
+    ...members.map((member) => ({ id: member.profileId, name: member.name, avatarUrl: member.avatarUrl, initials: member.initials })),
   ].filter((member) => member.name.toLocaleLowerCase().includes(match?.query.toLocaleLowerCase() ?? "")).slice(0, 8), [members, match?.query]);
 
   useEffect(() => editor.registerUpdateListener(({ editorState }) => editorState.read(() => {
@@ -71,13 +74,21 @@ export function TeamMentionPlugin({ members }: { members: TeamMemberView[] }) {
     return false;
   }, COMMAND_PRIORITY_HIGH), [editor, match, choices, selected, choose]);
 
+  useEffect(() => {
+    picker.current?.querySelectorAll("button")[selected]?.scrollIntoView({ block: "nearest" });
+  }, [selected, match]);
+
   if (!match) return null;
-  return <div className={styles.mentionPicker} aria-label="Mention a group member">
+  return <div ref={picker} className={styles.mentionPicker} aria-label="Mention a group member">
     <span>Notify someone in this group</span>
     {choices.length ? choices.map((choice, index) => <button key={choice.id} type="button"
       className={index === selected ? styles.mentionSelected : undefined}
       aria-label={`Mention ${choice.name}`} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(choice)}>
-      <strong>@{choice.name}</strong>{choice.id === "everyone" ? <small>All active members</small> : null}
+      <span className={styles.mentionAvatar} aria-hidden="true">
+        {choice.id === "everyone" ? <UsersRound size={24} /> : <TeamAvatar name={choice.name} initials={choice.initials} avatarUrl={choice.avatarUrl} small />}
+      </span>
+      <span className={styles.mentionName}><span className={styles.mentionPrefix}>@</span>{choice.name}</span>
+      {choice.id === "everyone" ? <small>All active members</small> : null}
     </button>) : <p>No group members match.</p>}
   </div>;
 }
