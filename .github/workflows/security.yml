@@ -6,6 +6,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       database_only:
@@ -33,7 +34,7 @@ concurrency:
 
 jobs:
   typecheck:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only)) }}
     name: TypeScript compile boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -49,7 +50,7 @@ jobs:
       - run: npx next typegen && npm run typecheck
 
   lint:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only)) }}
     name: static lint boundary
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -63,7 +64,7 @@ jobs:
       - run: npm run lint
 
   build:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.database_only }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || !inputs.database_only) }}
     name: compiled app and PDF font trace
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -97,7 +98,7 @@ jobs:
         run: npx supabase stop --no-backup
 
   tests:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only)) }}
     name: JavaScript and TypeScript tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -114,7 +115,7 @@ jobs:
         run: npm test
 
   database:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.call_acceptance_only }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || !inputs.call_acceptance_only) }}
     name: local Supabase pgTAP and RLS tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -153,7 +154,7 @@ jobs:
         run: node scripts/qa/ticket-call-concurrency.mjs
 
   dependencies:
-    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only) }}
+    if: ${{ (github.event_name != 'pull_request' || !github.event.pull_request.draft) && (github.event_name != 'workflow_dispatch' || (!inputs.database_only && !inputs.call_acceptance_only)) }}
     name: production dependency vulnerabilities
     runs-on: ubuntu-latest
     timeout-minutes: 10
