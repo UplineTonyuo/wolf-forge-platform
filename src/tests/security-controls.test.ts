@@ -245,8 +245,9 @@ describe("secret scanning fails closed (C1)", () => {
   it("is reachable as an npm script alongside the dependency audit", () => {
     const packageJson = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
     expect(packageJson.scripts["security:secrets"]).toContain("scan-secrets.ts");
-    expect(packageJson.scripts["audit:deps"]).toContain("--omit=dev");
-    expect(packageJson.scripts["audit:deps"]).toContain("--audit-level=high");
+    expect(packageJson.scripts["audit:deps"]).toBe("node scripts/security/audit-deps.ts");
+    expect(read("scripts/security/audit-deps.ts")).toContain("--omit=dev");
+    expect(read("scripts/security/audit-deps.ts")).toContain("--audit-level=high");
   });
 });
 
