@@ -26,7 +26,7 @@
     "lint:db": "supabase db lint --local --level error --fail-on error",
     "smoke:backend": "tsx scripts/backend-smoke.ts",
     "security:secrets": "tsx scripts/security/scan-secrets.ts",
-    "audit:deps": "npm audit --omit=dev --audit-level=high",
+    "audit:deps": "node scripts/security/audit-deps.ts",
     "qa:auth-cookies": "tsx scripts/qa-c22-auth-cookies.ts"
   },
   "repository": {
@@ -50,7 +50,7 @@
     "@types/react-dom": "^19.2.4",
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.4.2",
+    "eslint-config-next": "16.4.5",
     "jsdom": "^30.0.1",
     "playwright": "^1.62.1",
     "postcss": "^8.5.26",
@@ -81,7 +81,7 @@
     "lexical": "^0.49.0",
     "lucide-react": "^1.31.0",
     "music-metadata": "^11.16.1",
-    "next": "^16.4.2",
+    "next": "16.4.5",
     "pdf-lib": "1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

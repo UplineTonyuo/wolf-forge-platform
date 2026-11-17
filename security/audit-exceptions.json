@@ -1,0 +1,10 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "package": "picomatch",
+    "reason": "No patched npm release is available. The advisory requires control of the glob pattern.",
+    "evidence": "On main 075e12b, the audited picomatch@4.0.5 was present only through Sentry's Rollup build tooling. No route or framework trace or executable bundle included the standalone npm copy. Next.js traces a separate vendored copy for its image optimizer, whose patterns come from configuration and whose request URLs are match inputs. A Vitest guard rejects extglobs in configured image patterns.",
+    "approver": "owner",
+    "expires": "2026-12-18"
+  }
+]
