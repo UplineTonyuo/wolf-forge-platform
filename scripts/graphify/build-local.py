@@ -5,12 +5,15 @@ if not __debug__:
     raise RuntimeError('Optimized Python is unsupported: graph safety checks must remain enabled')
 
 import hashlib
+from contextlib import contextmanager
 import importlib.metadata
 import json
 import os
 import re
+import runpy
 import subprocess
 import sys
+import tempfile
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -45,6 +48,31 @@ def git(*args: str, data: bytes | None = None, ok=(0,)) -> bytes:
 def save(name: str, value) -> None:
     TRIAL.mkdir(parents=True, exist_ok=True)
     (TRIAL / name).write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+
+
+@contextmanager
+def preserve_html(out):
+    html, stale = out / 'graph.html', out / '.graph.html.stale'
+    if html.is_symlink() or stale.is_symlink():
+        raise RuntimeError('Redirected graph HTML path')
+    previous = html.read_bytes() if html.exists() else None
+    try:
+        yield
+    except BaseException:
+        # Upstream clustering also writes HTML; preserve the last complete viewer.
+        if previous is None:
+            html.unlink(missing_ok=True)
+        else:
+            with tempfile.NamedTemporaryFile(dir=out, prefix='.universe-restore-', delete=False) as stream:
+                restore = Path(stream.name)
+                stream.write(previous)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(restore, html)
+            if html.read_bytes() != previous:
+                raise OSError('Previous graph HTML restoration readback failed')
+        stale.write_text('Universe generation failed; previous HTML is not this build.\n', encoding='utf-8')
+        raise
 
 
 def run_graphify(*args: str) -> None:
@@ -108,16 +136,20 @@ def main():
     assert to_json(graph, {}, str(OUT / 'graph.json')), 'Graph write refused'
     (OUT / '.graphify_root').write_text(str(ROOT), encoding='utf-8')
     (OUT / '.graphify_python').write_text(sys.executable, encoding='utf-8')
-    # --no-label uses structural labels and prevents LLM community naming.
-    run_graphify('cluster-only', str(ROOT), '--no-label')
-    for row in files:
-        assert hashlib.sha256((ROOT / row['path']).read_bytes()).hexdigest() == row['sha256'], 'Source changed during build'
-    assert git('rev-parse', 'HEAD').decode().strip() == sha
-    assert not git('diff', '--name-only').strip()
-    metadata = {'version': PIN, 'source_commit': sha, 'build_date': stamp, 'seconds': round(time.perf_counter() - started, 3), 'input_tokens': 0, 'output_tokens': 0, 'nodes': graph.number_of_nodes(), 'edges': graph.number_of_edges(), 'files': len(files), 'mode': 'local structural; Markdown headings/links/mentions; no image semantics'}
-    save('build-metadata.json', metadata)
-    report = OUT / 'GRAPH_REPORT.md'
-    report.write_text(f'> Source commit: {sha} | Build date: {stamp} | Graphify {PIN} | Local structural extraction, 0 LLM tokens\n\n' + report.read_text(encoding='utf-8'), encoding='utf-8')
+    with preserve_html(OUT):
+        # --no-label uses structural labels and prevents LLM community naming.
+        run_graphify('cluster-only', str(ROOT), '--no-label')
+        for row in files:
+            assert hashlib.sha256((ROOT / row['path']).read_bytes()).hexdigest() == row['sha256'], 'Source changed during build'
+        assert git('rev-parse', 'HEAD').decode().strip() == sha
+        assert not git('diff', '--name-only').strip()
+        metadata = {'version': PIN, 'source_commit': sha, 'build_date': stamp, 'seconds': round(time.perf_counter() - started, 3), 'input_tokens': 0, 'output_tokens': 0, 'nodes': graph.number_of_nodes(), 'edges': graph.number_of_edges(), 'files': len(files), 'mode': 'local structural; Markdown headings/links/mentions; no image semantics'}
+        save('build-metadata.json', metadata)
+        exporter = runpy.run_path(str(Path(__file__).with_name('export-universe.py')))
+        exporter['export_universe'](OUT / 'graph.json', TRIAL / 'build-metadata.json', OUT / 'graph.html')
+        report = OUT / 'GRAPH_REPORT.md'
+        report.write_text(f'> Source commit: {sha} | Build date: {stamp} | Graphify {PIN} | Local structural extraction, 0 LLM tokens\n\n' + report.read_text(encoding='utf-8'), encoding='utf-8')
+        (OUT / '.graph.html.stale').unlink(missing_ok=True)
     print(json.dumps(metadata))
 
 
