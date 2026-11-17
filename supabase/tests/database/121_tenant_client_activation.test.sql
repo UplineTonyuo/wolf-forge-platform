@@ -104,7 +104,7 @@ select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-00
 
 select results_eq(
   $$select outcome, recipient_email, canonical_host from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002803', '20000000-0000-4000-8000-000000002806', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000002802', repeat('b', 64))$$,
-  $$values ('claimed'::text, 'tenant-activation-2806@example.invalid'::text, 'wolf-forge-platform-woad.vercel.app'::text)$$,
+  $$values ('claimed'::text, 'tenant-activation-2806@example.invalid'::text, 'services.wolfforgedigitalagency.com'::text)$$,
   'a Wolf Forge owner claims in Wolf Forge and gets the Wolf Forge canonical host'
 );
 select is(public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000000001'),

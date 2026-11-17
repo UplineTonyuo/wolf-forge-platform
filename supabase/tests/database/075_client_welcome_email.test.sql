@@ -61,7 +61,7 @@ select throws_ok(
 
 select results_eq(
   $$select outcome, recipient_email, recipient_name, canonical_host from public.app_server_claim_client_welcome_email('e5100000-0000-4000-8000-000000000001', 'e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000000001', repeat('a', 64))$$,
-  $$values ('claimed'::text, 'welcome-client@example.invalid'::text, 'Welcome Client'::text, 'wolf-forge-platform-woad.vercel.app'::text)$$,
+  $$values ('claimed'::text, 'welcome-client@example.invalid'::text, 'Welcome Client'::text, 'services.wolfforgedigitalagency.com'::text)$$,
   'an authorized sender claims the first send and receives the login email and the Wolf Forge canonical host'
 );
 select is(
