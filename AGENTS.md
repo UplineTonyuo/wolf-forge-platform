@@ -8,6 +8,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## CI usage
+
+- Push only after every local validation step in the task prompt has passed. Batch fixes into one push. CI confirms; it is not the place to debug.
+- Never start workflow_dispatch runs or re-run jobs without the owner's explicit approval for that run. The existing one-re-run rule for confirmed flakes still needs that approval.
+- If every job fails within seconds or reports a billing or spending-limit error, stop and report it to the owner. Never work around it, never merge without CI.
+- Draft PRs do not run the full suite; mark a PR ready only when it is ready for CI.
+
 ## Skill routing
 
 At the start of every task, read this table, pick only the skills that match (usually 1-3), and open only those SKILL.md files. Do not load every installed skill. If no row matches, use none.
