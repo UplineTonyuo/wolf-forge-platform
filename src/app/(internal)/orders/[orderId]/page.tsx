@@ -6,6 +6,7 @@ import { OrderConversation } from "../../../../components/tickets/order-conversa
 import { OrderConversationDialog } from "../../../../components/tickets/order-conversation-dialog";
 import { DataError } from "../../../../components/ui/list-states";
 import { composeProjectTaskViews } from "../../../../domain/orders/projections";
+import { orderReference } from "../../../../domain/orders/references";
 import { toTeamConversationViews } from "../../../../domain/team/projections";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatDate } from "../../../../lib/format";
@@ -30,6 +31,7 @@ export default async function OrderDetailsPage({
     ]);
 
     const canViewForms = context.user.forms.submissionsView;
+    const reference = orderReference(order);
 
     const { views: taskViews, counts: taskCounts } = composeProjectTaskViews(tasks);
     const conversationTicket = conversation?.ticket ?? null;
@@ -58,13 +60,13 @@ export default async function OrderDetailsPage({
           )}
         </section>
 
-        {context.user.tickets.view ? <OrderConversationDialog key={orderId} orderNumber={order.order_number}>
+        {context.user.tickets.view ? <OrderConversationDialog key={orderId} orderNumber={reference}>
           <OrderConversation
             orderId={orderId}
             viewerProfileId={context.user.id}
             messages={conversationMessages}
             initialPage={conversation?.page}
-            heading={`Project #${order.order_number}`}
+            heading={`Project #${reference}`}
             destinations={legacyTicket ? toTeamConversationViews(teamConversations) : []}
             canReply={context.user.tickets.reply}
             repliesDisabled={repliesDisabled}

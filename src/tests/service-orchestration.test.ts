@@ -21,7 +21,7 @@ async function verifiedActor() {
 }
 
 function order(status: OrderRow["status"], completion: string | null): OrderRow {
-  return { id: entityId, order_number: 42, company_id: actorId, service_id: actorId, reporting_period_month: null, assigned_to_profile_id: null, title: "Test", status, priority: "normal", due_at: null, started_at: null, completed_at: completion, notes: null, created_at: completedAt, updated_at: completedAt, archived_at: null };
+  return { id: entityId, order_number: 42, spp_order_reference: null, company_id: actorId, service_id: actorId, reporting_period_month: null, assigned_to_profile_id: null, title: "Test", status, priority: "normal", due_at: null, started_at: null, completed_at: completion, notes: null, created_at: completedAt, updated_at: completedAt, archived_at: null };
 }
 
 function task(status: OrderTaskRow["status"], completion: string | null): OrderTaskRow {

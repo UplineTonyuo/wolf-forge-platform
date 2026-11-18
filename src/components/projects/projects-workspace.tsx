@@ -642,7 +642,10 @@ export function ProjectsWorkspace({
                     {project.unanswered === true ? <span className={styles.unansweredBadge}>Unanswered</span> : null}
                   </strong>
                   <span>{project.title}</span>
-                  <small>{project.serviceName ?? "Unavailable service"}</small>
+                  <small>
+                    {project.sppOrderReference ? `#${project.sppOrderReference} · ` : null}
+                    {project.serviceName ?? "Unavailable service"}
+                  </small>
                 </Link>
 
                 <div className={styles.personCell}>

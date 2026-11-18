@@ -27,6 +27,7 @@ function relationRow(id: string, overrides: Partial<ProjectRelationRow> = {}): P
     reporting_period_month: null,
     id,
     order_number: 42,
+    spp_order_reference: null,
     company_id: companyId,
     service_id: serviceId,
     assigned_to_profile_id: null,
