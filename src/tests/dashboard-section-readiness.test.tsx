@@ -116,6 +116,12 @@ it("shows the Working SEO order count in the Active subscriptions card", async (
   expect(mocks.workingSeo).toHaveBeenCalledExactlyOnceWith();
 });
 
+it("counts client signups in Clients added", async () => {
+  const page = await DashboardPage({ searchParams: Promise.resolve({}) });
+  const card = find(page, (element) => (element.props as { label?: string }).label === "Clients added");
+  expect(card?.props).toMatchObject({ value: "3", metric: overview.clients.created });
+});
+
 it.each(["ranking", "catalog"])("returns ready Dashboard content while %s remains pending", async (slow) => {
   let finish!: (value: never) => void;
   const delayed = new Promise((resolve) => { finish = resolve; });

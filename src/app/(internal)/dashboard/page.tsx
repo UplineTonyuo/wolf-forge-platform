@@ -357,9 +357,9 @@ export default async function DashboardPage({
         <MetricCard
           icon={<UsersRound size={18} aria-hidden="true" />}
           label="Clients added"
-          value={String(clients.converted.current)}
-          metric={clients.converted}
-          note={`${clients.created.current} new contacts entered the pipeline`}
+          value={String(clients.created.current)}
+          metric={clients.created}
+          note="Client signups in the selected period"
         />
 
         <Suspense fallback={<MetricCard
