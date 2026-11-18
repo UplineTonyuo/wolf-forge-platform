@@ -1,10 +1,10 @@
 -- Client welcome email (KI-091): sender authority, idempotent claim, link stored before the send, single-use activation link.
--- WL-2.22c: the claim/finish/find RPCs take the activation Tenant; this suite
+-- WL-2.22c: the claim and finish RPCs take the activation Tenant; this suite
 -- exercises the Wolf Forge Tenant only, so every Wolf Forge behavior this
 -- feature ever had stays under test while 121 covers the Tenant dimensions.
 begin;
 
-select plan(32);
+select plan(37);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 values
@@ -36,8 +36,8 @@ where id = 'e5100000-0000-4000-8000-000000000004';
 select has_table('private', 'client_welcome_emails', 'welcome delivery table exists');
 select ok(not has_table_privilege('authenticated', 'private.client_welcome_emails', 'SELECT'), 'browser roles cannot read welcome rows or link hashes');
 select ok(not has_function_privilege('authenticated', 'public.app_server_claim_client_welcome_email(uuid,uuid,uuid,uuid,text)', 'EXECUTE'), 'authenticated cannot claim a welcome send');
-select ok(not has_function_privilege('anon', 'public.app_server_find_client_activation(text,uuid)', 'EXECUTE'), 'anonymous callers cannot probe activation links');
-select ok(not has_function_privilege('authenticated', 'public.app_server_complete_client_activation(uuid,text)', 'EXECUTE'), 'authenticated cannot complete an activation');
+select ok(not has_function_privilege('anon', 'public.app_server_claim_client_activation(text,uuid,uuid)', 'EXECUTE'), 'anonymous callers cannot probe activation links');
+select ok(not has_function_privilege('authenticated', 'public.app_server_finish_client_activation(uuid,uuid,uuid,text)', 'EXECUTE'), 'authenticated cannot complete an activation');
 select ok(has_function_privilege('service_role', 'public.app_server_finish_client_welcome_email(uuid,uuid,uuid,uuid,text)', 'EXECUTE'), 'the trusted server can record a send result');
 
 set local role service_role;
@@ -65,9 +65,11 @@ select results_eq(
   'an authorized sender claims the first send and receives the login email and the Wolf Forge canonical host'
 );
 select is(
-  public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), 'e5100000-0000-4000-8000-000000000004'::uuid,
+  public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000001'), 'e5100000-0000-4000-8000-000000000004'::uuid,
   'the link works from the claim on, so a delivered email never depends on a later write'
 );
+select ok(public.app_server_finish_client_activation('e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000001', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 select is(
   (select outcome from public.app_server_claim_client_welcome_email('e5100000-0000-4000-8000-000000000001', 'e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000000002', repeat('b', 64))),
   'in_progress', 'a second send is refused while the first is in flight'
@@ -90,11 +92,13 @@ select is(
   'sent', 'replaying the delivered request reports sent without a second email'
 );
 select ok(
-  public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000000001') is null
-    and public.app_server_find_client_activation(repeat('c', 64), 'f0f0f0f0-0000-4000-8000-000000000001') is null
-    and public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001') = 'e5100000-0000-4000-8000-000000000004',
+  public.app_server_claim_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()) is null
+    and public.app_server_claim_client_activation(repeat('c', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()) is null
+    and public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000002') = 'e5100000-0000-4000-8000-000000000004',
   'refused and replayed claims store no link and leave the live one alone'
 );
+select ok(public.app_server_finish_client_activation('e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000002', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 
 reset role;
 update private.client_welcome_emails set sent_at = now() - interval '5 minutes'
@@ -106,18 +110,22 @@ select is(
   'claimed', 'a deliberate resend is allowed after the cooldown'
 );
 select ok(
-  public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001') is null
-    and public.app_server_find_client_activation(repeat('d', 64), 'f0f0f0f0-0000-4000-8000-000000000001') = 'e5100000-0000-4000-8000-000000000004',
+  public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()) is null
+    and public.app_server_claim_client_activation(repeat('d', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000003') = 'e5100000-0000-4000-8000-000000000004',
   'a resend replaces the earlier link as soon as it is claimed'
 );
+select ok(public.app_server_finish_client_activation('e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000003', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 select lives_ok(
   $$select public.app_server_finish_client_welcome_email('e5100000-0000-4000-8000-000000000001', 'e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000000004', 'gmail_delivery_failed')$$,
   'a failed resend is recorded'
 );
 select is(
-  public.app_server_find_client_activation(repeat('d', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), 'e5100000-0000-4000-8000-000000000004'::uuid,
+  public.app_server_claim_client_activation(repeat('d', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000004'), 'e5100000-0000-4000-8000-000000000004'::uuid,
   'a failed send keeps its link, since Gmail may still have delivered it'
 );
+select ok(public.app_server_finish_client_activation('e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000004', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 
 reset role;
 select is(
@@ -158,23 +166,23 @@ update private.client_welcome_emails set activation_expires_at = now() - interva
 where profile_id = 'e5100000-0000-4000-8000-000000000004';
 set local role service_role;
 
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid, 'an expired link resolves to nothing');
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()), null::uuid, 'an expired link resolves to nothing');
 
 reset role;
 update private.client_welcome_emails set activation_expires_at = now() + interval '1 day'
 where profile_id = 'e5100000-0000-4000-8000-000000000004';
 set local role service_role;
 
-select lives_ok(
-  $$select public.app_server_complete_client_activation('e5100000-0000-4000-8000-000000000004', repeat('e', 64))$$,
-  'the link completes activation'
-);
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid, 'a used link cannot be used again');
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000005'),
+  'e5100000-0000-4000-8000-000000000004'::uuid, 'the unexpired link can reserve activation');
+select ok(public.app_server_finish_client_activation('e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000000005', 'activated'),
+  'the matching claim completes activation');
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()), null::uuid, 'a used link cannot be used again');
 select is(
   (select outcome from public.app_server_claim_client_welcome_email('e5100000-0000-4000-8000-000000000001', 'e5100000-0000-4000-8000-000000000004', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000000008', repeat('f', 64))),
   'activated', 'no welcome email is sent once the client has set a password'
 );
-select is(public.app_server_find_client_activation(repeat('f', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid, 'the refused claim after activation stored no link');
+select is(public.app_server_claim_client_activation(repeat('f', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()), null::uuid, 'the refused claim after activation stored no link');
 
 select * from finish();
 rollback;
