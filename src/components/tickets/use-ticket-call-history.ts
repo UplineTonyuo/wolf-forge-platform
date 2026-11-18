@@ -34,10 +34,10 @@ export function useTicketCallHistory(ticketId: string, order = false, controlled
         const failure = await response.json().catch(() => null);
         if (current !== generation.current) return;
         const support = failure?.code === "SUPPORT_MODE";
-        setRetryable(!support);
+        setRetryable(false);
         cursor.current = null;
         controlledRef.current?.onClear();
-        setState({ ticketId, entries: [], more: false, busy: false, error: support ? "Calls and call history are disabled in client-support sessions. Use your own signed-in account for calling." : response.status === 401 ? "Your session expired. Sign in again to view call history." : "Call history is unavailable." }); return;
+        setState({ ticketId, entries: [], more: false, busy: false, error: support ? "Calls and call history are disabled in client-support sessions. Use your own signed-in account for calling." : response.status === 401 ? "Your session expired. Sign in again to view call history." : "You don’t have access to call history for this conversation." }); return;
       }
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(response.status === 429 ? "RATE_LIMITED" : "History unavailable");
@@ -47,7 +47,10 @@ export function useTicketCallHistory(ticketId: string, order = false, controlled
       controlledRef.current?.onPage(page,older);
       setState(previous => ({ ticketId, entries: controlledRef.current ? [] : [...new Map([...(previous.ticketId === ticketId ? previous.entries : []), ...page].map(call => [call.id, call])).values()], more: older ? page.length === 50 : page.length === 50 || (previous.ticketId === ticketId && previous.more), busy: false, error: "" }));
     } catch (error) {
-      if (current === generation.current) setState(previous => ({ ...previous, busy: false, error: error instanceof Error && error.message === "RATE_LIMITED" ? "Call history request limit reached. Wait a moment, then try again." : "Call history could not be loaded. Try again." }));
+      if (current === generation.current) {
+        setRetryable(true);
+        setState(previous => ({ ...previous, busy: false, error: error instanceof Error && error.message === "RATE_LIMITED" ? "Call history request limit reached. Wait a moment, then try again." : "Call history could not be loaded. Try again." }));
+      }
     } finally {
       if (current === generation.current) {
         inFlight.current = false;
