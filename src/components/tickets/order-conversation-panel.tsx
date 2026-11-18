@@ -70,8 +70,8 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
   return <div ref={host} className={`${styles.orderConversationSurface} ${styles.orderPagedSurface}${renderer.clientView?` ${styles.clientPagedSurface}`:""}`} data-order-conversation="paged">
     <TicketConversation {...renderer} orderChat messages={conversation.messages} callHistory={conversation.calls}
       transcript={{ref:scroll,onScroll:capture,controls:<div className={styles.messageHistoryBar}>
-        {conversation.page.hasOlder?<button type="button" disabled={conversation.busy} onClick={()=>{capture();following.current=false;conversation.setViewport(false,anchor.current?.id??null);void conversation.loadOlder()}}><History aria-hidden="true"/>{conversation.busy?"Loading messages…":"Load 10 older messages"}</button>:<span>Beginning of conversation</span>}
-        <span>{conversation.messages.filter(m=>!m.pending&&!m.failed).length} messages loaded</span>
+        {conversation.page.hasOlder?<button type="button" disabled={conversation.busy} onClick={()=>{capture();following.current=false;conversation.setViewport(false,anchor.current?.id??null);void conversation.loadOlder()}}><History aria-hidden="true"/>{conversation.busy?"Loading messages…":renderer.headerSlot !== undefined ? "Load older messages" : "Load 10 older messages"}</button>:<span>Beginning of conversation</span>}
+        <span>{conversation.messages.filter(m=>!m.pending&&!m.failed).length} {renderer.headerSlot !== undefined ? "loaded" : "messages loaded"}</span>
         {conversation.error?<p role="status">{conversation.error} <button type="button" disabled={conversation.busy} onClick={()=>void conversation.retryPage()}>Retry messages</button></p>:null}
       </div>,jump:conversation.away||conversation.newCount||conversation.page.hasNewer?<div className={styles.jumpLatest}>
         {conversation.page.hasNewer?<button type="button" disabled={conversation.busy} onClick={()=>void conversation.loadNewer()}>Load 10 newer messages</button>:null}

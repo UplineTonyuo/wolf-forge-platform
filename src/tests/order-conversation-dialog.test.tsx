@@ -7,12 +7,12 @@ import { OrderConversationDialog } from "../components/tickets/order-conversatio
 afterEach(cleanup);
 
 it("opens on demand, returns focus and preserves the composer across dismissal", async () => {
-  render(<OrderConversationDialog><textarea aria-label="Reply" /></OrderConversationDialog>);
+  render(<OrderConversationDialog orderNumber={13}><textarea aria-label="Reply" /></OrderConversationDialog>);
   const opener = screen.getByRole("button", { name: "Open message" });
   expect(screen.queryByRole("textbox")).toBeNull();
   opener.focus();
   fireEvent.click(opener);
-  const dialog = screen.getByRole("dialog", { name: "Order conversation" });
+  const dialog = screen.getByRole("dialog", { name: "Order #13" });
   const reply = screen.getByRole("textbox");
   fireEvent.change(reply, { target: { value: "Unsent reply" } });
   fireEvent.keyDown(dialog, { key: "Escape" });
