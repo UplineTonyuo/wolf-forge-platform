@@ -58,7 +58,7 @@ export default async function OrderDetailsPage({
           )}
         </section>
 
-        {context.user.tickets.view ? <OrderConversationDialog key={orderId}>
+        {context.user.tickets.view ? <OrderConversationDialog key={orderId} orderNumber={order.order_number}>
           <OrderConversation
             orderId={orderId}
             viewerProfileId={context.user.id}

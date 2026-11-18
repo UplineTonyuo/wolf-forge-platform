@@ -1,13 +1,16 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { createContext, useState, type ReactNode } from "react";
 import { PortalDialog } from "../account/ui/portal-dialog";
 import styles from "../projects/project-detail.module.css";
 
-export function OrderConversationDialog({ children }: { children: ReactNode }) {
+export const OrderHeaderSlot = createContext<HTMLDivElement | null | undefined>(undefined);
+
+export function OrderConversationDialog({ orderNumber, children }: { orderNumber: number; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   return (
     <section className={styles.fieldsCard} aria-labelledby="order-conversation-heading">
@@ -17,9 +20,9 @@ export function OrderConversationDialog({ children }: { children: ReactNode }) {
         <MessageSquare size={16} aria-hidden="true" /> Open message
       </button>
       {visited && (
-        <PortalDialog open={open} onClose={() => setOpen(false)} title="Order conversation"
-          size="feature" layout="conversation" showClose>
-          {children}
+        <PortalDialog open={open} onClose={() => setOpen(false)} title={`Order #${orderNumber}`}
+          size="feature" layout="conversation" headerAction={<div ref={setHeaderSlot} />} showClose>
+          <OrderHeaderSlot.Provider value={headerSlot}>{children}</OrderHeaderSlot.Provider>
         </PortalDialog>
       )}
     </section>

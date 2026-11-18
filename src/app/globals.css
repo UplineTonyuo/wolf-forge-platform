@@ -13854,6 +13854,24 @@ html:has(.portal-overlay[data-layer="call"][data-full-window]) { scrollbar-gutte
 }
 
 .portal-overlay[data-layout="conversation"][hidden] { display: none; }
+.portal-overlay[data-layout="conversation"] {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.portal-overlay[data-layout="conversation"] .portal-overlay-backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgb(9 19 55 / 25%);
+}
+.portal-overlay[data-layout="conversation"] .portal-overlay-head {
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+}
+.portal-overlay[data-layout="conversation"] .portal-overlay-head-actions {
+  margin-inline-start: auto;
+  max-width: 100%;
+}
 .portal-overlay[data-layout="conversation"] .portal-overlay-panel {
   width: min(1040px, 100%);
   height: min(82dvh, 900px);

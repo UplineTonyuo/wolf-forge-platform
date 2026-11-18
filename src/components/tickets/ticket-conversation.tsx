@@ -541,6 +541,7 @@ export function TicketConversation({
   messages,
   clientView = false,
   heading = "Conversation",
+  headerSlot,
   headerActions,
   callControls,
   callHistory = [],
@@ -560,6 +561,7 @@ export function TicketConversation({
     TicketDetailMessage[];
   clientView?: boolean;
   heading?: ReactNode;
+  headerSlot?: HTMLElement | null;
   headerActions?: ReactNode;
   callControls?: ReactNode;
   callHistory?: CallHistoryEntry[];
@@ -610,6 +612,12 @@ export function TicketConversation({
     ...callHistory.map(call => ({ kind: "call" as const, call, at: call.requestedAt, id: call.id })),
   ].sort((a, b) => compareConversationTime(a.at,b.at) || a.id.localeCompare(b.id) || a.kind.localeCompare(b.kind));
 
+  const actions = callControls || (headerActions && !clientView) ? (
+    <div className={styles.conversationHeaderActions}>
+      {callControls}{!clientView ? headerActions : null}
+    </div>
+  ) : null;
+
   return (
     <section
       className={
@@ -618,7 +626,7 @@ export function TicketConversation({
       data-client-view={clientView || undefined}
       aria-label="Conversation"
     >
-      <header>
+      {headerSlot === undefined ? <header>
         <div>
           <MessageSquareText
             aria-hidden="true"
@@ -633,16 +641,8 @@ export function TicketConversation({
           </div>
         </div>
 
-        {callControls || (headerActions && !clientView) ? (
-          <div
-            className={
-              styles.conversationHeaderActions
-            }
-          >
-            {callControls}{!clientView ? headerActions : null}
-          </div>
-        ) : null}
-      </header>
+        {actions}
+      </header> : headerSlot && createPortal(actions, headerSlot)}
 
       {transcript?.controls}
       <TranscriptFrame enabled={Boolean(transcript)} scrollRef={transcript?.ref} onScroll={transcript?.onScroll}>
