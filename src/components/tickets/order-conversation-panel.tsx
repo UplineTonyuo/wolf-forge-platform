@@ -13,6 +13,7 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
   const anchor=useRef<{id:string;offset:number}|null>(null);
   const following=useRef(true),latest=useRef(conversation.latestRevision),initialized=useRef(false);
   const viewport=useRef(conversation.setViewport);
+  const inlineClient = renderer.clientView && renderer.headerSlot === undefined;
   useLayoutEffect(()=>{viewport.current=conversation.setViewport},[conversation.setViewport]);
   useLayoutEffect(()=>{
     const viewport=window.visualViewport;
@@ -20,7 +21,7 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
       const element=host.current;if(!element)return;
       const height=viewport?.height??window.innerHeight;
       element.style.setProperty("--order-viewport-height",`${height}px`);
-      if(renderer.clientView){
+      if(inlineClient){
         const top=Math.max(0,element.getBoundingClientRect().top-(viewport?.offsetTop??0));
         const available=height-24;
         // A panel below the fold keeps a usable internal viewport until scrolled into view.
@@ -35,10 +36,10 @@ export function OrderConversationPanel({conversation,renderer,children}:{convers
     const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(resize)};
     const focusedScroll=()=>{if(host.current?.contains(document.activeElement))schedule()};
     resize();viewport?.addEventListener("resize",schedule);viewport?.addEventListener("scroll",schedule);window.addEventListener("resize",schedule);
-    if(renderer.clientView){window.addEventListener("scroll",focusedScroll);host.current?.addEventListener("focusin",schedule)}
+    if(inlineClient){window.addEventListener("scroll",focusedScroll);host.current?.addEventListener("focusin",schedule)}
     const element=host.current;
     return ()=>{cancelAnimationFrame(frame);viewport?.removeEventListener("resize",schedule);viewport?.removeEventListener("scroll",schedule);window.removeEventListener("resize",schedule);window.removeEventListener("scroll",focusedScroll);element?.removeEventListener("focusin",schedule)};
-  },[renderer.clientView]);
+  },[inlineClient]);
   const capture=useCallback(()=>{
     const element=scroll.current;if(!element)return;
     // Follow only within 60 CSS pixels of the bottom, including keyboard scrolling.
