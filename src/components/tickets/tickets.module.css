@@ -4813,10 +4813,6 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 :global(.portal-overlay[data-layout="conversation"]) .conversationHeaderActions { flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 :global(.portal-overlay[data-layout="conversation"]) .messageHistoryBar { justify-content: flex-start; padding-block: 0; gap: 4px 14px; }
 :global(.portal-overlay[data-layout="conversation"]) .messageHistoryBar button { min-height: 34px; }
-:global(.portal-overlay[data-layout="conversation"]) .orderPagedSurface > .composer { padding: 6px 12px max(6px, env(safe-area-inset-bottom)); }
-:global(.portal-overlay[data-layout="conversation"]) .orderPagedSurface .composer footer { padding-top: 4px; }
-:global(.portal-overlay[data-layout="conversation"]) .orderPagedSurface .ticketRichToolbar { width: fit-content; max-width: 100%; min-height: 32px; padding: 1px 4px; }
-:global(.portal-overlay[data-layout="conversation"]) .orderPagedSurface .composer .ticketRichComposer { min-height: 38px; padding: 7px 12px; }
 
 /* The name and time start in column two. Offset the bubble by its text inset. */
 :global(.portal-overlay[data-layout="conversation"]) .orderChat .thread > li[data-side="client"]:not([data-grouped="true"]) .messageStack {
