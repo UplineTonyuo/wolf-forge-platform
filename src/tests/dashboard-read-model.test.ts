@@ -1,8 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
+import { createClient } from "@supabase/supabase-js";
 import { toComparison } from "../domain/dashboard/schema";
 import { resolveDashboardRange } from "../lib/dashboard/date-range";
 import { DashboardRepository } from "../repositories/dashboard-repository";
 import { DashboardService } from "../services/dashboard-service";
+
+it("counts only non-archived Working orders in the Local SEO and GBP service folders", async () => {
+  const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+    new Response(null, { headers: { "content-range": "0-0/1" } }),
+  );
+  const client = createClient("https://qa.example.test", "test-key", {
+    auth: { persistSession: false },
+    global: { fetch },
+  });
+  const repository = new DashboardRepository(client as never);
+
+  await expect(repository.getWorkingSeoOrderCount()).resolves.toBe(1);
+  const [requestUrl, options] = fetch.mock.calls[0]!;
+  const url = new URL(String(requestUrl));
+  expect(url.pathname).toBe("/rest/v1/orders");
+  expect(options?.method).toBe("HEAD");
+  expect(new Headers(options?.headers).get("Prefer")).toBe("count=exact");
+  expect(url.searchParams.get("select")).toBe("id,services!inner(service_folders!inner(name))");
+  expect(url.searchParams.get("status")).toBe("eq.working");
+  expect(url.searchParams.get("archived_at")).toBe("is.null");
+  expect(url.searchParams.get("services.service_folders.name")).toBe("in.(Local SEO,GBP Only SEO)");
+});
 
 /**
  * The payload shape below is the one app_dashboard_overview actually returns;

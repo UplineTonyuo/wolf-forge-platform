@@ -32,6 +32,18 @@ function comparison(pair: RawPair | null | undefined): MetricComparison {
 export class DashboardRepository {
   constructor(private readonly client: UserMutationClient) {}
 
+  async getWorkingSeoOrderCount(): Promise<number> {
+    const result = await this.client.from("orders")
+      .select("id,services!inner(service_folders!inner(name))", { count: "exact", head: true })
+      .eq("status", "working")
+      .is("archived_at", null)
+      .in("services.service_folders.name", ["Local SEO", "GBP Only SEO"]);
+
+    if (result.error) throw mapDatabaseError(result.error, "Working SEO orders");
+    if (result.count === null) throw new Error("Working SEO order count is unavailable.");
+    return result.count;
+  }
+
   async getHistoryStart(currency: string): Promise<string | null> {
     const result = await this.client.rpc("app_dashboard_history_start", { p_currency: currency });
     if (result.error) throw mapDatabaseError(result.error, "Revenue history");

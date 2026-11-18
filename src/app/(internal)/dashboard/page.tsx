@@ -116,6 +116,16 @@ function MetricCard({
 
 type DashboardServices = Awaited<ReturnType<typeof getInternalContext>>["services"];
 
+async function ActiveSubscriptionsCard({ request }: { request: Promise<number | null> }) {
+  const count = await request;
+  return <MetricCard
+    icon={<Repeat2 size={18} aria-hidden="true" />}
+    label="Active subscriptions"
+    value={count === null ? "—" : String(count)}
+    note={count === null ? "Working SEO order count unavailable" : "Working Local SEO and GMB orders"}
+  />;
+}
+
 async function SalesTrendSection({ dashboard, timeZone, chartKey, ...chart }: {
   dashboard: DashboardServices["dashboard"];
   timeZone: string;
@@ -214,6 +224,8 @@ export default async function DashboardPage({
   ]);
   const catalogRequest = context.user.modules.services
     ? context.services.catalog.listCatalogOptions().catch(() => []) : Promise.resolve([]);
+  const workingSeoRequest = context.user.modules.projects && context.user.modules.services
+    ? context.services.dashboard.getWorkingSeoOrderCount().catch(() => null) : Promise.resolve(null);
 
   let overview;
 
@@ -350,12 +362,14 @@ export default async function DashboardPage({
           note={`${clients.created.current} new contacts entered the pipeline`}
         />
 
-        <MetricCard
+        <Suspense fallback={<MetricCard
           icon={<Repeat2 size={18} aria-hidden="true" />}
           label="Active subscriptions"
-          value={String(overview.active_subscriptions.billable)}
-          note={`${overview.new_subscriptions.current} new in selected period`}
-        />
+          value="—"
+          note="Loading Working Local SEO and GMB orders"
+        />}>
+          <ActiveSubscriptionsCard request={workingSeoRequest} />
+        </Suspense>
       </section>
 
       {otherCurrencies.length ? (

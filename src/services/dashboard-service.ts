@@ -19,6 +19,8 @@ export class DashboardService {
 
   getHistoryStart(currency: string) { return this.dependencies.repository.getHistoryStart(currency); }
 
+  getWorkingSeoOrderCount() { return this.dependencies.repository.getWorkingSeoOrderCount(); }
+
   async getTopServices(input: ResolveRangeInput) {
     const range = resolveDashboardRange(input);
     const query = parseInput(dashboardQuerySchema, {

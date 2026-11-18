@@ -5,7 +5,7 @@ import { resolveDashboardRange } from "../lib/dashboard/date-range";
 import { toComparison } from "../domain/dashboard/schema";
 import DashboardPage from "../app/(internal)/dashboard/page";
 
-const mocks = vi.hoisted(() => ({ context: vi.fn(), overview: vi.fn(), history: vi.fn(), top: vi.fn(), catalog: vi.fn() }));
+const mocks = vi.hoisted(() => ({ context: vi.fn(), overview: vi.fn(), history: vi.fn(), top: vi.fn(), catalog: vi.fn(), workingSeo: vi.fn() }));
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: mocks.context }));
 vi.mock("../components/dashboard/dashboard-reporting-control", () => ({ DashboardReportingControl: () => null }));
 vi.mock("../components/dashboard/sales-trend-chart", () => ({ SalesTrendChart: () => null }));
@@ -94,13 +94,26 @@ it("contains failed history in the chart panel while retaining overview cards", 
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.context.mockResolvedValue({ user: { greetingName: "Synthetic", modules: { services: true, subscriptions: true } }, services: {
-    dashboard: { getOverview: mocks.overview, getHistoryStart: mocks.history, getTopServices: mocks.top }, catalog: { listCatalogOptions: mocks.catalog },
+  mocks.context.mockResolvedValue({ user: { greetingName: "Synthetic", modules: { services: true, projects: true, subscriptions: true } }, services: {
+    dashboard: { getOverview: mocks.overview, getHistoryStart: mocks.history, getTopServices: mocks.top, getWorkingSeoOrderCount: mocks.workingSeo }, catalog: { listCatalogOptions: mocks.catalog },
   } });
   mocks.overview.mockResolvedValue(overview);
   mocks.history.mockResolvedValue(null);
   mocks.top.mockResolvedValue({ range, services: [] });
   mocks.catalog.mockResolvedValue([]);
+  mocks.workingSeo.mockResolvedValue(1);
+});
+
+it("shows the Working SEO order count in the Active subscriptions card", async () => {
+  const page = await DashboardPage({ searchParams: Promise.resolve({}) });
+  const cardBoundary = find(page, (element) => element.type === Suspense &&
+    (element.props as { fallback?: ReactElement<{ label?: string }> }).fallback?.props.label === "Active subscriptions")!;
+  expect(cardBoundary).toBeTruthy();
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const html = renderToStaticMarkup(await resolveChild(cardBoundary));
+  expect(html).toContain("Working Local SEO and GMB orders");
+  expect(html).toMatch(/<strong[^>]*>1<\/strong>/);
+  expect(mocks.workingSeo).toHaveBeenCalledExactlyOnceWith();
 });
 
 it.each(["ranking", "catalog"])("returns ready Dashboard content while %s remains pending", async (slow) => {
@@ -154,13 +167,13 @@ it("keeps all three periods, individual ranking errors and catalog fallback afte
     .mockResolvedValueOnce({ range, services: [{ service_id: "service-a", name: "Synthetic monthly service", paid_orders: 3 }] });
   mocks.catalog.mockRejectedValue(new Error("Synthetic catalog failure"));
   const page = await DashboardPage({ searchParams: Promise.resolve({ servicesPeriod: "year" }) });
+  const { renderToStaticMarkup } = await import("react-dom/server");
   const boundary = find(page, (element) => element.type === Suspense &&
-    (element.props as { fallback?: ReactElement<{ "aria-label"?: string }> }).fallback?.props["aria-label"] !== "Loading sales trend")!;
+    renderToStaticMarkup((element.props as { fallback?: ReactNode }).fallback).includes('aria-label="Loading top services"'))!;
   const section = Children.only(boundary.props.children) as ReactElement<Record<string, unknown>>;
   const panel = await (section.type as (props: typeof section.props) => Promise<ReactElement<{ initialPeriod: string; periods: Record<"week" | "month" | "year", { content: ReactNode }> }>>)(section.props);
   expect(panel.props.initialPeriod).toBe("year");
   expect(Object.keys(panel.props.periods)).toEqual(["week", "month", "year"]);
-  const { renderToStaticMarkup } = await import("react-dom/server");
   expect(renderToStaticMarkup(panel.props.periods.week.content)).toContain("Try refreshing");
   expect(renderToStaticMarkup(panel.props.periods.month.content)).toContain("Synthetic monthly service");
   expect(renderToStaticMarkup(panel.props.periods.year.content)).toContain("No paid orders");

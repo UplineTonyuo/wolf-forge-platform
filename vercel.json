@@ -9,7 +9,8 @@
       "codex/woad-integrated-validation-20261105": false,
       "codex/woad-navigation-performance-release-20261106": false,
       "codex/woad-client-tickets-performance-20261106": false,
-      "codex/woad-call-duration-20261106": false
+      "codex/woad-call-duration-20261106": false,
+      "codex/woad-hide-unnamed-form-responses-20261118": false
     }
   },
   "crons": [
