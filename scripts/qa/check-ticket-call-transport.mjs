@@ -213,7 +213,7 @@ async function main() {
     (:'native','${tenant}',:'company',:'service','Synthetic native transport order','working',:'callee'),
     (:'linked','${tenant}',:'company',:'service','Synthetic legacy transport order','working',:'callee');
     update public.tickets set order_id=:'linked' where id=:'ticket';
-    update private.ticket_call_environment set pilot_profile_ids=array[:'caller'::uuid,:'callee'::uuid];
+    update private.ticket_call_environment set pilot_profile_ids='{}',rollout_tenant_ids=array['${tenant}'::uuid];
     insert into public.profile_permission_overrides(tenant_id,profile_id,permission_key,allowed)
       select '${tenant}',:'callee',key,true from unnest(array['projects.view','tickets.view','tickets.reply']) key
       on conflict(tenant_id,profile_id,permission_key) do update set allowed=true;`,
@@ -246,7 +246,13 @@ async function main() {
   const legacy=await okay(caller.api.rpc('app_request_order_call',{p_order_id:linkedOrder,p_request_id:randomUUID(),p_device_id:randomUUID(),p_mode:'audio',p_recipient_id:callee.id}),'Linked order admission');
   need(legacy.ticketId===ticket&&legacy.orderId===linkedOrder&&legacy.state==='ringing','Linked order did not reuse real Ticket');
   await okay(callee.api.rpc('app_ticket_call_command',{p_action:'decline',p_call_id:legacy.id}),'Linked order decline');
-  await sql(`update private.ticket_call_environment set pilot_profile_ids=array[:'callee'::uuid];`,{callee:callee.id});
+  for (const account of [caller, callee]) {
+    for (const target of ['order_id='+nativeOrder, 'ticket_id='+ticket]) {
+      const history=await request('/api/ticket-calls?action=history&'+target,account);
+      need(history.ok && (await history.json()).ok,'Rolled-out client/staff history failed for '+target);
+    }
+  }
+  await sql(`update private.ticket_call_environment set rollout_tenant_ids='{}',pilot_profile_ids=array[:'callee'::uuid];`,{callee:callee.id});
   need((await request('/api/ticket-calls?action=current&order_id='+nativeOrder,caller)).status===403,'Pilot-excluded client retained native authority');
   await sql(`update private.ticket_call_environment set pilot_profile_ids=array[:'caller'::uuid,:'callee'::uuid];`,{caller:caller.id,callee:callee.id});
   console.log('PASS native order real Auth/HTTP/PostgREST/private Realtime/SSE/history/deep links for permitted Owner/Admin/Manager/Staff; linked Ticket and pilot exclusion');

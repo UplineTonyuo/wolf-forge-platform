@@ -35,7 +35,10 @@ it("deduplicates repeated authoritative pages and clears history on revoked acce
  act(()=>window.dispatchEvent(new Event("wolf-forge-call-history")));await waitFor(()=>expect(fetcher).toHaveBeenCalledTimes(2));
  await waitFor(()=>expect(result.current.busy).toBe(false));expect(result.current.entries).toHaveLength(1);
  fetcher.mockResolvedValue(Response.json({ok:false},{status:403}));act(()=>window.dispatchEvent(new Event("wolf-forge-call-history")));
- await waitFor(()=>expect(result.current.entries).toHaveLength(0));expect(result.current.error).toBe("Call history is unavailable.");
+ await waitFor(()=>expect(result.current.entries).toHaveLength(0));expect(result.current.error).toContain("don’t have access");
+ expect(result.current.retryable).toBe(false);
+ fetcher.mockResolvedValue(Response.json({ok:false},{status:503}));act(()=>window.dispatchEvent(new Event("wolf-forge-call-history")));
+ await waitFor(()=>expect(result.current.error).toContain("Try again"));expect(result.current.retryable).toBe(true);
 });
 it("discards an earlier Ticket's late history response after navigation",async()=>{
  let finish!:(response:Response)=>void;

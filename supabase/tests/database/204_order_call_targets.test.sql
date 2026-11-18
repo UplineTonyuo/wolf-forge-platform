@@ -75,7 +75,21 @@ update private.ticket_call_environment set pilot_profile_ids=array['20000000-000
 select pg_temp.order_call_actor(); set local role authenticated;
 select throws_ok($$select pg_temp.native_invite('2042')$$,'42501',null,'native support preserves pilot exclusion');
 reset role;
-update private.ticket_call_environment set pilot_profile_ids=null;
+-- Neither participant is on the profile pilot. Only this Tenant opts in.
+update private.ticket_call_environment set pilot_profile_ids='{}',
+  rollout_tenant_ids=array['f0f0f0f0-0000-4000-8000-000000001701'::uuid];
+select pg_temp.order_call_actor(); set local role authenticated;
+select is(jsonb_array_length(public.app_order_call_history('e2040000-0000-4000-8000-000000000002')),1,'rolled-out client sees own native call history');
+select lives_ok($$select public.app_ticket_call_history('e1700000-0000-4000-8000-000000001701')$$,'rolled-out client can read own Ticket history');
+select throws_ok($$select public.app_ticket_call_history('e1700000-0000-4000-8000-000000001703')$$,'42501',null,'rollout still denies another client Ticket');
+reset role;
+select pg_temp.order_call_actor('1704'); set local role authenticated;
+select lives_ok($$select public.app_order_call_history('e2040000-0000-4000-8000-000000000002')$$,'rolled-out assigned staff can read order history');
+select lives_ok($$select public.app_ticket_call_history('e1700000-0000-4000-8000-000000001701')$$,'rolled-out staff can read Ticket history');
+reset role;
+update private.ticket_call_environment set rollout_tenant_ids=array['f0f0f0f0-0000-4000-8000-000000002041'::uuid];
+select ok(not private.ticket_call_profile_allowed('20000000-0000-4000-8000-000000001701','e1700000-0000-4000-8000-000000001701'),'rolling out another Tenant does not override the local pilot');
+update private.ticket_call_environment set pilot_profile_ids=null,rollout_tenant_ids='{}';
 -- The fixture transition must use an authorized Owner, not the prior Client JWT.
 select pg_temp.order_call_actor('1703');
 update public.orders set status='complete',completed_at=clock_timestamp() where id='e2040000-0000-4000-8000-000000000002';
