@@ -11,7 +11,7 @@
 -- 2806 WF client; 2807 C owner only; 2808 C client.
 begin;
 
-select plan(36);
+select plan(49);
 
 insert into auth.users (id, aud, role, email, created_at, updated_at)
 select ('20000000-0000-4000-8000-00000000' || n)::uuid, 'authenticated', 'authenticated',
@@ -99,20 +99,24 @@ select results_eq(
   $$values ('claimed'::text, 'tenant-activation-2802@example.invalid'::text, null::text, 'activation-b.test'::text)$$,
   'a Tenant B owner claims in Tenant B and gets Tenant B''s verified canonical host'
 );
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'),
+select is(public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002811'),
   '20000000-0000-4000-8000-000000002802'::uuid, 'the Tenant B link resolves in Tenant B');
+select ok(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002811', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 
 select results_eq(
   $$select outcome, recipient_email, canonical_host from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002803', '20000000-0000-4000-8000-000000002806', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5300000-0000-4000-8000-000000002802', repeat('b', 64))$$,
   $$values ('claimed'::text, 'tenant-activation-2806@example.invalid'::text, 'services.wolfforgedigitalagency.com'::text)$$,
   'a Wolf Forge owner claims in Wolf Forge and gets the Wolf Forge canonical host'
 );
-select is(public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000000001'),
+select is(public.app_server_claim_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000002812'),
   '20000000-0000-4000-8000-000000002806'::uuid, 'the Wolf Forge link resolves in Wolf Forge');
+select ok(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002806', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000002812', 'weak_password'),
+  'a confirmed password rejection releases this claim');
 
 select ok(
-  public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001') is null
-    and public.app_server_find_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1') is null,
+  public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()) is null
+    and public.app_server_claim_client_activation(repeat('b', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid()) is null,
   'a Tenant B link never resolves in Wolf Forge, nor a Wolf Forge link in Tenant B'
 );
 
@@ -127,7 +131,7 @@ select is(
   1::bigint, 'the dual identity''s Tenant B record stays separate from any other Tenant'
 );
 set local role service_role;
-select is(public.app_server_find_client_activation(repeat('c', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid,
+select is(public.app_server_claim_client_activation(repeat('c', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()), null::uuid,
   'the dual identity''s Tenant B link does not resolve in Wolf Forge');
 
 -- A client in BOTH Tenants still owns two links, and each spends only on its
@@ -136,9 +140,11 @@ select is(
   (select outcome from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002805', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5300000-0000-4000-8000-000000002805', repeat('e', 64))),
   'claimed', 'a dual client claims its Tenant B link independently'
 );
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'),
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002813'),
   '20000000-0000-4000-8000-000000002805'::uuid, 'the dual client''s Tenant B link resolves in Tenant B');
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001'), null::uuid,
+select ok(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002805', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002813', 'weak_password'),
+  'a confirmed password rejection releases this claim');
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-000000000001', gen_random_uuid()), null::uuid,
   'the dual client''s Tenant B link does not resolve in Wolf Forge even though the client exists there too');
 
 -- A membership archived after the send kills the link too: find re-checks it.
@@ -147,7 +153,7 @@ update public.tenant_memberships set archived_at = now()
 where tenant_id = 'f0f0f0f0-0000-4000-8000-0000000121b1'
   and profile_id = '20000000-0000-4000-8000-000000002805';
 set local role service_role;
-select is(public.app_server_find_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
+select is(public.app_server_claim_client_activation(repeat('e', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid()), null::uuid,
   'a link stops resolving when the client membership is archived after the send');
 
 select throws_ok(
@@ -215,20 +221,41 @@ reset role;
 update private.client_welcome_emails set activation_expires_at = now() - interval '1 second'
 where profile_id = '20000000-0000-4000-8000-000000002802';
 set local role service_role;
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
+select is(public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid()), null::uuid,
   'an expired Tenant B link resolves to nothing');
 reset role;
-update private.client_welcome_emails set activation_expires_at = now() + interval '1 day'
+update private.client_welcome_emails
+set activation_expires_at = now() + interval '1 day', sent_at = now() - interval '5 minutes'
 where profile_id = '20000000-0000-4000-8000-000000002802';
 set local role service_role;
-select lives_ok(
-  $$select public.app_server_complete_client_activation('20000000-0000-4000-8000-000000002802', repeat('a', 64))$$,
-  'the Tenant B link completes activation'
+select is(public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002814'),
+  '20000000-0000-4000-8000-000000002802'::uuid, 'the unexpired link can reserve activation');
+select is(public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid()),
+  null::uuid, 'a reserved link cannot be claimed again before completion');
+select is(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid(), 'activated'),
+  false, 'an unrelated claim cannot complete activation');
+select is(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-000000000001', 'e5400000-0000-4000-8000-000000002814', 'weak_password'),
+  false, 'a different Tenant cannot release the reservation');
+select is(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002814', 'unknown'),
+  false, 'an uncertain Auth result cannot release the reservation');
+select throws_ok(
+  $$select * from public.app_server_claim_client_welcome_email('20000000-0000-4000-8000-000000002801', '20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid(), repeat('f', 64))$$,
+  '55000', null, 'a resend cannot replace a reserved link'
 );
-select is(public.app_server_find_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1'), null::uuid,
+select ok(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002814', 'activated'),
+  'the matching claim completes activation');
+select ok(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002814', 'activated'),
+  'completion for the same claim confirms the committed result');
+select is(public.app_server_finish_client_activation('20000000-0000-4000-8000-000000002802', 'f0f0f0f0-0000-4000-8000-0000000121b1', 'e5400000-0000-4000-8000-000000002814', 'weak_password'),
+  false, 'a confirmed activation cannot be released');
+select is(public.app_server_claim_client_activation(repeat('a', 64), 'f0f0f0f0-0000-4000-8000-0000000121b1', gen_random_uuid()), null::uuid,
   'a spent Tenant B link cannot be used again');
 
 reset role;
+select is(to_regprocedure('public.app_server_find_client_activation(text,uuid)'), null::regprocedure,
+  'the earlier lookup RPC cannot authorize an unclaimed password write');
+select is(to_regprocedure('public.app_server_complete_client_activation(uuid,text)'), null::regprocedure,
+  'the earlier completion RPC cannot spend a claim');
 update public.tenants set status = 'archived', archived_at = now()
 where id = 'f0f0f0f0-0000-4000-8000-0000000121b1';
 set local role service_role;

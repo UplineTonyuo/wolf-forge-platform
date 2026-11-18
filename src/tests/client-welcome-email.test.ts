@@ -195,6 +195,8 @@ describe("set-password link", () => {
   const token = "a".repeat(43);
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const profileId = "30000000-0000-4000-8000-000000000001";
+  const claim = "app_server_claim_client_activation";
+  const finish = "app_server_finish_client_activation";
 
   function submit(fields: Record<string, string>) {
     const form = new FormData();
@@ -205,11 +207,12 @@ describe("set-password link", () => {
   }
 
   function mockLink(found: string | null) {
-    trusted.rpc.mockReset().mockImplementation(async (name: string) => ({
-      data: name === "app_server_find_client_activation" ? found : null,
-      error: null,
-    }));
-    trusted.auth.admin.updateUserById.mockReset().mockResolvedValue({ data: {}, error: null });
+    trusted.rpc.mockReset().mockImplementation(async (name: string) => {
+      if (name === claim) return { data: found, error: null };
+      if (name === finish) return { data: true, error: null };
+      throw new Error("Unexpected activation RPC");
+    });
+    trusted.auth.admin.updateUserById.mockReset().mockResolvedValue({ data: { user: { id: profileId } }, error: null });
   }
 
   it("rejects a malformed token, a bad password and an unknown link without setting anything", async () => {
@@ -222,31 +225,109 @@ describe("set-password link", () => {
     expect(trusted.rpc).not.toHaveBeenCalled();
 
     expect((await submit({})).error).toMatch(/invalid, already used or expired/u);
-    expect(trusted.rpc).toHaveBeenCalledWith("app_server_find_client_activation", {
+    expect(trusted.rpc).toHaveBeenCalledExactlyOnceWith(claim, {
+      p_claim_id: expect.any(String),
       p_token_hash: tokenHash,
       p_tenant_id: "f0f0f0f0-0000-4000-8000-000000000001",
     });
     expect(trusted.auth.admin.updateUserById).not.toHaveBeenCalled();
   });
 
-  it("keeps the link usable when the password is refused", async () => {
+  it("rejects a password above Auth's UTF-8 limit before it reserves a link", async () => {
     mockLink(profileId);
-    trusted.auth.admin.updateUserById.mockResolvedValue({ data: {}, error: { code: "weak_password", message: "weak" } });
+    const password = "🔒".repeat(19);
 
-    expect((await submit({})).error).toMatch(/too weak/u);
-    expect(trusted.rpc).not.toHaveBeenCalledWith("app_server_complete_client_activation", expect.anything());
+    expect(await submit({ password, confirm_password: password })).toMatchObject({
+      done: false,
+      error: expect.stringMatching(/72 UTF-8 bytes/u),
+    });
+    expect(trusted.rpc).not.toHaveBeenCalled();
+    expect(trusted.auth.admin.updateUserById).not.toHaveBeenCalled();
   });
 
-  it("sets the password, then spends the link by its hash only", async () => {
+  it("releases the claimed link only after Auth rejects a weak password", async () => {
+    mockLink(profileId);
+    trusted.auth.admin.updateUserById.mockResolvedValue({ data: {}, error: { code: "weak_password", status: 422, message: "weak" } });
+
+    expect((await submit({})).error).toMatch(/too weak/u);
+    const claimId = trusted.rpc.mock.calls[0]?.[1]?.p_claim_id;
+    expect(trusted.rpc).toHaveBeenLastCalledWith(finish, {
+      p_claim_id: claimId,
+      p_profile_id: profileId,
+      p_tenant_id: headersState.tenant,
+      p_result: "weak_password",
+    });
+  });
+
+  it("claims before setting the password and confirms the same claim before reporting success", async () => {
     mockLink(profileId);
 
     await expect(submit({})).resolves.toEqual({ error: null, done: true });
     expect(trusted.auth.admin.updateUserById).toHaveBeenCalledWith(profileId, { password: "correct horse" });
-    expect(trusted.rpc).toHaveBeenLastCalledWith("app_server_complete_client_activation", {
+    const claimId = trusted.rpc.mock.calls[0]?.[1]?.p_claim_id;
+    expect(claimId).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(trusted.rpc).toHaveBeenLastCalledWith(finish, {
+      p_claim_id: claimId,
       p_profile_id: profileId,
-      p_token_hash: tokenHash,
+      p_tenant_id: headersState.tenant,
+      p_result: "activated",
     });
+    const passwordWrite = trusted.auth.admin.updateUserById.mock.invocationCallOrder[0]!;
+    expect(trusted.rpc.mock.invocationCallOrder[0]).toBeLessThan(passwordWrite);
+    expect(trusted.rpc.mock.invocationCallOrder[1]).toBeGreaterThan(passwordWrite);
     expect(JSON.stringify(trusted.rpc.mock.calls)).not.toContain(token);
+  });
+
+  it.each([
+    ["a database error", { data: null, error: { code: "XX000" } }],
+    ["a missing completion", { data: false, error: null }],
+  ])("keeps the link locked and reports an unconfirmed result after %s", async (_label, result) => {
+    mockLink(profileId);
+    trusted.rpc.mockResolvedValueOnce({ data: profileId, error: null }).mockResolvedValueOnce(result);
+
+    expect(await submit({})).toMatchObject({ done: false, error: expect.stringMatching(/confirm/i) });
+    expect(trusted.auth.admin.updateUserById).toHaveBeenCalledTimes(1);
+    expect(trusted.rpc).toHaveBeenCalledTimes(2);
+    expect(trusted.rpc).toHaveBeenLastCalledWith(finish, expect.objectContaining({ p_result: "activated" }));
+  });
+
+  it("keeps the claim locked when the Auth response is uncertain", async () => {
+    mockLink(profileId);
+    trusted.auth.admin.updateUserById.mockRejectedValueOnce(new Error("transport failed"));
+
+    expect(await submit({})).toMatchObject({ done: false, error: expect.stringMatching(/confirm/i) });
+    expect(trusted.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the claim locked when Auth does not confirm a password validation rejection", async () => {
+    mockLink(profileId);
+    trusted.auth.admin.updateUserById.mockResolvedValueOnce({
+      data: {},
+      error: { code: "weak_password", status: 503, message: "provider unavailable" },
+    });
+
+    expect(await submit({})).toMatchObject({ done: false, error: expect.stringMatching(/confirm/i) });
+    expect(trusted.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["without a user", { user: null }],
+    ["for a different user", { user: { id: "30000000-0000-4000-8000-000000000002" } }],
+  ])("keeps the reservation after an Auth success response %s", async (_label, data) => {
+    mockLink(profileId);
+    trusted.auth.admin.updateUserById.mockResolvedValueOnce({ data, error: null });
+
+    expect(await submit({})).toMatchObject({ done: false, error: expect.stringMatching(/confirm/i) });
+    expect(trusted.rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an unconfirmed result when a weak-password rejection cannot be recorded", async () => {
+    mockLink(profileId);
+    trusted.auth.admin.updateUserById.mockResolvedValue({ data: {}, error: { code: "weak_password", status: 422, message: "weak" } });
+    trusted.rpc.mockResolvedValueOnce({ data: profileId, error: null }).mockRejectedValueOnce(new Error("transport failed"));
+
+    expect(await submit({})).toMatchObject({ done: false, error: expect.stringMatching(/confirm/i) });
+    expect(trusted.rpc).toHaveBeenLastCalledWith(finish, expect.objectContaining({ p_result: "weak_password" }));
   });
 
   it("looks the link up in the request host's Tenant", async () => {
@@ -254,7 +335,8 @@ describe("set-password link", () => {
     mockLink(null);
     try {
       expect((await submit({})).error).toMatch(/invalid, already used or expired/u);
-      expect(trusted.rpc).toHaveBeenCalledWith("app_server_find_client_activation", {
+      expect(trusted.rpc).toHaveBeenCalledExactlyOnceWith(claim, {
+        p_claim_id: expect.any(String),
         p_token_hash: tokenHash,
         p_tenant_id: "f0f0f0f0-0000-4000-8000-000000002601",
       });

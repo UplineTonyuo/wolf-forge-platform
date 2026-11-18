@@ -7006,6 +7006,10 @@ export type Database = {
         }
         Returns: Json
       }
+      app_server_claim_client_activation: {
+        Args: { p_claim_id: string; p_tenant_id: string; p_token_hash: string }
+        Returns: string
+      }
       app_server_claim_client_welcome_email: {
         Args: {
           p_actor_id: string
@@ -7021,17 +7025,18 @@ export type Database = {
           recipient_name: string
         }[]
       }
-      app_server_complete_client_activation: {
-        Args: { p_profile_id: string; p_token_hash: string }
-        Returns: undefined
-      }
       app_server_disconnect_gmail: {
         Args: { p_actor_id: string }
         Returns: undefined
       }
-      app_server_find_client_activation: {
-        Args: { p_token_hash: string; p_tenant_id: string }
-        Returns: string
+      app_server_finish_client_activation: {
+        Args: {
+          p_claim_id: string
+          p_profile_id: string
+          p_result: string
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       app_server_finish_client_welcome_email: {
         Args: {

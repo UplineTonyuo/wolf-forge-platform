@@ -76,14 +76,19 @@ export class AuthAdminAdapter {
     await this.trusted.auth.admin.deleteUser(userId);
   }
 
-  /** Client activation only: the caller has already verified a set-password link for this user. */
+  /** Client activation only: the caller has already reserved the user's set-password link. */
   async setPassword(userId: string, password: string): Promise<void> {
-    const { error } = await this.trusted.auth.admin.updateUserById(userId, { password });
+    const { data, error } = await this.trusted.auth.admin.updateUserById(userId, { password });
     if (error) {
       throw new AuthAdminError({
-        reason: error.code === "weak_password" ? "weak_password" : "rejected",
+        reason: error.code === "weak_password" && (error.status === 400 || error.status === 422)
+          ? "weak_password"
+          : "rejected",
         message: error.message,
       });
+    }
+    if (data?.user?.id !== userId) {
+      throw new AuthAdminError({ reason: "rejected", message: "Auth did not confirm the password update." });
     }
   }
 }
