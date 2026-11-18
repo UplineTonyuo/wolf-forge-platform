@@ -173,6 +173,75 @@ describe("Projects workspace renders real data", () => {
   });
 });
 
+describe("Orders pagination", () => {
+  function sampleOrders(count: number) {
+    const sample = rows[0];
+    if (!sample) throw new Error("Sample order fixture is missing");
+
+    return Array.from({ length: count }, (_, index) => ({
+      ...sample,
+      id: `sample-order-${index + 1}`,
+      title: `Sample order ${index + 1}`,
+      orderNumber: index + 1,
+    }));
+  }
+
+  it("shows ten of fifty rows at a time with numbered and sequential navigation", () => {
+    renderWorkspace({ rows: sampleOrders(50) });
+    const navigation = screen.getByRole("navigation", { name: "Order pages" });
+    const previous = within(navigation).getByRole("button", { name: "Previous page" });
+    const next = within(navigation).getByRole("button", { name: "Next page" });
+
+    expect(rowCount()).toBe(10);
+    expect(screen.getByText("1–10 of 50 orders")).toBeTruthy();
+    expect(previous.hasAttribute("disabled")).toBe(true);
+    expect(within(navigation).getByRole("button", { name: "Page 1" }).getAttribute("aria-current")).toBe("page");
+
+    fireEvent.click(next);
+    expect(screen.getByText("11–20 of 50 orders")).toBeTruthy();
+    expect(screen.queryByText("Sample order 1")).toBeNull();
+
+    fireEvent.click(within(navigation).getByRole("button", { name: "Page 5" }));
+    expect(rowCount()).toBe(10);
+    expect(screen.getByText("41–50 of 50 orders")).toBeTruthy();
+    expect(next.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(previous);
+    expect(screen.getByText("31–40 of 50 orders")).toBeTruthy();
+  });
+
+  it("selects only the current page and keeps selections when moving between pages", () => {
+    renderWorkspace({ rows: sampleOrders(12) });
+    const selectPage = screen.getByRole("button", { name: "Select all visible orders" });
+
+    fireEvent.click(selectPage);
+    expect(screen.getByText("10 selected")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+
+    expect(rowCount()).toBe(2);
+    expect(screen.getByText("11–12 of 12 orders")).toBeTruthy();
+    expect(selectPage.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(selectPage);
+    expect(screen.getByText("12 selected")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    expect(selectPage.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("searches the full list and resets to page one when a filter changes", () => {
+    renderWorkspace({ rows: sampleOrders(50) });
+    fireEvent.click(screen.getByRole("button", { name: "Page 5" }));
+
+    const search = screen.getByRole("searchbox", { name: "Search orders" });
+    fireEvent.change(search, { target: { value: "Sample order 22" } });
+    expect(rowCount()).toBe(1);
+    expect(screen.getByText("Sample order 22")).toBeTruthy();
+    expect(screen.queryByRole("navigation", { name: "Order pages" })).toBeNull();
+
+    fireEvent.change(search, { target: { value: "" } });
+    expect(screen.getByText("1–10 of 50 orders")).toBeTruthy();
+  });
+});
+
 describe("Projects status tabs and counts", () => {
   it("shows counts that match the rows each tab renders", () => {
     renderWorkspace();

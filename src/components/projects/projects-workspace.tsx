@@ -4,6 +4,8 @@ import {
   BellRing,
   Building2,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   ListChecks,
   ListFilter,
@@ -13,7 +15,7 @@ import {
 } from "lucide-react";
 import { RouteTransitionLink as Link } from "../shell/route-transition";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   bulkArchiveProjectsAction,
   bulkAssignProjectsAction,
@@ -90,6 +92,8 @@ const dialogTitles: Record<DialogKind, string> = {
   archive: "Archive orders",
 };
 
+const ordersPerPage = 10;
+
 export function ProjectsWorkspace({
   rows,
   complete,
@@ -112,6 +116,7 @@ export function ProjectsWorkspace({
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<ProjectTab>("all");
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [filterOpen, setFilterOpen] = useState(false);
   const [mobileFilters, setMobileFilters] = useState(false);
@@ -153,10 +158,18 @@ export function ProjectsWorkspace({
     [activeTab, rows, scopeCriteria],
   );
 
+  const pageCount = Math.max(1, Math.ceil(filteredProjects.length / ordersPerPage));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * ordersPerPage;
+  const pageProjects = filteredProjects.slice(pageStart, pageStart + ordersPerPage);
+  const pageNumbers = Array.from({ length: pageCount }, (_, index) => index + 1).filter(
+    (number) => pageCount <= 5 || number === 1 || number === pageCount || Math.abs(number - currentPage) <= 1,
+  );
+
   const unansweredCount = useMemo(() => countUnansweredOrders(rows), [rows]);
 
   const allVisibleSelected =
-    filteredProjects.length > 0 && filteredProjects.every((project) => selected.has(project.id));
+    pageProjects.length > 0 && pageProjects.every((project) => selected.has(project.id));
 
   const activeFilterCount =
     Number(personFilter !== "all") +
@@ -291,6 +304,11 @@ export function ProjectsWorkspace({
     });
   }
 
+  function updateFilter<T>(setValue: (value: T) => void, value: T) {
+    setValue(value);
+    setPage(1);
+  }
+
   function clearAllFilters() {
     setSearch("");
     setPersonFilter("all");
@@ -298,13 +316,14 @@ export function ProjectsWorkspace({
     setClientFilter("all");
     setActiveTab("all");
     setUnansweredOnly(false);
+    setPage(1);
   }
 
   function toggleAllVisible() {
     setSelected((current) => {
       const next = new Set(current);
-      if (allVisibleSelected) filteredProjects.forEach((project) => next.delete(project.id));
-      else filteredProjects.forEach((project) => next.add(project.id));
+      if (allVisibleSelected) pageProjects.forEach((project) => next.delete(project.id));
+      else pageProjects.forEach((project) => next.add(project.id));
       return next;
     });
   }
@@ -367,7 +386,7 @@ export function ProjectsWorkspace({
           type="button"
           aria-pressed={scopeCriteria.unansweredOnly}
           onClick={() => {
-            setUnansweredOnly((current) => !current);
+            updateFilter(setUnansweredOnly, !unansweredOnly);
             setActiveTab("all");
           }}
         >
@@ -440,7 +459,7 @@ export function ProjectsWorkspace({
                 type="button"
                 className={active ? styles.statusTabActive : styles.statusTab}
                 aria-current={active ? "page" : undefined}
-                onClick={() => setActiveTab(tab.value)}
+                onClick={() => updateFilter(setActiveTab, tab.value)}
               >
                 <span className={styles.statusLabel}>
                   {tab.value === "pending_update"
@@ -485,7 +504,7 @@ export function ProjectsWorkspace({
           placeholder="Title, order number or client"
           autoComplete="off"
           aria-label="Search orders"
-          onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => updateFilter(setSearch, event.target.value)}
         />
       </div>
 
@@ -499,7 +518,7 @@ export function ProjectsWorkspace({
               value={search}
               placeholder="Title, order number or client"
               autoComplete="off"
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => updateFilter(setSearch, event.target.value)}
             />
           </div>
 
@@ -515,7 +534,7 @@ export function ProjectsWorkspace({
               ]}
               options={personOptions}
               value={personFilter}
-              onChange={setPersonFilter}
+              onChange={(value) => updateFilter(setPersonFilter, value)}
               searchPlaceholder="Search people..."
             />
           </div>
@@ -526,7 +545,7 @@ export function ProjectsWorkspace({
               folders={serviceFolders}
               services={services}
               value={serviceFilter}
-              onChange={setServiceFilter}
+              onChange={(value) => updateFilter(setServiceFilter, value)}
             />
           </div>
 
@@ -539,7 +558,7 @@ export function ProjectsWorkspace({
               fixedOptions={[{ id: "all", label: "All clients", icon: <Building2 size={16} aria-hidden="true" /> }]}
               options={clientOptions}
               value={clientFilter}
-              onChange={setClientFilter}
+              onChange={(value) => updateFilter(setClientFilter, value)}
               searchPlaceholder="Search clients..."
             />
           </div>
@@ -553,7 +572,7 @@ export function ProjectsWorkspace({
               fixedOptions={[{ id: "all", label: "All statuses", icon: <ListChecks size={16} aria-hidden="true" /> }]}
               options={statusOptions}
               value={activeTab}
-              onChange={(value) => setActiveTab(value as ProjectTab)}
+              onChange={(value) => updateFilter(setActiveTab, value as ProjectTab)}
               searchPlaceholder="Search statuses..."
             />
           </div>
@@ -563,7 +582,7 @@ export function ProjectsWorkspace({
             className={scopeCriteria.unansweredOnly ? styles.attentionFilterActive : styles.attentionFilter}
             aria-pressed={scopeCriteria.unansweredOnly}
             disabled={!responseStatesAvailable}
-            onClick={() => setUnansweredOnly((current) => !current)}
+            onClick={() => updateFilter(setUnansweredOnly, !unansweredOnly)}
           >
             <ListFilter size={14} aria-hidden="true" />
             Unanswered
@@ -583,16 +602,16 @@ export function ProjectsWorkspace({
         serviceFolders={serviceFolders}
         services={services}
         personFilter={personFilter}
-        onPersonFilterChange={setPersonFilter}
+        onPersonFilterChange={(value) => updateFilter(setPersonFilter, value)}
         clientFilter={clientFilter}
-        onClientFilterChange={setClientFilter}
+        onClientFilterChange={(value) => updateFilter(setClientFilter, value)}
         serviceFilter={serviceFilter}
-        onServiceFilterChange={setServiceFilter}
+        onServiceFilterChange={(value) => updateFilter(setServiceFilter, value)}
         statusFilter={activeTab}
-        onStatusFilterChange={setActiveTab}
+        onStatusFilterChange={(value) => updateFilter(setActiveTab, value)}
         unansweredOnly={scopeCriteria.unansweredOnly}
         responseStatesAvailable={responseStatesAvailable}
-        onUnansweredOnlyChange={setUnansweredOnly}
+        onUnansweredOnlyChange={(value) => updateFilter(setUnansweredOnly, value)}
         onClear={clearAllFilters}
         activeFilterCount={activeFilterCount}
       />
@@ -617,7 +636,7 @@ export function ProjectsWorkspace({
         </div>
 
         <div className={styles.projectRows}>
-          {filteredProjects.map((project) => {
+          {pageProjects.map((project) => {
             const checked = selected.has(project.id);
             const clientName = project.companyName ?? "Unavailable client";
 
@@ -691,9 +710,49 @@ export function ProjectsWorkspace({
         </div>
 
         <div className={styles.tableFooter}>
-          <span>
-            {filteredProjects.length} {filteredProjects.length === 1 ? "order" : "orders"}
+          <span aria-live="polite">
+            {pageCount > 1
+              ? `${pageStart + 1}–${pageStart + pageProjects.length} of ${filteredProjects.length} orders`
+              : `${filteredProjects.length} ${filteredProjects.length === 1 ? "order" : "orders"}`}
           </span>
+          {pageCount > 1 ? (
+            <nav className={styles.pagination} aria-label="Order pages">
+              <button
+                type="button"
+                aria-label="Previous page"
+                disabled={currentPage === 1}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                <ChevronLeft size={16} aria-hidden="true" />
+              </button>
+              {pageNumbers.map((number, index) => {
+                const previousNumber = pageNumbers[index - 1];
+                return (
+                  <Fragment key={number}>
+                    {previousNumber !== undefined && number - previousNumber > 1 ? (
+                      <span aria-hidden="true">…</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      aria-label={`Page ${number}`}
+                      aria-current={number === currentPage ? "page" : undefined}
+                      onClick={() => setPage(number)}
+                    >
+                      {number}
+                    </button>
+                  </Fragment>
+                );
+              })}
+              <button
+                type="button"
+                aria-label="Next page"
+                disabled={currentPage === pageCount}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </nav>
+          ) : null}
           <span>{selected.size} selected</span>
         </div>
       </div>
