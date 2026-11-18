@@ -6,6 +6,7 @@ import { PortalDialog } from "../account/ui/portal-dialog";
 import styles from "../projects/project-detail.module.css";
 
 export const OrderHeaderSlot = createContext<HTMLDivElement | null | undefined>(undefined);
+export const OrderConversationVisible = createContext(true);
 
 export function OrderConversationDialog({ orderNumber, children }: { orderNumber: number | string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,9 @@ export function OrderConversationDialog({ orderNumber, children }: { orderNumber
       {visited && (
         <PortalDialog open={open} onClose={() => setOpen(false)} title={`Order #${orderNumber}`}
           size="feature" layout="conversation" headerAction={<div ref={setHeaderSlot} />} showClose>
-          <OrderHeaderSlot.Provider value={headerSlot}>{children}</OrderHeaderSlot.Provider>
+          <OrderHeaderSlot.Provider value={headerSlot}>
+            <OrderConversationVisible.Provider value={open}>{children}</OrderConversationVisible.Provider>
+          </OrderHeaderSlot.Provider>
         </PortalDialog>
       )}
     </section>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { OrderConversationVisible, OrderHeaderSlot } from "./order-conversation-dialog";
 import { toggleClientOrderMessageReactionAction } from "../../app/actions/tickets";
 import type { TicketDetailMessage } from "../../domain/tickets/schema";
 import { TicketComposer } from "./ticket-composer";
@@ -35,10 +36,12 @@ function ProjectConversationBody({
   initialPage?: OrderPageInfo;
 }) {
   const [replyTo, setReplyTo] = useState<OrderReplyTarget | null>(null);
+  const visible = useContext(OrderConversationVisible);
+  const headerSlot = useContext(OrderHeaderSlot);
   const optimistic = useOrderConversationMessages({orderId,serverMessages:messages,initialPage,mode:"client",viewerProfileId});
   const history = useTicketCallHistory(orderId,true,{entries:optimistic.calls,onPage:optimistic.addCalls,onClear:optimistic.clearCalls,resetKey:optimistic.latestRevision});
   useEffect(()=>{if(optimistic.unavailable)queueMicrotask(()=>setReplyTo(null))},[optimistic.unavailable]);
-  useClientConversationPresence("project", orderId, !optimistic.unavailable);
+  useClientConversationPresence("project", orderId, visible && !optimistic.unavailable);
 
   const toggleReaction = async (messageId: string, reactionCode: string) => {
     const result = await toggleClientOrderMessageReactionAction(orderId, messageId, reactionCode);
@@ -50,7 +53,7 @@ function ProjectConversationBody({
   if (optimistic.unavailable) return <p role="alert">This conversation is unavailable.</p>;
 
   return (
-    <OrderConversationPanel conversation={optimistic} renderer={{clientView:true,viewerProfileId,heading,
+    <OrderConversationPanel conversation={optimistic} renderer={{clientView:true,viewerProfileId,heading,headerSlot,
       callControls:<OrderCallControls orderId={orderId} disabled={repliesDisabled}/>,
       historyControls:history.error?<p role="status">{history.error} {history.retryable?<button type="button" disabled={history.busy} onClick={()=>void history.load()}>Retry call history</button>:null}</p>:history.more||optimistic.hasEvictedEarlierCalls?<button type="button" disabled={history.busy} onClick={()=>void history.load(true)}>Earlier calls</button>:null,
       onReply:repliesDisabled?undefined:setReplyTo,canReact:true,onToggleReaction:toggleReaction,onRetryMessage:message=>void optimistic.retry(message.requestId??"")}}>

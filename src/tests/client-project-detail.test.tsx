@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ClientProjectDetail } from "../components/account/projects/client-projects";
 import type { ClientProjectView } from "../domain/orders/client-projections";
@@ -11,8 +11,12 @@ afterEach(cleanup);
 it("removes an already mounted conversation when the authoritative state becomes locked", () => {
   const props = { project, conversation: null, viewerId: "client", startControl: <Link href="/account/onboarding/required">Continue form</Link> };
   const view = render(<ClientProjectDetail {...props} chatAccess="unlocked" />);
+  expect(screen.queryByText("Chat controls and composer")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open message" }));
+  expect(screen.getByRole("dialog", { name: "Order #WF-P0013" })).toBeVisible();
   expect(screen.getByText("Chat controls and composer")).toBeInTheDocument();
   view.rerender(<ClientProjectDetail {...props} chatAccess="locked" />);
+  expect(screen.queryByRole("button", { name: "Open message" })).not.toBeInTheDocument();
   expect(screen.queryByText("Chat controls and composer")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Continue form" })).toBeInTheDocument();
   expect(screen.getByText("1 of 3 delivery steps complete.")).toBeInTheDocument();
@@ -20,6 +24,7 @@ it("removes an already mounted conversation when the authoritative state becomes
 });
 it("fails closed for an unavailable state while preserving safe Project facts", () => {
   render(<ClientProjectDetail project={project} conversation={null} viewerId="client" chatAccess="unavailable" />);
+  expect(screen.queryByRole("button", { name: "Open message" })).not.toBeInTheDocument();
   expect(screen.queryByText("Chat controls and composer")).not.toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent(/could not be confirmed/);
   expect(screen.getByRole("heading", { name: "Details" })).toBeInTheDocument();

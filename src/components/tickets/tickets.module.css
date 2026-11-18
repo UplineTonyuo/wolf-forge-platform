@@ -4815,12 +4815,16 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
 :global(.portal-overlay[data-layout="conversation"]) .messageHistoryBar button { min-height: 34px; }
 
 /* The name and time start in column two. Offset the bubble by its text inset. */
-:global(.portal-overlay[data-layout="conversation"]) .orderChat .thread > li[data-side="client"]:not([data-grouped="true"]) .messageStack {
+:global(.portal-overlay[data-layout="conversation"]) .orderChat:not([data-client-view]) .thread > li[data-side="client"]:not([data-grouped="true"]) .messageStack {
   grid-column: 2;
   margin-inline-start: -13px;
 }
-:global(.portal-overlay[data-layout="conversation"]) .orderChat .thread > li[data-side="client"][data-grouped="true"] .messageAvatar { display: grid; }
-:global(.portal-overlay[data-layout="conversation"]) .orderChat .thread > li[data-side="client"][data-grouped="true"] .messageStack { margin-inline-start: -13px; }
+:global(.portal-overlay[data-layout="conversation"]) .orderChat:not([data-client-view]) .thread > li[data-side="client"][data-grouped="true"] .messageAvatar { display: grid; }
+:global(.portal-overlay[data-layout="conversation"]) .orderChat:not([data-client-view]) .thread > li[data-side="client"][data-grouped="true"] .messageStack { margin-inline-start: -13px; }
+:global(.portal-overlay[data-layout="conversation"]) .orderChat[data-client-view] [data-side="internal"] .messageStack {
+  margin-inline-start: -13px;
+}
+:global(.portal-overlay[data-layout="conversation"]) .composer[data-client-view] .ticketRichToolbar { display: flex; }
 @media (pointer: coarse) {
   :global(.portal-overlay[data-layout="conversation"]) .messageHistoryBar button { min-height: 44px; }
 }

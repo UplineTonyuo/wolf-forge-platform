@@ -5,6 +5,7 @@ import type { ClientProjectView } from "../../../domain/orders/client-projection
 import type { TicketDetail } from "../../../domain/tickets/schema";
 import type { OrderPageInfo } from "../../../domain/orders/conversation-page";
 import { ProjectConversation } from "../../tickets/project-conversation";
+import { OrderConversationDialog } from "../../tickets/order-conversation-dialog";
 import { AttentionPill } from "../ui/attention-pill";
 import { PortalProgressBar } from "../ui/portal-progress-bar";
 import type { ReactNode } from "react";
@@ -99,17 +100,21 @@ export function ClientProjectDetail({
           </div>
         </section>
         <p className={styles.formHelp}>If a required form is unavailable, contact the team.</p>
-      </div> :
+      </div> : chatAccess === "unlocked" ? (
+        <OrderConversationDialog key={project.id} orderNumber={project.reference}>
+          <ProjectConversation
+            orderId={project.id}
+            heading={project.reference}
+            messages={conversation?.messages ?? []}
+            initialPage={conversation?.page}
+            viewerProfileId={viewerId}
+            repliesDisabled={repliesDisabled}
+          />
+        </OrderConversationDialog>
+      ) :
       <section className={`portal-section ${styles.conversation}`} aria-labelledby="portal-project-conversation">
         <h2 id="portal-project-conversation" className="sr-only">Conversation</h2>
-        {chatAccess === "unlocked" ? <ProjectConversation
-          orderId={project.id}
-          heading={project.reference}
-          messages={conversation?.messages ?? []}
-          initialPage={conversation?.page}
-          viewerProfileId={viewerId}
-          repliesDisabled={repliesDisabled}
-        /> : <p role="status">Conversation access could not be confirmed. Reload to try again.</p>}
+        <p role="status">Conversation access could not be confirmed. Reload to try again.</p>
       </section>}
 
       <aside className={`${styles.sidebar} ${locked ? styles.lockedSidebar : ""}`} aria-label="Order information">
