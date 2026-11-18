@@ -17,6 +17,8 @@ import { createNextServerSupabaseClient, getClientContext, getInternalContext } 
 import { FormRepository } from "../../repositories/form-repository";
 import { runIntakeSubmissionJob } from "../../lib/forms/intake-jobs";
 import { clientOrderStartSchema } from "../../domain/orders/client-start";
+import { invalidatePublicFormSchemas } from "../f/public-schema";
+import { requirePublicFormHuman } from "../../lib/security/public-form-protection";
 
 export type FormMutationResult<T = undefined> =
   | { ok: true; data: T }
@@ -59,6 +61,7 @@ export async function publishFormAction(formId: string, requestId: string): Prom
   if (!context.user.forms.publish) return { ok: false, error: "You do not have permission to publish Forms." };
   try {
     const version = await context.services.forms.publish(formId, { request_id: requestId }, context.actor);
+    invalidatePublicFormSchemas(context.user.tenantId);
     revalidatePath("/forms");
     revalidatePath(`/forms/${formId}`);
     return { ok: true, data: { version: version.version_number } };
@@ -72,6 +75,7 @@ export async function archiveFormAction(formId: string, requestId: string): Prom
   if (!context.user.forms.manage) return { ok: false, error: "You do not have permission to archive Forms." };
   try {
     await context.services.forms.archive(formId, { request_id: requestId }, context.actor);
+    invalidatePublicFormSchemas(context.user.tenantId);
   } catch (error) {
     return failure(error);
   }
@@ -165,6 +169,7 @@ export async function loadFormCollectionAvailability(canonicalKey?: string, expe
 export async function submitPublicFormAction(input: SubmitFormInput): Promise<FormMutationResult<{ id: string }>> {
   try {
     const parsed = parseInput(submitFormSchema, input);
+    await requirePublicFormHuman();
     const repository = new FormRepository(await createNextServerSupabaseClient());
     const submission = await repository.submit(parsed);
     return { ok: true, data: { id: submission.id } };

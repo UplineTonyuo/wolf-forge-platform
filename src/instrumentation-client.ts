@@ -33,9 +33,9 @@ Sentry.init({
   },
 });
 
-/** Invisible, free BotID Basic protection for the login Server Action only. */
+/** Invisible, free BotID Basic protection for login and public Form Server Actions. */
 initBotId({
-  protect: [{ path: "/login", method: "POST" }],
+  protect: [{ path: "/login", method: "POST" }, { path: "/f/*", method: "POST" }],
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
