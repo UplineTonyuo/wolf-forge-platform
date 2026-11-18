@@ -1,6 +1,6 @@
 begin;
 
-select plan(79);
+select plan(80);
 
 -- Catalog-driven guardrail for current and future Wolf Forge public tables.
 -- Extension-owned relations and views are excluded; ordinary and partitioned
@@ -390,10 +390,16 @@ select ok(
 select lives_ok(
   $$
     update public.orders
-    set status = 'working', started_at = now()
+    set status = 'working', started_at = now(), title = 'Service order [SPP #AFFE7091_2]'
     where id = '50000000-0000-0000-0000-000000000001'
   $$,
-  'service_role can update orders'
+  'service_role can update an order title without private schema access'
+);
+
+select is(
+  (select spp_order_reference from public.orders where id = '50000000-0000-0000-0000-000000000001'),
+  null::text,
+  'service_role title edits do not recover historical SPP references'
 );
 
 select lives_ok(

@@ -44,15 +44,18 @@ begin
     return new;
   end if;
 
-  if new.spp_order_reference is null and new.tenant_id = private.wolf_forge_tenant_id() then
-    tagged_reference := substring(new.title from ' \[SPP #([0-9A-F]{8}(_[0-9]{1,16})?)\]$');
-    if tagged_reference is not null and exists (
-      select 1 from private.spp_account_references a
-      where a.tenant_id = new.tenant_id and a.company_id = new.company_id
-        and a.state = 'complete' and new.created_at < a.created_at
-    ) then
-      new.spp_order_reference := tagged_reference;
-    end if;
+  -- Only the historical SQL loader (postgres) needs the private account lookup.
+  if new.spp_order_reference is not null or current_user <> 'postgres' then
+    return new;
+  end if;
+
+  tagged_reference := substring(new.title from ' \[SPP #([0-9A-F]{8}(_[0-9]{1,16})?)\]$');
+  if tagged_reference is not null and new.tenant_id = private.wolf_forge_tenant_id() and exists (
+    select 1 from private.spp_account_references a
+    where a.tenant_id = new.tenant_id and a.company_id = new.company_id
+      and a.state = 'complete' and new.created_at < a.created_at
+  ) then
+    new.spp_order_reference := tagged_reference;
   end if;
   return new;
 end;
