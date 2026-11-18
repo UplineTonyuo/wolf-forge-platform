@@ -7,6 +7,7 @@ import sanitizeHtml from "sanitize-html";
 import { decodeHTML } from "entities";
 import { FORM_PDF_MAX_BYTES, formPdfReceiptSchema, type FormPdfReceipt } from "./pdf-receipt";
 import { readSignatureStrokes } from "./signature";
+import { hasSubmittedFieldLabel } from "./submitted-fields";
 
 const excluded = new Set(["hidden", "secret", "password", "captcha", "payment"]);
 const subsets = ["latin", "latin-ext", "vietnamese", "greek", "greek-ext", "cyrillic", "cyrillic-ext"];
@@ -104,7 +105,7 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
   function answers(record: FormPdfReceipt["original"]) {
     for (const value of [...record.values].sort((a, b) => a.sort_order - b.sort_order)) {
       const field = receipt.form.fields.find((item) => item.key === value.stable_field_key);
-      if (!field || excluded.has(field.type) || field.type === "signature") continue;
+      if (!field || excluded.has(field.type) || field.type === "signature" || !hasSubmittedFieldLabel(value.label)) continue;
       if (y < 105) newPage(); text(value.label, 11, navy); text(answerValue(field, value.value) || "No answer recorded");
     }
   }
@@ -120,6 +121,8 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
   heading("Original submitted form");
   for (const field of [...receipt.form.fields].sort((a, b) => a.sort_order - b.sort_order)) {
     if (excluded.has(field.type)) continue;
+    const displayOnly = ["break", "pagebreak", "html"].includes(field.type) || (field.type === "richtext" && field.display_only);
+    if (!displayOnly && field.type !== "signature" && !hasSubmittedFieldLabel(field.label)) continue;
     const answer = receipt.original.values.find((value) => value.stable_field_key === field.key);
     if (field.type === "pagebreak" && y < 740) newPage();
     if (y < 105) newPage();
@@ -129,7 +132,7 @@ export async function renderSubmissionPdf(input: FormPdfReceipt) {
       const content = formHtmlText(field.html ?? field.help_html);
       if (field.type === "signature") agreement(content); else text(content);
     }
-    if (["break", "pagebreak", "html"].includes(field.type) || (field.type === "richtext" && field.display_only)) continue;
+    if (displayOnly) continue;
     if (field.type !== "signature") { text(answer ? answerValue(field, answer.value) || "No answer recorded" : "No answer recorded"); continue; }
     if (!answer) { text("No signature was recorded for this field."); continue; }
     const value = answer.value && typeof answer.value === "object" && !Array.isArray(answer.value) ? answer.value : {};

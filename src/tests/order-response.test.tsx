@@ -47,6 +47,19 @@ describe("read-only submitted answers", () => {
 });
 
 describe("response disclosure", () => {
+  it("automatically hides unnamed rows from the order responses", () => {
+    const detail = response(undefined, [
+      { ...answer(null, "text", 0), label: " (No name) " },
+      { ...answer("Synthetic unnamed answer", "text", 1), label: "NO NAME" },
+      { ...answer("Synthetic blank label answer", "text", 2), label: " " },
+      { ...answer(null, "text", 3), label: "Named question" },
+    ]);
+    render(<OrderResponse detail={detail} />);
+    expect(screen.getByText("Named question")).toBeVisible();
+    expect(screen.getAllByText("Not answered")).toHaveLength(1);
+    expect(screen.queryByText(/\bno name\b/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Synthetic (?:unnamed|blank label) answer/)).not.toBeInTheDocument();
+  });
   it("folds long responses, keeps the real PDF action accessible and preserves state on refresh", () => {
     const detail = response(undefined, [answer("Long agreement ".repeat(60))]);
     const view = render(<OrderResponse detail={detail} />);

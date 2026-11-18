@@ -13,6 +13,34 @@ describe("saved form PDF", () => {
     try { await renderSubmissionPdf(value);expect(lines.join(" ")).toContain("Project #WF-P0012");expect(lines.indexOf("Synthetic project service")).toBeLessThan(lines.indexOf(value.form.title)); }
     finally {spy.mockRestore();}
   });
+  it("omits unnamed original and corrected answer rows from the PDF", async () => {
+    const value = receiptFixture();
+    const key = "10000000-0000-4000-8000-000000000003";
+    value.form.fields.push({ ...value.form.fields[0]!, key, label: "(No name)", sort_order: 2 });
+    value.original.values[0]!.value = null;
+    const unnamed = { ...value.original.values[0]!, stable_field_key: key, label: "(No name)", sort_order: 2 };
+    value.original.values.push(unnamed);
+    value.correction = {
+      ...value.original,
+      id: "20000000-0000-4000-8000-000000000002",
+      revision_number: 2,
+      values: [{ ...unnamed, label: "No name", value: "Synthetic unnamed correction" }],
+    };
+    const lines: string[] = [];
+    const draw = PDFPage.prototype.drawText;
+    const spy = vi.spyOn(PDFPage.prototype, "drawText").mockImplementation(function (this: PDFPage, line, options) {
+      lines.push(line);
+      return draw.call(this, line, options);
+    });
+    try {
+      await renderSubmissionPdf(value);
+      expect(lines).toContain("Business name");
+      expect(lines.filter((line) => line === "No answer recorded")).toHaveLength(1);
+      expect(lines.join("\n")).not.toMatch(/\bno name\b|Synthetic unnamed correction/i);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it("creates a readable real PDF containing ink, a pinned version and server signing metadata", async () => {
     const bytes = await renderSubmissionPdf(receiptFixture());
     expect(new TextDecoder().decode(bytes.slice(0, 8))).toMatch(/^%PDF-/);
