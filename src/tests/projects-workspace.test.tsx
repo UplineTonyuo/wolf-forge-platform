@@ -251,6 +251,18 @@ describe("Projects filters and search", () => {
     expect(screen.getByText("Local SEO Growth Campaign")).toBeTruthy();
   });
 
+  it("displays and searches a full imported SPP number", () => {
+    renderWorkspace({ rows: [
+      { ...rows[0]!, sppOrderReference: "ABCD5678_2" },
+      { ...rows[1]!, sppOrderReference: "ABCD5678_3" },
+    ] });
+    expect(screen.getByText(/^#ABCD5678_2 · /u)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "# #abcd5678_2" } });
+    expect(rowCount()).toBe(1);
+    expect(screen.queryByText(/^#ABCD5678_3 · /u)).toBeNull();
+  });
+
   it("filters by real person, service and client options", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: /^Filter/u }));

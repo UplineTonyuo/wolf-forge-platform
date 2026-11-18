@@ -19,7 +19,7 @@ export default async function AssignFormPage({ params }: PageProps<"/forms/[form
       const page = await context.services.orders.listProjects();
       const published = detail.form.published_version_id ? await context.services.forms.getVersion(detail.form.id, detail.form.published_version_id) : null;
       const serviceIds = new Set((published?.service_links ?? []).map((link) => link.service_id));
-      options = page.rows.filter((row) => serviceIds.has(row.serviceId)).map((row) => ({ id: row.id, label: `#${row.orderNumber} ${row.title}`, detail: `${row.companyName ?? "Client"} · ${row.serviceName ?? "Service"}`, companyId: row.companyId }));
+      options = page.rows.filter((row) => serviceIds.has(row.serviceId)).map((row) => ({ id: row.id, label: `#${row.sppOrderReference ?? row.orderNumber} ${row.title}`, detail: `${row.companyName ?? "Client"} · ${row.serviceName ?? "Service"}`, companyId: row.companyId }));
     } else {
       options = candidates.map((candidate) => ({ id: candidate.profile_id, label: candidate.display_name ?? "Client", detail: candidate.company_name }));
     }

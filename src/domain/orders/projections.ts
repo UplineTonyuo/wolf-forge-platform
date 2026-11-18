@@ -1,5 +1,6 @@
 import type { OrderRow } from "../../lib/supabase/database-rows";
 import { formatShortDate } from "../../lib/format";
+import { parseSppOrderReference } from "./references";
 import type { OrderPriority, OrderStatus } from "./schema";
 
 /**
@@ -51,6 +52,7 @@ export type OrderResponseState = { order_id: string; unanswered: boolean | null 
 export type ProjectListRow = {
   id: string;
   orderNumber: number;
+  sppOrderReference?: string | null;
   title: string;
   status: OrderStatus;
   priority: OrderPriority;
@@ -153,6 +155,7 @@ export function composeProjectRows(
     return {
       id: order.id,
       orderNumber: order.order_number,
+      sppOrderReference: order.spp_order_reference,
       title: order.title,
       status: order.status,
       priority: order.priority,
@@ -239,11 +242,14 @@ function normalize(value: string): string {
   return value.trim().toLocaleLowerCase();
 }
 
-/** Matches Project title, database-generated Project number and Client name. */
+/** Matches Project title, original and native Project numbers, and Client name. */
 export function matchesProjectSearch(row: ProjectListRow, search: string): boolean {
   const query = normalize(search);
   if (!query) return true;
 
+  const sppReference = parseSppOrderReference(query);
+  if (sppReference?.includes("_")) return row.sppOrderReference === sppReference;
+  if (sppReference && row.sppOrderReference === sppReference) return true;
   if (normalize(row.title).includes(query)) return true;
   if (row.companyName && normalize(row.companyName).includes(query)) return true;
   if (row.serviceName && normalize(row.serviceName).includes(query)) return true;

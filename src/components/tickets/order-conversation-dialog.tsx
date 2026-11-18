@@ -7,7 +7,7 @@ import styles from "../projects/project-detail.module.css";
 
 export const OrderHeaderSlot = createContext<HTMLDivElement | null | undefined>(undefined);
 
-export function OrderConversationDialog({ orderNumber, children }: { orderNumber: number; children: ReactNode }) {
+export function OrderConversationDialog({ orderNumber, children }: { orderNumber: number | string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [visited, setVisited] = useState(false);
   const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);

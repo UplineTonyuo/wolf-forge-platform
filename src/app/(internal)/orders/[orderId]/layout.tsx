@@ -13,6 +13,7 @@ import { CopyValueButton } from "../../../../components/ui/copy-value-button";
 import { DataError } from "../../../../components/ui/list-states";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { composeProjectTaskViews, projectNeedsAttention } from "../../../../domain/orders/projections";
+import { orderReference } from "../../../../domain/orders/references";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatCurrencyCents, formatDate } from "../../../../lib/format";
 import { getInternalContext } from "../../../../lib/supabase/next-server";
@@ -48,6 +49,7 @@ export default async function OrderDetailLayout({
     ]);
 
     const invoiceDetail = invoiceItem ? await context.services.invoices.get(invoiceItem.invoice_id) : null;
+    const reference = orderReference(project);
 
     const relatedOrders = companyOrders
       .filter((order) => order.id !== project.id && !order.archived_at)
@@ -65,7 +67,7 @@ export default async function OrderDetailLayout({
       <OrderSectionProvider><PageFrame
         className={styles.orderFrame}
         title={project.title}
-        description={`Project #${project.order_number} ${String.fromCharCode(183)} ${project.companies?.name ?? "Unavailable client"}`}
+        description={`Project #${reference} ${String.fromCharCode(183)} ${project.companies?.name ?? "Unavailable client"}`}
       >
         <nav className={styles.subnav} aria-label="Order sections">
           <div className={styles.subnavLeft}>
@@ -99,8 +101,8 @@ export default async function OrderDetailLayout({
                 <div className={styles.railRow}>
                   <dt>Number</dt>
                   <dd className={styles.railInlineValue}>
-                    {project.order_number}
-                    <CopyValueButton value={String(project.order_number)} label="Order number" />
+                    {reference}
+                    <CopyValueButton value={reference} label="Order number" />
                   </dd>
                 </div>
 

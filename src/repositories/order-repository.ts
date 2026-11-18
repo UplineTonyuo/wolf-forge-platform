@@ -17,7 +17,7 @@ import type { OperationalAssigneeRow } from "./service-repository";
  */
 const projectRelationSelect = "*, companies(id, name), services(id, name)";
 
-export type ProjectLabelRow = Pick<OrderRow, "id" | "order_number" | "title">;
+export type ProjectLabelRow = Pick<OrderRow, "id" | "order_number" | "spp_order_reference" | "title">;
 
 export type ProjectRelationPage = {
   rows: ProjectRelationRow[];
@@ -210,7 +210,7 @@ export class OrderRepository {
   async listLabels(orderIds: string[]): Promise<ProjectLabelRow[]> {
     if (orderIds.length === 0) return [];
     return unwrapMany(
-      await this.client.from("orders").select("id, order_number, title").in("id", orderIds),
+      await this.client.from("orders").select("id, order_number, spp_order_reference, title").in("id", orderIds),
     ) as ProjectLabelRow[];
   }
 

@@ -1876,6 +1876,7 @@ export type Database = {
           id: string
           notes: string | null
           order_number: number
+          spp_order_reference: string | null
           priority: string
           service_id: string
           started_at: string | null
@@ -1894,6 +1895,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: never
+          spp_order_reference?: string | null
           priority?: string
           service_id: string
           started_at?: string | null
@@ -1912,6 +1914,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: never
+          spp_order_reference?: string | null
           priority?: string
           service_id?: string
           started_at?: string | null

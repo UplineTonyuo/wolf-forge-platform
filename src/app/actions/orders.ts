@@ -1,5 +1,7 @@
 "use server";
 
+import { orderReference } from "../../domain/orders/references";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -189,7 +191,7 @@ async function resolveProjectLabels(orderIds: string[]): Promise<Map<string, str
   const context = await getInternalContext();
   try {
     for (const row of await context.services.orders.listLabels(orderIds)) {
-      labels.set(row.id, `#${row.order_number} ${row.title}`);
+      labels.set(row.id, `#${orderReference(row)} ${row.title}`);
     }
   } catch {
     // A label lookup failure must not mask the real mutation outcomes.

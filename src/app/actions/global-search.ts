@@ -3,6 +3,7 @@
 import type {
   TicketSummary,
 } from "../../domain/tickets/schema";
+import { orderReference, parseSppOrderReference } from "../../domain/orders/references";
 
 import {
   getInternalContext,
@@ -52,6 +53,7 @@ type Candidate = GlobalSearchItem & {
 type SearchProjectRow = {
   id: string;
   order_number: number;
+  spp_order_reference: string | null;
   title: string;
   company_id: string;
   service_id: string;
@@ -297,6 +299,7 @@ function ticketCandidate(
 function projectCandidate(
   project: SearchProjectRow,
   query: string,
+  sppReference: string | null,
 ): Candidate {
 
   const companyName =
@@ -344,6 +347,7 @@ function projectCandidate(
   const score =
     Math.min(
       numberScore,
+      sppReference !== null && project.spp_order_reference === sppReference ? 0 : 1000,
 
       textScore(
         project.title,
@@ -368,7 +372,7 @@ function projectCandidate(
 
   const relationship =
     [
-      `Project #${project.order_number}`,
+      `Project #${orderReference(project)}`,
       companyName,
       serviceName,
     ]
@@ -452,6 +456,8 @@ export async function globalSearchAction(
     };
   }
 
+  const sppReference = parseSppOrderReference(query);
+
 
   /*
    * Prevent user-entered wildcard characters from
@@ -503,7 +509,7 @@ export async function globalSearchAction(
 
 
     const projectSelect =
-      "id, order_number, title, company_id, service_id, companies(id, name), services(id, name)";
+      "id, order_number, spp_order_reference, title, company_id, service_id, companies(id, name), services(id, name)";
 
 
     const [
@@ -511,6 +517,7 @@ export async function globalSearchAction(
       servicesResult,
       titleProjectsResult,
       ticketsResult,
+      referenceProjectsResult,
     ] =
       await Promise.all([
 
@@ -597,13 +604,23 @@ export async function globalSearchAction(
           .catch(
             (): TicketSummary[] => [],
           ),
+
+        sppReference === null
+          ? Promise.resolve({ data: [], error: null })
+          : context.client
+            .from("orders")
+            .select(projectSelect)
+            .is("archived_at", null)
+            .eq("spp_order_reference", sppReference)
+            .limit(1),
       ]);
 
 
     if (
       companiesResult.error ||
       servicesResult.error ||
-      titleProjectsResult.error
+      titleProjectsResult.error ||
+      referenceProjectsResult.error
     ) {
 
       return {
@@ -622,11 +639,10 @@ export async function globalSearchAction(
 
     const projects:
       SearchProjectRow[] =
-      (
-        titleProjectsResult.data ??
-        []
-      ) as unknown as
-        SearchProjectRow[];
+      [
+        ...(referenceProjectsResult.data ?? []),
+        ...(titleProjectsResult.data ?? []),
+      ] as unknown as SearchProjectRow[];
 
     const tickets:
       TicketSummary[] =
@@ -941,6 +957,7 @@ export async function globalSearchAction(
         projectCandidate(
           project,
           textQuery,
+          sppReference,
         ),
       );
     }

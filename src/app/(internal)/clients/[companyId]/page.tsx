@@ -18,6 +18,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { FinancialVisibilityBoundary } from "../../../../components/invoices/financial-visibility-boundary";
 import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-status-badge";
 import { financialAuthority, financialIdentity, invoiceVisibility } from "../../../../domain/invoices/visibility";
+import { orderReference } from "../../../../domain/orders/references";
 import type { ClientInvoiceSummary } from "../../../../repositories/invoice-repository";
 import invoiceHistoryStyles from "../../../../components/clients/client-invoice-history.module.css";
 import { DataError } from "../../../../components/ui/list-states";
@@ -434,7 +435,7 @@ export default async function ClientDetailPage({
                       >
                         <div>
                           <strong>
-                            #{project.order_number}{" "}
+                            #{orderReference(project)}{" "}
                             {project.title}
                           </strong>
                         </div>
@@ -475,7 +476,7 @@ export default async function ClientDetailPage({
                   >
                     <div>
                       <strong>
-                        #{project.order_number}{" "}
+                        #{orderReference(project)}{" "}
                         {project.title}
                       </strong>
                     </div>

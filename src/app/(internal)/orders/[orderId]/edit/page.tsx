@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ProjectForm } from "../../../../../components/projects/project-form";
 import { DataError } from "../../../../../components/ui/list-states";
 import { PageFrame } from "../../../../../components/ui/page-frame";
+import { orderReference } from "../../../../../domain/orders/references";
 import { toClientSafeError } from "../../../../../lib/errors/application-error";
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
 
@@ -43,7 +44,7 @@ export default async function EditProjectPage({
     ]);
 
     return (
-      <PageFrame title="Edit Project" description={`Project #${project.order_number}`} narrow>
+      <PageFrame title="Edit Project" description={`Project #${orderReference(project)}`} narrow>
         <ProjectForm
           mode="edit"
           project={project}

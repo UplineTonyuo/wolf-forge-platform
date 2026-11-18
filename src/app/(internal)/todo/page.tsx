@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DataError, EmptyState } from "../../../components/ui/list-states";
 import { StatusBadge } from "../../../components/ui/status-badge";
+import { orderReference } from "../../../domain/orders/references";
 import type { Order } from "../../../domain/orders/schema";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { formatDate, isOverdue } from "../../../lib/format";
@@ -25,7 +26,7 @@ function AttentionSection({ title, empty, orders, companyNames, serviceNames }: 
           {orders.slice(0, 8).map((order) => (
             <article className="attention-row" key={order.id}>
               <div className="attention-row-main">
-                <strong>#{order.order_number} {order.title}</strong>
+                <strong>#{orderReference(order)} {order.title}</strong>
                 <span>{companyNames.get(order.company_id) ?? "Client unavailable"} · {serviceNames.get(order.service_id) ?? "Service unavailable"}</span>
               </div>
               <div className="attention-row-meta">
