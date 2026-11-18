@@ -3998,6 +3998,11 @@ button.attachmentLink:focus-visible { outline: 2px solid rgba(0, 13, 81, .35); o
   background: #fff;
   box-shadow: 0 20px 60px rgba(0, 13, 81, .2);
 }
+
+/* These thread controls portal to body so they can extend beyond the transcript. */
+:global(body:has(.portal-overlay[data-layout="conversation"]:not([hidden]))) :is(.orderMessageMenu, .orderForwardBackdrop, .imageLightboxBackdrop) {
+  z-index: 9601;
+}
 .orderForwardCard > header {
   display: flex;
   align-items: center;

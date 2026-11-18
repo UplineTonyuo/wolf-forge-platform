@@ -64,6 +64,7 @@ export function PortalDialog({
   /** Set false for flows where a stray backdrop click would lose typed input. */
   closeOnBackdrop = true,
   size = "default",
+  layout,
   /** Renders a close control in the header. Off by default so existing
       dialogs keep the header they were designed with. */
   showClose = false,
@@ -80,6 +81,8 @@ export function PortalDialog({
   initialFocusRef?: RefObject<HTMLElement | null>;
   closeOnBackdrop?: boolean;
   size?: PortalDialogSize;
+  /** Keeps the order thread, its history and its unsent composer mounted between openings. */
+  layout?: "conversation";
   showClose?: boolean;
   /** Optional control rendered beside the close button, e.g. "Clear cart". */
   headerAction?: ReactNode;
@@ -212,6 +215,10 @@ export function PortalDialog({
     if (!render) return;
 
     function onKeyDown(event: KeyboardEvent) {
+      if (layout === "conversation") {
+        const activeDialog = document.activeElement?.closest('dialog[open], [role="dialog"]');
+        if (activeDialog && activeDialog !== panelRef.current) return;
+      }
       const foreground = document.querySelector('.portal-overlay[data-layer="call"]');
       if (event.defaultPrevented || (foreground && !foreground.contains(panelRef.current))) return;
       if (layer === "call" && !open) {
@@ -257,13 +264,13 @@ export function PortalDialog({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [render, focusables, onClose, layer, open]);
+  }, [render, focusables, onClose, layer, open, layout]);
 
 
 
   useBodyScrollLock(render);
 
-  if (!mounted || !render) return null;
+  if (!mounted || (!render && layout !== "conversation")) return null;
 
   const Overlay = layer === "call" ? "dialog" : "div";
 
@@ -272,6 +279,7 @@ export function PortalDialog({
     <Overlay
       ref={(node: HTMLDivElement | HTMLDialogElement | null) => { nativeCallRef.current = node?.tagName === "DIALOG" ? node as HTMLDialogElement : null; }}
       className="portal-overlay" data-phase={phase} data-size={size} data-layer={layer}
+      data-layout={layout} hidden={!render}
       data-full-window={layer === "call" && fullWindow || undefined}
       aria-modal={layer === "call" ? true : undefined}
       aria-labelledby={layer === "call" ? titleId : undefined}
