@@ -3,6 +3,7 @@ import { OrderTeamNote } from "../../../../components/projects/order-team-note";
 import { ProjectTasks } from "../../../../components/projects/project-tasks";
 import { InternalNotesModal } from "../../../../components/tickets/internal-notes-modal";
 import { OrderConversation } from "../../../../components/tickets/order-conversation";
+import { OrderConversationDialog } from "../../../../components/tickets/order-conversation-dialog";
 import { DataError } from "../../../../components/ui/list-states";
 import { composeProjectTaskViews } from "../../../../domain/orders/projections";
 import { toTeamConversationViews } from "../../../../domain/team/projections";
@@ -57,11 +58,7 @@ export default async function OrderDetailsPage({
           )}
         </section>
 
-        {context.user.tickets.view ? <section aria-labelledby="order-conversation-heading">
-          <h2 id="order-conversation-heading" className="sr-only">
-            Conversation
-          </h2>
-
+        {context.user.tickets.view ? <OrderConversationDialog key={orderId}>
           <OrderConversation
             orderId={orderId}
             viewerProfileId={context.user.id}
@@ -81,7 +78,7 @@ export default async function OrderDetailsPage({
               ) : null
             }
           />
-        </section> : null}
+        </OrderConversationDialog> : null}
 
         <section className={styles.secondary} aria-labelledby="order-secondary-heading">
           <h2 id="order-secondary-heading" className={styles.secondaryHeading}>
