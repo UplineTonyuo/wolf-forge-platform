@@ -8,6 +8,7 @@ import {
   FolderKanban,
   Hash,
   LoaderCircle,
+  ReceiptText,
   Search,
   TicketIcon,
   X,
@@ -75,6 +76,10 @@ function resultIcon(
   }
 
 
+  if (kind === "invoice") {
+    return <ReceiptText size={16} aria-hidden="true" />;
+  }
+
   return (
     <Hash
       size={16}
@@ -108,6 +113,8 @@ function resultTypeLabel(
     return "TICKET";
   }
 
+
+  if (kind === "invoice") return "INVOICE";
 
   return "PROJECT";
 }
@@ -174,7 +181,15 @@ function HighlightedTitle({
 }
 
 
-export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true }: { ticketsAvailable?: boolean; projectsAvailable?: boolean } = {}) {
+export function GlobalSearch({
+  ticketsAvailable = true,
+  projectsAvailable = true,
+  invoicesAvailable = true,
+}: {
+  ticketsAvailable?: boolean;
+  projectsAvailable?: boolean;
+  invoicesAvailable?: boolean;
+} = {}) {
 
   const push = useRouteTransitionPush();
 
@@ -210,7 +225,11 @@ export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true
       GlobalSearchItem[]
     >([]);
 
-  const results = cachedResults.filter((item) => (ticketsAvailable || item.kind !== "ticket") && (projectsAvailable || item.kind !== "project"));
+  const results = cachedResults.filter((item) =>
+    (ticketsAvailable || item.kind !== "ticket") &&
+    (projectsAvailable || item.kind !== "project") &&
+    (invoicesAvailable || item.kind !== "invoice"),
+  );
 
   const [
     open,
@@ -845,9 +864,9 @@ export function GlobalSearch({ ticketsAvailable = true, projectsAvailable = true
               </strong>
 
               <span>
-                Try a client, project,
-                service, or ticket
-                number.
+                {invoicesAvailable
+                  ? "Try a client, project, service, ticket, or invoice number."
+                  : "Try a client, project, service, or ticket number."}
               </span>
             </div>
           ) : (

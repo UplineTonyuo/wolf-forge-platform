@@ -45,6 +45,7 @@ export class InvoiceService {
   findItemByOrderId(orderId: unknown) {
     return this.dependencies.repository.findItemByOrderId(parseInput(uuidSchema, orderId));
   }
+  listOrderIds(invoiceId: unknown) { return this.dependencies.repository.listOrderIds(parseInput(uuidSchema, invoiceId)); }
   listForClient() { return this.dependencies.repository.listForClient(); }
   listForCompany(companyId: unknown) { return this.dependencies.repository.listForCompany(parseInput(uuidSchema, companyId)); }
   getForClient(id: unknown) {

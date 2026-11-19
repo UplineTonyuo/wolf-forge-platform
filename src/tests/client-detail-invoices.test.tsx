@@ -9,7 +9,7 @@ import type { UserMutationClient } from "../repositories/types";
 
 const companyId = "10000000-0000-4000-8000-000000000001";
 const mocks = vi.hoisted(() => ({
-  list: vi.fn(), workEnabled: vi.fn(), forms: vi.fn(), candidates: vi.fn(), actions: vi.fn(), boundary: vi.fn(),
+  list: vi.fn(), projects: vi.fn(), findInvoiceItem: vi.fn(), listInvoiceOrderIds: vi.fn(), workEnabled: vi.fn(), forms: vi.fn(), candidates: vi.fn(), actions: vi.fn(), boundary: vi.fn(),
   user: { id: 'actor', tenantId: 'tenant', role: 'staff', clients: { privateManage: false, contactRead: false }, invoices: { view: true, manage: false }, forms: { assign: false }, tickets: { create: false } },
 }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error('not found'); }, unstable_rethrow: vi.fn() }));
@@ -18,9 +18,14 @@ vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => 
   user: mocks.user,
   services: {
     companies: { get: async (id: string) => ({ id, name: 'Synthetic account', created_at: '2026-10-01', status: 'client' }) },
-    orders: { listForCompany: async () => [] },
+    orders: { listForCompany: mocks.projects },
     wfCard: { getMembership: async () => null },
-    invoices: { listForCompany: mocks.list, workEnabled: mocks.workEnabled },
+    invoices: {
+      listForCompany: mocks.list,
+      workEnabled: mocks.workEnabled,
+      findItemByOrderId: mocks.findInvoiceItem,
+      listOrderIds: mocks.listInvoiceOrderIds,
+    },
     forms: { list: mocks.forms, listOnboardingCandidates: mocks.candidates },
   },
 }) }));
@@ -41,6 +46,9 @@ beforeEach(() => {
   mocks.user.forms.assign = false;
   mocks.list.mockResolvedValue([summary('manual'), summary('store', 'store_purchase', 'overdue')]);
   mocks.workEnabled.mockResolvedValue(true);
+  mocks.projects.mockResolvedValue([]);
+  mocks.findInvoiceItem.mockResolvedValue(null);
+  mocks.listInvoiceOrderIds.mockResolvedValue([]);
   mocks.forms.mockResolvedValue([]);
   mocks.candidates.mockResolvedValue([]);
 });
@@ -59,6 +67,56 @@ describe('client invoice tab', () => {
     expect(html).not.toContain('billing domain is connected');
     expect(mocks.boundary).toHaveBeenCalledWith(expect.objectContaining({ scope: 'internal', companyId }));
   });
+  it('shows the verified order reference and title only on the linked invoice', async () => {
+    mocks.projects.mockResolvedValue([
+      { id: 'linked-order', title: 'Local campaign', order_number: 25, spp_order_reference: 'ABCD5678_2', status: 'working' },
+      { id: 'unlinked-order', title: 'Unrelated order', order_number: 26, status: 'working' },
+    ]);
+    mocks.findInvoiceItem.mockImplementation(async (id: string) =>
+      id === 'linked-order' ? { invoice_id: 'manual', order_id: 'linked-order' } : null,
+    );
+
+    const document = new DOMParser().parseFromString(await page(), 'text/html');
+    const linked = document.querySelector('a[href="/invoices/manual"]')?.closest('li');
+    const other = document.querySelector('a[href="/invoices/store"]')?.closest('li');
+    expect(linked?.querySelector('a[href="/orders/linked-order"]')?.textContent).toContain('#ABCD5678_2 · Local campaign');
+    expect(other?.querySelector('a[href^="/orders/"]')).toBeNull();
+    expect(other?.textContent).toContain('Order not linked');
+  });
+
+  it('starts from invoices when there are fewer invoices than visible orders', async () => {
+    mocks.list.mockResolvedValue([summary('manual')]);
+    mocks.projects.mockResolvedValue([
+      { id: 'local-order', title: 'Local campaign', order_number: 25, status: 'working' },
+      { id: 'another-order', title: 'Another local project', order_number: 26, status: 'working' },
+    ]);
+    mocks.listInvoiceOrderIds.mockResolvedValue(['local-order', 'unavailable-order']);
+
+    const html = await page();
+    expect(mocks.listInvoiceOrderIds).toHaveBeenCalledExactlyOnceWith('manual');
+    expect(mocks.findInvoiceItem).not.toHaveBeenCalled();
+    expect(html).toContain('href="/orders/local-order"');
+    expect(html).not.toContain('href="/orders/unavailable-order"');
+  });
+
+  it('keeps billing history visible when a related order lookup fails', async () => {
+    mocks.projects.mockResolvedValue([{ id: 'linked-order', title: 'Campaign', order_number: 25, status: 'working' }]);
+    mocks.findInvoiceItem.mockRejectedValue(new Error('Order lookup unavailable'));
+
+    const html = await page();
+    expect(html).toContain('/invoices/manual');
+    expect(html).toContain('Order link unavailable');
+  });
+
+  it('does not render an order link for an invoice outside the visible history', async () => {
+    mocks.projects.mockResolvedValue([{ id: 'unrelated-order', title: 'Campaign', order_number: 25, status: 'working' }]);
+    mocks.findInvoiceItem.mockResolvedValue({ invoice_id: 'foreign-invoice', order_id: 'unrelated-order' });
+
+    const html = await page();
+    expect(html).not.toContain('href="/orders/unrelated-order"');
+    expect(html).toContain('Order not linked');
+  });
+
   it.each(['details', 'projects', 'activities', 'history'])('does not read invoices on %s', async (tab) => {
     await page(tab);
     expect(mocks.list).not.toHaveBeenCalled();
@@ -69,6 +127,7 @@ describe('client invoice tab', () => {
     expect(await page()).toContain('You do not have access to invoice history.');
     expect(mocks.list).not.toHaveBeenCalled();
     expect(mocks.workEnabled).not.toHaveBeenCalled();
+    expect(mocks.findInvoiceItem).not.toHaveBeenCalled();
   });
   it('retains authorized issued history when new work is off', async () => {
     mocks.workEnabled.mockResolvedValue(false);
