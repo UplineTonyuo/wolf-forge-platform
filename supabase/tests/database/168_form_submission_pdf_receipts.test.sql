@@ -211,6 +211,44 @@ select throws_ok($$select public.app_get_form_submission_pdf((select id from pdf
   'trusted server role cannot bypass private export authorization');
 reset role;
 
+-- An imported signed original is a separate, scoped artifact. Preserve the
+-- native submission and all append-only answers while projecting its source time.
+select set_config('request.jwt.claim.sub','',true);
+select set_config('request.jwt.claims','{}',true);
+update public.orders set spp_order_reference='A0B0C0D0_1' where id=(select id from pdf_ids where label='order');
+insert into private.spp_submission_history(submission_id,order_id,source_submitted_at,source_time_precision)
+select s.id,s.order_id,'2020-01-02 03:04Z','minute' from public.form_submissions s where s.id=(select id from pdf_ids where label='submission');
+insert into private.spp_signed_agreements(submission_id,order_id,original_name,contents,sha256_hex,source_signed_at)
+select h.submission_id,h.order_id,'Sample agreement.pdf',v.contents,encode(sha256(v.contents),'hex'),'2020-01-02 03:04:32Z'
+from private.spp_submission_history h cross join (values(convert_to('%PDF-1.7 synthetic signing evidence','UTF8'))) v(contents)
+where h.submission_id=(select id from pdf_ids where label='submission');
+select throws_ok($$update private.spp_signed_agreements set sha256_hex=repeat('0',64)
+  where submission_id=(select id from pdf_ids where label='submission')$$,'23514',null,'wrong source digest rejected');
+set local role authenticated;
+select pg_temp.pdf_act(1);
+select is((select submitted_at from public.app_list_form_submissions(null,(select id from pdf_ids where label='order'))
+  where id=(select id from pdf_ids where label='submission')),'2020-01-02 03:04Z'::timestamptz,'order forms uses source submission time');
+select is((public.app_get_form_submission((select id from pdf_ids where label='submission'))->'submission'->>'submitted_at')::timestamptz,
+  '2020-01-02 03:04Z'::timestamptz,'submission detail uses source time');
+select is((public.app_get_form_submission_pdf((select id from pdf_ids where label='submission'),true)->'original'->>'submitted_at')::timestamptz,
+  '2020-01-02 03:04Z'::timestamptz,'generated PDF uses source time');
+select is((select count(*) from public.app_list_order_signed_agreements((select id from pdf_ids where label='order'))),1::bigint,
+  'Files lists authorized signed agreement metadata');
+select pg_temp.pdf_act(2);
+select is(public.app_get_form_submission((select id from pdf_ids where label='submission'))->>'has_signed_agreement','true',
+  'submitting client sees separate original download');
+select is(decode(public.app_get_spp_signed_agreement((select id from pdf_ids where label='submission'))->>'contents_base64','base64'),
+  convert_to('%PDF-1.7 synthetic signing evidence','UTF8'),'submitting client receives exact archived bytes');
+select pg_temp.pdf_act(3);
+select throws_ok($$select public.app_get_spp_signed_agreement((select id from pdf_ids where label='submission'))$$,'42501',null,
+  'same-company peer cannot download another client submission');
+select pg_temp.pdf_act(5);
+select is((select count(*) from public.app_list_order_signed_agreements((select id from pdf_ids where label='order'))),0::bigint,
+  'foreign tenant cannot enumerate the file');
+select throws_ok($$select public.app_get_spp_signed_agreement((select id from pdf_ids where label='submission'))$$,'42501',null,
+  'foreign tenant cannot download agreement');
+reset role;
+
 -- Saturate only this fixture actor's current/next buckets; seeding both sides
 -- avoids a clock-boundary race while the real RPC enforces each quota.
 insert into private.rate_limit_counters(scope,subject,window_start,expires_at,hits)

@@ -48,6 +48,12 @@ export default async function InvoiceDetailPage({
   try {
     const [detail, rows, workEnabled, manual] = await Promise.all([context.services.invoices.get(invoiceId), context.services.invoices.list(), context.services.invoices.workEnabled(), context.services.invoices.getManualPayment(invoiceId).catch(() => null)]);
     const signature = invoiceVisibility(rows, workEnabled, context.user.invoices, financialIdentity(context.user));
+    const sourcePayments = new Map(detail.sourceHistory?.payments.map((payment) => [payment.payment_id, payment]));
+    const sourceInvoices = [...new Set(detail.sourceHistory?.payments.map((payment) => payment.source_invoice_id))];
+    const method = (payment: (typeof detail.payments)[number]) => {
+      const source = sourcePayments.get(payment.id);
+      return source ? `${source.source_provider} · ${source.source_payment_id}` : paymentMethodLabel(payment.payment_method);
+    };
     const closedByRefund = ["partially_refunded", "refunded"].includes(detail.financials.presentation_state);
     const refundable = Math.max(detail.financials.gross_paid_cents - detail.financials.successful_refunds_cents, 0);
     return (
@@ -63,6 +69,10 @@ export default async function InvoiceDetailPage({
           {query.saved ? <SuccessToast title="Invoice changes saved." /> : null}
           {manual ? <InvoiceManualPaymentReview context={manual} /> : workEnabled ? <p role="status">Manual payment reports could not be loaded. Reload before recording a payment.</p> : null}
           <section className={styles.metadata} aria-label="Invoice information">
+            {detail.sourceHistory?.shared_orders.map((order) => <div key={order.order_id}>
+              <span>Linked order</span><Link href={`/orders/${order.order_id}`}>#{order.source_order_reference}</Link>
+            </div>)}
+            {sourceInvoices.length > 0 ? <div><span>SPP invoice</span><strong>{sourceInvoices.join(", ")}</strong></div> : null}
             <div><span>Status</span><InvoiceStatusBadge state={detail.financials.presentation_state} /></div>
             <div><span>Created</span><strong>{formatDate(detail.invoice.created_at)}</strong></div>
             <div><span>Issued</span><strong>{formatDate(detail.invoice.issued_at)}</strong></div>
@@ -78,7 +88,7 @@ export default async function InvoiceDetailPage({
           </div>
 
           <div className={styles.historyGrid}>
-            <section className={styles.detailSection}><h2>Payment history</h2>{detail.payments.length === 0 ? <p className={styles.emptyLedger}>No payments recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>{detail.payments.map((payment) => <tr key={payment.id}><td>{formatDateTime(payment.settled_at ?? payment.created_at)}</td><td>{formatCurrencyCents(payment.amount_cents, payment.currency)}</td><td>{paymentMethodLabel(payment.payment_method)}</td><td><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.payments.map((payment) => <article key={payment.id}><header><strong>{formatCurrencyCents(payment.amount_cents, payment.currency)}</strong><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></header><span>{paymentMethodLabel(payment.payment_method)} · {formatDateTime(payment.settled_at ?? payment.created_at)}</span></article>)}</div></>}</section>
+            <section className={styles.detailSection}><h2>Payment history</h2>{detail.payments.length === 0 ? <p className={styles.emptyLedger}>No payments recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead><tbody>{detail.payments.map((payment) => <tr key={payment.id}><td>{formatDateTime(payment.settled_at ?? payment.created_at)}</td><td>{formatCurrencyCents(payment.amount_cents, payment.currency)}</td><td>{method(payment)}</td><td><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.payments.map((payment) => <article key={payment.id}><header><strong>{formatCurrencyCents(payment.amount_cents, payment.currency)}</strong><span className={styles.ledgerStatus} data-state={payment.status}>{statusLabel(payment.status)}</span></header><span>{method(payment)} · {formatDateTime(payment.settled_at ?? payment.created_at)}</span></article>)}</div></>}</section>
             <section className={styles.detailSection}><h2>Refund ledger history</h2><p className={styles.closedNote}>Ledger entries record refunds; they do not confirm money was returned to a wallet or payment provider.</p>{detail.refunds.length === 0 ? <p className={styles.emptyLedger}>No refunds recorded.</p> : <><div className={styles.ledgerTable}><table><thead><tr><th>Date</th><th>Amount</th><th>Reason</th><th>Status</th></tr></thead><tbody>{detail.refunds.map((refund) => <tr key={refund.id}><td>{formatDateTime(refund.refunded_at ?? refund.created_at)}</td><td>{formatCurrencyCents(refund.amount_cents, refund.currency)}</td><td>{refund.reason}</td><td><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></td></tr>)}</tbody></table></div><div className={styles.ledgerCards}>{detail.refunds.map((refund) => <article key={refund.id}><header><strong>{formatCurrencyCents(refund.amount_cents, refund.currency)}</strong><span className={styles.ledgerStatus} data-state={refund.status}>{statusLabel(refund.status)}</span></header><span>{refund.reason} · {formatDateTime(refund.refunded_at ?? refund.created_at)}</span></article>)}</div></>}</section>
           </div>
 

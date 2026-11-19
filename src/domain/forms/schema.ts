@@ -382,6 +382,7 @@ export type FormSubmissionSummary = {
 };
 
 export type FormSubmissionDetail = {
+  has_signed_agreement?: boolean;
   has_saved_credentials?: boolean;
   submission: FormSubmissionRow;
   values: Array<{

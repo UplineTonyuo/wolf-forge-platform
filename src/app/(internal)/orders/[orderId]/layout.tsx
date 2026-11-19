@@ -209,8 +209,13 @@ export default async function OrderDetailLayout({
                     </div>
 
                     <div className={styles.railRow}>
-                      <dt>Amount</dt>
-                      <dd>{formatCurrencyCents(invoiceItem.line_subtotal_cents ?? 0, invoiceDetail.invoice.currency)}</dd>
+                      {invoiceDetail.sourceHistory?.shared_orders.some((link) => link.invoice_item_id === invoiceItem.id) ? <>
+                        <dt>Shared invoice line</dt>
+                        <dd>{invoiceItem.quantity} units</dd>
+                      </> : <>
+                        <dt>Amount</dt>
+                        <dd>{formatCurrencyCents(invoiceItem.line_subtotal_cents ?? 0, invoiceDetail.invoice.currency)}</dd>
+                      </>}
                     </div>
 
                     {invoiceDetail.invoice.billing_reason ? (

@@ -47,7 +47,7 @@ export function SubmissionDetail({ detail, canCorrect, automaticPdf = false }: {
   }
 
   return <div className={styles.submissionDetail}>
-    <DownloadFormPdf submissionId={detail.submission.id} automatic={automaticPdf} />
+    <DownloadFormPdf submissionId={detail.submission.id} automatic={automaticPdf} signedOriginal={detail.has_signed_agreement} />
     {followUp && followUp !== "not_required" ? <p className={followUp === "blocked" ? styles.actionError : undefined} role="status">
       {followUp === "completed" ? "Automatic follow-up completed." : followUp === "blocked"
         ? "Automatic follow-up needs staff review. Check the form publisher’s current permissions and configured Service." : "Automatic follow-up is awaiting processing."}

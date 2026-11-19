@@ -382,6 +382,12 @@ export class FormRepository {
     return assignments.map((assignment) => ({ ...assignment, service_name: labels.get(assignment.assignment_id) ?? null }));
   }
 
+  async listSignedAgreements(orderId: string) {
+    const result = await this.client.rpc("app_list_order_signed_agreements", { p_order_id: orderId });
+    if (result.error) throw mapDatabaseError(result.error, "Signed agreements");
+    return result.data ?? [];
+  }
+
   async listSubmissions(formId?: string, orderId?: string): Promise<FormSubmissionSummary[]> {
     const result = await this.client.rpc("app_list_form_submissions", {
       p_form_id: formId,
