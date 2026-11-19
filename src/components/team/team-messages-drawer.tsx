@@ -1749,6 +1749,11 @@ export function TeamMessagesDrawer({
             </div>
           ) : (
             <TeamTicketsPane
+              page={ticketInboxList.page}
+              pages={ticketInboxList.pages}
+              query={ticketInboxList.query}
+              onPageChange={ticketInboxList.onPageChange}
+              onQueryChange={ticketInboxList.onQueryChange}
               tickets={ticketInboxList.tickets}
               loading={!ticketInboxList.loaded && ticketInboxList.tickets.length === 0}
               error={ticketInboxList.error}

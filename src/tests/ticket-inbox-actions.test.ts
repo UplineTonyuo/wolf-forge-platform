@@ -39,14 +39,15 @@ describe("listTicketSummariesAction", () => {
       { ticket_id: "legacy", inbox_added_at: "2026-09-18T09:00:00Z", personal_inbox_added_at: null },
       { ticket_id: "personal", inbox_added_at: "2026-11-04T00:00:00Z", personal_inbox_added_at: "2026-11-04T00:00:00Z" },
     ];
-    const listInbox = vi.fn().mockResolvedValue(summaries);
+    const listInbox = vi.fn().mockResolvedValue({ tickets: summaries, total: 12 });
     const list = vi.fn();
     const get = vi.fn();
     getInternalContext.mockResolvedValue(contextWith(true, { listInbox, list, get }));
 
     const result = await listTicketSummariesAction();
 
-    expect(result).toEqual({ ok: true, data: summaries });
+    expect(result).toEqual({ ok: true, data: { tickets: summaries, total: 12 } });
+    expect(listInbox).toHaveBeenCalledWith(1, "");
     expect(listInbox).toHaveBeenCalledTimes(1);
     // Tickets that were never added to the Inbox must not reach the pane,
     // which is a property of which read is called, not of a later filter.

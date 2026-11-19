@@ -6,7 +6,7 @@ import { TeamMessagesDrawer } from "../components/team/team-messages-drawer";
 vi.mock("../app/actions/team-messages");
 vi.mock("../app/actions/tickets");
 vi.mock("../components/team/use-team-sync-controller", () => ({ useTeamSyncController: () => ({ refreshNow: vi.fn() }) }));
-vi.mock("../components/team/use-ticket-inbox-list", () => ({ useTicketInboxList: () => ({ tickets: [], error: null, unavailable: false, refreshNow: vi.fn() }) }));
+vi.mock("../components/team/use-ticket-inbox-list", () => ({ useTicketInboxList: () => ({ page: 1, pages: 1, query: "", onQueryChange: vi.fn(), onPageChange: vi.fn(), tickets: [], error: null, unavailable: false, refreshNow: vi.fn() }) }));
 function Harness() {
   const [open, setOpen] = useState(false);
   return <><button onClick={() => setOpen(true)}>Open Inbox</button>

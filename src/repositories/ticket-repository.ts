@@ -14,6 +14,7 @@ import type {
   UpdateTicketPriorityInput,
   UpdateTicketStatusInput,
 } from "../domain/tickets/schema";
+import { ticketInboxPageSize, type TicketInboxPage } from "../domain/tickets/schema";
 import { mapDatabaseError } from "../lib/errors/map-database-error";
 import type { Json } from "../lib/supabase/database.types";
 import type { TicketMessageRow, TicketRow } from "../lib/supabase/database-rows";
@@ -176,13 +177,34 @@ export class TicketRepository {
    * personal_inbox_added_at separately identifies the viewer's deliberate save;
    * visibility alone never establishes call-recipient eligibility.
    */
-  async listInbox(): Promise<TicketSummary[]> {
-    const result = await this.client.rpc("app_list_ticket_summaries", {
-      p_include_archived: false,
-      p_inbox_only: true,
-    });
+  async listInbox(page: number, search: string): Promise<TicketInboxPage> {
+    const summaries = (head = false) => {
+      let query = this.client.rpc("app_list_ticket_summaries", {
+        p_include_archived: false,
+        p_inbox_only: true,
+      }, { count: "exact", head });
+      if (search) {
+        // PostgreSQL's ***= prefix matches the remaining text literally.
+        // Escape the quoted PostgREST operand independently of the regex.
+        const literal = search.replace(/["\\]/g, "\\$&");
+        const fields = ["public_ref", "client_name", "company_name", "subject"];
+        query = query.or(fields.map((field) => field + '.imatch."***=' + literal + '"').join(","));
+      }
+      return query;
+    };
+    const start = (page - 1) * ticketInboxPageSize;
+    const result = await summaries()
+      .order("updated_at", { ascending: false })
+      .order("ticket_id", { ascending: true })
+      .range(start, start + ticketInboxPageSize - 1);
+    // If the last page disappeared between polls, recover its new count.
+    if (page > 1 && result.error?.code === "PGRST103") {
+      const count = await summaries(true);
+      if (count.error) throw mapDatabaseError(count.error, "Tickets");
+      return { tickets: [], total: count.count ?? 0 };
+    }
     if (result.error) throw mapDatabaseError(result.error, "Tickets");
-    return (result.data ?? []) as TicketSummary[];
+    return { tickets: (result.data ?? []) as TicketSummary[], total: result.count ?? 0 };
   }
 
   async getById(id: string): Promise<TicketDetail> {

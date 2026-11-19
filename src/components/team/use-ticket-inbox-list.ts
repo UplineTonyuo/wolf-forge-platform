@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { applyTeamJitter, teamBackoffIntervalMs } from "../../domain/team/live-scheduler";
 import { listTicketSummariesAction } from "../../app/actions/tickets";
-import type { TicketSummary } from "../../domain/tickets/schema";
+import { ticketInboxPageSize, type TicketSummary } from "../../domain/tickets/schema";
 import { notifyTicketAccessUnavailable } from "../tickets/ticket-access-boundary";
 import { useTicketCacheRevocation } from "../tickets/use-ticket-cache-revocation";
 
@@ -28,9 +28,26 @@ export function useTicketInboxList(active: boolean, onUnavailable?: () => void) 
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const [pages, setPages] = useState(0);
+  const [request, setRequest] = useState({ page: 1, query: "" });
+  const latestRequest = useRef(request);
+  const changeRequest = useCallback((page: number, query: string) => {
+    const next = { page, query };
+    latestRequest.current = next;
+    setRequest(next);
+    setTickets([]);
+    setError(null);
+    setLoaded(false);
+  }, []);
+  const onPageChange = (page: number) => changeRequest(page, latestRequest.current.query);
+  const onQueryChange = (query: string) => {
+    setPages(0);
+    changeRequest(1, query);
+  };
   const cacheGeneration = useRef(0);
   useTicketCacheRevocation(() => {
     setTickets([]);
+    setPages(0);
     setUnavailable(true);
     setError("Tickets are unavailable.");
     setLoaded(true);
@@ -76,7 +93,10 @@ export function useTicketInboxList(active: boolean, onUnavailable?: () => void) 
     if (disposedRef.current || inFlightRef.current || suspended()) return;
     inFlightRef.current = true;
     const generation = cacheGeneration.current;
-    const result = await listTicketSummariesAction();
+    const pending = latestRequest.current;
+    const result = await listTicketSummariesAction(pending.page, pending.query).catch(() => ({
+      ok: false as const, error: "Tickets could not be refreshed.", code: undefined,
+    }));
     inFlightRef.current = false;
     if (disposedRef.current) return;
     if (generation !== cacheGeneration.current) {
@@ -84,29 +104,44 @@ export function useTicketInboxList(active: boolean, onUnavailable?: () => void) 
       return;
     }
 
+    // Access loss applies to the entire drawer, even if the requested page changed.
+    if (!result.ok && (result.code === "PERMISSION_DENIED" || result.code === "NOT_FOUND")) {
+      setError(result.error);
+      setTickets([]);
+      setPages(0);
+      setUnavailable(true);
+      setLoaded(true);
+      clearTimer();
+      notifyTicketAccessUnavailable();
+      onUnavailable?.();
+      return;
+    }
+
+    if (pending !== latestRequest.current) {
+      schedule(0);
+      return;
+    }
+
     if (!result.ok) {
       failureCountRef.current += 1;
       setError(result.error);
-      if (result.code === "PERMISSION_DENIED" || result.code === "NOT_FOUND") {
-        setTickets([]);
-        setUnavailable(true);
-        setLoaded(true);
-        clearTimer();
-        notifyTicketAccessUnavailable();
-        onUnavailable?.();
-        return;
-      }
       schedule(applyTeamJitter(teamBackoffIntervalMs(failureCountRef.current)));
       return;
     }
 
     failureCountRef.current = 0;
-    setTickets(result.data);
+    const pageCount = Math.max(1, Math.ceil(result.data.total / ticketInboxPageSize));
+    setPages(pageCount);
+    if (pending.page > pageCount) {
+      changeRequest(pageCount, pending.query);
+      return;
+    }
+    setTickets(result.data.tickets);
     setError(null);
     setUnavailable(false);
     setLoaded(true);
     schedule(applyTeamJitter(TICKET_INBOX_LIST_INTERVAL_MS));
-  }, [schedule, suspended, clearTimer, onUnavailable]);
+  }, [schedule, suspended, clearTimer, onUnavailable, changeRequest]);
 
   useEffect(() => {
     runRef.current = run;
@@ -138,7 +173,7 @@ export function useTicketInboxList(active: boolean, onUnavailable?: () => void) 
       window.removeEventListener("online", wake);
       document.removeEventListener("visibilitychange", wake);
     };
-  }, [active, clearTimer, refreshNow, run, suspended]);
+  }, [active, clearTimer, refreshNow, run, suspended, request]);
 
   useEffect(() => {
     disposedRef.current = false;
@@ -148,5 +183,5 @@ export function useTicketInboxList(active: boolean, onUnavailable?: () => void) 
     };
   }, [clearTimer]);
 
-  return { tickets: active ? tickets : [], loaded, error, unavailable, refreshNow };
+  return { page: request.page, pages, query: request.query, onPageChange, onQueryChange, tickets: active ? tickets : [], loaded, error, unavailable, refreshNow };
 }

@@ -126,6 +126,9 @@ export type UpdateTicketStatusInput = z.infer<typeof updateTicketStatusSchema>;
 export type UpdateTicketPriorityInput = z.infer<typeof updateTicketPrioritySchema>;
 export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
 
+export const ticketInboxPageSize = 10;
+export type TicketInboxPage = { tickets: TicketSummary[]; total: number };
+
 export type TicketSummary = {
   ticket_id: string;
   public_ref: string;
