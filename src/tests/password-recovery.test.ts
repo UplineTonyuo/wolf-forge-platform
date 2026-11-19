@@ -6,6 +6,9 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ auth }) }));
 vi.mock("../lib/env/public-env", () => ({ readPublicEnvironment: () => ({}) }));
+const eligibility = vi.hoisted(() => vi.fn());
+vi.mock("../lib/env/server-env", () => ({ readServerEnvironment: () => ({}) }));
+vi.mock("../lib/supabase/trusted-server-client", () => ({ createTrustedServerSupabaseClient: () => ({ rpc: eligibility }) }));
 vi.mock("../lib/security/login-protection", () => ({ beginProtectedLogin: async () => ({ ok: true }) }));
 
 function form() {
@@ -17,7 +20,17 @@ function form() {
 }
 
 describe("password recovery", () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    eligibility.mockResolvedValue({ data: true, error: null });
+  });
+  it("withholds code delivery and verification until activation is complete", async () => {
+    eligibility.mockResolvedValue({ data: false, error: null });
+    expect((await requestRecoveryCode(form())).ok).toBe(true);
+    expect(auth.resetPasswordForEmail).not.toHaveBeenCalled();
+    expect((await finishPasswordRecovery(form())).ok).toBe(false);
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+  });
   it("gives the same receipt for a registered and an unknown email", async () => {
     auth.resetPasswordForEmail.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: { status: 400 } });
     const receipt = await requestRecoveryCode(form());

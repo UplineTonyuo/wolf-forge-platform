@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { readPublicEnvironment } from "../../lib/env/public-env";
+import { readServerEnvironment } from "../../lib/env/server-env";
+import { createTrustedServerSupabaseClient } from "../../lib/supabase/trusted-server-client";
 import { beginProtectedLogin } from "../../lib/security/login-protection";
 
 const emailSchema = z.email().max(320);
@@ -13,6 +15,10 @@ const unconfirmed = "Try signing in with your new password. If that fails, reque
 
 async function recoveryAuth(email: string) {
   if (!(await beginProtectedLogin(email)).ok) throw new Error("Recovery unavailable");
+  const trusted = createTrustedServerSupabaseClient(readServerEnvironment());
+  const eligibility = await trusted.rpc("app_server_can_request_recovery", { p_email: email });
+  if (eligibility.error) throw new Error("Recovery unavailable");
+  if (eligibility.data !== true) return null;
   const env = readPublicEnvironment();
   // Isolate the OTP session from existing sign-in cookies and other requests.
   return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
@@ -25,6 +31,7 @@ export async function requestRecoveryCode(form: FormData) {
   if (!parsed.success) return { ok: false, message: "Enter a valid email address." };
   try {
     const auth = await recoveryAuth(parsed.data);
+    if (!auth) return { ok: true, message: genericReceipt };
     const { error } = await auth.resetPasswordForEmail(parsed.data);
     // A per-recipient cooldown can reveal account existence. Give everyone
     // the same guidance about using an earlier code or waiting to resend.
@@ -48,6 +55,7 @@ export async function finishPasswordRecovery(form: FormData) {
 
   try {
     const auth = await recoveryAuth(email.data);
+    if (!auth) return { ok: false, message: "The code is invalid or expired. Check it or request another code." };
     const proof = await auth.verifyOtp({ type: "recovery", email: email.data, token });
     if (proof.error?.status === 429) return { ok: false, message: throttled };
     if (proof.error && (!proof.error.status || proof.error.status >= 500))
