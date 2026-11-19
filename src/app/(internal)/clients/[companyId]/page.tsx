@@ -19,7 +19,7 @@ import { FinancialVisibilityBoundary } from "../../../../components/invoices/fin
 import { InvoiceStatusBadge } from "../../../../components/invoices/invoice-status-badge";
 import { financialAuthority, financialIdentity, invoiceVisibility } from "../../../../domain/invoices/visibility";
 import { orderReference } from "../../../../domain/orders/references";
-import type { ClientInvoiceSummary } from "../../../../repositories/invoice-repository";
+import type { CompanyInvoiceSummary } from "../../../../repositories/invoice-repository";
 import invoiceHistoryStyles from "../../../../components/clients/client-invoice-history.module.css";
 import { DataError } from "../../../../components/ui/list-states";
 import { ClientDetailActions } from "../../../../components/clients/client-detail-actions";
@@ -215,7 +215,7 @@ export default async function ClientDetailPage({
     const historyGroups =
       groupHistory(visibleHistoryEvents);
 
-    let invoices: ClientInvoiceSummary[] = [];
+    let invoices: CompanyInvoiceSummary[] = [];
     const invoiceOrders = new Map<string, typeof projects>();
     let invoiceLinksAvailable = true;
     let invoiceState: "ready" | "denied" | "error" = "ready";
@@ -538,23 +538,26 @@ export default async function ClientDetailPage({
               : invoiceState === "error" ? <div role="alert"><p>Invoice history could not be loaded.</p><a href={`/clients/${client.id}?tab=invoices`}>Try again</a></div>
                 : <FinancialVisibilityBoundary key={`${client.id}:${financialAuthority("internal", invoiceSignature)}`} scope="internal" companyId={client.id} signature={invoiceSignature}>
                   {invoices.length ? <ul className={invoiceHistoryStyles.list} aria-label="Client invoices">
-                    {invoices.map(({ invoice, financials }) => {
+                    {invoices.map(({ invoice, financials, paidAt }) => {
                       const orders = invoiceOrders.get(invoice.id);
-                      const date = invoice.issued_at ?? invoice.created_at;
+                      const number = invoice.invoice_number == null ? "Pending" : `WF-${String(invoice.invoice_number).padStart(4, "0")}`;
                       return (
                         <li className={invoiceHistoryStyles.row} key={invoice.id}>
                           <div className={invoiceHistoryStyles.identity}>
-                            <strong>{invoice.invoice_number == null ? "Pending" : `WF-${String(invoice.invoice_number).padStart(4, "0")}`}</strong>
+                            <strong>{contactSummary?.name || client.name}</strong>
                             {orders?.length ? orders.map((order) => (
                               <RouteTransitionLink className={invoiceHistoryStyles.order} key={order.id} href={`/orders/${order.id}`}>
-                                #{orderReference(order)} · {order.title}
+                                #{orderReference(order)} · {order.services?.name ?? order.title}
                               </RouteTransitionLink>
                             )) : <span>{invoiceLinksAvailable ? "Order not linked" : "Order link unavailable"}</span>}
                           </div>
 
                           <div className={invoiceHistoryStyles.meta}>
                             <InvoiceStatusBadge state={financials.presentation_state} />
-                            <time dateTime={date}>{formatDate(date)}</time>
+                            <dl className={invoiceHistoryStyles.dates}>
+                              <div><dt>Created</dt><dd><time dateTime={invoice.created_at}>{formatDate(invoice.created_at)}</time></dd></div>
+                              <div><dt>Paid</dt><dd>{paidAt ? <time dateTime={paidAt}>{formatDate(paidAt)}</time> : "—"}</dd></div>
+                            </dl>
                           </div>
 
                           <div className={invoiceHistoryStyles.billing}>
@@ -562,7 +565,10 @@ export default async function ClientDetailPage({
                               <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
                               <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
                             </dl>
-                            <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : invoice.invoice_number}`}>View</RouteTransitionLink>
+                            <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : number}`}>
+                              <span>{number}</span>
+                              <small>View</small>
+                            </RouteTransitionLink>
                           </div>
                         </li>
                       );
