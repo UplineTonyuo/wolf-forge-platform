@@ -71,10 +71,11 @@ values(pg_temp.h(42),pg_temp.h(30),pg_temp.h(1),'internal','Normal reply');
 select ok(exists(select 1 from public.notifications where event_key='client-conversation:project:'||pg_temp.h(30)
   and recipient_profile_id=pg_temp.h(2)),'unreserved operational staff reply notifies its client');
 
-insert into public.invoices(id,company_id,client_profile_id,status,invoice_number,issued_at,subtotal_cents,total_cents,created_by_profile_id,updated_by_profile_id)
-values(pg_temp.h(50),pg_temp.h(10),pg_temp.h(2),'paid',99100215,'2020-01-01 00:00:00+00',2000,2000,pg_temp.h(1),pg_temp.h(1));
+insert into public.invoices(id,company_id,client_profile_id,status,subtotal_cents,total_cents,created_by_profile_id,updated_by_profile_id)
+values(pg_temp.h(50),pg_temp.h(10),pg_temp.h(2),'draft',2000,2000,pg_temp.h(1),pg_temp.h(1));
 insert into public.invoice_items(id,invoice_id,service_id,order_id,position,name,quantity,unit_price_cents,fulfillment_status)
 values(pg_temp.h(51),pg_temp.h(50),pg_temp.h(20),pg_temp.h(30),0,'Shared historical service',2,1000,'provisioned');
+update public.invoices set status='paid',invoice_number=99100215,issued_at='2020-01-01 00:00:00+00' where id=pg_temp.h(50);
 insert into private.spp_invoice_item_orders(order_id,invoice_item_id,source_order_reference)
 values(pg_temp.h(30),pg_temp.h(51),'CAFE0201_1'),(pg_temp.h(31),pg_temp.h(51),'CAFE0201_2');
 select throws_ok($$insert into private.spp_invoice_item_orders values(pg_temp.h(32),pg_temp.h(51),'CAFE0201_3')$$,'23514',null,'reject another company');
