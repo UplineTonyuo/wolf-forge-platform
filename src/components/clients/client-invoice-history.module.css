@@ -1,15 +1,67 @@
-.list { margin: 0; padding: 0; list-style: none; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding-block: 16px; border-bottom: 1px solid var(--wf-border); }
-.identity { display: grid; min-width: 0; gap: 4px; overflow-wrap: anywhere; }
+.list {
+  container-type: inline-size;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 16px;
+  padding: 12px clamp(16px, 2vw, 24px);
+  border-bottom: 1px solid var(--wf-border);
+}
+
+.row:last-child { border-bottom: 0; }
+
+.identity, .meta {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
 .identity strong { font-size: 14px; color: var(--wf-navy); }
-.identity span { font-size: 12px; color: var(--wf-text-muted); }
-.amounts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 20px; margin: 0; }
+.identity span, .meta time { font-size: 12px; color: var(--wf-text-muted); }
+.meta { justify-items: start; }
+.order { width: fit-content; max-width: 100%; color: var(--wf-navy); font-size: 13px; text-underline-offset: 3px; }
+
+.billing {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.amounts {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 0;
+}
+
 .amounts div { min-width: 0; }
 .amounts dt { margin-bottom: 4px; font-size: 12px; color: var(--wf-text-muted); }
 .amounts dd { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.view { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; color: var(--wf-navy); text-underline-offset: 3px; }
-@media (max-width: 767px) {
-  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
-  .amounts { justify-content: flex-start; }
-  .view { justify-self: end; }
+
+.view {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  color: var(--wf-navy);
+  text-underline-offset: 3px;
+}
+
+.order:hover, .view:hover { text-decoration: underline; }
+
+@container (max-width: 680px) {
+  .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 }

@@ -216,6 +216,8 @@ export default async function ClientDetailPage({
       groupHistory(visibleHistoryEvents);
 
     let invoices: ClientInvoiceSummary[] = [];
+    const invoiceOrders = new Map<string, typeof projects>();
+    let invoiceLinksAvailable = true;
     let invoiceState: "ready" | "denied" | "error" = "ready";
     let invoiceSignature = "";
     if (activeTab === "invoices") {
@@ -226,6 +228,35 @@ export default async function ClientDetailPage({
           // New-work availability is independent of authorized issued history.
           const workEnabled = await context.services.invoices.workEnabled();
           invoices = await context.services.invoices.listForCompany(client.id);
+          if (invoices.length && projects.length) {
+            const invoiceIds = new Set(invoices.map(({ invoice }) => invoice.id));
+            const visibleOrders = new Map(projects.map((project) => [project.id, project]));
+            // Both access-checked lookups take one identifier. Start from the smaller list.
+            const lookups = invoices.length < projects.length
+              ? invoices.map(async ({ invoice }) =>
+                (await context.services.invoices.listOrderIds(invoice.id))
+                  .map((orderId) => ({ invoiceId: invoice.id, orderId })),
+              )
+              : projects.map(async ({ id }) => {
+                const item = await context.services.invoices.findItemByOrderId(id);
+                return item?.order_id === id ? [{ invoiceId: item.invoice_id, orderId: id }] : [];
+              });
+
+            for (const result of await Promise.allSettled(lookups)) {
+              if (result.status === "rejected") {
+                unstable_rethrow(result.reason);
+                invoiceLinksAvailable = false;
+                continue;
+              }
+              for (const { invoiceId, orderId } of result.value) {
+                const order = visibleOrders.get(orderId);
+                if (!order || !invoiceIds.has(invoiceId)) continue;
+                const linked = invoiceOrders.get(invoiceId) ?? [];
+                linked.push(order);
+                invoiceOrders.set(invoiceId, linked);
+              }
+            }
+          }
           invoiceSignature = invoiceVisibility(invoices, workEnabled, context.user.invoices, JSON.stringify([financialIdentity(context.user), client.id]));
         } catch (error) {
           unstable_rethrow(error);
@@ -507,18 +538,35 @@ export default async function ClientDetailPage({
               : invoiceState === "error" ? <div role="alert"><p>Invoice history could not be loaded.</p><a href={`/clients/${client.id}?tab=invoices`}>Try again</a></div>
                 : <FinancialVisibilityBoundary key={`${client.id}:${financialAuthority("internal", invoiceSignature)}`} scope="internal" companyId={client.id} signature={invoiceSignature}>
                   {invoices.length ? <ul className={invoiceHistoryStyles.list} aria-label="Client invoices">
-                    {invoices.map(({ invoice, financials }) => <li className={invoiceHistoryStyles.row} key={invoice.id}>
-                      <div className={invoiceHistoryStyles.identity}>
-                        <strong>{invoice.invoice_number == null ? "Pending" : `WF-${String(invoice.invoice_number).padStart(4, "0")}`}</strong>
-                        <span>{formatDate(invoice.issued_at ?? invoice.created_at)}</span>
-                      </div>
-                      <InvoiceStatusBadge state={financials.presentation_state} />
-                      <dl className={invoiceHistoryStyles.amounts}>
-                        <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
-                        <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
-                      </dl>
-                      <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : invoice.invoice_number}`}>View</RouteTransitionLink>
-                    </li>)}
+                    {invoices.map(({ invoice, financials }) => {
+                      const orders = invoiceOrders.get(invoice.id);
+                      const date = invoice.issued_at ?? invoice.created_at;
+                      return (
+                        <li className={invoiceHistoryStyles.row} key={invoice.id}>
+                          <div className={invoiceHistoryStyles.identity}>
+                            <strong>{invoice.invoice_number == null ? "Pending" : `WF-${String(invoice.invoice_number).padStart(4, "0")}`}</strong>
+                            {orders?.length ? orders.map((order) => (
+                              <RouteTransitionLink className={invoiceHistoryStyles.order} key={order.id} href={`/orders/${order.id}`}>
+                                #{orderReference(order)} · {order.title}
+                              </RouteTransitionLink>
+                            )) : <span>{invoiceLinksAvailable ? "Order not linked" : "Order link unavailable"}</span>}
+                          </div>
+
+                          <div className={invoiceHistoryStyles.meta}>
+                            <InvoiceStatusBadge state={financials.presentation_state} />
+                            <time dateTime={date}>{formatDate(date)}</time>
+                          </div>
+
+                          <div className={invoiceHistoryStyles.billing}>
+                            <dl className={invoiceHistoryStyles.amounts}>
+                              <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
+                              <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
+                            </dl>
+                            <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : invoice.invoice_number}`}>View</RouteTransitionLink>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul> : <p className="client-detail-empty">No invoices for this client yet.</p>}
                 </FinancialVisibilityBoundary>}
           </section>

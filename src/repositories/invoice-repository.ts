@@ -116,6 +116,11 @@ export class InvoiceRepository {
     return unwrapMany(await this.client.rpc("app_list_invoice_items", { p_invoice_id: invoiceId })) as InvoiceItemRow[];
   }
 
+  async listOrderIds(invoiceId: string): Promise<string[]> {
+    const items = await this.listItems(invoiceId);
+    return Array.from(new Set(items.flatMap((item) => item.order_id ? [item.order_id] : [])));
+  }
+
   private async getFinancials(invoiceId: string): Promise<InvoiceFinancials> {
     const result = await this.client.rpc("app_get_invoice_financials", { p_invoice_id: invoiceId });
     if (result.error) throw mapDatabaseError(result.error, "Invoice financials");
