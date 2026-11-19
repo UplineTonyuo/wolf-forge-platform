@@ -552,24 +552,18 @@ export default async function ClientDetailPage({
                             )) : <span>{invoiceLinksAvailable ? "Order not linked" : "Order link unavailable"}</span>}
                           </div>
 
-                          <div className={invoiceHistoryStyles.meta}>
-                            <InvoiceStatusBadge state={financials.presentation_state} />
-                            <dl className={invoiceHistoryStyles.dates}>
-                              <div><dt>Created</dt><dd><time dateTime={invoice.created_at}>{formatDate(invoice.created_at)}</time></dd></div>
-                              <div><dt>Paid</dt><dd>{paidAt ? <time dateTime={paidAt}>{formatDate(paidAt)}</time> : "—"}</dd></div>
-                            </dl>
-                          </div>
+                          <dl className={invoiceHistoryStyles.facts}>
+                            <div><dt>Status</dt><dd><InvoiceStatusBadge state={financials.presentation_state} /></dd></div>
+                            <div><dt>Created</dt><dd><time dateTime={invoice.created_at}>{formatDate(invoice.created_at)}</time></dd></div>
+                            <div><dt>Paid</dt><dd>{paidAt ? <time dateTime={paidAt}>{formatDate(paidAt)}</time> : "—"}</dd></div>
+                            <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
+                            <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
+                          </dl>
 
-                          <div className={invoiceHistoryStyles.billing}>
-                            <dl className={invoiceHistoryStyles.amounts}>
-                              <div><dt>Total</dt><dd>{formatCurrencyCents(invoice.total_cents, invoice.currency)}</dd></div>
-                              <div><dt>Balance</dt><dd>{formatCurrencyCents(financials.balance_due_cents, invoice.currency)}</dd></div>
-                            </dl>
-                            <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : number}`}>
-                              <span>{number}</span>
-                              <small>View</small>
-                            </RouteTransitionLink>
-                          </div>
+                          <RouteTransitionLink className={invoiceHistoryStyles.view} href={`/invoices/${invoice.id}`} aria-label={`View invoice ${invoice.invoice_number == null ? "draft" : number}`}>
+                            <span>{number}</span>
+                            <small>View</small>
+                          </RouteTransitionLink>
                         </li>
                       );
                     })}
