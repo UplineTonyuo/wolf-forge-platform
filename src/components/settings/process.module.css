@@ -1,5 +1,5 @@
 .editor { max-width: 56rem; min-width: 0; }
-.editor > fieldset, .preferences { display: grid; gap: 1rem; min-width: 0; }
+.editor > fieldset, .preferences { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; }
 .editor > fieldset { border: 0; margin: 0; padding: 0; }
 .editor h2 { margin: 0 0 1rem; }
 .editor label { display: grid; gap: .35rem; min-width: 0; font-weight: 550; }
@@ -20,4 +20,10 @@
 .editor button:disabled { cursor: default; opacity: .55; }
 .preferences fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .7rem; }
 .preferences legend { margin-bottom: .5rem; }
+.preferences button[aria-haspopup="listbox"] > span {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+.preferences [role="option"] { overflow-wrap: anywhere; }
 
