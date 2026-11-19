@@ -142,6 +142,13 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Projects workspace renders real data", () => {
+  it.each(["Needs Review","Editorial review"])("shows the current workspace stage %s from a fresh order projection",name=>{
+    const key="de215000-0000-4000-8000-000000000001";
+    const refreshed=composeProjectRows([order("da215000-0000-4000-8000-000000000001",{status:"working",process_stage:key})],[],now);
+    renderWorkspace({rows:refreshed,stages:[{key,name,color:"#112233",description:"Review the revision"}]});
+    expect(screen.getByText(name)).toBeTruthy();
+  });
+
   it("renders one row per authorized project with its real client, title and service", () => {
     renderWorkspace();
 
@@ -443,11 +450,20 @@ describe("Projects action controls", () => {
       failed: [],
     });
 
-    renderWorkspace();
+    const stages = [
+      { key: "canceled", name: "Canceled", color: "#990000", description: "" },
+      { key: "complete", name: "Complete", color: "#009900", description: "" },
+    ];
+    renderWorkspace({ stages });
     fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
     requestBulkAction("status");
 
-    fireEvent.change(screen.getByLabelText(/New status/u), { target: { value: "complete" } });
+    const apply = screen.getByRole("button", { name: "Apply" }) as HTMLButtonElement;
+    expect(apply.disabled).toBe(true);
+    fireEvent.click(apply);
+    expect(bulkChangeProjectStatusAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "New status: Select" }));
+    fireEvent.click(screen.getByRole("option", { name: "Complete" }));
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     await screen.findByText("3 projects updated.");
@@ -468,7 +484,8 @@ describe("Projects action controls", () => {
     renderWorkspace();
     fireEvent.click(screen.getByRole("button", { name: "Select all visible orders" }));
     requestBulkAction("status");
-    fireEvent.change(screen.getByLabelText(/New status/u), { target: { value: "complete" } });
+    fireEvent.click(screen.getByRole("button", { name: "New status: Select" }));
+    fireEvent.click(screen.getByRole("option", { name: "Complete" }));
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     expect((await screen.findByRole("dialog", { name: "Monthly report required" })).textContent).toContain("October 2026");
     expect(refresh).not.toHaveBeenCalled();

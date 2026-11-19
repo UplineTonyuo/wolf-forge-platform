@@ -22,6 +22,10 @@ import {
   Palette,
 } from "lucide-react";
 import Link from "next/link";
+import { SettingsNavigation } from "../settings/settings-navigation";
+import { useSettingsOrigin } from "./use-settings-origin";
+import { WorkflowLabelProvider } from "../settings/workflow-labels";
+import { canManageProcess, type ProcessEntry } from "../../domain/process/settings";
 import { InboxCallProvider } from "../calls/call-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { startTransition, useEffect, useId, useOptimistic, useRef, useState } from "react";
@@ -139,7 +143,7 @@ function SidebarDisclosure({ item, pathname, pendingRoute, onNavigate }: {
 }
 
 export function InternalShell({
-  user,
+  user, workflowLabels = {tickets:[],clients:[]},
   notificationSoundEnabled = true,
   showWhiteLabel = false,
   runtimeConfiguration,
@@ -147,6 +151,7 @@ export function InternalShell({
   children,
 }: {
   user: InternalUser;
+  workflowLabels?: {tickets:ProcessEntry[];clients:ProcessEntry[]};
   /** The profile's stored chime preference, passed through to the bell. */
   notificationSoundEnabled?: boolean;
   showWhiteLabel?: boolean;
@@ -161,6 +166,7 @@ export function InternalShell({
   const workspaceName = unavailable ? "Workspace branding unavailable" : branding?.name ?? "Wolf Forge";
   const ticketRoute = pathname === "/tickets" || pathname.startsWith("/tickets/");
   const router = useRouter();
+  const settingsOrigin = useSettingsOrigin(pathname, `${user.tenantId}:${user.id}`);
   // This shell receives a verified internal member. Goals has its own database
   // boundary; exposing it does not grant access to Members or supervision.
   const navigationCategories = navigationForModules(user.modules, showWhiteLabel, true);
@@ -207,6 +213,7 @@ export function InternalShell({
     }
 
     event.preventDefault();
+    if (routeIsCurrent("/settings", route)) settingsOrigin.rememberMain();
     // Exact: from /team/all-conversations a Team click must still navigate.
     if (route === pathname && !pendingRoute) return;
 
@@ -217,6 +224,11 @@ export function InternalShell({
   }
 
   function renderNavigation(mobile = false) {
+    if (routeIsCurrent("/settings",pendingRoute ?? pathname) && user.modules.settings)
+      return <SettingsNavigation back={settingsOrigin.back} pending={pendingRoute} manage={canManageProcess(user.role)} onNavigate={(route,event)=>{
+        if(mobile) mobileDrawerRef.current?.close();
+        handleSidebarNavigate(route,event);
+      }}/>;
     return (
       <nav className="sidebar-navigation" aria-label={mobile ? "Mobile primary" : "Primary"}>
         {navigationCategories.map((category) => (
@@ -247,7 +259,7 @@ export function InternalShell({
   }
 
   return (
-    <TenantBrandingProvider value={brandingState}>
+    <WorkflowLabelProvider value={workflowLabels}><TenantBrandingProvider value={brandingState}>
     <RouteTransitionProvider begin={begin}>
     <TeamPresenceProvider enabled={user.teamMessaging.use}>
     <InboxCallProvider key={user.id} profileId={user.id} notificationSoundEnabled={notificationSoundEnabled}>
@@ -343,6 +355,6 @@ export function InternalShell({
     </InboxCallProvider>
     </TeamPresenceProvider>
     </RouteTransitionProvider>
-    </TenantBrandingProvider>
+    </TenantBrandingProvider></WorkflowLabelProvider>
   );
 }

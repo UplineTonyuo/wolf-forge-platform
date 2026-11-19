@@ -4,7 +4,7 @@ import type { Tables } from "./database.types";
 // constraints over text columns, so domain-facing aliases refine those fields.
 export type RoleRow = Tables<"roles">;
 export type ProfileRow = Tables<"profiles">;
-export type CompanyRow = Tables<"companies">;
+export type CompanyRow = Tables<"companies"> & { process_tags?: string[] };
 export type OrganizationRow = Tables<"organizations">;
 export type CompanyWalletRow = Tables<"company_wallets">;
 export type CompanyWalletTransactionRow = Tables<"company_wallet_transactions">;
@@ -90,6 +90,8 @@ export type SubscriptionDunningAttemptRow = Omit<Tables<"subscription_dunning_at
   outcome: "succeeded" | "failed" | "skipped" | null;
 };
 export type OrderRow = Omit<Tables<"orders">, "status" | "priority"> & {
+  process_stage?: string | null;
+  process_tags?: string[];
   status: "pending" | "submitted" | "working" | "waiting_reply" | "pending_update" | "complete" | "canceled";
   priority: "low" | "normal" | "high" | "urgent";
 };
@@ -131,6 +133,7 @@ export type FormSubmissionRow = Omit<Tables<"form_submissions">, "orchestration_
 export type FormSubmissionValueRow = Tables<"form_submission_values">;
 export type FormFileRow = Tables<"form_files">;
 export type TicketRow = Omit<Tables<"tickets">, "status" | "priority"> & {
+  process_tags?: string[];
   status: "open" | "in_progress" | "waiting_on_client" | "waiting_on_team" | "resolved" | "closed";
   priority: "low" | "normal" | "high" | "urgent";
 };

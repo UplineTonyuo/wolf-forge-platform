@@ -22,6 +22,7 @@ import {
 import { randomUuid } from "../../lib/random-uuid";
 import { TICKET_ATTACHMENT_ACCEPT } from "../../lib/tickets/ticket-attachment-file";
 import type { OrderReplyTarget } from "./order-message-actions";
+import { SavedReplyPicker } from "../settings/saved-reply-picker";
 import { TicketRichTextEditor } from "./ticket-rich-text-editor";
 import { TicketVoiceRecorder } from "./ticket-voice-recorder";
 import { VoiceAudioPlayer } from "../audio/voice-audio-player";
@@ -159,6 +160,18 @@ function TicketComposerBody({
     void persistent.save(nextBody, nextAttachment, undefined, replyTo ? {
       ticketId: replyTo.ticketId, messageId: replyTo.messageId, attachmentId: replyTo.replyAttachment?.id ?? null,
     } : null).catch(() => undefined);
+  }
+
+  function insertSavedReply(text: string) {
+    const next = body ? body + "\n\n" + text : text;
+    if (next.length > 50_000) {
+      setError("Adding this saved reply would exceed 50,000 characters. Shorten your draft and try again.");
+      return;
+    }
+    setError(null);
+    setBody(next);
+    saveDraft(next, attachment);
+    setResetKey(value => value + 1);
   }
 
   useEffect(() => {
@@ -386,6 +399,7 @@ function TicketComposerBody({
         </div>
       ) : null}
 
+      {mode === "admin" && <SavedReplyPicker disabled={busy} insert={insertSavedReply} />}
       {isNote ? (
         <textarea
           aria-label="Add internal note"

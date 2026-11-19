@@ -1,3 +1,4 @@
+import { ResourceProcess } from "../../../../components/settings/resource-process";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TicketWorkspace } from "../../../../components/tickets/ticket-workspace";
@@ -29,6 +30,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ t
         title={ticket.subject}
         description={<>Ticket <strong>{ticket.public_ref}</strong></>}
       >
+        <ResourceProcess kind="tickets" target={ticket.id} editable={context.user.tickets.edit}/>
         <TicketWorkspace
           ticketId={ticket.id}
           detail={detail}

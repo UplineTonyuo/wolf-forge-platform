@@ -4,6 +4,8 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WorkflowLabelProvider } from "../components/settings/workflow-labels";
+import type { ProcessEntry } from "../domain/process/settings";
 
 const refresh = vi.fn();
 const push = vi.fn();
@@ -55,19 +57,21 @@ const primaryContact = {
 
 const onboardingForms = [{ id: "form-1", name: "Client Onboarding" }];
 
-function renderActions(overrides: Partial<Parameters<typeof ClientDetailActions>[0]> = {}) {
+function renderActions(overrides: Partial<Parameters<typeof ClientDetailActions>[0]> = {}, statuses: ProcessEntry[] = []) {
   return render(
-    <ClientDetailActions
-      companyId={companyId}
-      clientName="Acme Co"
-      clientStatus="client"
-      primaryContact={primaryContact}
-      permissions={allPermissions}
-      onboardingForms={onboardingForms}
-      eligibleProfiles={[]}
-      welcomeEmailProfileId={null}
-      {...overrides}
-    />,
+    <WorkflowLabelProvider value={{ clients: statuses, tickets: [] }}>
+      <ClientDetailActions
+        companyId={companyId}
+        clientName="Acme Co"
+        clientStatus="client"
+        primaryContact={primaryContact}
+        permissions={allPermissions}
+        onboardingForms={onboardingForms}
+        eligibleProfiles={[]}
+        welcomeEmailProfileId={null}
+        {...overrides}
+      />
+    </WorkflowLabelProvider>,
   );
 }
 
@@ -159,6 +163,25 @@ describe("Client Detail actions menu", () => {
 });
 
 describe("Edit client", () => {
+  it("selects a renamed status by keyboard in workspace order and submits its stable key", async () => {
+    updateClientDetailsAction.mockResolvedValue({ ok: true });
+    renderActions({}, [
+      { key: "lead", name: "Prospect", description: "", color: "#335577" },
+      { key: "client", name: "Customer", description: "", color: "#225577" },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: /actions/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /edit client/i }));
+    const trigger = screen.getByRole("button", { name: "Status: Customer" });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    expect(screen.getAllByRole("option").map(option => option.textContent)).toEqual(["Prospect", "Customer"]);
+    fireEvent.keyDown(trigger, { key: "Home" });
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    expect(trigger).toHaveAccessibleName("Status: Prospect");
+    expect(trigger).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => expect(updateClientDetailsAction).toHaveBeenCalledWith(companyId, contactId, expect.objectContaining({ status: "lead" })));
+  });
   it("saves company and primary contact fields together", async () => {
     updateClientDetailsAction.mockResolvedValue({ ok: true });
     renderActions();

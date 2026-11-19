@@ -29,6 +29,8 @@ import {
   sendClientWelcomeEmailAction,
   type SendClientWelcomeEmailResult,
 } from "../../app/actions/client-welcome-email";
+import { useWorkflowLabels } from "../settings/workflow-labels";
+import { AnimatedSelect } from "../ui/animated-select";
 import { companyStatuses } from "../../domain/companies/schema";
 import { ticketPriorityOptions } from "../../lib/tickets/presentation";
 
@@ -383,6 +385,7 @@ function EditClientModal({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(clientName);
+  const entries = useWorkflowLabels("clients");
   const [status, setStatus] = useState(clientStatus);
   const [contactName, setContactName] = useState(primaryContact?.name ?? "");
   const [contactEmail, setContactEmail] = useState(primaryContact?.email ?? "");
@@ -441,16 +444,20 @@ function EditClientModal({
           />
         </label>
 
-        <label className="client-balance-field">
+        <div className="client-balance-field">
           <span>Status</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} disabled={pending}>
-            {companyStatuses.map((option) => (
-              <option key={option} value={option}>
-                {companyStatusLabels[option]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <AnimatedSelect
+            name="status"
+            label="Status"
+            menuLabel="Client status"
+            value={status}
+            onChange={setStatus}
+            disabled={pending}
+            options={entries.length
+              ? entries.map(({ key, name }) => ({ value: key, label: name }))
+              : companyStatuses.map(value => ({ value, label: companyStatusLabels[value] }))}
+          />
+        </div>
 
         {primaryContact ? (
           canManageContact ? (

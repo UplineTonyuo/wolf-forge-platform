@@ -6,6 +6,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TeamTaskListRow } from "../domain/team/schema";
 
 const push = vi.fn();
+const stageKey = "ab120000-0000-4000-8000-000000000001";
+vi.mock("../lib/settings/process", () => ({
+  readWorkflowStages: async () => [{ key: stageKey, name: "Needs Review", description: "", color: "#335577" }],
+}));
+vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({
+  user: { teamMessaging: { use: false }, modules: { projects: true } },
+  services: {
+    orders: { list: async () => [
+      { id: "revision", order_number: 1, title: "Revision", status: "working", process_stage: stageKey, assigned_to_profile_id: null },
+      { id: "closed", order_number: 2, title: "Completed project", status: "complete", assigned_to_profile_id: null },
+    ] },
+    companies: { listActive: async () => [] }, catalog: { listActive: async () => [] },
+  },
+}) }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
@@ -21,6 +35,16 @@ vi.mock("../app/actions/team-messages", () => ({
 }));
 
 const { TeamTodoSection } = await import("../components/team/team-todo-section");
+const { default: ToDoPage } = await import("../app/(internal)/todo/page");
+
+it("shows Needs Review for unassigned working orders without counting them as waiting or including completed work", async () => {
+  render(await ToDoPage());
+  const badge = screen.getByText("Needs Review");
+  expect(badge).toHaveClass("status-working");
+  expect(badge.closest("section")).toHaveTextContent("Unassigned");
+  expect(screen.getByText("Nothing is waiting on a client.")).toBeInTheDocument();
+  expect(screen.queryByText(/Completed project/)).not.toBeInTheDocument();
+});
 
 afterEach(() => {
   cleanup();

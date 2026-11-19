@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { SettingsShell } from "../../../components/settings/settings-navigation";
 import { PageFrame } from "../../../components/ui/page-frame";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { getInternalContext } from "../../../lib/supabase/next-server";
@@ -23,7 +22,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
         title="Settings"
         description="Workspace configuration, access boundaries, and external provider readiness."
       >
-        <SettingsShell>{children}</SettingsShell>
+        {children}
       </PageFrame>
     </div>
   );

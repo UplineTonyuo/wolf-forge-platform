@@ -1,3 +1,4 @@
+import { ClientFeedback, readClientFeedback } from "../../../../components/settings/client-feedback";
 import type { Metadata } from "next";
 import { ClientOrderStart } from "../../../../components/account/projects/client-order-start";
 import type { ClientOrderStartState } from "../../../../domain/orders/client-start";
@@ -81,7 +82,8 @@ export default async function ClientProjectDetailPage({
     } catch { chatAccess = "unavailable"; conversation = null; }
   }
 
-  return <ClientProjectDetail project={project} conversation={conversation} viewerId={user.id}
+  const feedback = project.status==="complete" && chatAccess==="unlocked" ? await readClientFeedback("orders",projectId) : null;
+  return <ClientProjectDetail completedLock={feedback?.lock} project={project} conversation={conversation} viewerId={user.id}
     chatAccess={chatAccess}
-    startControl={startError ? <p role="alert">Order start status could not be loaded. Reload before starting this order.</p> : <>{startState ? <ClientOrderStart initial={startState} /> : null}{legacyControl}</>} />;
+    startControl={startError ? <p role="alert">Order start status could not be loaded. Reload before starting this order.</p> : <>{startState ? <ClientOrderStart initial={startState} /> : null}{legacyControl}<ClientFeedback section="orders" target={projectId} state={feedback}/></>} />;
 }

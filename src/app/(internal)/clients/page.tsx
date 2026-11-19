@@ -1,5 +1,6 @@
 import { ClientsHeaderTools } from "../../../components/clients/clients-header-tools";
 import { ClientsTable } from "../../../components/clients/clients-table";
+import { readWorkflowStages } from "../../../lib/settings/process";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ClientsActionMenu } from "../../../components/clients/clients-action-menu";
@@ -31,7 +32,7 @@ type ClientFilter =
   | LifecycleStatus
   | "all";
 
-const filterOptions: Array<{
+const defaultFilters: Array<{
   value: ClientFilter;
   label: string;
 }> = [
@@ -137,6 +138,8 @@ export default async function ClientsPage({
     await getInternalContext();
 
   try {
+    const entries=await readWorkflowStages("clients").catch(()=>[]);
+    const filterOptions = entries.length ? [...entries.map(e=>({value:normalizeStatus(e.key) as ClientFilter,label:e.name})),{value:"all" as const,label:"All"}] : defaultFilters;
     const clients =
       await context.services.companies.listActive();
     const managers = new Map((await context.services.companies.managerAssignments()).map(row => [row.company_id, row.manager_name]));
@@ -294,13 +297,11 @@ export default async function ClientsPage({
                 ? ""
                 : selectedStatus
             }
-            counts={{
-              "": countFor("all"),
-              contact: countFor("contact"),
-              lead: countFor("lead"),
-              client: countFor("client"),
-              client_team: countFor("client_team"),
-            }}
+            options={filterOptions.map(({ value, label }) => ({
+              value: value === "all" ? "" : value,
+              label,
+              count: countFor(value),
+            }))}
           />
         </div>
 
@@ -336,7 +337,7 @@ export default async function ClientsPage({
               avatarUrl: avatars.get(primaryContacts.get(client.id)?.profile_id ?? ""),
               createdLabel: formatDate(client.created_at),
               status: normalizeStatus(client.status),
-              statusLabel: statusLabel(client.status),
+              statusLabel: entries.find(e=>e.key===client.status)?.name ?? statusLabel(client.status),
               managerName: managers.get(client.id),
             }))}
             statuses={filterOptions.filter((option) => option.value !== "all")}

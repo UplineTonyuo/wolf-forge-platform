@@ -1,4 +1,5 @@
 "use client";
+import { orderStage, type ProcessEntry } from "../../domain/process/settings";
 
 import {
   BellRing,
@@ -52,6 +53,7 @@ import { ProjectSimpleFilterPicker } from "./project-simple-filter-picker";
 import type { SimpleFilterOption } from "./project-simple-filter-content";
 import type { ServiceFilterOption } from "./use-service-folder-filter";
 import { ProjectsHeaderActions } from "./projects-header-actions";
+import { AnimatedSelect } from "../ui/animated-select";
 import styles from "./projects-workspace.module.css";
 
 export type ProjectOption = {
@@ -95,6 +97,7 @@ const dialogTitles: Record<DialogKind, string> = {
 const ordersPerPage = 10;
 
 export function ProjectsWorkspace({
+  stages = [],
   rows,
   complete,
   people,
@@ -104,6 +107,7 @@ export function ProjectsWorkspace({
   capabilities,
   viewerId,
 }: {
+  stages?: ProcessEntry[];
   rows: ProjectListRow[];
   complete: boolean;
   people: ProjectOption[];
@@ -127,6 +131,7 @@ export function ProjectsWorkspace({
   const [clientFilter, setClientFilter] = useState("all");
   const [unansweredOnly, setUnansweredOnly] = useState(false);
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [bulkStage, setBulkStage] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ProjectBulkResult | null>(null);
 
@@ -193,8 +198,9 @@ export function ProjectsWorkspace({
   );
 
   const statusOptions: SimpleFilterOption[] = useMemo(
-    () => orderStatuses.map((status) => ({ id: status, label: projectStatusLabels[status], status })),
-    [],
+    () => stages.length ? stages.map(e=>({id:e.key,label:e.name,sublabel:e.description,status:e.key})) :
+      orderStatuses.map((status) => ({ id: status, label: projectStatusLabels[status], status })),
+    [stages],
   );
 
   const selectedPersonName =
@@ -208,7 +214,7 @@ export function ProjectsWorkspace({
   const selectedClientName =
     clientFilter === "all" ? "All clients" : (clients.find((client) => client.id === clientFilter)?.name ?? "All clients");
 
-  const selectedStatusName = activeTab === "all" ? "All statuses" : projectStatusLabels[activeTab];
+  const selectedStatusName = activeTab === "all" ? "All statuses" : statusOptions.find(option=>option.id===activeTab)?.label ?? activeTab;
 
   const selectedIds = useMemo(
     () => rows.filter((project) => selected.has(project.id)).map((project) => project.id),
@@ -240,6 +246,7 @@ export function ProjectsWorkspace({
       setFilterOpen(false);
       setOpenRowMenu(null);
       setResult(null);
+      setBulkStage("");
       setDialog({
         kind: detail.kind,
         ids: selectedIds,
@@ -267,7 +274,8 @@ export function ProjectsWorkspace({
     }
 
     window.addEventListener("keydown", onKeyDown);
-    (dialogChoiceRef.current ?? dialogConfirmRef.current)?.focus();
+    const stagePicker = dialogRef.current?.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]');
+    (stagePicker ?? dialogChoiceRef.current ?? dialogConfirmRef.current)?.focus();
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [dialog]);
 
@@ -328,8 +336,10 @@ export function ProjectsWorkspace({
     });
   }
 
+  const validBulkStage = statusOptions.some(option => option.id === bulkStage);
+
   async function runDialogAction() {
-    if (!dialog) return;
+    if (!dialog || busy || (dialog.kind === "status" && !validBulkStage)) return;
     const choice = dialogChoiceRef.current?.value ?? "";
 
     setBusy(true);
@@ -337,7 +347,7 @@ export function ProjectsWorkspace({
     let outcome: ProjectBulkResult;
     try {
       if (dialog.kind === "status") {
-        outcome = await bulkChangeProjectStatusAction(dialog.ids, choice);
+        outcome = await bulkChangeProjectStatusAction(dialog.ids, bulkStage);
       } else if (dialog.kind === "assign") {
         outcome = await bulkAssignProjectsAction(dialog.ids, choice ? choice : null);
       } else {
@@ -451,7 +461,7 @@ export function ProjectsWorkspace({
             )
             .map((tab) => {
             const active = activeTab === tab.value;
-            const count = counts[tab.value];
+            const count = counts[tab.value] ?? 0;
 
             return (
               <button
@@ -462,11 +472,11 @@ export function ProjectsWorkspace({
                 onClick={() => updateFilter(setActiveTab, tab.value)}
               >
                 <span className={styles.statusLabel}>
-                  {tab.value === "pending_update"
+                  {orderStage(stages,tab.value)?.name ?? (tab.value === "pending_update"
                     ? "Pending Update"
                     : tab.value === "waiting_reply"
                       ? "Waiting Reply"
-                      : tab.label}
+                      : tab.label)}
                 </span>
                 {count > 0 ? <span className={styles.statusCount}>{count}</span> : null}
               </button>
@@ -607,6 +617,7 @@ export function ProjectsWorkspace({
         onClientFilterChange={(value) => updateFilter(setClientFilter, value)}
         serviceFilter={serviceFilter}
         onServiceFilterChange={(value) => updateFilter(setServiceFilter, value)}
+        configuredStatuses={statusOptions}
         statusFilter={activeTab}
         onStatusFilterChange={(value) => updateFilter(setActiveTab, value)}
         unansweredOnly={scopeCriteria.unansweredOnly}
@@ -685,9 +696,10 @@ export function ProjectsWorkspace({
 
                 <div>
                   <span
+                    style={{borderInlineStart:"4px solid "+(orderStage(stages,project.status,project.processStage)?.color ?? "transparent")}}
                     className={`${styles.statusBadge} ${styles[`status_${project.status}` as keyof typeof styles]}`}
                   >
-                    {projectStatusLabels[project.status]}
+                    {orderStage(stages,project.status,project.processStage)?.name ?? projectStatusLabels[project.status]}
                   </span>
                 </div>
 
@@ -776,16 +788,12 @@ export function ProjectsWorkspace({
             </p>
 
             {dialog.kind === "status" ? (
-              <label htmlFor="project-dialog-status">
-                New status
-                <select id="project-dialog-status" ref={dialogChoiceRef} defaultValue="Working\u2026">
-                  {orderStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {projectStatusLabels[status]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div>
+                <span>New status</span>
+                <AnimatedSelect name="bulk-stage" label="New status" menuLabel="Order stages"
+                  value={bulkStage} onChange={setBulkStage} disabled={busy}
+                  options={statusOptions.map(option => ({ value: option.id, label: option.label }))} />
+              </div>
             ) : null}
 
             {dialog.kind === "assign" ? (
@@ -820,7 +828,7 @@ export function ProjectsWorkspace({
                 type="button"
                 className={styles.dialogConfirm}
                 aria-busy={busy || undefined}
-                disabled={busy}
+                disabled={busy || (dialog.kind === "status" && !validBulkStage)}
                 ref={dialogConfirmRef}
                 onClick={runDialogAction}
               >

@@ -1,15 +1,16 @@
-﻿import type { OrderStatus } from "../../domain/orders/schema";
+﻿import type { Order } from "../../domain/orders/schema";
+import { projectStatusLabels } from "../../domain/orders/projections";
+import { orderStage, type ProcessEntry } from "../../domain/process/settings";
 
-const labels: Record<OrderStatus, string> = {
-  pending: "Pending",
-  submitted: "Submitted",
-  working: "Working",
-  waiting_reply: "Waiting on client",
-  pending_update: "Needs update",
-  complete: "Complete",
-  canceled: "Canceled",
-};
-
-export function StatusBadge({ status }: { status: OrderStatus }) {
-  return <span className={`status-badge status-${status}`}>{labels[status]}</span>;
+export function StatusBadge({ order, stages }: {
+  order: Pick<Order, "status" | "process_stage">;
+  stages: ProcessEntry[];
+}) {
+  const stage = orderStage(stages, order.status, order.process_stage);
+  return (
+    <span className={`status-badge status-${order.status}`} title={stage?.description}
+      style={stage ? { borderInlineStart: `3px solid ${stage.color}` } : undefined}>
+      {stage?.name ?? projectStatusLabels[order.status]}
+    </span>
+  );
 }

@@ -238,6 +238,13 @@ export async function bulkChangeProjectStatusAction(
   orderIds: string[],
   status: string,
 ): Promise<ProjectBulkResult> {
+  if (uuidSchema.safeParse(status).success) {
+    const context = await getInternalContext();
+    return runProjectAction(orderIds,context.user.projects.edit,"The stage change was refused.",async orderId=>{
+      const result = await context.client.rpc("app_assign_process_stage",{p_order:orderId,p_stage:status});
+      if (result.error) throw new Error("Stage update refused.");
+    });
+  }
   if (!isProjectStatus(status)) {
     return failedProjectBatch(orderIds, "Choose a valid project status.");
   }

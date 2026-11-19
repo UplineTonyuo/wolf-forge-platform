@@ -1,67 +1,33 @@
 "use client";
-
-import {
-  Bell,
-  Building2,
-  CreditCard,
-  Plug,
-  ShieldCheck,
-  UsersRound,
-} from "lucide-react";
-import { RouteTransitionLink as Link } from "../shell/route-transition";
+import { ArrowLeft, Bell, Building2, CreditCard, Plug, ShieldCheck, UsersRound } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, startTransition, useContext, useOptimistic } from "react";
-import { SettingsSectionSkeleton, type SettingsSection } from "../shell/route-skeletons";
-import styles from "./settings-foundation.module.css";
+import { sections, sectionTitle } from "../../domain/process/settings";
 
 export const SETTINGS_NAV_ITEMS = [
-  { id: "general", label: "General", route: "/settings/general", icon: Building2 },
-  { id: "team", label: "Team & Access", route: "/settings/team", icon: UsersRound },
-  { id: "billing", label: "Billing & Payments", route: "/settings/billing", icon: CreditCard },
-  { id: "integrations", label: "Integrations", route: "/settings/integrations", icon: Plug },
-  { id: "notifications", label: "Notifications", route: "/settings/notifications", icon: Bell },
-  { id: "security", label: "Security", route: "/settings/security", icon: ShieldCheck },
+  {route:"/settings/general",label:"General",icon:Building2},
+  {route:"/settings/team",label:"Team & Access",icon:UsersRound},
+  {route:"/settings/billing",label:"Billing & Payments",icon:CreditCard},
+  {route:"/settings/integrations",label:"Integrations",icon:Plug},
+  {route:"/settings/notifications",label:"Notifications",icon:Bell},
+  {route:"/settings/security",label:"Security",icon:ShieldCheck},
 ] as const;
-
-const SettingsTransition = createContext<{ route: string | null; begin: (route: string | null) => void } | null>(null);
-
-export function SettingsNavigation() {
+export function SettingsNavigation({ manage=false, back="/dashboard", pending, onNavigate }: {
+  manage?: boolean; back?: string; pending?: string | null; onNavigate?: (route:string,event:React.MouseEvent<HTMLAnchorElement>)=>void;
+}) {
   const pathname = usePathname();
-  const transition = useContext(SettingsTransition);
-  const items = SETTINGS_NAV_ITEMS;
-
-  return (
-    <nav className={styles.navigation} aria-label="Settings sections">
-      {items.map((item) => {
-        const current = (transition?.route ?? pathname) === item.route;
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.id}
-            href={item.route}
-            data-route-skeleton="off"
-            onNavigate={() => startTransition(() => transition?.begin(pathname === item.route ? null : item.route))}
-            className={styles.navigationLink}
-            aria-current={current ? "page" : undefined}
-          >
-            <Icon aria-hidden="true" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
-export function SettingsShell({ children }: { children: React.ReactNode }) {
-  const [route, begin] = useOptimistic<string | null>(null);
-  return (
-    <SettingsTransition.Provider value={{ route, begin }}><div className={styles.shell}>
-      <SettingsNavigation />
-      <div className={styles.content}>
-        {route ? <SettingsSectionSkeleton section={route.split("/")[2] as SettingsSection} /> : null}
-        <div hidden={route !== null} aria-busy={route !== null}>{children}</div>
-      </div>
-    </div></SettingsTransition.Provider>
-  );
+  function item(route:string,label:string,icon?:React.ReactNode) {
+    const current=(pending ?? pathname)===route || ((pending ?? pathname)==="/settings" && route==="/settings/general");
+    return <Link key={route} className={"sidebar-link"+(current?" is-active":"")} href={route} aria-current={current?"page":undefined}
+      onClick={event=>onNavigate?.(route,event)}>{icon}<span>{label}</span></Link>;
+  }
+  return <nav className="sidebar-navigation" aria-label="Settings sections">
+    {item(back,"Back",<ArrowLeft aria-hidden />)}
+    <section className="sidebar-section"><h2>Business</h2><div className="sidebar-links">
+      {SETTINGS_NAV_ITEMS.map(({route,label,icon:Icon})=>item(route,label,<Icon aria-hidden />))}
+    </div></section>
+    {manage && <section className="sidebar-section"><h2>Process</h2><div className="sidebar-links">
+      {sections.map(section=>item("/settings/process/"+section,sectionTitle[section]))}
+    </div></section>}
+  </nav>;
 }

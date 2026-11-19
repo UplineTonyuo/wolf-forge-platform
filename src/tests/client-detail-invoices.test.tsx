@@ -9,16 +9,19 @@ import type { UserMutationClient } from "../repositories/types";
 
 const companyId = "10000000-0000-4000-8000-000000000001";
 const mocks = vi.hoisted(() => ({
+  projects: vi.fn(), stages: vi.fn(),
   list: vi.fn(), workEnabled: vi.fn(), forms: vi.fn(), candidates: vi.fn(), actions: vi.fn(), boundary: vi.fn(),
-  user: { id: 'actor', tenantId: 'tenant', role: 'staff', clients: { privateManage: false, contactRead: false }, invoices: { view: true, manage: false }, forms: { assign: false }, tickets: { create: false } },
+  user: { id: 'actor', tenantId: 'tenant', role: 'staff', modules: { projects: true }, clients: { privateManage: false, contactRead: false }, invoices: { view: true, manage: false }, forms: { assign: false }, tickets: { create: false } },
 }));
+vi.mock("../lib/settings/process", () => ({ readWorkflowStages: mocks.stages }));
+vi.mock("../components/settings/resource-process", () => ({ ResourceProcess: () => null }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error('not found'); }, unstable_rethrow: vi.fn() }));
-vi.mock("../lib/email/client-welcome-email-server", () => ({ canSendClientWelcomeEmail: async () => false }));
+vi.mock("../lib/email/client-welcome-email-server", () => ({ canSendClientEmail: async () => false }));
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({
   user: mocks.user,
   services: {
     companies: { get: async (id: string) => ({ id, name: 'Synthetic account', created_at: '2026-10-01', status: 'client' }) },
-    orders: { listForCompany: async () => [] },
+    orders: { listForCompany: mocks.projects },
     wfCard: { getMembership: async () => null },
     invoices: { listForCompany: mocks.list, workEnabled: mocks.workEnabled },
     forms: { list: mocks.forms, listOnboardingCandidates: mocks.candidates },
@@ -37,12 +40,28 @@ function summary(id: string, origin = 'manual', state = 'paid'): ClientInvoiceSu
 const page = async (tab = 'invoices') => renderToStaticMarkup(await ClientPage({ params: Promise.resolve({ companyId }), searchParams: Promise.resolve({ tab }) }));
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.projects.mockResolvedValue([]);
+  mocks.stages.mockResolvedValue([]);
   mocks.user.invoices = { view: true, manage: false };
   mocks.user.forms.assign = false;
   mocks.list.mockResolvedValue([summary('manual'), summary('store', 'store_purchase', 'overdue')]);
   mocks.workEnabled.mockResolvedValue(true);
   mocks.forms.mockResolvedValue([]);
   mocks.candidates.mockResolvedValue([]);
+});
+
+it.each(['details', 'projects'])('shows the workspace stage and retains lifecycle filtering on the %s tab', async (tab) => {
+  const key = 'ab120000-0000-4000-8000-000000000001';
+  mocks.stages.mockResolvedValue([{ key, name: 'Needs Review', color: '#335577', description: '' }]);
+  mocks.projects.mockResolvedValue([
+    { id: 'review', order_number: 1, title: 'Revision', status: 'working', process_stage: key },
+    { id: 'done', order_number: 2, title: 'Finished project', status: 'complete', process_stage: null },
+  ]);
+  const html = await page(tab);
+  expect(html).toContain('Needs Review');
+  expect(html).toContain('status-working');
+  expect(html.includes('Finished project')).toBe(tab === 'projects');
+  expect(mocks.stages).toHaveBeenCalledWith('orders');
 });
 
 describe('client invoice tab', () => {

@@ -113,15 +113,25 @@ export function createClientWelcomeEmailDependencies(
   };
 }
 
-/**
- * Presentation gate for the checkbox and the resend action. The claim RPC and
- * the Gmail credential RPC enforce the same two permissions in the database.
- */
-export async function canSendClientWelcomeEmail(
-  context: Awaited<ReturnType<typeof getInternalContext>>,
-): Promise<boolean> {
+type ClientEmailContext = Awaited<ReturnType<typeof getInternalContext>>;
+
+/** Both ordinary client email and invitations use these Gmail permissions. */
+export async function canSendClientEmail(context: ClientEmailContext): Promise<boolean> {
   if (!context.user.clients.privateManage || !context.user.integrations.manage) return false;
   if (!isGmailIntegrationConfigured()) return false;
   const connections = await context.services.integrations.listConnections().catch(() => []);
   return connections.some((connection) => connection.provider.id === "gmail" && connection.status === "connected");
+}
+
+export async function canIssueClientInvitation(context: ClientEmailContext): Promise<boolean> {
+  try {
+    const { data, error } = await context.client.rpc("app_can_issue_client_invitation");
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function canSendClientWelcomeEmail(context: ClientEmailContext): Promise<boolean> {
+  return await canSendClientEmail(context) && await canIssueClientInvitation(context);
 }

@@ -1813,6 +1813,7 @@ export function TeamMessagesDrawer({
                   canReply={ticketCapabilities.reply}
                   canReact={ticketCapabilities.reply}
                   repliesDisabled={
+                    activeTicketDetail.ticket.completed_order_locked === true ||
                     activeTicketDetail.ticket.status === "closed" ||
                     Boolean(activeTicketDetail.ticket.archived_at)
                   }

@@ -76,7 +76,7 @@ describe("Internal route loading boundary", () => {
     cleanup();
 
     const settings = render(<RouteSkeleton pathname="/settings/general" />).container;
-    expect(settings.querySelector(`.settings-page-layout .${settingsStyles.navigation}`)).toBeTruthy();
+    expect(settings.querySelector(`.settings-page-layout .${settingsStyles.navigation}`)).toBeNull();
     expect(settings.querySelectorAll(`.${profileStyles.fields} > div`).length).toBeGreaterThan(2);
     expect(settings.querySelector(".route-skeleton-table, table")).toBeNull();
   });

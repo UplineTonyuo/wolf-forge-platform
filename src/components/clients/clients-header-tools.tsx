@@ -4,19 +4,17 @@ import {
   Building2,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  ClientsFilterPanel,
-  type ClientTypeCounts,
-} from "./clients-filter-panel";
+import { ClientsFilterPanel } from "./clients-filter-panel";
+import type { MobileFilterOption } from "../ui/mobile-filter-sheet";
 
 export function ClientsHeaderTools({
   query,
   status,
-  counts,
+  options,
 }: {
   query: string;
   status: string;
-  counts: ClientTypeCounts;
+  options: MobileFilterOption[];
 }) {
   return (
     <div className="clients-header-tools">
@@ -37,7 +35,7 @@ export function ClientsHeaderTools({
       <ClientsFilterPanel
         query={query}
         status={status}
-        counts={counts}
+        options={options}
       />
     </div>
   );

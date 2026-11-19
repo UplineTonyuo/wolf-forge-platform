@@ -3,19 +3,9 @@
 import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { FilterOptionGroup, MobileFilterSheet } from "../ui/mobile-filter-sheet";
+import { FilterOptionGroup, MobileFilterSheet, type MobileFilterOption } from "../ui/mobile-filter-sheet";
 import sheet from "../ui/mobile-filter-sheet.module.css";
 import styles from "./clients-filter-panel.module.css";
-
-export type ClientTypeCounts = Record<"" | "contact" | "lead" | "client" | "client_team", number>;
-
-const typeOptions = [
-  { value: "", label: "All" },
-  { value: "contact", label: "Contact" },
-  { value: "lead", label: "Lead" },
-  { value: "client", label: "Client" },
-  { value: "client_team", label: "Client Team" },
-] as const;
 
 /**
  * The Clients Filter: the shared filter modal, holding exactly the two filters
@@ -26,13 +16,13 @@ const typeOptions = [
 export function ClientsFilterPanel({
   query,
   status,
-  counts,
+  options,
 }: {
   /** The applied `q`, as the server read it. */
   query: string;
   /** The applied lifecycle status; "" is All. */
   status: string;
-  counts: ClientTypeCounts;
+  options: MobileFilterOption[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -88,7 +78,7 @@ export function ClientsFilterPanel({
         label="Type"
         value={draftStatus}
         onChange={setDraftStatus}
-        options={typeOptions.map((option) => ({ ...option, count: counts[option.value] }))}
+        options={options}
       />
     </MobileFilterSheet>
   );

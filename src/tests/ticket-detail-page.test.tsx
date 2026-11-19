@@ -13,6 +13,7 @@ vi.mock("../lib/supabase/next-server", () => ({
   getInternalContext: () => getInternalContext(),
 }));
 
+vi.mock("../components/settings/resource-process", () => ({ ResourceProcess: () => null }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
 /*

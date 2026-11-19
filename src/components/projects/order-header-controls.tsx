@@ -1,4 +1,5 @@
 "use client";
+import { orderStage, type ProcessEntry } from "../../domain/process/settings";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -26,12 +27,15 @@ const UNASSIGNED_VALUE = "";
  */
 export function OrderHeaderControls({
   orderId,
+  stages = [], customStage,
   status,
   assigneeId,
   people,
   capabilities,
 }: {
   orderId: string;
+  stages?: ProcessEntry[];
+  customStage?: string | null;
   status: OrderStatus;
   assigneeId: string | null;
   people: ProjectOption[];
@@ -84,7 +88,8 @@ export function OrderHeaderControls({
     }
   }
 
-  const statusOptions = orderStatuses.map((value) => ({ value, label: projectStatusLabels[value] }));
+  const stage = orderStage(stages,status,customStage);
+  const statusOptions = stages.length ? stages.map(e=>({value:e.key,label:e.name,description:e.description,leading:<span style={{color:e.color}}>●</span>})) : orderStatuses.map((value) => ({ value, label: projectStatusLabels[value] }));
   const assigneeOptions = [
     {
       value: UNASSIGNED_VALUE,
@@ -112,14 +117,14 @@ export function OrderHeaderControls({
           label="Status"
           menuLabel="Order status"
           options={statusOptions}
-          value={status}
+          value={customStage ?? status}
           onChange={onStatusChange}
           disabled={busy}
           compact
         />
       ) : (
-        <span className={styles.headerStatValue} aria-label={`Status: ${projectStatusLabels[status]}`}>
-          {projectStatusLabels[status]}
+        <span className={styles.headerStatValue} aria-label={`Status: ${stage?.name ?? projectStatusLabels[status]}`}>
+          {stage?.name ?? projectStatusLabels[status]}
         </span>
       )}
 
@@ -143,7 +148,7 @@ export function OrderHeaderControls({
         </span>
       )}
 
-      <ProjectDetailActions
+      <ProjectDetailActions stages={stages} customStage={customStage}
         orderId={orderId}
         status={status}
         assigneeId={assigneeId}

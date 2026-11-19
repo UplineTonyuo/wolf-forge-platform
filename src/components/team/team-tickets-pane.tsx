@@ -5,6 +5,7 @@ import orderStyles from "../projects/projects-workspace.module.css";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatTeamRelativeTime } from "../../domain/team/projections";
 import { ticketStatusLabels } from "../../lib/tickets/presentation";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 import styles from "./team-messages.module.css";
 
 /**
@@ -42,6 +43,7 @@ export function TeamTicketsPane({
   onSelect: (ticketId: string) => void;
   onRetry: () => void;
 }) {
+  const statuses = useWorkflowLabels("tickets");
   const isEmpty = !loading && !error && tickets.length === 0;
 
   return (
@@ -110,7 +112,7 @@ export function TeamTicketsPane({
           <span className={styles.ticketRowMeta}>
             <span>{ticket.public_ref}</span>{" · "}
             <span className={styles.ticketRowStatus}>
-              {ticketStatusLabels[ticket.status]}
+              {statuses.find(entry => entry.key === ticket.status)?.name ?? ticketStatusLabels[ticket.status]}
             </span>
             {" · "}
             {formatTeamRelativeTime(ticket.last_message_at ?? ticket.updated_at)}

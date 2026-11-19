@@ -53,6 +53,7 @@ export type ProjectListRow = {
   id: string;
   orderNumber: number;
   sppOrderReference?: string | null;
+  processStage?: string | null;
   title: string;
   status: OrderStatus;
   priority: OrderPriority;
@@ -73,7 +74,8 @@ export type ProjectListRow = {
   unanswered: boolean | null;
 };
 
-export type ProjectTab = OrderStatus | "all";
+/** System status, workspace stage key, or the all-orders tab. */
+export type ProjectTab = string;
 
 /**
  * Capability flags used to decide which controls to render. They are affordance
@@ -158,6 +160,7 @@ export function composeProjectRows(
       sppOrderReference: order.spp_order_reference,
       title: order.title,
       status: order.status,
+      processStage: order.process_stage,
       priority: order.priority,
       createdAt: order.created_at,
       createdLabel: formatShortDate(order.created_at),
@@ -285,10 +288,10 @@ export function filterProjectRows(
 ): ProjectListRow[] {
   const scoped = applyProjectScopeFilters(rows, criteria);
   if (criteria.tab === "all") return scoped;
-  return scoped.filter((row) => row.status === criteria.tab);
+  return scoped.filter((row) => (row.processStage ?? row.status) === criteria.tab);
 }
 
-export type ProjectStatusCounts = Record<ProjectTab, number>;
+export type ProjectStatusCounts = Record<OrderStatus | "all", number> & Partial<Record<string, number>>;
 
 /**
  * Counts are derived from the same scoped set the table renders, so a tab that
@@ -299,7 +302,7 @@ export function countProjectsByStatus(
   criteria: ProjectFilterCriteria,
 ): ProjectStatusCounts {
   const scoped = applyProjectScopeFilters(rows, criteria);
-  const counts = {
+  const counts: ProjectStatusCounts = {
     pending: 0,
     submitted: 0,
     working: 0,
@@ -308,9 +311,12 @@ export function countProjectsByStatus(
     complete: 0,
     canceled: 0,
     all: scoped.length,
-  } satisfies ProjectStatusCounts;
+  };
 
-  for (const row of scoped) counts[row.status] += 1;
+  for (const row of scoped) {
+    const key = row.processStage ?? row.status;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
   return counts;
 }
 

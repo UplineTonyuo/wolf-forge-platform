@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { contactEmailSchema } from "../../domain/contacts/email-schema";
 import { sendClientContactEmail } from "../../lib/email/client-contact-email";
-import { canSendClientWelcomeEmail } from "../../lib/email/client-welcome-email-server";
+import { canSendClientEmail } from "../../lib/email/client-welcome-email-server";
 import { readServerEnvironment } from "../../lib/env/server-env";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { mapDatabaseError } from "../../lib/errors/map-database-error";
@@ -20,7 +20,7 @@ export async function sendClientContactEmailAction(raw: unknown) {
   try {
     const input = contactEmailSchema.parse(raw);
     const context = await getInternalContext();
-    if (!(await canSendClientWelcomeEmail(context))) return { ok: false, message: "Connect Gmail in Settings → Integrations to send email." };
+    if (!(await canSendClientEmail(context))) return { ok: false, message: "Connect Gmail in Settings → Integrations to send email." };
     const tenant = await requestTenantSelector();
     const trusted = createTrustedServerSupabaseClient(readServerEnvironment());
     const gmail = createGmailIntegrationService(context.actor);

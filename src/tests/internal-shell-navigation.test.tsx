@@ -77,6 +77,7 @@ function Router({ initial, role = "owner" }: { initial: string; role?: InternalU
 }
 
 function start(initial: string, role?: InternalUser["role"]) {
+  if (window.location.pathname !== initial) window.history.replaceState(null, "", initial);
   const { container } = render(<Router initial={initial} role={role} />);
   const main = container.querySelector("main")!;
   return {
@@ -95,13 +96,17 @@ function start(initial: string, role?: InternalUser["role"]) {
       if (!container.querySelector(`.app-sidebar a[href='${route}']`)) await act(async () => fireEvent.click(container.querySelector('.app-sidebar button[aria-controls]')!));
       await act(async () => fireEvent.click(container.querySelector(`.app-sidebar a[href='${route}']`)!));
     },
-    commit: (route: string) => act(async () => payloads.get(route)!()),
+    commit: (route: string) => act(async () => {
+      window.history.pushState(null, "", redirectTo ?? route);
+      payloads.get(route)!();
+    }),
     skeleton: () => [...main.querySelectorAll("[data-skeleton]")].map((node) => node.getAttribute("data-skeleton")),
     active: () => container.querySelector(".app-sidebar a[aria-current='page']")?.getAttribute("href"),
   };
 }
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   payloads = new Map();
   redirectTo = null;
   inPageHref = null;
@@ -151,16 +156,77 @@ describe("Sidebar navigation renders the destination skeleton", () => {
     expect(shell.active()).toBe(to);
   });
 
+  it("replaces primary navigation and returns to the originating staff page", async () => {
+    const shell=start("/tickets");
+    await shell.click("/settings");
+    await shell.commit("/settings");
+    expect(document.querySelector(".app-sidebar a[href='/team']")).toBeNull();
+    await shell.click("/settings/process/orders");
+    await shell.commit("/settings/process/orders");
+    expect(shell.active()).toBe("/settings/process/orders");
+    await shell.click("/tickets");
+    await shell.commit("/tickets");
+    expect(document.querySelector(".app-sidebar a[href='/team']")).toBeTruthy();
+  });
+
+  it("shows business settings on a direct staff link and restricts Process to administrators", () => {
+    start("/settings/general","staff");
+    expect(document.querySelector(".app-sidebar a[href='/settings/general']")).toHaveAttribute("aria-current","page");
+    expect(document.querySelector(".app-sidebar a[href='/settings/process/orders']")).toBeNull();
+    expect(document.querySelector(".app-sidebar a[href='/dashboard']")).toHaveTextContent("Back");
+  });
+
+  it("returns to filtered Clients when Back is clicked before Settings commits", async () => {
+    const origin = "/clients?status=lead&q=Acme#results";
+    window.history.replaceState(null, "", origin);
+    const shell = start("/clients");
+    await shell.click("/settings");
+    expect(document.querySelector(".app-sidebar a")).toHaveAttribute("href", origin);
+    await shell.click(origin);
+    await shell.commit(origin);
+    expect(window.location.pathname + window.location.search + window.location.hash).toBe(origin);
+    expect(document.querySelector(".app-sidebar a[href='/team']")).toBeTruthy();
+  });
+
+  it("retains the originating filters across Settings sections, a reload and history traversal", async () => {
+    const origin = "/clients?status=lead&q=Acme";
+    window.history.replaceState(null, "", origin);
+    const shell = start("/clients");
+    await shell.click("/settings");
+    await shell.commit("/settings");
+    await shell.click("/settings/process/orders");
+    await shell.commit("/settings/process/orders");
+    cleanup();
+    const backLink = () => document.querySelector(".app-sidebar a")?.getAttribute("href");
+    const reloaded = start("/settings/process/orders");
+    expect(backLink()).toBe(origin);
+    await reloaded.click(origin);
+    await reloaded.commit(origin);
+    expect(window.location.search).toBe("?status=lead&q=Acme");
+    cleanup();
+    // A separate direct entry has no originating staff URL. Traversing to the
+    // older Settings entry restores its own URL even at the same pathname.
+    window.history.pushState(null, "", "/settings/process/orders");
+    start("/settings/process/orders");
+    expect(backLink()).toBe("/dashboard");
+    const traversed = new Promise<void>(resolve => window.addEventListener("popstate", () => resolve(), { once: true }));
+    await act(async () => { window.history.go(-2); await traversed; });
+    expect(backLink()).toBe(origin);
+    const forward = new Promise<void>(resolve => window.addEventListener("popstate", () => resolve(), { once: true }));
+    await act(async () => { window.history.go(2); await forward; });
+    expect(backLink()).toBe("/dashboard");
+  });
+
   it("covers every sidebar destination with its own skeleton, never the generic or previous one", async () => {
     const routes = ["/dashboard", "/orders", "/tickets", "/reporting", "/clients", "/invoices", "/subscriptions", "/coupons", "/investment-intent", "/services", "/forms", "/team", "/team/all-conversations", "/settings"];
     const seen = new Set<string>();
     for (const [index, route] of routes.entries()) {
-      const shell = start(routes[(index + routes.length - 1) % routes.length]!);
+      const shell = start(index === 0 ? "/orders" : routes[index - 1]!);
       await shell.click(route);
       const [variant] = shell.skeleton();
       expect(variant, route).toBeTruthy();
       expect(variant, route).not.toBe("generic");
-      expect(shell.active(), route).toBe(route);
+      expect(shell.active(), route).toBe(route === "/settings" ? "/settings/general" : route);
       seen.add(variant!);
       cleanup();
     }

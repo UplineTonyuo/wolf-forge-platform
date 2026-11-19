@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ticketPriorityOptions, ticketStatusOptions } from "../../lib/tickets/presentation";
 import { FilterOptionList, type FilterOptionRow } from "../projects/project-filter-option-list";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 import { useExitTransition } from "../team/use-exit-transition";
 import sheetStyles from "../projects/project-detail-actions.module.css";
 import footerStyles from "../projects/projects-filter-sheet.module.css";
@@ -47,11 +48,13 @@ function TicketFilterSections({
   onPriorityChange: (value: string) => void;
   onInboxChange: (value: InboxFilter) => void;
 }) {
+  const workspaceStatuses = useWorkflowLabels("tickets");
+  const statuses = workspaceStatuses.length ? workspaceStatuses : ticketStatusOptions.map(([key, name]) => ({ key, name }));
   const statusRows: FilterOptionRow[] = [
     { id: "all", label: "All statuses", icon: <ListChecks size={16} aria-hidden="true" /> },
-    ...ticketStatusOptions.map(([value, label]) => ({
-      id: value,
-      label,
+    ...statuses.map(({ key, name }) => ({
+      id: key,
+      label: name,
       icon: <ListChecks size={16} aria-hidden="true" />,
     })),
   ];

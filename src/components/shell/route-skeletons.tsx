@@ -713,12 +713,7 @@ function SettingsSkeleton({ section = "general" }: { section?: SettingsSection }
     <div className="settings-page-layout">
       <Frame variant="settings">
         <Header />
-        <div className={settings.shell}>
-          <div className={settings.navigation}>
-            {Array.from({ length: 6 }, (_, link) => (
-              <div className={settings.navigationLink} key={link}><Bar w={16} h={16} /><Bar w="70%" h={12} /></div>
-            ))}
-          </div>
+        <div>
           <div className={settings.content}><SettingsSkeletonBody section={section} /></div>
         </div>
       </Frame>
@@ -867,6 +862,7 @@ const SKELETONS: Record<Exclude<InternalSkeletonVariant, "projectDetail" | "invo
 export function RouteSkeleton({ pathname }: { pathname: string }) {
   const variant = getInternalSkeletonVariant(pathname);
   if (variant === "settings") {
+    if (pathname.startsWith("/settings/process/")) return <Frame variant="settings" label="Loading process settings"><Header /><Bar w="60%" h={20}/></Frame>;
     const section = (pathname.split(/[?#]/)[0] ?? "").split("/")[2] as SettingsSection;
     return <SettingsSkeleton section={Object.hasOwn(SETTINGS_SECTION_LABELS, section) ? section : "general"} />;
   }

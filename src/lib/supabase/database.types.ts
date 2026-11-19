@@ -4863,6 +4863,18 @@ export type Database = {
         Args: { p_order_id: string; p_service_id: string; p_reporting_period_month: string }
         Returns: Database["public"]["Tables"]["orders"]["Row"]
       }
+      app_process_config: { Args: { p_section: string }; Returns: Json }
+      app_process_entries: { Args: { p_section: string }; Returns: Json }
+      app_can_issue_client_invitation: { Args: never; Returns: boolean }
+      app_save_process_config: { Args: { p_section: string; p_version: number; p_settings: Json }; Returns: undefined }
+      app_assign_process_stage: { Args: { p_order: string; p_stage: string }; Returns: undefined }
+      app_resource_process: { Args: { p_kind: string; p_target: string }; Returns: Json }
+      app_tag_resource: { Args: { p_kind: string; p_target: string; p_tag: string; p_add: boolean }; Returns: undefined }
+      app_request_order_revision: {
+        Args: { p_order: string; p_reason: string; p_expected_completed_at: string; p_request_id: string }
+        Returns: Json
+      }
+      app_client_process: { Args: { p_section: string; p_target: string; p_score?: number }; Returns: Json }
       app_change_order_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: {

@@ -1,4 +1,5 @@
-﻿import { InternalShell } from "../../components/shell/internal-shell";
+import { readWorkflowStages } from "../../lib/settings/process";
+import { InternalShell } from "../../components/shell/internal-shell";
 import { getInternalContext } from "../../lib/supabase/next-server";
 import { isLocalQuickAccessSession, localUiQaBypassEnabled } from "../../lib/qa/local-ui-bypass";
 import { WhiteLabelPublicationRepository } from "../../repositories/white-label-publication-repository";
@@ -17,9 +18,12 @@ export default async function InternalLayout({ children }: { children: React.Rea
    * portal's bell already reads, so the toggle on the Profile page controls
    * both. A failed read falls back to sound on, matching the column default.
    */
-  const [runtimeConfiguration, profile] = await Promise.all([
+  const [runtimeConfiguration, profile, tickets, clients] = await Promise.all([
     runtimeConfigurationPromise,
+
     context.services.profile.getMine().catch(() => null),
+    context.user.modules.tickets ? readWorkflowStages("tickets").catch(()=>[]) : [],
+    context.user.modules.clients ? readWorkflowStages("clients").catch(()=>[]) : [],
   ]);
   const showWhiteLabel = (await localUiQaBypassEnabled()) &&
     !(await isLocalQuickAccessSession(context.actor)) &&
@@ -28,6 +32,7 @@ export default async function InternalLayout({ children }: { children: React.Rea
 
   return (
     <InternalShell
+      workflowLabels={{tickets, clients}}
       user={context.user}
       runtimeConfiguration={runtimeConfiguration}
       showWhiteLabel={showWhiteLabel}

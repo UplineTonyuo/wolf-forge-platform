@@ -1,4 +1,5 @@
 "use client";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 
 import { TicketIcon } from "lucide-react";
 import type { TicketSummary } from "../../domain/tickets/schema";
@@ -8,6 +9,7 @@ import { TicketPagination, useTicketPagination } from "./ticket-pagination";
 import styles from "./tickets.module.css";
 
 export function TicketWorkspaceList({ summaries, ticketId }: { summaries: TicketSummary[]; ticketId: string }) {
+  const stages = useWorkflowLabels("tickets");
   const pagination = useTicketPagination(summaries.length, summaries.findIndex((ticket) => ticket.ticket_id === ticketId));
   const pageTickets = summaries.slice(pagination.start, pagination.end);
 
@@ -35,7 +37,7 @@ export function TicketWorkspaceList({ summaries, ticketId }: { summaries: Ticket
               {summary.company_name ?? summary.client_name ?? "Contact Form guest"}
             </span>
             <span className={styles.ticketWorkspaceListStatus}>
-              {ticketStatusLabels[summary.status]}
+              {stages.find(stage=>stage.key===summary.status)?.name ?? ticketStatusLabels[summary.status]}
             </span>
           </span>
         </Link>

@@ -5,7 +5,7 @@ import {PermissionDeniedError,ValidationError} from '../lib/errors/application-e
 const mocks=vi.hoisted(()=>({clientContext:vi.fn(),internalContext:vi.fn(),refresh:vi.fn(),available:vi.fn(),submit:vi.fn(),review:vi.fn(),settings:vi.fn(),create:vi.fn(),list:vi.fn(),revoke:vi.fn(),get:vi.fn(),contacts:vi.fn()}));
 vi.mock('next/cache',()=>({revalidatePath:mocks.refresh}));
 vi.mock('../lib/supabase/next-server',()=>({getClientContext:mocks.clientContext,getInternalContext:mocks.internalContext}));
-vi.mock('../lib/email/client-welcome-email-server',()=>({canSendClientWelcomeEmail:mocks.available}));
+vi.mock('../lib/email/client-welcome-email-server',()=>({canSendClientEmail:mocks.available}));
 import {createInvoiceShareLinkAction,listInvoiceShareLinksAction,loadInvoiceEmailTargetAction,reviewInvoiceManualPaymentAction,revokeInvoiceShareLinkAction,saveInvoiceManualSettingsAction,submitInvoiceManualPaymentAction} from '../app/actions/invoice-manual-payments';
 
 const invoiceId='10000000-0000-4000-8000-000000001921',claimId='10000000-0000-4000-8000-000000001922',requestId='10000000-0000-4000-8000-000000001923';
