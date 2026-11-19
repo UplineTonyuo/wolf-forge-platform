@@ -134,8 +134,11 @@ export class OrderRepository {
     return unwrapMany(await query.order("created_at", { ascending: false })) as OrderRow[];
   }
 
-  async listForCompany(companyId: string): Promise<OrderRow[]> {
-    return this.list({ companyId });
+  async listForCompany(companyId: string): Promise<Array<OrderRow & Pick<ProjectRelationRow, "services">>> {
+    return unwrapMany(await this.client.from("orders").select("*, services(id, name)")
+      .eq("company_id", companyId)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })) as Array<OrderRow & Pick<ProjectRelationRow, "services">>;
   }
 
   async getWithRelations(id: string): Promise<ProjectRelationRow> {
