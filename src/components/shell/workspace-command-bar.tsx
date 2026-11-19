@@ -133,6 +133,7 @@ export function WorkspaceCommandBar({
   const projectsAvailable = user.modules?.projects === true;
   const projectsAvailableRef = useRef(projectsAvailable);
   useEffect(() => { projectsAvailableRef.current = projectsAvailable; }, [projectsAvailable]);
+  const invoicesAvailable = user.invoices?.view === true || user.invoices?.manage === true;
   const ticketsAvailable = user.modules?.tickets === true && user.tickets?.view === true;
   const ticketsAvailableRef = useRef(ticketsAvailable);
   useEffect(() => { ticketsAvailableRef.current = ticketsAvailable; }, [ticketsAvailable]);
@@ -970,7 +971,12 @@ export function WorkspaceCommandBar({
         data-scrolled={scrolled}
       >
         {mobileNavigation}
-        <GlobalSearch ticketsAvailable={ticketsAvailable} projectsAvailable={projectsAvailable} />
+        <GlobalSearch
+          key={`${user.id}:${user.tenantId}:${invoicesAvailable}`}
+          ticketsAvailable={ticketsAvailable}
+          projectsAvailable={projectsAvailable}
+          invoicesAvailable={invoicesAvailable}
+        />
         {/*
           Secondary utilities stay in the collapsible rail. The notification
           bell sits outside so unread counts remain visible at rest (KI-059),

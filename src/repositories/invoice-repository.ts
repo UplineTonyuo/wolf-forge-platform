@@ -46,6 +46,8 @@ export type ClientInvoiceSummary = {
   financials: InvoiceFinancials;
 };
 
+export type CompanyInvoiceSummary = ClientInvoiceSummary & Pick<InvoiceSummary, "paidAt">;
+
 export type ClientInvoiceDetail = {
   invoice: InvoiceRow;
   clientName: string;
@@ -116,12 +118,29 @@ export class InvoiceRepository {
     return unwrapMany(await this.client.rpc("app_list_invoice_items", { p_invoice_id: invoiceId })) as InvoiceItemRow[];
   }
 
+  async listOrderIds(invoiceId: string): Promise<string[]> {
+    const items = await this.listItems(invoiceId);
+    return Array.from(new Set(items.flatMap((item) => item.order_id ? [item.order_id] : [])));
+  }
+
   private async getFinancials(invoiceId: string): Promise<InvoiceFinancials> {
     const result = await this.client.rpc("app_get_invoice_financials", { p_invoice_id: invoiceId });
     if (result.error) throw mapDatabaseError(result.error, "Invoice financials");
     const financials = result.data?.[0];
     if (!financials) throw mapDatabaseError({ code: "PGRST116" }, "Invoice financials");
     return asFinancials(financials);
+  }
+
+  private async getManualClaimPaidAt(invoiceId: string, paymentId: string): Promise<string | null> {
+    const { data } = await this.client.from("activity_events")
+      .select("paid_at:metadata->>paid_at")
+      .eq("entity_type", "invoice")
+      .eq("entity_id", invoiceId)
+      .eq("action", "invoice.manual_payment.approved")
+      .filter("metadata->>payment_id", "eq", paymentId)
+      .limit(1);
+    const value = data?.[0]?.paid_at;
+    return value && Number.isFinite(Date.parse(value)) ? value : null;
   }
 
   async list(): Promise<InvoiceSummary[]> {
@@ -192,17 +211,27 @@ export class InvoiceRepository {
     }));
   }
 
-  async listForCompany(companyId: string): Promise<ClientInvoiceSummary[]> {
+  async listForCompany(companyId: string): Promise<CompanyInvoiceSummary[]> {
     const invoices = unwrapMany(await this.client
       .from("invoices")
-      .select()
+      .select("*, invoice_payments!invoice_payments_invoice_id_fkey(id, processor, settled_at)")
       .eq("company_id", companyId)
       .is("archived_at", null)
-      .order("created_at", { ascending: false })) as InvoiceRow[];
-    return Promise.all(invoices.map(async (invoice) => ({
-      invoice,
-      financials: await this.getFinancials(invoice.id),
-    })));
+      .eq("invoice_payments.status", "succeeded")
+      .order("created_at", { ascending: false })
+      .order("settled_at", { ascending: false, nullsFirst: false, referencedTable: "invoice_payments" })
+      .limit(1, { referencedTable: "invoice_payments" }));
+    return Promise.all(invoices.map(async ({ invoice_payments, ...invoice }) => {
+      const payment = invoice.status === "paid" ? invoice_payments[0] : undefined;
+      // A manual claim settles when reviewed, while its approval records the actual transfer date.
+      const [financials, paidAt] = await Promise.all([
+        this.getFinancials(invoice.id),
+        payment?.processor === "manual_invoice_claim"
+          ? this.getManualClaimPaidAt(invoice.id, payment.id)
+          : Promise.resolve(payment?.settled_at ?? null),
+      ]);
+      return { invoice: invoice as InvoiceRow, financials, paidAt };
+    }));
   }
 
   async getForClient(id: string): Promise<ClientInvoiceDetail> {

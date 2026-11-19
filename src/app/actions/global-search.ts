@@ -15,7 +15,8 @@ export type GlobalSearchKind =
   | "client"
   | "project"
   | "service"
-  | "ticket";
+  | "ticket"
+  | "invoice";
 
 
 export type GlobalSearchItem = {
@@ -495,6 +496,7 @@ export async function globalSearchAction(
 
   const pattern =
     `%${textQuery}%`;
+  const invoiceNumber = Number(/^(?:#\s*)?(?:WF-)?(\d{1,16})$/i.exec(query)?.[1]);
 
 
   try {
@@ -518,6 +520,7 @@ export async function globalSearchAction(
       titleProjectsResult,
       ticketsResult,
       referenceProjectsResult,
+      invoiceResult,
     ] =
       await Promise.all([
 
@@ -613,6 +616,17 @@ export async function globalSearchAction(
             .is("archived_at", null)
             .eq("spp_order_reference", sppReference)
             .limit(1),
+
+        Number.isSafeInteger(invoiceNumber) && invoiceNumber > 0 &&
+        (context.user.invoices.view || context.user.invoices.manage)
+          ? context.client
+            .from("invoices")
+            .select("id, invoice_number")
+            .filter("tenant_id", "eq", context.user.tenantId)
+            .eq("invoice_number", invoiceNumber)
+            .is("archived_at", null)
+            .limit(1)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
 
@@ -902,6 +916,18 @@ export async function globalSearchAction(
     const candidates:
       Candidate[] =
       [];
+
+    for (const invoice of invoiceResult.data ?? []) {
+      if (invoiceResult.error || invoice.invoice_number === null) continue;
+      candidates.push({
+        kind: "invoice",
+        id: invoice.id,
+        title: `WF-${String(invoice.invoice_number).padStart(4, "0")}`,
+        subtitle: "Billing history",
+        href: `/invoices/${invoice.id}`,
+        score: -1,
+      });
+    }
 
 
     for (
