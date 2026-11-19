@@ -30,6 +30,30 @@ describe("password recovery", () => {
     expect((await finishPasswordRecovery(data)).ok).toBe(false);
     expect(auth.verifyOtp).not.toHaveBeenCalled();
   });
+  it("keeps an email cooldown indistinguishable from an accepted request", async () => {
+    auth.resetPasswordForEmail.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({
+      error: { status: 429, code: "over_email_send_rate_limit" },
+    });
+    const receipt = await requestRecoveryCode(form());
+    expect(await requestRecoveryCode(form())).toEqual(receipt);
+    expect(receipt.message).toMatch(/wait/i);
+  });
+  it("keeps the email step open when the provider throttles the request source", async () => {
+    auth.resetPasswordForEmail.mockResolvedValue({ error: { status: 429, code: "over_request_rate_limit" } });
+    expect(await requestRecoveryCode(form())).toMatchObject({ ok: false, message: expect.stringMatching(/wait/i) });
+  });
+  it("distinguishes an unavailable verifier from a rejected code", async () => {
+    auth.verifyOtp.mockResolvedValue({ error: { status: 503 }, data: { session: null } });
+    expect(await finishPasswordRecovery(form())).toMatchObject({ ok: false, message: expect.stringMatching(/unavailable/i) });
+    expect(auth.updateUser).not.toHaveBeenCalled();
+  });
+  it("handles an uncertain password update without submitting it again", async () => {
+    auth.verifyOtp.mockResolvedValue({ error: null, data: { session: {} } });
+    auth.updateUser.mockResolvedValue({ error: { status: 503 } });
+    auth.signOut.mockResolvedValue({ error: null });
+    expect(await finishPasswordRecovery(form())).toMatchObject({ ok: false, message: expect.stringMatching(/try signing in/i) });
+    expect(auth.updateUser).toHaveBeenCalledTimes(1);
+  });
   it("refuses a rejected code without changing credentials", async () => {
     auth.verifyOtp.mockResolvedValue({ error: {}, data: { session: null } });
     expect((await finishPasswordRecovery(form())).ok).toBe(false);
