@@ -285,7 +285,7 @@ describe("Composer focus: shell-level for the staff Ticket composer, untouched e
 });
 
 describe("In Inbox state label: Tickets-management lists only, driven by the one durable column", () => {
-  const workspace = stripBlockComments(read("components/tickets/ticket-workspace.tsx"));
+  const workspace = stripBlockComments(read("components/tickets/ticket-workspace-list.tsx"));
   const list = stripBlockComments(read("components/tickets/tickets-list.tsx"));
 
   it("renders on the desktop selector and the mobile list, both off inbox_added_at alone", () => {
