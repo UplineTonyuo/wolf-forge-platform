@@ -1,8 +1,8 @@
-import { ArrowLeft, TicketIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { RouteTransitionLink as Link } from "../shell/route-transition";
 import type { TicketCapabilities, TicketDetail, TicketSummary } from "../../domain/tickets/schema";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
-import { ticketStatusLabels } from "../../lib/tickets/presentation";
+import { TicketWorkspaceList } from "./ticket-workspace-list";
 import { TicketInboxAction } from "./ticket-inbox-action";
 import { TicketInspector } from "./ticket-inspector";
 import styles from "./tickets.module.css";
@@ -42,35 +42,7 @@ export function TicketWorkspace({
 
   return (
     <div className={styles.ticketWorkspace}>
-      <aside className={styles.ticketWorkspaceList} aria-label="Tickets">
-        {summaries.map((summary) => (
-          <Link
-            key={summary.ticket_id}
-            href={`/tickets/${summary.ticket_id}`}
-            className={[
-              styles.ticketWorkspaceListItem,
-              summary.ticket_id === ticketId ? styles.ticketWorkspaceListItemActive : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            aria-current={summary.ticket_id === ticketId ? "page" : undefined}
-          >
-            <TicketIcon aria-hidden="true" className={styles.ticketWorkspaceListIcon} />
-            <span className={styles.ticketWorkspaceListBody}>
-              <span className={styles.ticketWorkspaceListSubject}>{summary.subject}</span>
-              {summary.inbox_added_at ? (
-                <span className={styles.inboxTag}>In Inbox</span>
-              ) : null}
-              <span className={styles.ticketWorkspaceListMeta}>
-                {summary.company_name ?? summary.client_name ?? "Contact Form guest"}
-              </span>
-              <span className={styles.ticketWorkspaceListStatus}>
-                {ticketStatusLabels[summary.status]}
-              </span>
-            </span>
-          </Link>
-        ))}
-      </aside>
+      <TicketWorkspaceList key={ticketId} summaries={summaries} ticketId={ticketId} />
 
       <div className={styles.ticketWorkspaceManagement}>
         {/* Only shown where the list column above is hidden, i.e. below the

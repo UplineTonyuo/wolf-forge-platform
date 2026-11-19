@@ -13,6 +13,7 @@ import { TicketAdminControls } from "../components/tickets/ticket-admin-controls
 import { TicketComposer } from "../components/tickets/ticket-composer";
 import { TicketConversation } from "../components/tickets/ticket-conversation";
 import { TicketsList } from "../components/tickets/tickets-list";
+import { TicketWorkspaceList } from "../components/tickets/ticket-workspace-list";
 import type { TicketCapabilities, TicketDetailMessage, TicketSummary } from "../domain/tickets/schema";
 
 const refresh = vi.fn();
@@ -64,6 +65,37 @@ const messages: TicketDetailMessage[] = [
 const capabilities: TicketCapabilities = { view: true, create: true, reply: true, edit: true, assign: true, internalNotes: true, archive: true };
 
 describe("Tickets admin list", () => {
+  const dozen = Array.from({ length: 12 }, (_, index) => ({
+    ...ticket, ticket_id: String(index + 1), public_ref: `T-${index + 1}`,
+  }));
+
+  it("pages desktop rows and mobile cards together and searches all tickets", () => {
+    const { container } = render(<TicketsList summaries={dozen} />);
+    function checkPage(count: number, range: string) {
+      expect(container.querySelectorAll("tbody tr")).toHaveLength(count);
+      expect(container.querySelectorAll('[class*="mobileList"] > a')).toHaveLength(count);
+      expect(screen.getByText(range)).toBeInTheDocument();
+    }
+    checkPage(10, "1–10 of 12 tickets");
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    checkPage(2, "11–12 of 12 tickets");
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+    fireEvent.change(screen.getByPlaceholderText(/Search ticket ID/), { target: { value: "T-1" } });
+    checkPage(4, "4 tickets");
+    expect(screen.queryByRole("navigation", { name: "Ticket pages" })).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText(/Search ticket ID/), { target: { value: "" } });
+    checkPage(10, "1–10 of 12 tickets");
+  });
+
+  it("opens the detail list on the selected ticket's page and pages independently", () => {
+    render(<TicketWorkspaceList summaries={dozen} ticketId="12" />);
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(screen.getByRole("link", { current: "page" })).toHaveAttribute("href", "/tickets/12");
+    fireEvent.click(screen.getByRole("button", { name: "Previous page" }));
+    expect(screen.getAllByRole("link")).toHaveLength(10);
+    expect(screen.getByRole("button", { name: "Page 1" })).toHaveAttribute("aria-current", "page");
+  });
+
   it("renders real operational fields and links by UUID", () => {
     render(<TicketsList summaries={[ticket]} />);
     expect(screen.getAllByText("WF-T000042").length).toBeGreaterThan(0);

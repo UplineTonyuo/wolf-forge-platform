@@ -14,6 +14,7 @@ import { ticketPriorityOptions } from "../../lib/tickets/presentation";
 import { TicketPriorityBadge, TicketStatusBadge } from "./ticket-badges";
 import { TicketsFilterPanel, TicketsFilterSheet, type InboxFilter } from "./tickets-filter-panel";
 import styles from "./tickets.module.css";
+import { TicketPagination, useTicketPagination } from "./ticket-pagination";
 
 export function TicketsList({
   summaries,
@@ -131,6 +132,14 @@ export function TicketsList({
     });
   }, [inbox, priority, query, status, summaries]);
 
+  const pagination = useTicketPagination(visible.length);
+  const pageTickets = visible.slice(pagination.start, pagination.end);
+
+  function updateFilter<T>(setValue: (value: T) => void, value: T) {
+    setValue(value);
+    pagination.setPage(1);
+  }
+
   const activeFilterCount =
     Number(status !== "all") +
     Number(priority !== "all") +
@@ -138,6 +147,7 @@ export function TicketsList({
 
   /* Filters only -- the Ticket search is deliberately left standing. */
   function clearTicketFilters() {
+    pagination.setPage(1);
     setStatus("all");
     setPriority("all");
     setInbox("all");
@@ -583,7 +593,7 @@ export function TicketsList({
           <span className="sr-only">Search Tickets</span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => updateFilter(setQuery, event.target.value)}
             placeholder="Search ticket ID or person..."
           />
         </label>
@@ -623,9 +633,9 @@ export function TicketsList({
             status={status}
             priority={priority}
             inbox={inbox}
-            onStatusChange={setStatus}
-            onPriorityChange={setPriority}
-            onInboxChange={setInbox}
+            onStatusChange={(value) => updateFilter(setStatus, value)}
+            onPriorityChange={(value) => updateFilter(setPriority, value)}
+            onInboxChange={(value) => updateFilter(setInbox, value)}
             onClear={clearTicketFilters}
             onApply={() => setFilterOpen(false)}
           />
@@ -638,9 +648,9 @@ export function TicketsList({
         status={status}
         priority={priority}
         inbox={inbox}
-        onStatusChange={setStatus}
-        onPriorityChange={setPriority}
-        onInboxChange={setInbox}
+        onStatusChange={(value) => updateFilter(setStatus, value)}
+        onPriorityChange={(value) => updateFilter(setPriority, value)}
+        onInboxChange={(value) => updateFilter(setInbox, value)}
         onClear={clearTicketFilters}
       />
 
@@ -658,7 +668,7 @@ export function TicketsList({
           </thead>
 
           <tbody>
-            {visible.map((ticket) => (
+            {pageTickets.map((ticket) => (
               <tr key={ticket.ticket_id}>
                 <td>
                   <Link
@@ -730,7 +740,7 @@ export function TicketsList({
 
       {visible.length > 0 ? (
         <div className={styles.mobileList}>
-          {visible.map((ticket) => (
+          {pageTickets.map((ticket) => (
             <Link
               href={`/tickets/${ticket.ticket_id}`}
               key={ticket.ticket_id}
@@ -776,6 +786,8 @@ export function TicketsList({
         </div>
       ) : null}
 
+
+      <TicketPagination {...pagination} />
 
       <dialog
         className={`${styles.dialog} ${styles.internalCreateDialog}`}
