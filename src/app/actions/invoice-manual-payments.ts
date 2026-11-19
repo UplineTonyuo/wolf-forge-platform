@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { invoiceShareTokenSchema } from "../../domain/invoices/manual-payments";
 import { toClientSafeError } from "../../lib/errors/application-error";
-import { canSendClientWelcomeEmail } from "../../lib/email/client-welcome-email-server";
+import { canSendClientEmail } from "../../lib/email/client-welcome-email-server";
 import { getClientContext,getInternalContext } from "../../lib/supabase/next-server";
 
 function refreshInvoice(id:string) {
@@ -60,6 +60,6 @@ export async function loadInvoiceEmailTargetAction(invoiceId:string) {
     const contacts=await context.services.contacts.listForCompany(detail.invoice.company_id);
     const contact=contacts.find((value)=>value.is_primary&&value.email)??contacts.find((value)=>value.email);
     if(!contact?.email)return {ok:false as const,error:"Add an authorized client contact email before emailing this invoice."};
-    return {ok:true as const,data:{contactId:contact.id,name:contact.name,email:contact.email,available:await canSendClientWelcomeEmail(context)}};
+    return {ok:true as const,data:{contactId:contact.id,name:contact.name,email:contact.email,available:await canSendClientEmail(context)}};
   } catch(error) {return {ok:false as const,error:toClientSafeError(error).message};}
 }

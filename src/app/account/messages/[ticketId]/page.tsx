@@ -1,4 +1,5 @@
 import { ArrowLeft, CalendarDays, History, MailCheck } from "lucide-react";
+import { ClientFeedback, readClientFeedback } from "../../../../components/settings/client-feedback";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -35,7 +36,7 @@ export default async function ClientMessageDetailPage({
     const detail = await context.services.tickets.get(ticketId);
     const ticket = detail.ticket;
     const attention = ticketAttention(ticket.status);
-    const repliesDisabled = ticket.status === "closed" || Boolean(ticket.archived_at);
+    const repliesDisabled = ticket.completed_order_locked === true || ticket.status === "closed" || Boolean(ticket.archived_at);
 
     return (
       <TicketAccessBoundary key={ticket.id}><div className="portal-page">
@@ -74,6 +75,7 @@ export default async function ClientMessageDetailPage({
           </main>
 
           <aside className={styles.clientSummary}>
+            {["closed","resolved"].includes(ticket.status) && !ticket.archived_at && <ClientFeedback section="tickets" target={ticket.id} state={await readClientFeedback("tickets",ticket.id)}/>}
             <h2>Conversation</h2>
             <dl>
               <div>

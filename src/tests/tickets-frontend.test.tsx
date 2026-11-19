@@ -14,9 +14,13 @@ import { TicketComposer } from "../components/tickets/ticket-composer";
 import { TicketConversation } from "../components/tickets/ticket-conversation";
 import { TicketsList } from "../components/tickets/tickets-list";
 import { TicketWorkspaceList } from "../components/tickets/ticket-workspace-list";
+import { WorkflowLabelProvider } from "../components/settings/workflow-labels";
 import type { TicketCapabilities, TicketDetailMessage, TicketSummary } from "../domain/tickets/schema";
 
 const refresh = vi.fn();
+vi.mock("../app/actions/process", () => ({
+  savedReplies: async () => [{ key: "hello", name: "Greeting", description: "Hello" }],
+}));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 /*
  * ClientMessages seeds its composer from the cart, and the cart store reports
@@ -65,6 +69,21 @@ const messages: TicketDetailMessage[] = [
 const capabilities: TicketCapabilities = { view: true, create: true, reply: true, edit: true, assign: true, internalNotes: true, archive: true };
 
 describe("Tickets admin list", () => {
+  it("filters by the stored ticket status after reordering and renaming the choices", () => {
+    render(<WorkflowLabelProvider value={{ clients: [], tickets: [
+      { key: "waiting_on_client", name: "Client follow-up", color: "#435787", description: "" },
+      { key: "open", name: "New request", color: "#435787", description: "" },
+    ] }}>
+      <TicketsList summaries={[ticket, other]} />
+    </WorkflowLabelProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /^Filter/ }));
+    const filter = within(screen.getByRole("dialog", { name: "Filters" }));
+    const buttons = filter.getAllByRole("button").slice(0, 3);
+    expect(buttons.map(button => button.textContent)).toEqual(["All statuses", "Client follow-up", "New request"]);
+    fireEvent.click(buttons[1]!);
+    expect(screen.queryAllByText(ticket.public_ref)).toHaveLength(0);
+    expect(screen.getAllByText(other.public_ref).length).toBeGreaterThan(0);
+  });
   const dozen = Array.from({ length: 12 }, (_, index) => ({
     ...ticket, ticket_id: String(index + 1), public_ref: `T-${index + 1}`,
   }));
@@ -251,6 +270,34 @@ describe("Tickets admin list", () => {
 });
 
 describe("Ticket detail and actions", () => {
+  it.each([{ kind: "ticket", ticketId: ticket.ticket_id }, { kind: "order", orderId: ticket.ticket_id }] as const)(
+    "preserves a full $kind draft when a saved reply exceeds the limit, and accepts the exact limit", async (target) => {
+      render(<TicketComposer target={target} mode="admin" />);
+      const editor = screen.getByRole("textbox", { name: "Write a reply" });
+      const draft = "x".repeat(49_994);
+      editor.textContent = draft;
+      fireEvent.input(editor);
+      fireEvent.click(screen.getByRole("button", { name: "Saved replies" }));
+      const picker = await screen.findByRole("button", { name: /^Saved replies:/ });
+      function insertGreeting() {
+        fireEvent.keyDown(picker, { key: "ArrowDown" });
+        fireEvent.click(screen.getByRole("option", { name: "Greeting" }));
+      }
+      insertGreeting();
+      expect(screen.getByRole("alert")).toHaveTextContent("50,000");
+      expect(editor.textContent).toBe(draft);
+      expect(editor.isConnected).toBe(true);
+      const shortened = draft.slice(1);
+      editor.textContent = shortened;
+      fireEvent.input(editor);
+      await waitFor(() => expect(screen.queryByRole("option", { name: "Greeting" })).toBeNull());
+      insertGreeting();
+      expect(screen.queryByRole("alert")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Send reply" }));
+      await waitFor(() => expect(actions.sendTicketComposerAction).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(actions.sendTicketComposerAction).mock.calls[0]![1].get("body")).toBe(shortened + "\n\nHello");
+    },
+  );
   it("renders client-visible replies and a clearly marked internal note", () => {
     render(<TicketConversation messages={messages} />);
     expect(screen.getByText("Can you help with the brief?")).toBeInTheDocument();

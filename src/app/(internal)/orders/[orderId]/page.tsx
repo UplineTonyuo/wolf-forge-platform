@@ -36,6 +36,7 @@ export default async function OrderDetailsPage({
     const { views: taskViews, counts: taskCounts } = composeProjectTaskViews(tasks);
     const conversationTicket = conversation?.ticket ?? null;
     const legacyTicket = conversationTicket?.id !== orderId ? conversationTicket : null;
+    const completedLock = conversationTicket?.completed_order_locked === true;
     const repliesDisabled = conversationTicket
       ? conversationTicket.status === "closed" || Boolean(conversationTicket.archived_at)
       : false;
@@ -69,7 +70,7 @@ export default async function OrderDetailsPage({
             heading={`Project #${reference}`}
             destinations={legacyTicket ? toTeamConversationViews(teamConversations) : []}
             canReply={context.user.tickets.reply}
-            repliesDisabled={repliesDisabled}
+            repliesDisabled={Boolean(completedLock || repliesDisabled)}
             headerActions={
               context.user.tickets.internalNotes && legacyTicket ? (
                 <InternalNotesModal

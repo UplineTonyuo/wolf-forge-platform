@@ -1,3 +1,5 @@
+import { readWorkflowStages } from "../../../../lib/settings/process";
+import { ResourceProcess } from "../../../../components/settings/resource-process";
 import type { Metadata } from "next";
 import { BellRing, Building2, CalendarDays } from "lucide-react";
 import Link from "next/link";
@@ -35,10 +37,11 @@ export default async function OrderDetailLayout({
   const context = await getInternalContext();
 
   try {
-    const [project, tasks, people] = await Promise.all([
+    const [project, tasks, people, stages] = await Promise.all([
       context.services.orders.getWithRelations(orderId),
       context.services.tasks.listForOrder(orderId),
       context.services.catalog.listAssignees(),
+      readWorkflowStages("orders"),
     ]);
 
     const canViewInvoices = context.user.invoices.view;
@@ -77,6 +80,7 @@ export default async function OrderDetailLayout({
 
           <OrderHeaderControls
             orderId={project.id}
+            stages={stages} customStage={project.process_stage}
             status={project.status}
             assigneeId={project.assigned_to_profile_id}
             people={peopleOptions}
@@ -96,6 +100,7 @@ export default async function OrderDetailLayout({
 
           <aside className={styles.rail} aria-label="Order details" tabIndex={0}>
             <div className={styles.railCard}>
+              <ResourceProcess kind="projects" target={project.id} editable={context.user.projects.edit && !project.archived_at}/>
               <RailDetailsToggle>
               <dl className={styles.railList}>
                 <div className={styles.railRow}>

@@ -51,7 +51,7 @@ export function ProjectsFilterSheet({
   onClientFilterChange,
   serviceFilter,
   onServiceFilterChange,
-  statusFilter,
+  statusFilter, configuredStatuses,
   onStatusFilterChange,
   unansweredOnly,
   responseStatesAvailable,
@@ -71,6 +71,7 @@ export function ProjectsFilterSheet({
   onClientFilterChange: (value: string) => void;
   serviceFilter: string;
   onServiceFilterChange: (value: string) => void;
+  configuredStatuses?: SimpleFilterOption[];
   statusFilter: ProjectTab;
   onStatusFilterChange: (value: ProjectTab) => void;
   unansweredOnly: boolean;
@@ -111,8 +112,8 @@ export function ProjectsFilterSheet({
   );
 
   const statusOptions: SimpleFilterOption[] = useMemo(
-    () => orderStatuses.map((status) => ({ id: status, label: projectStatusLabels[status], status })),
-    [],
+    () => configuredStatuses ?? orderStatuses.map((status) => ({ id: status, label: projectStatusLabels[status], status })),
+    [configuredStatuses],
   );
 
   useEffect(() => {
@@ -164,7 +165,7 @@ export function ProjectsFilterSheet({
   const serviceName =
     serviceFilter === "all" ? "All services" : (services.find((service) => service.id === serviceFilter)?.name ?? "All services");
 
-  const statusName = statusFilter === "all" ? "All statuses" : projectStatusLabels[statusFilter];
+  const statusName = statusFilter === "all" ? "All statuses" : statusOptions.find(option=>option.id===statusFilter)?.label ?? statusFilter;
 
   const panelTitle =
     view === "person"

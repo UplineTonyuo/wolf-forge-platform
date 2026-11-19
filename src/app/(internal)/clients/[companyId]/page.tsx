@@ -1,3 +1,4 @@
+import { ResourceProcess } from "../../../../components/settings/resource-process";
 import type { Metadata } from "next";
 import { ClientContactEmail } from "../../../../components/clients/client-contact-email";
 import {
@@ -30,7 +31,8 @@ import { ClientBalanceControl } from "../../../../components/clients/client-bala
 import { WfCardMembershipControl } from "../../../../components/clients/wf-card-membership-control";
 import { PageFrame } from "../../../../components/ui/page-frame";
 import { StatusBadge } from "../../../../components/ui/status-badge";
-import { canSendClientWelcomeEmail } from "../../../../lib/email/client-welcome-email-server";
+import { readWorkflowStages } from "../../../../lib/settings/process";
+import { canIssueClientInvitation, canSendClientEmail } from "../../../../lib/email/client-welcome-email-server";
 import { toClientSafeError } from "../../../../lib/errors/application-error";
 import { formatCurrencyCents, formatDate } from "../../../../lib/format";
 import type { ActivityEventRow } from "../../../../lib/supabase/database-rows";
@@ -113,7 +115,7 @@ export default async function ClientDetailPage({
   const context = await getInternalContext();
 
   try {
-    const [client, contacts, projects, wallet, wfCardMembership, contactSummary] = await Promise.all([
+    const [client, contacts, projects, wallet, wfCardMembership, contactSummary, orderStages] = await Promise.all([
       context.services.companies.get(companyId),
       context.user.clients.privateManage
         ? context.services.contacts.listForCompany(companyId)
@@ -130,6 +132,9 @@ export default async function ClientDetailPage({
       context.user.clients.contactRead
         ? context.services.contacts.getPrimarySummary(companyId)
         : Promise.resolve(null),
+      (activeTab === "details" || activeTab === "projects") && context.user.modules.projects
+        ? readWorkflowStages("orders")
+        : [],
     ]);
 
     const openProjects = projects.filter(
@@ -143,9 +148,9 @@ export default async function ClientDetailPage({
       null;
 
     // The primary contact's portal login, when this viewer may email it a set-password link.
-    const emailAvailable = await canSendClientWelcomeEmail(context);
+    const emailAvailable = await canSendClientEmail(context);
     const welcomeEmailProfileId =
-      primaryContact?.profile_id && emailAvailable
+      primaryContact?.profile_id && emailAvailable && await canIssueClientInvitation(context)
         ? primaryContact.profile_id
         : null;
 
@@ -340,6 +345,7 @@ export default async function ClientDetailPage({
           </div>
         </div>
 
+        <ResourceProcess kind="clients" target={client.id} editable={context.user.clients.edit}/>
         <ClientDetailSections companyId={companyId} activeTab={activeTab}>
         {activeTab === "details" ? (
           <div className="client-detail-content">
@@ -471,9 +477,7 @@ export default async function ClientDetailPage({
                           </strong>
                         </div>
 
-                        <StatusBadge
-                          status={project.status}
-                        />
+                        <StatusBadge order={project} stages={orderStages} />
                       </RouteTransitionLink>
                     ))}
                 </div>
@@ -512,9 +516,7 @@ export default async function ClientDetailPage({
                       </strong>
                     </div>
 
-                    <StatusBadge
-                      status={project.status}
-                    />
+                    <StatusBadge order={project} stages={orderStages} />
                   </RouteTransitionLink>
                 ))}
               </div>

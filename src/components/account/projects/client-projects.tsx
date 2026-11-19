@@ -18,7 +18,7 @@ export function ClientProjectDetail({
   conversation,
   viewerId,
   startControl,
-  chatAccess,
+  chatAccess, completedLock=false,
 }: {
   project: ClientProjectView;
   conversation: (TicketDetail & {page?:OrderPageInfo}) | null;
@@ -26,6 +26,7 @@ export function ClientProjectDetail({
    *  authenticated user rather than from the client role. */
   viewerId: string;
   startControl?: ReactNode;
+  completedLock?: boolean;
   chatAccess: "locked" | "unlocked" | "unavailable";
 }) {
   const attention = projectAttention(project.status);
@@ -108,7 +109,7 @@ export function ClientProjectDetail({
             messages={conversation?.messages ?? []}
             initialPage={conversation?.page}
             viewerProfileId={viewerId}
-            repliesDisabled={repliesDisabled}
+            repliesDisabled={completedLock || repliesDisabled}
           />
         </OrderConversationDialog>
       ) :

@@ -406,6 +406,11 @@ a.tab:hover {
   color: #000d51;
 }
 
+.revisionReason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .historyBody time {
   color: #626b7d;
   font-size: 10.5px;

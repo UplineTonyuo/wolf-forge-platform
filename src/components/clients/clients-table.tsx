@@ -1,4 +1,5 @@
 "use client";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 
 import {
   ArrowLeft,
@@ -111,6 +112,7 @@ export function ClientsTable({
   canEdit: boolean;
   canDelete: boolean;
 }) {
+  const entries = useWorkflowLabels("clients");
   const router = useRouter();
   const selectAllRef = useRef<HTMLInputElement>(null);
   const applyRef = useRef<HTMLButtonElement>(null);
@@ -479,7 +481,7 @@ export function ClientsTable({
                   <td className="clients-table-created">{client.createdLabel}</td>
                   <td>
                     <span className={`clients-table-status is-${client.status}`}>
-                      <span className={`client-status-dot is-${client.status}`} aria-hidden="true" />
+                      <span style={{backgroundColor:entries.find(e=>e.key===client.status)?.color}} className={`client-status-dot is-${client.status}`} aria-hidden="true" />
                       {client.statusLabel}
                     </span>
                   </td>

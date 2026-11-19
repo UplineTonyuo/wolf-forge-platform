@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TeamTicketsPane } from "../components/team/team-tickets-pane";
+import { WorkflowLabelProvider } from "../components/settings/workflow-labels";
 import type { TicketSummary } from "../domain/tickets/schema";
 
 const controls = { page: 1, pages: 1, query: "", onPageChange: vi.fn(), onQueryChange: vi.fn() };
@@ -33,6 +34,15 @@ function ticket(overrides: Partial<TicketSummary> = {}): TicketSummary {
 }
 
 describe("TeamTicketsPane", () => {
+  it("uses the workspace label for the ticket's stored status", () => {
+    render(<WorkflowLabelProvider value={{ clients: [], tickets: [
+      { key: "waiting_on_client", name: "Client follow-up", color: "#435787", description: "" },
+    ] }}>
+      <TeamTicketsPane {...controls} tickets={[ticket()]} loading={false} error={null}
+        activeTicketId={null} onSelect={vi.fn()} onRetry={vi.fn()} />
+    </WorkflowLabelProvider>);
+    expect(screen.getByRole("listitem")).toHaveTextContent("Client follow-up");
+  });
   it("requests the adjacent page and forwards search edits to the list owner", () => {
     const onPageChange = vi.fn();
     const onQueryChange = vi.fn();

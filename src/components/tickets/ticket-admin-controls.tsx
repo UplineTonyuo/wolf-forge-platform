@@ -8,6 +8,7 @@ import type { ServiceAssigneeOption } from "../../repositories/service-repositor
 import { assignTicketAction, updateTicketPriorityAction, updateTicketStatusAction } from "../../app/actions/tickets";
 import { ticketPriorityOptions, ticketStatusLabels, ticketStatusOptions } from "../../lib/tickets/presentation";
 import type { TicketPriority, TicketStatus } from "../../lib/tickets/types";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 import { TicketOperationSelect } from "./ticket-operation-select";
 import styles from "./tickets.module.css";
 
@@ -21,6 +22,7 @@ const transitions: Record<TicketStatus, TicketStatus[]> = {
 };
 
 export function TicketAdminControls({ ticketId, status, priority, assigneeId, assignees, capabilities, onChanged }: { ticketId: string; status: TicketStatus; priority: TicketPriority; assigneeId: string | null; assignees: ServiceAssigneeOption[]; capabilities: TicketCapabilities; onChanged?: () => void }) {
+  const entries = useWorkflowLabels("tickets");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -37,7 +39,7 @@ export function TicketAdminControls({ ticketId, status, priority, assigneeId, as
 
   return <div className={styles.adminControls} aria-busy={pending || undefined}>
     {capabilities.edit ? <div className={styles.quickActions}>{status === "resolved" || status === "closed" ? <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "open"))} disabled={pending}><RotateCcw aria-hidden="true" />Reopen</button> : <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "resolved"))} disabled={pending}><CheckCircle2 aria-hidden="true" />Resolve</button>}{status === "resolved" ? <button type="button" onClick={() => run(() => updateTicketStatusAction(ticketId, "closed"))} disabled={pending}>Close</button> : null}</div> : null}
-    <label><span>Status</span><TicketOperationSelect aria-label="Status" value={status} disabled={pending || !capabilities.edit} onChange={(event) => run(() => updateTicketStatusAction(ticketId, event.target.value))}><option value={status}>{ticketStatusLabels[status]}</option>{ticketStatusOptions.filter(([value]) => transitions[status].includes(value)).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</TicketOperationSelect></label>
+    <label><span>Status</span><TicketOperationSelect aria-label="Status" value={status} disabled={pending || !capabilities.edit} onChange={(event) => run(() => updateTicketStatusAction(ticketId, event.target.value))}><option value={status}>{entries.find(e=>e.key===status)?.name ?? ticketStatusLabels[status]}</option>{(entries.length ? entries.map(e=>[e.key as TicketStatus,e.name] as const) : ticketStatusOptions).filter(([value]) => transitions[status].includes(value)).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</TicketOperationSelect></label>
     <label><span>Priority</span><TicketOperationSelect aria-label="Priority" value={priority} disabled={pending || !capabilities.edit} onChange={(event) => run(() => updateTicketPriorityAction(ticketId, event.target.value))}>{ticketPriorityOptions.map(([value, label]) => <option value={value} key={value}>{label}</option>)}</TicketOperationSelect></label>
     <label><span>Assigned Wolf Forge member</span><TicketOperationSelect aria-label="Assigned Wolf Forge member" value={assigneeId ?? ""} disabled={pending || !capabilities.assign} onChange={(event) => run(() => assignTicketAction(ticketId, event.target.value || null))}><option value="">Unassigned</option>{assignees.map((assignee) => <option value={assignee.id} key={assignee.id}>{assignee.displayName}</option>)}</TicketOperationSelect></label>
     {pending ? <p className={styles.saving}><LoaderCircle className="spinner" aria-hidden="true" />Updating Ticket…</p> : null}

@@ -7,7 +7,7 @@ import { RouteTransitionLink } from "../components/shell/route-transition";
 import { ClientDetailSections } from "../components/clients/client-detail-sections";
 
 const read = vi.hoisted(() => ({ company: vi.fn(), projects: vi.fn(), timeline: vi.fn() }));
-vi.mock("../lib/email/client-welcome-email-server", () => ({ canSendClientWelcomeEmail: async () => false }));
+vi.mock("../lib/email/client-welcome-email-server", () => ({ canSendClientEmail: async () => false }));
 vi.mock("../lib/supabase/next-server", () => ({ getInternalContext: async () => ({
   user: { role: "staff", clients: { privateManage: false }, invoices: { manage: false }, forms: { assign: false }, tickets: { create: false } },
   services: { companies: { get: read.company }, orders: { listForCompany: read.projects }, activity: { listTimeline: read.timeline } },

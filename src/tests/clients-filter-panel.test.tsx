@@ -15,10 +15,16 @@ vi.mock("next/navigation", () => ({
 
 const { ClientsFilterPanel } = await import("../components/clients/clients-filter-panel");
 
-const counts = { "": 12, contact: 5, lead: 3, client: 4, client_team: 0 };
+const options = [
+  { value: "", label: "All", count: 12 },
+  { value: "contact", label: "Contact", count: 5 },
+  { value: "lead", label: "Lead", count: 3 },
+  { value: "client", label: "Client", count: 4 },
+  { value: "client_team", label: "Client Team", count: 0 },
+];
 
-function openPanel(status = "", query = "") {
-  const view = render(<ClientsFilterPanel query={query} status={status} counts={counts} />);
+function openPanel(status = "", query = "", filterOptions = options) {
+  const view = render(<ClientsFilterPanel query={query} status={status} options={filterOptions} />);
   fireEvent.click(screen.getByRole("button", { name: "Filter clients" }));
   return { view, dialog: screen.getByRole("dialog", { name: "Filter clients" }) };
 }
@@ -37,6 +43,18 @@ afterEach(() => {
 });
 
 describe("Clients filter", () => {
+  it("lists renamed lifecycle statuses in workspace order and keeps their filter keys", () => {
+    const { dialog } = openPanel("", "", [
+      { value: "lead", label: "Prospect", count: 3 },
+      { value: "contact", label: "New contact", count: 5 },
+      { value: "", label: "All", count: 12 },
+    ]);
+    const buttons = within(within(dialog).getByRole("group", { name: "Type" })).getAllByRole("button");
+    expect(buttons.map(button => button.textContent)).toEqual(["Prospect3", "New contact5", "All12"]);
+    fireEvent.click(buttons[0]!);
+    apply(dialog);
+    expect(push).toHaveBeenCalledWith("/clients?status=lead");
+  });
   it("offers only the filters the server applies: search and Type", () => {
     const { dialog } = openPanel();
 
@@ -108,7 +126,7 @@ describe("Clients filter", () => {
   });
 
   it("badges the trigger with the applied filters, not an unapplied draft", () => {
-    render(<ClientsFilterPanel query="acme" status="lead" counts={counts} />);
+    render(<ClientsFilterPanel query="acme" status="lead" options={options} />);
     const trigger = screen.getByRole("button", { name: "Filter clients" });
     expect(trigger.textContent).toContain("2");
 

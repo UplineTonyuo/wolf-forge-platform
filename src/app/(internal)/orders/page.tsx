@@ -1,3 +1,4 @@
+import { readWorkflowStages } from "../../../lib/settings/process";
 import type { Metadata } from "next";
 import { ProjectsWorkspace } from "../../../components/projects/projects-workspace";
 import { DataError } from "../../../components/ui/list-states";
@@ -17,12 +18,13 @@ export default async function ProjectsPage() {
        assignee, plus one batched task query. Filter option lists come from the
        authoritative catalogs rather than from whatever the rows happen to
        contain. Everything stays inside the caller's RLS scope. */
-    const [projects, people, services, serviceFolders, clients] = await Promise.all([
+    const [projects, people, services, serviceFolders, clients, stages] = await Promise.all([
       context.services.orders.listProjects(),
       context.services.catalog.listAssignees(),
       context.services.catalog.listActiveOptions(),
       context.services.catalog.listFolders(),
       context.services.companies.listActive(),
+      readWorkflowStages("orders"),
     ]);
 
     return (
@@ -31,6 +33,7 @@ export default async function ProjectsPage() {
         description="Manage client delivery work across Wolf Forge services."
       >
         <ProjectsWorkspace
+          stages={stages}
           rows={projects.rows}
           complete={projects.complete}
           people={people.map((person) => ({ id: person.id, name: person.displayName, avatarUrl: person.avatarUrl }))}

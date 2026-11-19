@@ -1,4 +1,5 @@
 "use client";
+import { useWorkflowLabels } from "../settings/workflow-labels";
 
 import {
   Check,
@@ -64,6 +65,8 @@ export function ClientStatusControl({
   companyId: string;
   status: string;
 }) {
+  const entries = useWorkflowLabels("clients");
+  const options = entries.length ? entries.map(e=>({value:normalizeStatus(e.key),label:e.name})) : statusOptions;
   const router = useRouter();
 
   const containerRef =
@@ -200,14 +203,12 @@ export function ClientStatusControl({
         }
       >
         <span
-          className={`client-status-dot is-${currentStatus}`}
+          style={{backgroundColor:entries.find(entry=>entry.key===currentStatus)?.color}} className={`client-status-dot is-${currentStatus}`}
           aria-hidden="true"
         />
 
         <span className="client-status-trigger-label">
-          {labelForStatus(
-            currentStatus,
-          )}
+          {entries.find(entry=>entry.key===currentStatus)?.name ?? labelForStatus(currentStatus)}
         </span>
 
         {pending ? (
@@ -232,7 +233,7 @@ export function ClientStatusControl({
         role="menu"
         aria-hidden={!open}
       >
-        {statusOptions.map(
+        {options.map(
           (option) => {
             const selected =
               option.value ===
@@ -240,7 +241,7 @@ export function ClientStatusControl({
 
             return (
               <button
-                key={option.value}
+                key={option.value} title={entries.find(entry=>entry.key===option.value)?.description}
                 type="button"
                 role="menuitem"
                 tabIndex={
@@ -258,7 +259,7 @@ export function ClientStatusControl({
                 }
               >
                 <span
-                  className={`client-status-dot is-${option.value}`}
+                  style={{backgroundColor:entries.find(entry=>entry.key===option.value)?.color}} className={`client-status-dot is-${option.value}`}
                   aria-hidden="true"
                 />
 

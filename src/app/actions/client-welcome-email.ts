@@ -38,7 +38,7 @@ export async function sendClientWelcomeEmailAction(
   const context = await getInternalContext();
 
   if (!(await canSendClientWelcomeEmail(context))) {
-    return { ok: false, message: "Welcome emails need a connected Gmail account and integrations access." };
+    return { ok: false, message: "Welcome emails need a connected Gmail account and permission to issue client invitations." };
   }
 
   try {

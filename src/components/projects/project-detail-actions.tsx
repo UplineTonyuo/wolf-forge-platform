@@ -1,4 +1,5 @@
 "use client";
+import type { ProcessEntry } from "../../domain/process/settings";
 
 import {
   ChevronDown,
@@ -65,7 +66,7 @@ const closeDurationMs = 190;
 
 
 function statusHint(
-  status: OrderStatus,
+  status: string,
 ) {
   const value =
     String(status);
@@ -103,12 +104,14 @@ function statusHint(
 
 export function ProjectDetailActions({
   orderId,
-  status,
+  status, stages = [], customStage,
   assigneeId,
   people,
   capabilities,
 }: {
   orderId: string;
+  stages?: ProcessEntry[];
+  customStage?: string | null;
   status: OrderStatus;
   assigneeId: string | null;
   people: ProjectOption[];
@@ -331,7 +334,7 @@ export function ProjectDetailActions({
 
 
   async function changeStatus(
-    nextStatus: OrderStatus,
+    nextStatus: string,
   ) {
     if (busy) return;
     setCompletionFailures([]);
@@ -921,13 +924,12 @@ export function ProjectDetailActions({
                         styles.optionList
                       }
                     >
-                      {orderStatuses.map(
+                      {(stages.length ? stages.map(stage=>stage.key) : orderStatuses).map(
                         (
                           nextStatus,
                         ) => {
                           const selected =
-                            nextStatus ===
-                            status;
+                            nextStatus === (customStage ?? status);
 
                           return (
                             <button
@@ -964,13 +966,11 @@ export function ProjectDetailActions({
                               >
                                 <strong>
                                   {
-                                    projectStatusLabels[
-                                      nextStatus
-                                    ]
+                                    stages.find(stage=>stage.key===nextStatus)?.name ?? projectStatusLabels[nextStatus as OrderStatus]
                                   }
                                 </strong>
 
-                                <small className={styles.statusHint}>{statusHint(nextStatus)}</small>
+                                <small className={styles.statusHint}>{stages.find(stage=>stage.key===nextStatus)?.description || statusHint(nextStatus)}</small>
                               </span>
 
                               {selected ? (

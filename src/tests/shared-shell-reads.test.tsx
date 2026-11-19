@@ -159,6 +159,24 @@ describe.each(layouts)("$name shared shell reads", ({ name, render, getContext }
   });
 });
 
+it.each(["tickets", "clients"] as const)("loads only %s workflow labels for staff with that module", async (section) => {
+  const entry = { key: "open", name: "In review", color: "#335577", description: "Awaiting review" };
+  state.internal.mockResolvedValue({
+    ...context,
+    user: { ...context.user, modules: { [section]: true, settings: false } },
+  });
+  rpc.mockImplementation(async (name: string) => ({
+    data: name === "app_process_entries" ? [entry] : runtime,
+    error: null,
+  }));
+  const shell = await InternalLayout({ children: "workspace" });
+  expect(shell.props.workflowLabels).toEqual({ tickets: [], clients: [], [section]: [entry] });
+  expect(rpc.mock.calls).toEqual([
+    ["app_get_runtime_white_label_configuration"],
+    ["app_process_entries", { p_section: section }],
+  ]);
+});
+
 it.each(["branding", "self"] as const)("internal output remains correct when %s finishes last", async (last) => {
   const pending = holdReads();
   const rendering = InternalLayout({ children: "workspace" });

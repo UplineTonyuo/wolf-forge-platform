@@ -3,6 +3,8 @@ import { DataError, EmptyState } from "../../../components/ui/list-states";
 import { StatusBadge } from "../../../components/ui/status-badge";
 import { orderReference } from "../../../domain/orders/references";
 import type { Order } from "../../../domain/orders/schema";
+import type { ProcessEntry } from "../../../domain/process/settings";
+import { readWorkflowStages } from "../../../lib/settings/process";
 import { toClientSafeError } from "../../../lib/errors/application-error";
 import { formatDate, isOverdue } from "../../../lib/format";
 import { getInternalContext } from "../../../lib/supabase/next-server";
@@ -11,10 +13,11 @@ import type { TeamTaskListRow } from "../../../domain/team/schema";
 
 export const metadata: Metadata = { title: "Operations — Tasks" };
 
-function AttentionSection({ title, empty, orders, companyNames, serviceNames }: {
+function AttentionSection({ title, empty, orders, stages, companyNames, serviceNames }: {
   title: string;
   empty: string;
   orders: Order[];
+  stages: ProcessEntry[];
   companyNames: Map<string, string>;
   serviceNames: Map<string, string>;
 }) {
@@ -30,7 +33,7 @@ function AttentionSection({ title, empty, orders, companyNames, serviceNames }: 
                 <span>{companyNames.get(order.company_id) ?? "Client unavailable"} · {serviceNames.get(order.service_id) ?? "Service unavailable"}</span>
               </div>
               <div className="attention-row-meta">
-                <StatusBadge status={order.status} />
+                <StatusBadge order={order} stages={stages} />
                 <time dateTime={order.due_at ?? undefined} className={isOverdue(order.due_at, order.status) ? "overdue" : ""}>{formatDate(order.due_at)}</time>
               </div>
             </article>
@@ -56,7 +59,7 @@ export default async function ToDoPage() {
      */
     const canUseTeamMessages = context.user.teamMessaging.use;
 
-    const [orders, companies, services, teamTasks] = await Promise.all([
+    const [orders, companies, services, teamTasks, stages] = await Promise.all([
       context.services.orders.list(),
       context.services.companies.listActive(),
       context.services.catalog.listActive(),
@@ -65,6 +68,7 @@ export default async function ToDoPage() {
             .listMyTasks(false)
             .catch((): TeamTaskListRow[] => [])
         : Promise.resolve<TeamTaskListRow[]>([]),
+      context.user.modules.projects ? readWorkflowStages("orders") : [],
     ]);
     const companyNames = new Map(companies.map((company) => [company.id, company.name]));
     const serviceNames = new Map(services.map((service) => [service.id, service.name]));
@@ -92,9 +96,9 @@ export default async function ToDoPage() {
           <>
             <div className="attention-title"><span />Needs attention</div>
             {overdue.length === 0 && unassigned.length === 0 && waiting.length === 0 ? <p className="all-clear">Nothing needs attention right now.</p> : null}
-            <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} companyNames={companyNames} serviceNames={serviceNames} />
-            <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} companyNames={companyNames} serviceNames={serviceNames} />
-            <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} companyNames={companyNames} serviceNames={serviceNames} />
+            <AttentionSection title="Overdue" empty="Nothing overdue." orders={overdue} stages={stages} companyNames={companyNames} serviceNames={serviceNames} />
+            <AttentionSection title="Unassigned" empty="Everything is assigned." orders={unassigned} stages={stages} companyNames={companyNames} serviceNames={serviceNames} />
+            <AttentionSection title="Waiting on client" empty="Nothing is waiting on a client." orders={waiting} stages={stages} companyNames={companyNames} serviceNames={serviceNames} />
           </>
         )}
       </div>

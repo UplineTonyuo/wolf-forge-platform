@@ -6,11 +6,26 @@ import type { ReactNode } from "react";
 import { InternalShell } from "../components/shell/internal-shell";
 import type { InternalUser } from "../lib/supabase/next-server";
 
-const navigation = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/orders", useRouter: () => ({ push: navigation.push, prefetch: vi.fn() }) }));
+const navigation = vi.hoisted(() => ({ path:"/orders",push: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.path, useRouter: () => ({ push: navigation.push, prefetch: vi.fn() }) }));
 vi.mock("../components/shell/workspace-command-bar", () => ({ WorkspaceCommandBar: ({ mobileNavigation }: { mobileNavigation: ReactNode }) => mobileNavigation }));
 vi.mock("../components/team/team-presence-provider", () => ({ TeamPresenceProvider: ({ children }: { children: ReactNode }) => children }));
-afterEach(cleanup);
+afterEach(()=>{ navigation.path="/orders";cleanup(); });
+
+it("opens Process settings from a direct mobile URL and returns to primary navigation",()=>{
+  navigation.path="/settings/process/orders";
+  vi.stubGlobal("matchMedia",()=>({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()}));
+  HTMLDialogElement.prototype.showModal=function(){this.setAttribute("open","");};
+  HTMLDialogElement.prototype.close=function(){this.removeAttribute("open");this.dispatchEvent(new Event("close"));};
+  render(<InternalShell user={{id:"u1",displayName:"Admin",role:"admin",modules:{settings:true},teamMessaging:{use:false}} as unknown as InternalUser}><p>Orders</p></InternalShell>);
+  fireEvent.click(screen.getByRole("button",{name:"Open navigation"}));
+  const dialog=screen.getByRole("dialog");
+  expect(within(dialog).getByRole("link",{name:"Orders"})).toHaveAttribute("aria-current","page");
+  fireEvent.click(within(dialog).getByRole("link",{name:"Back"}));
+  expect(navigation.push).toHaveBeenCalledWith("/dashboard");
+  expect(dialog).not.toHaveAttribute("open");
+  vi.unstubAllGlobals();
+});
 
 it("opens the native modal, preserves permitted navigation and closes on destination, backdrop and desktop resize", () => {
   let resize = () => {};

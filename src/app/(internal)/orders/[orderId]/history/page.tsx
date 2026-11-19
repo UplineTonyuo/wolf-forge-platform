@@ -1,9 +1,17 @@
 import styles from "../../../../../components/projects/project-detail.module.css";
 import { AccountAvatar } from "../../../../../components/ui/account-avatar";
 import { DataError } from "../../../../../components/ui/list-states";
+import type { ActivityEvent } from "../../../../../domain/activity/schema";
 import { toClientSafeError } from "../../../../../lib/errors/application-error";
 import { formatDate, formatDateTime } from "../../../../../lib/format";
 import { getInternalContext } from "../../../../../lib/supabase/next-server";
+
+function RevisionReason({ event }: { event: ActivityEvent }) {
+  const metadata = event.metadata;
+  if (event.action !== "order.status_changed" || !metadata || typeof metadata !== "object" || Array.isArray(metadata) ||
+    typeof metadata.revision_id !== "string" || typeof metadata.reason !== "string") return null;
+  return <p className={styles.revisionReason}>{metadata.reason}</p>;
+}
 
 export default async function OrderHistoryPage({
   params,
@@ -55,6 +63,7 @@ export default async function OrderHistoryPage({
                           </strong>{" "}
                           {event.summary}
                         </p>
+                        <RevisionReason event={event}/>
                         <time dateTime={event.created_at}>{formatDateTime(event.created_at)}</time>
                       </div>
                     </li>

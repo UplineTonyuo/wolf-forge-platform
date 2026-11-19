@@ -47,6 +47,13 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Order header assignee avatars", () => {
+  it.each(["Needs Review","Editorial review"])("resolves a reopened order to its current stage label %s",name=>{
+    const key="de215000-0000-4000-8000-000000000001";
+    render(<OrderHeaderControls orderId={orderId} assigneeId={null} people={people} capabilities={capabilities}
+      status="working" customStage={key} stages={[{key,name,color:"#112233",description:"Review the revision"}]}/>);
+    expect(screen.getByRole("button",{name:"Status: "+name})).toBeVisible();
+  });
+
   it("shows the stored photo in the selected control and option while preserving the checkmark", () => {
     renderControls(williamId);
     const trigger = screen.getByRole("button", { name: "Assignee: WF William" });

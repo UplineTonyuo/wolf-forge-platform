@@ -283,7 +283,7 @@ export async function provisionClientAccountAction(
   ) {
     return {
       error:
-        "Welcome emails need a connected Gmail account and integrations access. Untick the option to set a temporary password instead.",
+        "Welcome emails need a connected Gmail account and permission to issue client invitations. Untick the option to set a temporary password instead.",
       fieldErrors: {},
     };
   }
