@@ -31,7 +31,19 @@ export type InvoiceSummary = {
   paidAt: string | null;
 };
 
+const orderHistorySchema = z.object({
+  order_ids: z.array(z.uuid()),
+  shared_orders: z.array(z.object({ order_id: z.uuid(), invoice_item_id: z.uuid(), source_order_reference: z.string() })),
+  payments: z.array(z.object({
+    payment_id: z.uuid(),
+    source_invoice_id: z.string(),
+    source_provider: z.string(),
+    source_payment_id: z.string(),
+  })),
+});
+
 export type InvoiceDetail = {
+  sourceHistory?: z.infer<typeof orderHistorySchema>;
   invoice: InvoiceRow;
   clientName: string;
   financials: InvoiceFinancials;
@@ -118,9 +130,14 @@ export class InvoiceRepository {
     return unwrapMany(await this.client.rpc("app_list_invoice_items", { p_invoice_id: invoiceId })) as InvoiceItemRow[];
   }
 
+  private async orderHistory(invoiceId: string) {
+    const result = await this.client.rpc("app_get_invoice_order_history", { p_invoice_id: invoiceId });
+    if (result.error) throw mapDatabaseError(result.error, "Invoice order history");
+    return orderHistorySchema.parse(result.data);
+  }
+
   async listOrderIds(invoiceId: string): Promise<string[]> {
-    const items = await this.listItems(invoiceId);
-    return Array.from(new Set(items.flatMap((item) => item.order_id ? [item.order_id] : [])));
+    return (await this.orderHistory(invoiceId)).order_ids;
   }
 
   private async getFinancials(invoiceId: string): Promise<InvoiceFinancials> {
@@ -171,7 +188,7 @@ export class InvoiceRepository {
   }
 
   async getById(id: string): Promise<InvoiceDetail> {
-    const [invoiceResult, companyResult, itemResult, paymentResult, refundResult, activityResult, financials] = await Promise.all([
+    const [invoiceResult, companyResult, itemResult, paymentResult, refundResult, activityResult, financials, sourceHistory] = await Promise.all([
       this.client.from("invoices").select().eq("id", id).is("archived_at", null).single(),
       this.client.from("companies").select().is("archived_at", null),
       this.listItems(id),
@@ -179,16 +196,19 @@ export class InvoiceRepository {
       this.client.from("invoice_refunds").select().eq("invoice_id", id).order("created_at", { ascending: false }),
       this.client.from("activity_events").select().eq("entity_type", "invoice").eq("entity_id", id).order("created_at", { ascending: false }),
       this.getFinancials(id),
+      this.orderHistory(id),
     ]);
     const invoice = unwrapOne(invoiceResult, "Invoice") as InvoiceRow;
     const companies = unwrapMany(companyResult) as CompanyRow[];
 
+    const payments = unwrapMany(paymentResult) as InvoicePaymentRow[];
     return {
       invoice,
+      sourceHistory,
       clientName: companies.find((company) => company.id === invoice.company_id)?.name ?? "Unknown client",
       financials,
       items: itemResult,
-      payments: unwrapMany(paymentResult) as InvoicePaymentRow[],
+      payments,
       refunds: unwrapMany(refundResult) as InvoiceRefundRow[],
       activity: unwrapMany(activityResult) as ActivityEventRow[],
     };

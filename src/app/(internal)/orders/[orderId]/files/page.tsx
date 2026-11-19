@@ -15,8 +15,19 @@ export default async function OrderFilesPage({
   const context = await getInternalContext();
 
   try {
-    const conversation = await context.services.tickets.getForOrder(orderId);
-    const files = (conversation?.messages ?? []).flatMap((message) => message.attachments);
+    const [conversation, agreements] = await Promise.all([
+      context.services.tickets.getForOrder(orderId),
+      context.services.forms.listSignedAgreements(orderId),
+    ]);
+    const files = [
+      ...agreements.map((agreement) => ({
+        id: agreement.submission_id, original_name: agreement.original_name, created_at: agreement.source_signed_at,
+        size_bytes: agreement.size_bytes, mime_type: "application/pdf", href: `/api/form-submissions/${agreement.submission_id}/pdf?original=signed`,
+      })),
+      ...(conversation?.messages ?? []).flatMap((message) => message.attachments.map((file) => ({
+        ...file, href: `/api/ticket-attachments/${file.id}`,
+      }))),
+    ];
 
     return (
       <section aria-labelledby="order-files-heading">
@@ -40,7 +51,7 @@ export default async function OrderFilesPage({
                   <span className={styles.filesNameGroup}>
                     <Link
                       className={styles.filesName}
-                      href={`/api/ticket-attachments/${file.id}`}
+                      href={file.href}
                       target="_blank"
                       rel="noreferrer"
                     >

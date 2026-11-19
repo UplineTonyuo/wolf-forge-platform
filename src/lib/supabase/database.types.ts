@@ -5607,6 +5607,12 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: { name: string; email: string | null; phone: string | null; job_title: string | null }[]
       }
+      app_get_invoice_order_history: { Args: { p_invoice_id: string }; Returns: Json }
+      app_get_spp_signed_agreement: { Args: { p_submission_id: string }; Returns: Json }
+      app_list_order_signed_agreements: {
+        Args: { p_order_id: string }
+        Returns: { submission_id: string; original_name: string; size_bytes: number; source_signed_at: string }[]
+      }
       app_get_form_submission_pdf: { Args: { p_submission_id: string; p_include_project?: boolean }; Returns: Json }
       app_get_form_submission: {
         Args: { p_submission_id: string }

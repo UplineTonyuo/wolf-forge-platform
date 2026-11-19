@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../app/api/form-submissions/[submissionId]/pdf/route";
 import { receiptFixture } from "./fixtures/form-pdf-fixture";
@@ -42,5 +43,31 @@ describe("authenticated saved-form PDF route", () => {
   it("keeps saved submission intact when generation fails", async () => {
     mocks.render.mockRejectedValue(new Error("internal font path"));const response = await GET(request(), params());
     expect(response.status).toBe(503);expect(await response.text()).toContain("saved form is unchanged");expect(mocks.rpc).toHaveBeenCalledOnce();
+  });
+});
+
+describe("archived signed agreement download", () => {
+  const signedRequest = () => new Request(request().url + "?original=signed");
+  const original = Buffer.from("%PDF-1.7\nsynthetic signature evidence\n%%EOF");
+  const archive = {
+    original_name: "Original agreement.pdf",
+    contents_base64: original.toString("base64"),
+    sha256_hex: createHash("sha256").update(original).digest("hex"),
+    size_bytes: original.length,
+  };
+  it("returns the verified original bytes through the caller's scoped RPC", async () => {
+    mocks.rpc.mockResolvedValue({ data: archive, error: null });
+    const response = await GET(signedRequest(), params());
+    expect(mocks.rpc).toHaveBeenCalledWith("app_get_spp_signed_agreement", { p_submission_id: id });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("content-disposition")).toContain("Original%20agreement.pdf");
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(original);
+    expect(mocks.render).not.toHaveBeenCalled();
+  });
+  it("rejects altered signed bytes without rendering a substitute", async () => {
+    mocks.rpc.mockResolvedValue({ data: { ...archive, sha256_hex: "0".repeat(64) }, error: null });
+    expect((await GET(signedRequest(), params())).status).toBe(503);
+    expect(mocks.render).not.toHaveBeenCalled();
   });
 });

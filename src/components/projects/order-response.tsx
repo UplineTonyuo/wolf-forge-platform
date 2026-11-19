@@ -28,7 +28,7 @@ export function OrderResponse({ detail, latest = true }: { detail: FormSubmissio
         <h3>{latest ? "Latest response" : "Earlier revision"} · Revision {detail.submission.revision_number}</h3>
         <p><time dateTime={detail.submission.submitted_at}>{formatDateTime(detail.submission.submitted_at)}</time> · {fields.length} fields</p>
       </div>
-      <DownloadFormPdf submissionId={detail.submission.id} automatic={false} />
+      <DownloadFormPdf submissionId={detail.submission.id} automatic={false} signedOriginal={detail.has_signed_agreement} />
     </header>
     <button ref={button} type="button" className="button-secondary" aria-expanded={expanded} aria-controls={contentId} onClick={toggle}>
       {expanded ? "Hide responses" : "Show responses"}

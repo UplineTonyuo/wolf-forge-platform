@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import { FORM_PDF_MAX_BYTES, formPdfFilename } from "../../lib/forms/pdf-receipt";
 import styles from "./forms.module.css";
 
-export function DownloadFormPdf({ submissionId, automatic = false }: { submissionId: string; automatic?: boolean }) {
+export function DownloadFormPdf({ submissionId, automatic = false, signedOriginal = false }: { submissionId: string; automatic?: boolean; signedOriginal?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef<AbortController | null>(null);
@@ -42,6 +42,7 @@ export function DownloadFormPdf({ submissionId, automatic = false }: { submissio
   useEffect(() => () => { active.current?.abort(); }, []);
   return <div className={styles.pdfDownload}>
     <button type="button" className="button-secondary" disabled={busy} aria-busy={busy || undefined} onClick={() => void download()}><Download aria-hidden="true" />{busy ? "Preparing PDF…" : "Download PDF"}</button>
+    {signedOriginal ? <a className="button-secondary" href={`/api/form-submissions/${submissionId}/pdf?original=signed`} download><Download aria-hidden="true" />Download original signed agreement</a> : null}
     {automatic ? <p>Your form is saved. If the download does not start, use Download PDF.</p> : null}
     {error ? <p role="alert">{error}</p> : null}
   </div>;
