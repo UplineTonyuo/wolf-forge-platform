@@ -48,7 +48,7 @@ export async function finishPasswordRecovery(form: FormData) {
   const email = emailSchema.safeParse(String(form.get("email") ?? "").trim());
   const token = String(form.get("code") ?? "").trim();
   const password = form.get("password");
-  if (!email.success || !/^\d{6}$/.test(token)) return { ok: false, message: "Enter the six-digit code from your email." };
+  if (!email.success || !/^\d{6,10}$/.test(token)) return { ok: false, message: "Enter the verification code from your email." };
   if (typeof password !== "string" || password.length < 8 || Buffer.byteLength(password, "utf8") > 72)
     return { ok: false, message: "Use at least 8 characters and at most 72 UTF-8 bytes." };
   if (password !== form.get("confirm")) return { ok: false, message: "The passwords do not match." };

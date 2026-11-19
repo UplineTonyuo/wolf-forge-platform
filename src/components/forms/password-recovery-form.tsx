@@ -30,7 +30,7 @@ export function PasswordRecoveryForm({ initialEmail, onBack }: { initialEmail: s
       {step === "email" && <label>Registered SPP email<input name="email" type="email" autoFocus autoComplete="email" maxLength={320} value={email} readOnly={busy} onChange={(e) => setEmail(e.target.value)} required /></label>}
       {step === "code" && <>
         <input type="hidden" name="email" value={email} />
-        <label>Verification code for {email}<input name="code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus pattern="[0-9]{6}" maxLength={6} required /></label>
+        <label style={{ overflowWrap: "anywhere" }}>Verification code for {email}<input name="code" type="text" inputMode="numeric" autoComplete="one-time-code" autoFocus pattern="[0-9]{6,10}" maxLength={10} required /></label>
         <label>New password<input name="password" type="password" autoComplete="new-password" minLength={8} required /></label>
         <label>Confirm new password<input name="confirm" type="password" autoComplete="new-password" minLength={8} required /></label>
       </>}

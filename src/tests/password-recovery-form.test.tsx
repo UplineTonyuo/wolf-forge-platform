@@ -19,12 +19,12 @@ it("carries the login email through recovery and returns to sign-in after a rese
   fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
   expect(screen.getByLabelText("Registered SPP email")).toHaveValue("person@example.test");
   fireEvent.click(screen.getByRole("button", { name: "Send verification code" }));
-  fireEvent.change(await screen.findByLabelText(/Verification code for/), { target: { value: "012345" } });
+  fireEvent.change(await screen.findByLabelText(/Verification code for/), { target: { value: "01234567" } });
   fireEvent.change(screen.getByLabelText("New password"), { target: { value: "new-password" } });
   fireEvent.change(screen.getByLabelText("Confirm new password"), { target: { value: "new-password" } });
   fireEvent.click(screen.getByRole("button", { name: "Reset password" }));
   expect(await screen.findByText("Password reset.")).toBeVisible();
-  expect(vi.mocked(finishPasswordRecovery).mock.calls[0]?.[0].get("code")).toBe("012345");
+  expect(vi.mocked(finishPasswordRecovery).mock.calls[0]?.[0].get("code")).toBe("01234567");
   fireEvent.click(screen.getByRole("button", { name: "Back to sign in" }));
   expect(screen.getByRole("button", { name: "Sign in" })).toBeVisible();
 });

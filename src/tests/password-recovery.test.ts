@@ -72,12 +72,14 @@ describe("password recovery", () => {
     expect((await finishPasswordRecovery(form())).ok).toBe(false);
     expect(auth.updateUser).not.toHaveBeenCalled();
   });
-  it("updates the OTP-proven account and closes its sessions", async () => {
+  it.each(["012345", "01234567"])("updates the OTP-proven account and closes its sessions for code %s", async (token) => {
     auth.verifyOtp.mockResolvedValue({ error: null, data: { session: {} } });
     auth.updateUser.mockResolvedValue({ error: null });
     auth.signOut.mockResolvedValue({ error: null });
-    expect((await finishPasswordRecovery(form())).ok).toBe(true);
-    expect(auth.verifyOtp).toHaveBeenCalledWith({ type: "recovery", email: "person@example.test", token: "012345" });
+    const data = form();
+    data.set("code", token);
+    expect((await finishPasswordRecovery(data)).ok).toBe(true);
+    expect(auth.verifyOtp).toHaveBeenCalledWith({ type: "recovery", email: "person@example.test", token });
     expect(auth.updateUser).toHaveBeenCalledWith({ password: "new-password" });
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "global" });
   });
