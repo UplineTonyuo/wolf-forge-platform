@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TeamTicketsPane } from "../components/team/team-tickets-pane";
 import type { TicketSummary } from "../domain/tickets/schema";
 
+const controls = { page: 1, pages: 1, query: "", onPageChange: vi.fn(), onQueryChange: vi.fn() };
 afterEach(cleanup);
 
 function ticket(overrides: Partial<TicketSummary> = {}): TicketSummary {
@@ -32,31 +33,21 @@ function ticket(overrides: Partial<TicketSummary> = {}): TicketSummary {
 }
 
 describe("TeamTicketsPane", () => {
-  it("searches full and partial references, all tickets for a client, and clears an empty result", () => {
-    render(<TeamTicketsPane tickets={[
-      ticket({ public_ref: "WF-TKT-000006" }),
-      ticket({ ticket_id: "t2", public_ref: "WF-TKT-000007", subject: "Another question" }),
-      ticket({ ticket_id: "t3", public_ref: "WF-TKT-000008", company_name: "Other company", client_name: "Other person" }),
-    ]} loading={false} error={null} activeTicketId={null} onSelect={vi.fn()} onRetry={vi.fn()} />);
-    const search = screen.getByRole("searchbox", { name: "Search tickets" });
-    for (const query of ["WF-TKT-000006", "000006"]) {
-      fireEvent.change(search, { target: { value: query } });
-      expect(screen.getAllByRole("listitem")).toHaveLength(1);
-      expect(screen.getByText("WF-TKT-000006")).toBeInTheDocument();
-    }
-    for (const query of ["Acme", "Client Person"]) {
-      fireEvent.change(search, { target: { value: query } });
-      expect(screen.getAllByRole("listitem")).toHaveLength(2);
-    }
-    fireEvent.change(search, { target: { value: "not found" } });
-    expect(screen.getByText("No tickets found")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Clear ticket search" }));
-    expect(search).toHaveValue("");
-    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  it("requests the adjacent page and forwards search edits to the list owner", () => {
+    const onPageChange = vi.fn();
+    const onQueryChange = vi.fn();
+    render(<TeamTicketsPane {...controls} pages={90} onPageChange={onPageChange} onQueryChange={onQueryChange}
+      tickets={[ticket()]} loading={false} error={null} activeTicketId={null} onSelect={vi.fn()} onRetry={vi.fn()} />);
+    expect(screen.getByText("Page 1 of 90")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(onPageChange).toHaveBeenCalledWith(2);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "later ticket" } });
+    expect(onQueryChange).toHaveBeenCalledWith("later ticket");
   });
   it("renders a lightweight row per Ticket — subject, status, company — with no unread affordance", () => {
     render(
-      <TeamTicketsPane
+      <TeamTicketsPane {...controls}
         tickets={[ticket()]}
         loading={false}
         error={null}
@@ -76,7 +67,7 @@ describe("TeamTicketsPane", () => {
   it("selecting a row calls onSelect with that Ticket's id, never fetching a transcript itself", () => {
     const onSelect = vi.fn();
     render(
-      <TeamTicketsPane
+      <TeamTicketsPane {...controls}
         tickets={[ticket({ ticket_id: "t42" })]}
         loading={false}
         error={null}
@@ -92,7 +83,7 @@ describe("TeamTicketsPane", () => {
 
   it("first load shows ticket-row skeletons, not a spinner or the empty state", () => {
     const { container } = render(
-      <TeamTicketsPane
+      <TeamTicketsPane {...controls}
         tickets={[]}
         loading
         error={null}
@@ -111,7 +102,7 @@ describe("TeamTicketsPane", () => {
 
   it("shows the empty state only once loaded, with no error", () => {
     render(
-      <TeamTicketsPane
+      <TeamTicketsPane {...controls}
         tickets={[]}
         loading={false}
         error={null}
@@ -126,7 +117,7 @@ describe("TeamTicketsPane", () => {
   it("surfaces a retry action on error instead of silently showing an empty list", () => {
     const onRetry = vi.fn();
     render(
-      <TeamTicketsPane
+      <TeamTicketsPane {...controls}
         tickets={[]}
         loading={false}
         error="Tickets could not be refreshed."

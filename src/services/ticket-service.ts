@@ -95,8 +95,8 @@ export class TicketService {
   }
 
   /** Inbox-only Ticket list. See TicketRepository.listInbox. */
-  listInbox() {
-    return this.dependencies.repository.listInbox();
+  listInbox(page: number, search: string) {
+    return this.dependencies.repository.listInbox(page, search);
   }
 
   get(id: unknown) {

@@ -7,7 +7,7 @@ import {useTicketInboxList} from '../components/team/use-ticket-inbox-list';
 import {notifyTicketAccessUnavailable} from '../components/tickets/ticket-access-boundary';
 const ticketId='70000000-0000-4000-8000-000000000010';
 const rows=[{ticket_id:ticketId,subject:'Protected Ticket title'}];
-beforeEach(()=>{vi.useFakeTimers();Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});Object.defineProperty(navigator,'onLine',{configurable:true,value:true});f.list.mockReset().mockResolvedValue({ok:true,data:rows});});
+beforeEach(()=>{vi.useFakeTimers();Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});Object.defineProperty(navigator,'onLine',{configurable:true,value:true});f.list.mockReset().mockResolvedValue({ok:true,data:{tickets:rows,total:1}});});
 afterEach(()=>{cleanup();vi.useRealTimers();});
 it('evicts cached titles on a transcript denial while permission refresh is pending and rejects the earlier list response',async()=>{
  const {result}=renderHook(()=>useTicketInboxList(true));
@@ -19,7 +19,7 @@ it('evicts cached titles on a transcript denial while permission refresh is pend
  expect(result.current.tickets).toEqual([]);
  expect(result.current.unavailable).toBe(true);
  expect(result.current.error).toBe('Tickets are unavailable.');
- await act(async()=>{resolve({ok:true,data:rows});});
+ await act(async()=>{resolve({ok:true,data:{tickets:rows,total:1}});});
  expect(result.current.tickets).toEqual([]);
 });
 it('hides previously loaded Ticket titles when revoked capabilities deactivate the lane',async()=>{
@@ -39,4 +39,39 @@ it('preserves retryable rows on network failure and clears them on typed authori
  await act(async()=>{await result.current.refreshNow();});
  expect(result.current.tickets).toEqual([]);
  expect(result.current.unavailable).toBe(true);
+});
+
+it('discards a slow page and polls the latest search at page one',async()=>{
+ const {result}=renderHook(()=>useTicketInboxList(true));
+ await act(async()=>{await vi.advanceTimersByTimeAsync(0);});
+ let resolve!: (value: unknown)=>void;
+ f.list.mockImplementationOnce(()=>new Promise(done=>{resolve=done;}));
+ act(()=>result.current.onPageChange(2));
+ expect(f.list).toHaveBeenLastCalledWith(2,'');
+ act(()=>result.current.onQueryChange('needle'));
+ await act(async()=>{resolve({ok:true,data:{tickets:rows,total:900}});});
+ expect(result.current.tickets).toEqual([]);
+ await act(async()=>{await vi.advanceTimersByTimeAsync(0);});
+ expect(f.list).toHaveBeenLastCalledWith(1,'needle');
+ expect(result.current.pages).toBe(1);
+ expect(vi.getTimerCount()).toBe(1);
+});
+
+it('shows ten rows at both ends of a 900-ticket inbox and searches beyond the current page', async () => {
+  const inbox = Array.from({ length: 900 }, (_, index) => ({
+    ticket_id: String(index + 1), subject: 'Ticket ' + (index + 1),
+  }));
+  f.list.mockImplementation(async (page: number, query: string) => {
+    const matches = inbox.filter(row => row.subject.includes(query));
+    return { ok: true, data: { tickets: matches.slice((page - 1) * 10, page * 10), total: matches.length } };
+  });
+  const { result } = renderHook(() => useTicketInboxList(true));
+  await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+  expect(result.current.pages).toBe(90);
+  expect(result.current.tickets).toEqual(inbox.slice(0, 10));
+  await act(async () => result.current.onPageChange(90));
+  expect(result.current.tickets).toEqual(inbox.slice(890));
+  await act(async () => result.current.onQueryChange('Ticket 899'));
+  expect(result.current.page).toBe(1);
+  expect(result.current.tickets).toEqual([inbox[898]]);
 });

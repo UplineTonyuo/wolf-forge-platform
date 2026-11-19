@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, BellRing, Search, TicketIcon, X } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { AlertCircle, BellRing, ChevronLeft, ChevronRight, Search, TicketIcon, X } from "lucide-react";
+import orderStyles from "../projects/projects-workspace.module.css";
 import type { TicketSummary } from "../../domain/tickets/schema";
 import { formatTeamRelativeTime } from "../../domain/team/projections";
 import { ticketStatusLabels } from "../../lib/tickets/presentation";
@@ -23,7 +23,7 @@ import styles from "./team-messages.module.css";
  * durable Ticket read marker exists. Inventing one here would be a fake.
  */
 export function TeamTicketsPane({
-  tickets,
+  tickets, page, pages, query, onPageChange, onQueryChange,
   loading,
   error,
   activeTicketId,
@@ -31,26 +31,25 @@ export function TeamTicketsPane({
   onRetry,
 }: {
   tickets: TicketSummary[];
+  page: number;
+  pages: number;
+  query: string;
+  onPageChange: (page: number) => void;
+  onQueryChange: (query: string) => void;
   loading: boolean;
   error: string | null;
   activeTicketId: string | null;
   onSelect: (ticketId: string) => void;
   onRetry: () => void;
 }) {
-  const [query, setQuery] = useState("");
-  const needle = useDeferredValue(query.trim().toLocaleLowerCase());
-  const visible = tickets.filter((ticket) =>
-    [ticket.public_ref, ticket.company_name, ticket.client_name, ticket.subject]
-      .some((value) => value?.toLocaleLowerCase().includes(needle)),
-  );
-  const isEmpty = !loading && !error && visible.length === 0;
+  const isEmpty = !loading && !error && tickets.length === 0;
 
   return (
     <div className={styles.ticketList}>
       <div className={styles.ticketSearch}>
         <Search aria-hidden="true" size={16} />
-        <input type="search" aria-label="Search tickets" placeholder="Search reference, client, or title" value={query} onChange={(event) => setQuery(event.currentTarget.value)} />
-        {query ? <button type="button" aria-label="Clear ticket search" onClick={() => setQuery("")}><X aria-hidden="true" size={16} /></button> : null}
+        <input type="search" aria-label="Search tickets" placeholder="Search reference, client, or title" value={query} onChange={(event) => onQueryChange(event.currentTarget.value)} />
+        {query ? <button type="button" aria-label="Clear ticket search" onClick={() => onQueryChange("")}><X aria-hidden="true" size={16} /></button> : null}
       </div>
       {loading ? (
         /* First load: rows shaped like .ticketRow (subject, client, meta) instead of a spinner. */
@@ -83,13 +82,13 @@ export function TeamTicketsPane({
           <span className={styles.stateIcon}>
             <TicketIcon aria-hidden="true" />
           </span>
-          <strong>{needle ? "No tickets found" : "No Tickets yet"}</strong>
-          <p>{needle ? "Try a different reference or client name." : "Client Tickets will appear here."}</p>
+          <strong>{query.trim() ? "No tickets found" : "No Tickets yet"}</strong>
+          <p>{query.trim() ? "Try a different reference or client name." : "Client Tickets will appear here."}</p>
         </div>
       ) : null}
 
       <div role="list" aria-label="Tickets">
-      {visible.map((ticket) => (
+      {tickets.map((ticket) => (
         <button
           key={ticket.ticket_id}
           type="button"
@@ -119,6 +118,13 @@ export function TeamTicketsPane({
         </button>
       ))}
       </div>
+      {pages > 0 && (
+        <nav className={`${orderStyles.pagination} ${styles.ticketPager}`} aria-label="Inbox ticket pages">
+          <button type="button" aria-label="Previous page" disabled={page <= 1} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} aria-hidden="true" /></button>
+          <span aria-live="polite">Page {page} of {pages}</span>
+          <button type="button" aria-label="Next page" disabled={page >= pages} onClick={() => onPageChange(page + 1)}><ChevronRight size={16} aria-hidden="true" /></button>
+        </nav>
+      )}
     </div>
   );
 }

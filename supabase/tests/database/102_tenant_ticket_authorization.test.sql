@@ -1,6 +1,6 @@
 begin;
 
-select plan(48);
+select plan(54);
 
 -- WL-2.5 (KI-111, Tickets): every Ticket operation requires the Ticket to belong
 -- to the caller's current Tenant. A foreign Ticket behaves like a missing one.
@@ -376,6 +376,37 @@ select lives_ok($$ select public.app_create_ticket(gen_random_uuid(), jsonb_buil
     'company_id', 'c0000000-0000-4000-8000-000000001201', 'client_profile_id', '20000000-0000-0000-0000-000000001207',
     'subject', 's', 'message', 'm', 'investment_service_id', 'c1000000-0000-4000-8000-000000001201')) $$,
   'WF admin opens a WF Ticket for the WF client and WF Service');
+
+-- 900 personal saves with identical timestamps make the ID tie-breaker observable.
+reset role;
+insert into public.tickets (id, tenant_id, company_id, subject, updated_at)
+select ('c9000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+  private.wolf_forge_tenant_id(), 'c0000000-0000-4000-8000-000000001201',
+  'Pagination fixture ' || n, '2026-11-01 00:00:00+00'
+from generate_series(1, 900) n;
+insert into private.ticket_inbox_memberships (ticket_id, profile_id)
+select id, '20000000-0000-0000-0000-000000001205'
+from public.tickets where subject like 'Pagination fixture %';
+
+set local role authenticated;
+select pg_temp.act('1205', '');
+select is((select count(*) from public.app_list_ticket_summaries(false, true)
+  where subject like 'Pagination fixture %'), 900::bigint, 'owner sees all 900 personal saves');
+select results_eq($$select subject from public.app_list_ticket_summaries(false, true)
+  where subject like 'Pagination fixture %' order by updated_at desc, ticket_id limit 10$$,
+  $$select 'Pagination fixture ' || n from generate_series(1, 10) n$$, 'first ten tied rows in ID order');
+select results_eq($$select subject from public.app_list_ticket_summaries(false, true)
+  where subject like 'Pagination fixture %' order by updated_at desc, ticket_id limit 10 offset 890$$,
+  $$select 'Pagination fixture ' || n from generate_series(891, 900) n$$, 'last ten tied rows in ID order');
+select is((select subject from public.app_list_ticket_summaries(false, true)
+  where subject ~* '***=fixture 899' order by updated_at desc, ticket_id limit 10),
+  'Pagination fixture 899', 'literal search finds a last-page subject');
+select pg_temp.act('1201', '');
+select is((select count(*) from public.app_list_ticket_summaries(false, true)
+  where subject like 'Pagination fixture %'), 0::bigint, 'another internal user cannot find the personal saves');
+select pg_temp.act('1205', '{"x-wf-tenant":"f0f0f0f0-0000-4000-8000-000000001201"}');
+select is((select count(*) from public.app_list_ticket_summaries(false, true)
+  where subject like 'Pagination fixture %'), 0::bigint, 'even the saving owner cannot find these in another tenant');
 
 select * from finish();
 

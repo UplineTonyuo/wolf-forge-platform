@@ -65,13 +65,13 @@ describe("Inbox membership is durable state, not a client-side view", () => {
   it("the Inbox pane's list action reads the Inbox-only list, never the full Ticket list", () => {
     const source = read("app/actions/tickets.ts");
     const fn = source.slice(source.indexOf("export async function listTicketSummariesAction"));
-    expect(fn.slice(0, 500)).toContain("context.services.tickets.listInbox()");
+    expect(fn.slice(0, 850)).toContain("context.services.tickets.listInbox(");
     expect(fn.slice(0, 500)).not.toContain("context.services.tickets.list()");
   });
 
   it("the Inbox-only read is the repository's, so every future caller gets the same filter", () => {
     const repository = read("repositories/ticket-repository.ts");
-    const fn = repository.slice(repository.indexOf("async listInbox()"));
+    const fn = repository.slice(repository.indexOf("async listInbox("));
     expect(fn.slice(0, 400)).toContain("p_inbox_only: true");
   });
 

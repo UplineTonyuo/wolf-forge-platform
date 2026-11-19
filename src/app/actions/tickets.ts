@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
-import type { TicketDetail, TicketSummary } from "../../domain/tickets/schema";
+import type { TicketDetail, TicketInboxPage } from "../../domain/tickets/schema";
 import type { ServiceAssigneeOption } from "../../repositories/service-repository";
 import { toClientSafeError } from "../../lib/errors/application-error";
 import { TICKET_ATTACHMENT_MAX_BYTES, validateTicketAttachment } from "../../lib/tickets/ticket-attachment-file";
@@ -478,18 +478,21 @@ export async function assignTicketAction(ticketId: string, profileId: string | n
   return { ok: true };
 }
 
-export type TicketSummariesResult = { ok: true; data: TicketSummary[] } | { ok: false; error: string; code?: string };
+export type TicketSummariesResult = { ok: true; data: TicketInboxPage } | { ok: false; error: string; code?: string };
 
 /**
  * Backs the Inbox drawer's Tickets pane list: the accessible Tickets whose
  * conversation is durably in the Inbox (tickets.inbox_added_at is not null),
  * never Tickets that are only managed from /tickets.
  */
-export async function listTicketSummariesAction(): Promise<TicketSummariesResult> {
+export async function listTicketSummariesAction(page = 1, search = ""): Promise<TicketSummariesResult> {
   try {
     const context = await getInternalContext();
     if (!context.user.tickets.view) return { ok: false, error: "You do not have permission to view Tickets.", code: "PERMISSION_DENIED" };
-    return { ok: true, data: await context.services.tickets.listInbox() };
+    if (!Number.isSafeInteger(page) || page < 1 || page > 2147483647 || typeof search !== "string") {
+      return { ok: false, error: "Invalid ticket page or search." };
+    }
+    return { ok: true, data: await context.services.tickets.listInbox(page, search.trim()) };
   } catch (error) {
     unstable_rethrow(error);
     return failure(error) as TicketSummariesResult;
