@@ -7009,6 +7009,10 @@ export type Database = {
         }
         Returns: Json
       }
+      app_server_can_request_recovery: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       app_server_claim_client_activation: {
         Args: { p_claim_id: string; p_tenant_id: string; p_token_hash: string }
         Returns: string

@@ -3,6 +3,7 @@
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { PasswordRecoveryForm } from "./password-recovery-form";
 import { signInAction, type LoginState } from "../../app/actions/auth";
 
 function SubmitButton() {
@@ -14,12 +15,16 @@ export function LoginForm({ next = "/", initialError = null }: { next?: string; 
   const initialState: LoginState = { error: initialError };
   const [state, action] = useActionState(signInAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [recovering, setRecovering] = useState(false);
+
+  if (recovering) return <PasswordRecoveryForm initialEmail={email} onBack={() => setRecovering(false)} />;
 
   return (
     <form action={action} className="login-form">
       <input type="hidden" name="next" value={next} />
       {state.error ? <div className="form-banner" role="alert">{state.error}</div> : null}
-      <label>Email<input name="email" type="email" autoComplete="username" autoFocus required /></label>
+      <label>Email<input name="email" type="email" autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
       <label>Password
         <span className="password-field">
           <input name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required />
@@ -29,6 +34,7 @@ export function LoginForm({ next = "/", initialError = null }: { next?: string; 
         </span>
       </label>
       <SubmitButton />
+      <button className="button-secondary" type="button" onClick={() => setRecovering(true)}>Forgot password?</button>
     </form>
   );
 }
