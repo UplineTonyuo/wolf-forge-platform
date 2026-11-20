@@ -8,6 +8,7 @@ import { lockModalSiblings } from "../ui/modal-inert";
 
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type ReactNode,
@@ -317,20 +318,60 @@ function renderTicketBodyBlocks(
   return blocks;
 }
 
+const emailReplyHeader = /^On (?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+(?:[a-z]{3,9}\s+\d{1,2}|\d{1,2}\s+[a-z]{3,9})\b.*\b\d{4}\b.*\s+wrote:$/i;
+
+function splitQuotedEmail(body: string) {
+  const lines = body.split(/\r?\n/);
+  let headerIndex = lines.length - 1;
+  let hasQuotedLines = false;
+
+  // Fold only a trailing email quote. Unquoted replies after a quote stay visible.
+  while (headerIndex >= 0) {
+    const line = lines[headerIndex]!.trim();
+    if (line.startsWith(">")) hasQuotedLines = true;
+    else if (line) break;
+    headerIndex--;
+  }
+
+  if (!hasQuotedLines || headerIndex < 1 || !emailReplyHeader.test(lines[headerIndex]!.trim())) {
+    return { reply: body, quotedEmail: null };
+  }
+
+  const reply = lines.slice(0, headerIndex).join("\n").trimEnd();
+  if (!reply) return { reply: body, quotedEmail: null };
+
+  return { reply, quotedEmail: lines.slice(headerIndex).join("\n") };
+}
+
 function TicketMessageBody({
   body,
 }: {
   body: string;
 }) {
+  const [showQuotedEmail, setShowQuotedEmail] = useState(false);
+  const quotedEmailId = useId();
+  const { reply, quotedEmail } = splitQuotedEmail(body);
+
   return (
-    <div
-      className={
-        styles.messageBody
-      }
-    >
-      {renderTicketBodyBlocks(
-        body,
-      )}
+    <div className={styles.messageBody}>
+      {renderTicketBodyBlocks(reply)}
+      {quotedEmail !== null ? (
+        <>
+          <button
+            type="button"
+            className={styles.quotedEmailToggle}
+            aria-label={showQuotedEmail ? "Show less quoted email history" : "Show more quoted email history"}
+            aria-expanded={showQuotedEmail}
+            aria-controls={quotedEmailId}
+            onClick={() => setShowQuotedEmail((current) => !current)}
+          >
+            {showQuotedEmail ? "Show less" : "Show more"}
+          </button>
+          <div id={quotedEmailId} hidden={!showQuotedEmail}>
+            {showQuotedEmail ? renderTicketBodyBlocks(quotedEmail) : null}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

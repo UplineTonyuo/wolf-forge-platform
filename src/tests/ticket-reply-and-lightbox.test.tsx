@@ -62,6 +62,48 @@ function openMenu(name = "Message actions") {
   fireEvent.click(screen.getByRole("button", { name }));
 }
 
+describe("Quoted email history", () => {
+  it.each([true, false])("folds the quoted tail in the shared conversation (orderChat=%s)", (orderChat) => {
+    const message = {
+      ...baseMessage,
+      body: [
+        "Thanks for the update!",
+        "",
+        "On Tue, Sep 15, 2026 at 4:18 AM, Support <support@example.test> wrote:",
+        "",
+        "> The work is ready.",
+        ">",
+        "> > An earlier reply.",
+      ].join("\r\n"),
+    };
+    render(<TicketConversation messages={[message]} orderChat={orderChat} />);
+
+    expect(screen.getByText("Thanks for the update!")).toBeVisible();
+    const toggle = screen.getByRole("button", { name: "Show more quoted email history" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/The work is ready/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Show less quoted email history" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/The work is ready/)).toBeVisible();
+    expect(screen.getByText(/An earlier reply/)).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(screen.queryByText(/The work is ready/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    "Here is the line to review:\n\n> An ordinary quotation.",
+    "On Tue we reviewed what the team wrote:\n\n> Notes from the review.",
+    "See my answer below.\n\nOn Tue, Sep 15, 2026, Support wrote:\n> Any updates?\nYes, the work is ready.",
+    "On Tue, Sep 15, 2026, Support wrote:\n> This message is the entire body.",
+  ])("leaves an ordinary or inline quote visible", (body) => {
+    const { container } = render(<TicketConversation messages={[{ ...baseMessage, body }]} orderChat />);
+    expect(container).toHaveTextContent(body.split("\n").at(-1)!);
+    expect(screen.queryByRole("button", { name: /show more/i })).not.toBeInTheDocument();
+  });
+});
+
 describe("Reply availability", () => {
   it("1. own image-only message exposes Reply", () => {
     const onReply = vi.fn();
