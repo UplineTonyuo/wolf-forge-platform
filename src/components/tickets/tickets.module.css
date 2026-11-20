@@ -2641,6 +2641,20 @@
   text-underline-offset: 2px;
 }
 
+.quotedEmailToggle {
+  min-block-size: 44px;
+  max-inline-size: 100%;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 /* Compact shared reply editor ------------------------------------------- */
 
 .ticketRichEditor {
