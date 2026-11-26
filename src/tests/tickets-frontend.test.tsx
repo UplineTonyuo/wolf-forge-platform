@@ -17,7 +17,8 @@ import { TicketWorkspaceList } from "../components/tickets/ticket-workspace-list
 import type { TicketCapabilities, TicketDetailMessage, TicketSummary } from "../domain/tickets/schema";
 
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push }) }));
 /*
  * ClientMessages seeds its composer from the cart, and the cart store reports
  * cart changes to the server as investment intent. Mocking that action keeps the
@@ -35,7 +36,7 @@ vi.mock("../app/actions/tickets", () => ({
   toggleTicketMessageReactionAction: vi.fn(), toggleOrderMessageReactionAction: vi.fn(),
   forwardTicketMessageToTeamAction: vi.fn(),
   unsendTicketInternalNoteAction: vi.fn(),
-  createClientTicketAction: vi.fn(), createInternalTicketAction: vi.fn(), updateTicketStatusAction: vi.fn(), updateTicketPriorityAction: vi.fn(), assignTicketAction: vi.fn(),
+  checkInternalTicketCreation: vi.fn(), createClientTicketAction: vi.fn(), createInternalTicketAction: vi.fn(), updateTicketStatusAction: vi.fn(), updateTicketPriorityAction: vi.fn(), assignTicketAction: vi.fn(),
 }));
 
 beforeAll(() => {
@@ -1301,4 +1302,33 @@ describe("Project and Ticket composers share one canonical toolbar", () => {
     const orderUndo = screen.getByRole("button", { name: "Undo" });
     expect(orderUndo.parentElement!.parentElement).toBe(orderToolbar);
   });
+});
+
+it.each([true, false])("recovers an uncertain ticket creation (already committed: %s)", async committed => {
+  const create = vi.mocked(actions.createInternalTicketAction);
+  create.mockRejectedValueOnce(new Error("connection lost")).mockResolvedValue({ ok: true, ticketId: "found" });
+  const check = vi.mocked(actions.checkInternalTicketCreation);
+  check.mockResolvedValueOnce({ ok: true, ticketId: committed ? "found" : null });
+  render(<TicketsList summaries={[]} companies={[{ id: "company", name: "Acme" }]} canCreate />);
+  fireEvent.click(screen.getByRole("button", { name: "Add ticket" }));
+  const dialog = within(screen.getByRole("dialog"));
+  fireEvent.change(dialog.getByPlaceholderText("Search client or company..."), { target: { value: "Acme" } });
+  fireEvent.click(dialog.getByRole("option", { name: /Acme/ }));
+  fireEvent.change(dialog.getByPlaceholderText("What is this conversation about?"), { target: { value: "Invoice question" } });
+  const editor = dialog.getByRole("textbox", { name: "Message" });
+  editor.textContent = "Please check the invoice.";
+  fireEvent.input(editor);
+  fireEvent.click(dialog.getByRole("button", { name: "Add ticket" }));
+  const checkButton = await dialog.findByRole("button", { name: "Check ticket status" });
+  expect(dialog.getByRole("button", { name: "Close" })).toBeEnabled();
+  expect(editor).toHaveTextContent("Please check the invoice.");
+  const attempt = create.mock.calls[0]![0];
+  fireEvent.click(checkButton);
+  await waitFor(() => expect(check).toHaveBeenCalledWith(attempt.requestId));
+  expect(create).toHaveBeenCalledTimes(1);
+  if (!committed) {
+    fireEvent.click(await dialog.findByRole("button", { name: "Retry creation" }));
+    expect(create).toHaveBeenNthCalledWith(2, attempt);
+  }
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/tickets/found?created=1"));
 });

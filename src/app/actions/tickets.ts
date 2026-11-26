@@ -1,5 +1,6 @@
 "use server";
 
+import { uuidSchema } from "../../domain/shared";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import type { TicketDetail, TicketInboxPage } from "../../domain/tickets/schema";
@@ -63,7 +64,7 @@ export type CreateInternalTicketResult =
    * a guess, and it lets the caller stop pretending nothing happened instead
    * of printing a constraint message at a human.
    */
-  | { ok: false; error: string; conflict?: true };
+  | { ok: false; error: string; conflict?: true; outcomeUnknown?: boolean };
 
 export async function createInternalTicketAction(input: {
   requestId: string;
@@ -128,7 +129,35 @@ export async function createInternalTicketAction(input: {
     return {
       ok: false,
       error: safe.message,
+      ...(safe.code === "DATABASE_ERROR" && { outcomeUnknown: true }),
     };
+  }
+}
+
+export async function checkInternalTicketCreation(requestId: string): Promise<
+  { ok: true; ticketId: string | null } | { ok: false; error: string }
+> {
+  const { actor, services, user } = await getInternalContext();
+  if (!user.modules.tickets || !user.tickets.view || !user.tickets.create || !uuidSchema.safeParse(requestId).success) {
+    return { ok: false, error: "Unable to check this ticket request." };
+  }
+  try {
+    // The initial message and ticket commit together. Match only this actor's
+    // request in their current tenant, then verify ordinary ticket access.
+    const client = createTrustedServerSupabaseClient(readServerEnvironment());
+    const { data, error } = await client.from("ticket_messages")
+      .select("ticket_id, tickets!ticket_messages_ticket_id_fkey!inner(tenant_id)")
+      .eq("tickets.tenant_id", user.tenantId)
+      .eq("author_profile_id", actor.id)
+      .eq("message_kind", "initial_request")
+      .eq("request_id", requestId)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) await services.tickets.get(data.ticket_id);
+    return { ok: true, ticketId: data?.ticket_id ?? null };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false, error: "Unable to check ticket status. Try checking again." };
   }
 }
 

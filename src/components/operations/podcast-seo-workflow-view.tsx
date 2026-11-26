@@ -10,7 +10,8 @@ import {
 } from "../../domain/operations/podcast-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
 import type { PodcastMonthOption } from "../../lib/integrations/google-sheets-source";
-import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
+import { WorkflowMonthSelect } from "./workflow-month-select";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import {
   DepartmentInspectorSection,
   DepartmentInspectorTab,
@@ -281,7 +282,7 @@ export function PodcastSeoWorkflowView({
             ]}
             trailingControl={
               monthOptions.length > 0 ? (
-                <AnimatedSelect
+                <WorkflowMonthSelect
                   name="podcast-seo-month"
                   label="Month"
                   menuLabel="Select month"

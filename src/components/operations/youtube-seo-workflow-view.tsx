@@ -12,7 +12,8 @@ import {
 } from "../../domain/operations/youtube-seo-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
 import type { OperationsWorkflowMonthOption } from "../../lib/integrations/operations-google-sheets";
-import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
+import { WorkflowMonthSelect } from "./workflow-month-select";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentOutputs } from "./department-outputs";
 import { DepartmentRecordInspector, type DepartmentInspectorTab } from "./department-record-inspector";
@@ -149,7 +150,7 @@ export function YoutubeSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, 
             trailingSelects={[
               { allLabel: "All Statuses", ariaLabel: "Filter by status", value: statusFilter, options: [], onChange: (value) => setStatusFilter(value as StatusFilter), countedOptions: statusSelectOptions },
             ]}
-            trailingControl={monthOptions.length > 0 ? <AnimatedSelect name="youtube-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} onChange={changeMonth} options={monthOptions.map((option) => ({ value: option.value, label: option.label }))} /> : null}
+            trailingControl={monthOptions.length > 0 ? <WorkflowMonthSelect name="youtube-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} onChange={changeMonth} options={monthOptions.map((option) => ({ value: option.value, label: option.label }))} /> : null}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
           />

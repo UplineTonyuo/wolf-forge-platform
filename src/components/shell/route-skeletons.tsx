@@ -323,9 +323,10 @@ export function SectionSkeleton() {
   );
 }
 
-type ProjectSection = "details" | "files" | "history";
+type ProjectSection = "details" | "files" | "history" | "edit";
 
 function ProjectBody({ section }: { section: ProjectSection }) {
+  if (section === "edit") return <section className="route-skeleton-stack" data-skeleton-body="edit"><Bar w={150} h={24} /><Fields count={5} /></section>;
   if (section === "files") return <section data-skeleton-body="files">
     <Bar w={100} h={20} />
     <div className={project.filesTable}>
@@ -350,6 +351,9 @@ function ProjectBody({ section }: { section: ProjectSection }) {
 
 export function ProjectDetailsSkeleton() {
   return <Frame variant="section" className="route-skeleton-section" label="Loading project details"><ProjectBody section="details" /></Frame>;
+}
+export function ProjectEditorSkeleton() {
+  return <Frame variant="section" className="route-skeleton-section" label="Loading order editor"><ProjectBody section="edit" /></Frame>;
 }
 export function ProjectFilesSkeleton() {
   return <Frame variant="section" className="route-skeleton-section" label="Loading project files"><ProjectBody section="files" /></Frame>;
@@ -879,7 +883,7 @@ export function RouteSkeleton({ pathname }: { pathname: string }) {
   }
   if (variant === "projectDetail") {
     const path = pathname.split(/[?#]/)[0]?.replace(/\/+$/, "");
-    return <ProjectDetailSkeleton section={path?.endsWith("/files") ? "files" : path?.endsWith("/history") ? "history" : "details"} />;
+    return <ProjectDetailSkeleton section={path?.endsWith("/edit") ? "edit" : path?.endsWith("/files") ? "files" : path?.endsWith("/history") ? "history" : "details"} />;
   }
   const Skeleton = SKELETONS[variant];
   return <Skeleton />;

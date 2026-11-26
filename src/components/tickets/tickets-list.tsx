@@ -2,7 +2,7 @@
 
 import { useRouteTransitionPush } from "../shell/route-transition";
 
-import { createInternalTicketAction } from "../../app/actions/tickets";
+import { checkInternalTicketCreation, createInternalTicketAction } from "../../app/actions/tickets";
 
 import { Bold, Filter, Heading1, Italic, Link2, Plus, Redo2, Search, TicketIcon, Undo2, X } from "lucide-react";
 import { RouteTransitionLink as Link } from "../shell/route-transition";
@@ -74,6 +74,9 @@ export function TicketsList({
   const [ticketPriorityOpen, setTicketPriorityOpen] =
     useState(false);
 
+  const ticketAttempt = useRef<Parameters<typeof createInternalTicketAction>[0] | null>(null);
+  const ticketInFlight = useRef(false);
+  const [recovery, setRecovery] = useState<"check" | "retry" | null>(null);
   const [creatingTicket, setCreatingTicket] =
     useState(false);
 
@@ -517,11 +520,13 @@ export function TicketsList({
 
   function openTicketDialog() {
     setFilterOpen(false);
-    setCreateTicketError(null);
+    if (!recovery) setCreateTicketError(null);
     ticketDialogRef.current?.showModal();
   }
 
   function resetTicketDraft() {
+    ticketAttempt.current = null;
+    setRecovery(null);
     setSelectedCompanyId("");
     setCompanyQuery("");
     setCompanyPickerOpen(false);
@@ -558,31 +563,49 @@ export function TicketsList({
       return;
     }
 
+    if (ticketInFlight.current) return;
+    ticketInFlight.current = true;
     setCreatingTicket(true);
     setCreateTicketError(null);
 
-    const result =
-      await createInternalTicketAction({
+    try {
+      const attempt = ticketAttempt.current ??= {
         requestId: crypto.randomUUID(),
         companyId: selectedCompanyId,
         subject: ticketSubject.trim(),
         message: ticketMessage.trim(),
         priority: ticketPriority,
-      });
-
-    if (!result.ok) {
+      };
+      const result = recovery === "check"
+        ? await checkInternalTicketCreation(attempt.requestId)
+        : await createInternalTicketAction(attempt);
+      if (!result.ok) {
+        if ("outcomeUnknown" in result && result.outcomeUnknown) {
+          setRecovery("check");
+        } else if (recovery !== "check") {
+          ticketAttempt.current = null;
+          setRecovery(null);
+        }
+        setCreateTicketError(result.error);
+        return;
+      }
+      if (!result.ticketId) {
+        setRecovery("retry");
+        setCreateTicketError("No ticket found yet. You can retry this same request.");
+        return;
+      }
+      ticketAttempt.current = null;
+      setRecovery(null);
+      ticketDialogRef.current?.close();
+      push(`/tickets/${result.ticketId}?created=1`);
+      router.refresh();
+    } catch {
+      setRecovery("check");
+      setCreateTicketError("Could not confirm creation. Check ticket status before retrying.");
+    } finally {
+      ticketInFlight.current = false;
       setCreatingTicket(false);
-      setCreateTicketError(result.error);
-      return;
     }
-
-    ticketDialogRef.current?.close();
-
-    push(
-      `/tickets/${result.ticketId}?created=1`,
-    );
-
-    router.refresh();
   }
   return (
     <section className={styles.listSurface} aria-label="Tickets">
@@ -792,7 +815,7 @@ export function TicketsList({
       <dialog
         className={`${styles.dialog} ${styles.internalCreateDialog}`}
         ref={ticketDialogRef}
-        onClose={resetTicketDraft}
+        onClose={() => { if (!ticketAttempt.current || recovery === "retry") resetTicketDraft(); }}
         onCancel={(event) => {
           if (creatingTicket) {
             event.preventDefault();
@@ -822,6 +845,7 @@ export function TicketsList({
           </header>
 
           <div className={styles.dialogBody}>
+            <div inert={creatingTicket || recovery !== null} style={{ display: "contents" }}>
 
             <div
               className={styles.ticketCreateField}
@@ -1217,6 +1241,7 @@ export function TicketsList({
 
 
 
+            </div>
             {createTicketError ? (
               <p
                 className={styles.ticketCreateError}
@@ -1251,8 +1276,8 @@ export function TicketsList({
               }
             >
               {creatingTicket
-                ? "Adding ticket..."
-                : "Add ticket"}
+                ? (recovery === "check" ? "Checking..." : "Adding ticket...")
+                : recovery === "check" ? "Check ticket status" : recovery === "retry" ? "Retry creation" : "Add ticket"}
             </button>
           </footer>
         </form>
