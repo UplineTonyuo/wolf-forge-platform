@@ -1,6 +1,7 @@
 import "@fontsource-variable/inter";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "../components/observability/speed-insights";
 import { PwaProvider } from "../components/pwa/pwa-provider";
 
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" suppressHydrationWarning>
       <body>
         <PwaProvider>{children}</PwaProvider>
+        <Analytics />
         <SpeedInsights />
       </body>
     </html>
