@@ -13,7 +13,7 @@ import {
 } from "../../domain/operations/off-page-seo-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
 import type { OperationsWorkflowMonthOption } from "../../lib/integrations/operations-google-sheets";
-import { AnimatedSelect } from "../ui/animated-select";
+import { WorkflowMonthSelect } from "./workflow-month-select";
 import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentOutputs, type DepartmentOutputResource } from "./department-outputs";
 import { DepartmentRecordInspector, type DepartmentInspectorSection, type DepartmentInspectorTab } from "./department-record-inspector";
@@ -127,7 +127,7 @@ export function OffPageSeoWorkflowView({ state, items, sourceTab, lastSyncedAt, 
             trailingSelects={[
               { allLabel: "All Statuses", ariaLabel: "Filter by status", value: statusFilter, options: [], onChange: (value) => setStatusFilter(value as StatusFilter), countedOptions: [{ value: "all", label: "All Statuses", count: statusCounts.all }, ...offPageOperationStatuses.map((status) => ({ value: status, label: offPageOperationStatusLabels[status], count: statusCounts[status] }))] },
             ]}
-            trailingControl={monthOptions.length > 0 ? <AnimatedSelect name="off-page-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} onChange={changeMonth} options={monthOptions.map((option) => ({ value: option.value, label: option.label }))} /> : null}
+            trailingControl={monthOptions.length > 0 ? <WorkflowMonthSelect name="off-page-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} onChange={changeMonth} options={monthOptions.map((option) => ({ value: option.value, label: option.label }))} /> : null}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={clearFilters}
           />

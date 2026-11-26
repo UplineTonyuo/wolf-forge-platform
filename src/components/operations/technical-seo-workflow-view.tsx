@@ -6,7 +6,8 @@ import { useState, type ReactNode } from "react";
 import type { TechnicalSeoItem } from "../../domain/operations/technical-seo-workflow";
 import { formatCleanDomain, formatDateTime } from "../../lib/format";
 import type { OperationsWorkflowMonthOption } from "../../lib/integrations/operations-google-sheets";
-import { AnimatedSelect, type AnimatedSelectOption } from "../ui/animated-select";
+import { WorkflowMonthSelect } from "./workflow-month-select";
+import type { AnimatedSelectOption } from "../ui/animated-select";
 import { DepartmentConnectionState } from "./department-connection-state";
 import { DepartmentOutputs } from "./department-outputs";
 import { DepartmentRecordInspector, type DepartmentInspectorTab } from "./department-record-inspector";
@@ -161,7 +162,7 @@ export function TechnicalSeoWorkflowView({ state, items, sourceTab, lastSyncedAt
         trailingSelects={[
           { allLabel: "All Statuses", ariaLabel: "Filter by status", value: status, options: [], onChange: setStatus, countedOptions: statusSelectOptions },
         ]}
-        trailingControl={monthOptions.length ? <AnimatedSelect name="technical-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} options={monthOptions.map((month) => ({ value: month.value, label: month.label }))} onChange={(value) => { const next = new URLSearchParams(params.toString()); next.set("month", value); router.push(`${pathname}?${next}`); }} /> : null}
+        trailingControl={monthOptions.length ? <WorkflowMonthSelect name="technical-seo-month" label="Month" menuLabel="Select month" value={selectedMonth ?? monthOptions[0]!.value} options={monthOptions.map((month) => ({ value: month.value, label: month.label }))} onChange={(value) => { const next = new URLSearchParams(params.toString()); next.set("month", value); router.push(`${pathname}?${next}`); }} /> : null}
         hasActiveFilters={hasFilters} onClearFilters={() => { setSearch(""); setStatus("all"); setPack("all"); setAssignee("all"); }} />
       {visible.length ? <>
         <DepartmentWorkTable columns={columns} rows={visible} selectedRowId={selectedId} onSelectRow={(item) => setSelectedId(item.id)} getRowLabel={(item) => `Open ${label(item)}`} />

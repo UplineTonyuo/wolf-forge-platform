@@ -50,3 +50,9 @@ describe("annotated record destinations", () => {
     expect(container.querySelector('[data-skeleton-block="project-conversation"]')).toBeNull();
   });
 });
+
+it("loads Edit Order with editor fields inside the shared order frame", () => {
+  const { container } = render(<RouteSkeleton pathname="/orders/one/edit" />);
+  expect(container.querySelector('[data-skeleton-body="edit"] .route-skeleton-fields')).not.toBeNull();
+  expect(container.querySelector('[data-skeleton-body="details"]')).toBeNull();
+});

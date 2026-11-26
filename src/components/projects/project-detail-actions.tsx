@@ -14,11 +14,13 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useOrderSectionTransition } from "./order-section-transition";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
   useRef,
+  startTransition,
   useState,
 } from "react";
 import { createPortal } from "react-dom";
@@ -115,6 +117,7 @@ export function ProjectDetailActions({
   capabilities: ProjectCapabilities;
 }) {
   const router = useRouter();
+  const orderTransition = useOrderSectionTransition();
   const [completionFailures, setCompletionFailures] = useState<ProjectOutcome[]>([]);
   const launcherRef = useRef<HTMLButtonElement>(null);
   const push = useRouteTransitionPush();
@@ -547,6 +550,7 @@ export function ProjectDetailActions({
                           styles.menuRow
                         }
                         href={`/orders/${orderId}/edit`}
+                        onNavigate={() => startTransition(() => orderTransition?.begin("edit"))}
                         onClick={() => {
                           setMounted(
                             false,
