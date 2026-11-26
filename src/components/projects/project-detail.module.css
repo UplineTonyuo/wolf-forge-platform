@@ -131,6 +131,7 @@ a.tab:hover {
 @media (min-width: 901px) {
   /* Clip the rounded shell without creating a non-scrolling sticky ancestor. */
   :global(.workspace):has(.orderFrame) {
+    display: flow-root; /* Keep the command bar's top margin inside the clipped workspace. */
     overflow: clip;
   }
 
