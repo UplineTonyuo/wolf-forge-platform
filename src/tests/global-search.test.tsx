@@ -62,6 +62,46 @@ function ghost(container: HTMLElement) {
   return container.querySelector('[class*="completion"] em')?.textContent ?? "";
 }
 
+describe("Global search: request failures", () => {
+  it("clears the spinner and cached results after a failure, then allows another search", async () => {
+    const action = vi.mocked(search.globalSearchAction);
+    action.mockResolvedValueOnce({ ok: true, results: [ticket] })
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ok: true, results: [project] });
+    render(<GlobalSearch />);
+    await type("ticket");
+    expect(resultTitle(ticket.title)).toBeVisible();
+
+    await type("4D7AC2A3");
+    expect(screen.getByText("Search unavailable")).toBeVisible();
+    expect(screen.queryByLabelText("Searching")).toBeNull();
+    expect(screen.queryByRole("option")).toBeNull();
+
+    await type("#227");
+    expect(resultTitle(project.title)).toBeVisible();
+    expect(screen.queryByText("Search unavailable")).toBeNull();
+  });
+
+  it("ignores a late rejection while the newer search is still pending", async () => {
+    let rejectOlder!: (reason: Error) => void;
+    let finishNewer!: (value: search.GlobalSearchResponse) => void;
+    vi.mocked(search.globalSearchAction)
+      .mockImplementationOnce(() => new Promise((_, reject) => { rejectOlder = reject; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { finishNewer = resolve; }));
+    render(<GlobalSearch />);
+    await type("old");
+    await type("new");
+
+    await act(async () => { rejectOlder(new TypeError("Failed to fetch")); });
+    expect(screen.getByLabelText("Searching")).toBeVisible();
+    expect(screen.queryByText("Search unavailable")).toBeNull();
+
+    await act(async () => { finishNewer({ ok: true, results: [project] }); });
+    expect(resultTitle(project.title)).toBeVisible();
+    expect(screen.queryByLabelText("Searching")).toBeNull();
+  });
+});
+
 describe("Global search: Ticket results", () => {
   it("invalidates Ticket cache on a confirmed denial before permission refresh and rejects the earlier response", async () => {
     vi.mocked(search.globalSearchAction).mockResolvedValue({ ok: true, results: [ticket, project] });
