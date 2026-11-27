@@ -324,10 +324,10 @@ export function GlobalSearch({
       window.setTimeout(
         async () => {
 
-          const response =
-            await globalSearchAction(
-              wanted,
-            );
+          const response = await globalSearchAction(wanted).catch(() => ({
+            ok: false as const,
+            error: "Please try your search again.",
+          }));
 
 
           if (
